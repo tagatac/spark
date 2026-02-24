@@ -76,8 +76,7 @@ class ExecutorPodsWatchSnapshotSourceSuite extends SparkFunSuite with BeforeAndA
 
   test("Watch events should be pushed to the snapshots store as snapshot updates.") {
     val conf = new SparkConf()
-    watchSourceUnderTest = new ExecutorPodsWatchSnapshotSource(
-      eventQueue, kubernetesClient, conf)
+    watchSourceUnderTest = new ExecutorPodsWatchSnapshotSource(eventQueue, kubernetesClient, conf)
     watchSourceUnderTest.start(TEST_SPARK_APP_ID)
     val exec1 = runningExecutor(1)
     val exec2 = runningExecutor(2)
@@ -90,8 +89,7 @@ class ExecutorPodsWatchSnapshotSourceSuite extends SparkFunSuite with BeforeAndA
   test("SPARK-36462: Verify if watchers are disabled we don't call pods() on the client") {
     val conf = new SparkConf()
     conf.set(KUBERNETES_EXECUTOR_ENABLE_API_WATCHER, false)
-    watchSourceUnderTest = new ExecutorPodsWatchSnapshotSource(
-      eventQueue, kubernetesClient, conf)
+    watchSourceUnderTest = new ExecutorPodsWatchSnapshotSource(eventQueue, kubernetesClient, conf)
     watchSourceUnderTest.start(TEST_SPARK_APP_ID)
     verify(kubernetesClient, never()).pods()
   }

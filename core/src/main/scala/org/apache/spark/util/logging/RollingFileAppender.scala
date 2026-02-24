@@ -27,16 +27,21 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 /**
- * Continuously appends data from input stream into the given file, and rolls
- * over the file after the given interval. The rolled over files are named
- * based on the given pattern.
+ * Continuously appends data from input stream into the given file, and rolls over the file after
+ * the given interval. The rolled over files are named based on the given pattern.
  *
- * @param inputStream             Input stream to read data from
- * @param activeFile              File to write data to
- * @param rollingPolicy           Policy based on which files will be rolled over.
- * @param conf                    SparkConf that is used to pass on extra configurations
- * @param bufferSize              Optional buffer size. Used mainly for testing.
- * @param closeStreams            Option flag: whether to close the inputStream at the end.
+ * @param inputStream
+ *   Input stream to read data from
+ * @param activeFile
+ *   File to write data to
+ * @param rollingPolicy
+ *   Policy based on which files will be rolled over.
+ * @param conf
+ *   SparkConf that is used to pass on extra configurations
+ * @param bufferSize
+ *   Optional buffer size. Used mainly for testing.
+ * @param closeStreams
+ *   Option flag: whether to close the inputStream at the end.
  */
 private[spark] class RollingFileAppender(
     inputStream: InputStream,
@@ -44,8 +49,8 @@ private[spark] class RollingFileAppender(
     val rollingPolicy: RollingPolicy,
     conf: SparkConf,
     bufferSize: Int = RollingFileAppender.DEFAULT_BUFFER_SIZE,
-    closeStreams: Boolean = false
-  ) extends FileAppender(inputStream, activeFile, bufferSize, closeStreams) {
+    closeStreams: Boolean = false)
+    extends FileAppender(inputStream, activeFile, bufferSize, closeStreams) {
 
   private val maxRetainedFiles = conf.get(config.EXECUTOR_LOGS_ROLLING_MAX_RETAINED_FILES)
   private val enableCompression = conf.get(config.EXECUTOR_LOGS_ROLLING_ENABLE_COMPRESSION)
@@ -110,13 +115,14 @@ private[spark] class RollingFileAppender(
   /** Move the active log file to a new rollover file */
   private def moveFile(): Unit = {
     val rolloverSuffix = rollingPolicy.generateRolledOverFileSuffix()
-    val rolloverFile = new File(
-      activeFile.getParentFile, activeFile.getName + rolloverSuffix).getAbsoluteFile
+    val rolloverFile =
+      new File(activeFile.getParentFile, activeFile.getName + rolloverSuffix).getAbsoluteFile
     logDebug(s"Attempting to rollover file $activeFile to file $rolloverFile")
     if (activeFile.exists) {
       if (!rolloverFileExist(rolloverFile)) {
         rotateFile(activeFile, rolloverFile)
-        logInfo(log"Rolled over ${MDC(FILE_NAME, activeFile)} to ${MDC(FILE_NAME2, rolloverFile)}")
+        logInfo(
+          log"Rolled over ${MDC(FILE_NAME, activeFile)} to ${MDC(FILE_NAME2, rolloverFile)}")
       } else {
         // In case the rollover file name clashes, make a unique file name.
         // The resultant file names are long and ugly, so this is used only
@@ -125,14 +131,16 @@ private[spark] class RollingFileAppender(
         var i = 0
         var altRolloverFile: File = null
         do {
-          altRolloverFile = new File(activeFile.getParent,
+          altRolloverFile = new File(
+            activeFile.getParent,
             s"${activeFile.getName}$rolloverSuffix--$i").getAbsoluteFile
           i += 1
         } while (i < 10000 && rolloverFileExist(altRolloverFile))
 
-        logWarning(log"Rollover file ${MDC(FILE_NAME, rolloverFile)} already exists, " +
-          log"rolled over ${MDC(FILE_NAME2, activeFile)} " +
-          log"to file ${MDC(FILE_NAME3, altRolloverFile)}")
+        logWarning(
+          log"Rollover file ${MDC(FILE_NAME, rolloverFile)} already exists, " +
+            log"rolled over ${MDC(FILE_NAME2, activeFile)} " +
+            log"to file ${MDC(FILE_NAME3, altRolloverFile)}")
         rotateFile(activeFile, altRolloverFile)
       }
     } else {
@@ -143,16 +151,19 @@ private[spark] class RollingFileAppender(
   /** Retain only last few files */
   private[util] def deleteOldFiles(): Unit = {
     try {
-      val rolledoverFiles = activeFile.getParentFile.listFiles(new FileFilter {
-        def accept(f: File): Boolean = {
-          f.getName.startsWith(activeFile.getName) && f != activeFile
-        }
-      }).sorted
-      val filesToBeDeleted = rolledoverFiles.take(
-        math.max(0, rolledoverFiles.length - maxRetainedFiles))
+      val rolledoverFiles = activeFile.getParentFile
+        .listFiles(new FileFilter {
+          def accept(f: File): Boolean = {
+            f.getName.startsWith(activeFile.getName) && f != activeFile
+          }
+        })
+        .sorted
+      val filesToBeDeleted =
+        rolledoverFiles.take(math.max(0, rolledoverFiles.length - maxRetainedFiles))
       filesToBeDeleted.foreach { file =>
-        logInfo(log"Deleting file executor log file" +
-          log" ${MDC(FILE_ABSOLUTE_PATH, file.getAbsolutePath)}")
+        logInfo(
+          log"Deleting file executor log file" +
+            log" ${MDC(FILE_ABSOLUTE_PATH, file.getAbsolutePath)}")
         file.delete()
       }
     } catch {
@@ -164,8 +175,8 @@ private[spark] class RollingFileAppender(
 }
 
 /**
- * Companion object to [[org.apache.spark.util.logging.RollingFileAppender]]. Defines
- * names of configurations that configure rolling file appenders.
+ * Companion object to [[org.apache.spark.util.logging.RollingFileAppender]]. Defines names of
+ * configurations that configure rolling file appenders.
  */
 private[spark] object RollingFileAppender {
   val DEFAULT_BUFFER_SIZE = 8192
@@ -173,10 +184,10 @@ private[spark] object RollingFileAppender {
   val GZIP_LOG_SUFFIX = ".gz"
 
   /**
-   * Get the sorted list of rolled over files. This assumes that the all the rolled
-   * over file names are prefixed with the `activeFileName`, and the active file
-   * name has the latest logs. So it sorts all the rolled over logs (that are
-   * prefixed with `activeFileName`) and appends the active file
+   * Get the sorted list of rolled over files. This assumes that the all the rolled over file
+   * names are prefixed with the `activeFileName`, and the active file name has the latest logs.
+   * So it sorts all the rolled over logs (that are prefixed with `activeFileName`) and appends
+   * the active file
    */
   def getSortedRolledOverFiles(directory: String, activeFileName: String): Seq[File] = {
     val rolledOverFiles = new File(directory).getAbsoluteFile.listFiles.filter { file =>
@@ -187,7 +198,7 @@ private[spark] object RollingFileAppender {
       val file = new File(directory, activeFileName).getAbsoluteFile
       if (file.exists) Some(file) else None
     }
-    (rolledOverFiles.sortBy(_.getName.stripSuffix(GZIP_LOG_SUFFIX)) ++ activeFile)
-      .toImmutableArraySeq
+    (rolledOverFiles.sortBy(
+      _.getName.stripSuffix(GZIP_LOG_SUFFIX)) ++ activeFile).toImmutableArraySeq
   }
 }

@@ -104,29 +104,40 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
 
   override def tablePreparation(connection: Connection): Unit = {
     mySQLVersion = connection.getMetaData.getDatabaseMajorVersion
-    connection.prepareStatement(
-      "CREATE TABLE employee (dept INT, name VARCHAR(32), salary DECIMAL(20, 2)," +
-        " bonus DOUBLE)").executeUpdate()
-    connection.prepareStatement(
-      s"""CREATE TABLE pattern_testing_table (
+    connection
+      .prepareStatement(
+        "CREATE TABLE employee (dept INT, name VARCHAR(32), salary DECIMAL(20, 2)," +
+          " bonus DOUBLE)")
+      .executeUpdate()
+    connection
+      .prepareStatement(s"""CREATE TABLE pattern_testing_table (
          |pattern_testing_col LONGTEXT
          |)
-         |""".stripMargin
-    ).executeUpdate()
-    connection.prepareStatement(
-      "CREATE TABLE datetime (name VARCHAR(32), date1 DATE, time1 TIMESTAMP)")
+         |""".stripMargin)
+      .executeUpdate()
+    connection
+      .prepareStatement("CREATE TABLE datetime (name VARCHAR(32), date1 DATE, time1 TIMESTAMP)")
       .executeUpdate()
   }
 
   override def dataPreparation(connection: Connection): Unit = {
     super.dataPreparation(connection)
-    connection.prepareStatement("INSERT INTO datetime VALUES " +
-      "('amy', '2022-05-19', '2022-05-19 00:00:00')").executeUpdate()
-    connection.prepareStatement("INSERT INTO datetime VALUES " +
-      "('alex', '2022-05-18', '2022-05-18 00:00:00')").executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES " +
+          "('amy', '2022-05-19', '2022-05-19 00:00:00')")
+      .executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES " +
+          "('alex', '2022-05-18', '2022-05-18 00:00:00')")
+      .executeUpdate()
     // '2022-01-01' is Saturday and is in ISO year 2021.
-    connection.prepareStatement("INSERT INTO datetime VALUES " +
-      "('tom', '2022-01-01', '2022-01-01 00:00:00')").executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES " +
+          "('tom', '2022-01-01', '2022-01-01 00:00:00')")
+      .executeUpdate()
   }
 
   override def testUpdateColumnType(tbl: String): Unit = {
@@ -153,8 +164,7 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
         "newName" -> "`ID`",
         "originName" -> "`ID`",
         "table" -> s"`$catalogName`.`alt_table`"),
-      context = ExpectedContext(fragment = sql1, start = 0, stop = 55)
-    )
+      context = ExpectedContext(fragment = sql1, start = 0, stop = 55))
   }
 
   override def testRenameColumn(tbl: String): Unit = {
@@ -183,8 +193,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
   }
 
   override def testCreateTableWithProperty(tbl: String): Unit = {
-    sql(s"CREATE TABLE $tbl (ID INT)" +
-      s" TBLPROPERTIES('ENGINE'='InnoDB', 'DEFAULT CHARACTER SET'='utf8')")
+    sql(
+      s"CREATE TABLE $tbl (ID INT)" +
+        s" TBLPROPERTIES('ENGINE'='InnoDB', 'DEFAULT CHARACTER SET'='utf8')")
     val t = spark.table(tbl)
     val expectedSchema = new StructType()
       .add("ID", IntegerType, true, defaultMetadata(IntegerType, jdbcClientTypes.INTEGER))
@@ -207,8 +218,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
   }
 
   override def testDatetime(tbl: String): Unit = {
-    val df1 = sql(s"SELECT name FROM $tbl WHERE " +
-      "dayofyear(date1) > 100 AND dayofmonth(date1) > 10 ")
+    val df1 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "dayofyear(date1) > 100 AND dayofmonth(date1) > 10 ")
     checkFilterPushed(df1)
     val rows1 = df1.collect()
     assert(rows1.length === 2)
@@ -237,8 +249,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
     assert(rows4(1).getString(0) === "alex")
     assert(rows4(2).getString(0) === "tom")
 
-    val df5 = sql(s"SELECT name FROM $tbl WHERE " +
-      "extract(WEEK from date1) > 10 AND extract(YEAR from date1) = 2022")
+    val df5 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "extract(WEEK from date1) > 10 AND extract(YEAR from date1) = 2022")
     checkFilterPushed(df5)
     val rows5 = df5.collect()
     assert(rows5.length === 3)
@@ -246,8 +259,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
     assert(rows5(1).getString(0) === "alex")
     assert(rows5(2).getString(0) === "tom")
 
-    val df6 = sql(s"SELECT name FROM $tbl WHERE date_add(date1, 1) = date'2022-05-20' " +
-      "AND datediff(date1, '2022-05-10') > 0")
+    val df6 = sql(
+      s"SELECT name FROM $tbl WHERE date_add(date1, 1) = date'2022-05-20' " +
+        "AND datediff(date1, '2022-05-10') > 0")
     checkFilterPushed(df6)
     val rows6 = df6.collect()
     assert(rows6.length === 1)
@@ -261,7 +275,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
 
     withClue("weekofyear") {
       val woy = sql(s"SELECT weekofyear(date1) FROM $tbl WHERE name = 'tom'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE weekofyear(date1) = $woy")
       checkFilterPushed(df)
       val rows = df.collect()
@@ -271,7 +287,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
 
     withClue("dayofweek") {
       val dow = sql(s"SELECT dayofweek(date1) FROM $tbl WHERE name = 'alex'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE dayofweek(date1) = $dow")
       checkFilterPushed(df)
       val rows = df.collect()
@@ -281,7 +299,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
 
     withClue("yearofweek") {
       val yow = sql(s"SELECT extract(YEAROFWEEK from date1) FROM $tbl WHERE name = 'tom'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE extract(YEAROFWEEK from date1) = $yow")
       checkFilterPushed(df, false)
       val rows = df.collect()
@@ -298,8 +318,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
       assert(rows(1).getString(0) === "alex")
     }
 
-    val df9 = sql(s"SELECT name FROM $tbl WHERE " +
-      "dayofyear(date1) > 100 order by dayofyear(date1) limit 1")
+    val df9 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "dayofyear(date1) > 100 order by dayofyear(date1) limit 1")
     checkFilterPushed(df9)
     val rows9 = df9.collect()
     assert(rows9.length === 1)

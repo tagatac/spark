@@ -52,8 +52,8 @@ import org.apache.spark.util.ShutdownHookManager
 import org.apache.spark.util.SparkExitCode._
 
 /**
- * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver
- * has dropped its support.
+ * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver has
+ * dropped its support.
  */
 private[hive] object SparkSQLCLIDriver extends Logging {
   private val prompt = "spark-sql"
@@ -65,9 +65,9 @@ private[hive] object SparkSQLCLIDriver extends Logging {
   installSignalHandler()
 
   /**
-   * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(),
-   * a signal handler will invoke this registered callback if a Ctrl+C signal is detected while
-   * a command is being processed by the current thread.
+   * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(), a
+   * signal handler will invoke this registered callback if a Ctrl+C signal is detected while a
+   * command is being processed by the current thread.
    */
   def installSignalHandler(): Unit = {
     HiveInterruptUtils.add(() => {
@@ -219,8 +219,10 @@ private[hive] object SparkSQLCLIDriver extends Logging {
       }
     } catch {
       case e: Exception =>
-        logWarning("Encountered an error while trying to initialize Hive's " +
-                     "history file. History will not be available during this session.", e)
+        logWarning(
+          "Encountered an error while trying to initialize Hive's " +
+            "history file. History will not be available during this session.",
+          e)
     }
 
     // add shutdown hook to flush the history to history file
@@ -231,8 +233,7 @@ private[hive] object SparkSQLCLIDriver extends Logging {
             h.flush()
           } catch {
             case e: IOException =>
-              logWarning(
-                log"Failed to write command history file: ${MDC(ERROR, e.getMessage)}")
+              logWarning(log"Failed to write command history file: ${MDC(ERROR, e.getMessage)}")
           }
         case _ =>
       }
@@ -243,17 +244,22 @@ private[hive] object SparkSQLCLIDriver extends Logging {
 
     def currentDB = {
       if (!SparkSQLEnv.sparkSession.sessionState.conf
-        .getConf(LEGACY_EMPTY_CURRENT_DB_IN_CLI)) {
+          .getConf(LEGACY_EMPTY_CURRENT_DB_IN_CLI)) {
         s" (${SparkSQLEnv.sparkSession.catalog.currentDatabase})"
       } else {
-        ReflectionUtils.invokeStatic(classOf[CliDriver], "getFormattedDb",
-          classOf[HiveConf] -> conf, classOf[CliSessionState] -> sessionState)
+        ReflectionUtils.invokeStatic(
+          classOf[CliDriver],
+          "getFormattedDb",
+          classOf[HiveConf] -> conf,
+          classOf[CliSessionState] -> sessionState)
       }
     }
 
     def promptWithCurrentDB: String = s"$prompt$currentDB"
     def continuedPromptWithDBSpaces: String = continuedPrompt + ReflectionUtils.invokeStatic(
-      classOf[CliDriver], "spacesForString", classOf[String] -> currentDB)
+      classOf[CliDriver],
+      "spacesForString",
+      classOf[String] -> currentDB)
 
     var currentPrompt = promptWithCurrentDB
     var line = reader.readLine(currentPrompt + "> ")
@@ -339,7 +345,10 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     // We stack a custom Completer on top of our ArgumentCompleter
     // to reverse this.
     val customCompleter: Completer = new Completer() {
-      override def complete(buffer: String, offset: Int, completions: JList[CharSequence]): Int = {
+      override def complete(
+          buffer: String,
+          offset: Int,
+          completions: JList[CharSequence]): Int = {
         val comp: JList[String] = completions.asInstanceOf[JList[String]]
         val ret = argCompleter.complete(buffer, offset, completions)
         // ConsoleReader will do the substitution if and only if there
@@ -366,9 +375,13 @@ private[hive] object SparkSQLCLIDriver extends Logging {
     }
 
     val propCompleter = new ArgumentCompleter(setCompleter, confCompleter) {
-      override def complete(buffer: String, offset: Int, completions: JList[CharSequence]): Int = {
+      override def complete(
+          buffer: String,
+          offset: Int,
+          completions: JList[CharSequence]): Int = {
         val ret = super.complete(buffer, offset, completions)
-        if (completions.size == 1) completions.set(0, completions.get(0).asInstanceOf[String].trim)
+        if (completions.size == 1)
+          completions.set(0, completions.get(0).asInstanceOf[String].trim)
         ret
       }
     }
@@ -398,8 +411,8 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
   def printMasterAndAppId(): Unit = {
     val master = SparkSQLEnv.sparkContext.master
     val appId = SparkSQLEnv.sparkContext.applicationId
-    SparkSQLEnv.sparkContext.uiWebUrl.foreach {
-      webUrl => console.printInfo(s"Spark Web UI available at $webUrl")
+    SparkSQLEnv.sparkContext.uiWebUrl.foreach { webUrl =>
+      console.printInfo(s"Spark Web UI available at $webUrl")
     }
     console.printInfo(s"Spark master: $master, Application Id: $appId")
   }
@@ -431,7 +444,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
         if (proc.isInstanceOf[Driver] || proc.isInstanceOf[SetProcessor] ||
           proc.isInstanceOf[AddResourceProcessor] || proc.isInstanceOf[ListResourceProcessor] ||
           proc.isInstanceOf[DeleteResourceProcessor] ||
-          proc.isInstanceOf[ResetProcessor] ) {
+          proc.isInstanceOf[ResetProcessor]) {
           val driver = new SparkSQLDriver
 
           driver.init()
@@ -482,7 +495,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
           val res = new JArrayList[String]()
 
           if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER) ||
-              SparkSQLEnv.sparkSession.sessionState.conf.cliPrintHeader) {
+            SparkSQLEnv.sparkSession.sessionState.conf.cliPrintHeader) {
             // Print the column names.
             Option(driver.getSchema.getFieldSchemas).foreach { fields =>
               out.println(fields.asScala.map(_.getName).mkString("\t"))
@@ -500,8 +513,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
             }
           } catch {
             case e: IOException =>
-              err.println(
-                s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
+              err.println(s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
                    |${Utils.stringifyException(e)}
                  """.stripMargin)
               ret = 1
@@ -556,27 +568,29 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
       // Remember all threads that were running at the time we started line processing.
       // Hook up the custom Ctrl+C handler while processing this line
       interruptSignal = new Signal("INT")
-      oldSignal = Signal.handle(interruptSignal, new SignalHandler() {
-        private var interruptRequested: Boolean = false
+      oldSignal = Signal.handle(
+        interruptSignal,
+        new SignalHandler() {
+          private var interruptRequested: Boolean = false
 
-        override def handle(signal: Signal): Unit = {
-          val initialRequest = !interruptRequested
-          interruptRequested = true
+          override def handle(signal: Signal): Unit = {
+            val initialRequest = !interruptRequested
+            interruptRequested = true
 
-          // Kill the VM on second ctrl+c
-          if (!initialRequest) {
-            console.printInfo("Exiting the JVM")
-            SparkSQLCLIDriver.exit(ERROR_COMMAND_NOT_FOUND)
+            // Kill the VM on second ctrl+c
+            if (!initialRequest) {
+              console.printInfo("Exiting the JVM")
+              SparkSQLCLIDriver.exit(ERROR_COMMAND_NOT_FOUND)
+            }
+
+            // Interrupt the CLI thread to stop the current statement and return
+            // to prompt
+            console.printInfo("Interrupting... Be patient, this might take some time.")
+            console.printInfo("Press Ctrl+C again to kill JVM")
+
+            HiveInterruptUtils.interrupt()
           }
-
-          // Interrupt the CLI thread to stop the current statement and return
-          // to prompt
-          console.printInfo("Interrupting... Be patient, this might take some time.")
-          console.printInfo("Press Ctrl+C again to kill JVM")
-
-          HiveInterruptUtils.interrupt()
-        }
-      })
+        })
     }
 
     try {
@@ -688,7 +702,7 @@ private[hive] class SparkSQLCLIDriver extends CliDriver with Logging {
         val hasNext = index + 1 < line.length
         if (insideSingleQuote || insideDoubleQuote) {
           // Ignores '/' in any case of quotes
-        } else if (insideBracketedComment && line.charAt(index - 1) == '*' ) {
+        } else if (insideBracketedComment && line.charAt(index - 1) == '*') {
           // Decrements `bracketedCommentLevel` at the beginning of the next loop
           leavingBracketedComment = true
         } else if (hasNext && line.charAt(index + 1) == '*') {

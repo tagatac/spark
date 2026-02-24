@@ -29,15 +29,17 @@ import org.apache.spark.sql.SparkSession
 /**
  * Spark's own GetCatalogsOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
  */
 private[hive] class SparkGetCatalogsOperation(
     val session: SparkSession,
     parentSession: HiveSession)
-  extends GetCatalogsOperation(parentSession)
-  with SparkOperation
-  with Logging {
+    extends GetCatalogsOperation(parentSession)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     val logMsg = "Listing catalogs"

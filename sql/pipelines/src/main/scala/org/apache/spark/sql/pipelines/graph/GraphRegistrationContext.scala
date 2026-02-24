@@ -24,8 +24,10 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 /**
  * A mutable context for registering tables, views, and flows in a dataflow graph.
  *
- * @param defaultCatalog The pipeline's default catalog.
- * @param defaultDatabase The pipeline's default schema.
+ * @param defaultCatalog
+ *   The pipeline's default catalog.
+ * @param defaultDatabase
+ *   The pipeline's default schema.
  */
 class GraphRegistrationContext(
     val defaultCatalog: String,
@@ -79,15 +81,13 @@ class GraphRegistrationContext(
       qualifiedTables = tables.toSeq,
       validatedViews = views.toSeq,
       qualifiedFlows = flows.toSeq,
-      validatedSinks = sinks.toSeq
-    )
+      validatedSinks = sinks.toSeq)
 
     new DataflowGraph(
       tables = tables.toSeq,
       views = views.toSeq,
       sinks = sinks.toSeq,
-      flows = flows.toSeq
-    )
+      flows = flows.toSeq)
   }
 
   private def assertNoDuplicates(
@@ -102,15 +102,11 @@ class GraphRegistrationContext(
           identifier = identifier,
           tables = qualifiedTables,
           sinks = validatedSinks,
-          views = validatedViews
-        )
+          views = validatedViews)
       }
 
     qualifiedFlows.foreach { flow =>
-      assertFlowIdentifierIsUnique(
-        flow = flow,
-        flows = qualifiedFlows
-      )
+      assertFlowIdentifierIsUnique(flow = flow, flows = qualifiedFlows)
     }
   }
 
@@ -121,9 +117,8 @@ class GraphRegistrationContext(
       views: Seq[View]): Unit = {
 
     // We need to check for duplicates in both tables and views, as they can have the same name.
-    val allOutputs = tables.map(t => t.identifier -> TableType) ++ views.map(
-        v => v.identifier -> ViewType
-      ) ++ sinks.map(s => s.identifier -> SinkType)
+    val allOutputs = tables.map(t => t.identifier -> TableType) ++ views.map(v =>
+      v.identifier -> ViewType) ++ sinks.map(s => s.identifier -> SinkType)
 
     val grouped = allOutputs.groupBy { case (id, _) => id }
 
@@ -136,9 +131,7 @@ class GraphRegistrationContext(
           messageParameters = Map(
             "outputName" -> identifier.quotedString,
             "outputType1" -> sortedTypes.head,
-            "outputType2" -> sortedTypes.last
-          )
-        )
+            "outputType2" -> sortedTypes.last))
       case _ => // No duplicates found.
     }
   }
@@ -146,10 +139,14 @@ class GraphRegistrationContext(
   /**
    * Throws an exception if the given flow's identifier is used by multiple flows.
    *
-   * @param flow The flow to check.
-   * @param datasetType The type of dataset the flow writes to.
-   * @param flows All flows in the graph.
-   * @throws AnalysisException If the flow's identifier is used by multiple flows.
+   * @param flow
+   *   The flow to check.
+   * @param datasetType
+   *   The type of dataset the flow writes to.
+   * @param flows
+   *   All flows in the graph.
+   * @throws AnalysisException
+   *   If the flow's identifier is used by multiple flows.
    */
   private def assertFlowIdentifierIsUnique(
       flow: UnresolvedFlow,
@@ -166,11 +163,8 @@ class GraphRegistrationContext(
             "flowName" -> flow.identifier.unquotedString,
             "datasetNames" -> Set(
               flow.destinationIdentifier.quotedString,
-              duplicateFlow.destinationIdentifier.quotedString
-            ).mkString(",")
-          )
-        )
-    }
+              duplicateFlow.destinationIdentifier.quotedString).mkString(",")))
+      }
   }
 }
 

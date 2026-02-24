@@ -116,15 +116,17 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     val prefix = "spark.prefix."
     val conf = new SparkConf(false)
     conf.set("spark.prefix.main.suffix", "v1")
-    assert(conf.getAllWithPrefix(prefix).toSet ===
-      Set(("main.suffix", "v1")))
+    assert(
+      conf.getAllWithPrefix(prefix).toSet ===
+        Set(("main.suffix", "v1")))
 
     conf.set("spark.prefix.main2.suffix", "v2")
     conf.set("spark.prefix.main3.extra1.suffix", "v3")
     conf.set("spark.notMatching.main4", "v4")
 
-    assert(conf.getAllWithPrefix(prefix).toSet ===
-      Set(("main.suffix", "v1"), ("main2.suffix", "v2"), ("main3.extra1.suffix", "v3")))
+    assert(
+      conf.getAllWithPrefix(prefix).toSet ===
+        Set(("main.suffix", "v1"), ("main2.suffix", "v2"), ("main3.extra1.suffix", "v3")))
   }
 
   test("more flexible getAllWithPrefix") {
@@ -136,15 +138,17 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
       val keyWithoutPrefix = k.substring(prefix.length)
       newPrefix + keyWithoutPrefix
     }
-    assert(conf.getAllWithPrefix(prefix, f).toSet ===
-      Set(("spark.hadoop.fs.s3a.config1", "v1")))
+    assert(
+      conf.getAllWithPrefix(prefix, f).toSet ===
+        Set(("spark.hadoop.fs.s3a.config1", "v1")))
 
     conf.set("spark.fs.s3a.config1.suffix", "v2")
     conf.set("spark.fs.s3a.config1.extra.suffix", "v3")
     conf.set("spark.notMatching.main4", "v4")
 
-    assert(conf.getAllWithPrefix(prefix).toSet ===
-      Set(("config1", "v1"), ("config1.suffix", "v2"), ("config1.extra.suffix", "v3")))
+    assert(
+      conf.getAllWithPrefix(prefix).toSet ===
+        Set(("config1", "v1"), ("config1.suffix", "v2"), ("config1.extra.suffix", "v3")))
   }
 
   test("creating SparkContext without master and app name") {
@@ -195,7 +199,9 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     val executor = Executors.newSingleThreadScheduledExecutor()
     executor.scheduleAtFixedRate(
       () => System.setProperty("spark.5425." + Random.nextInt(), Random.nextInt().toString),
-      0, 1, TimeUnit.MILLISECONDS)
+      0,
+      1,
+      TimeUnit.MILLISECONDS)
 
     try {
       val t0 = System.nanoTime()
@@ -215,16 +221,19 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     val conf = new SparkConf().set(KRYO_REGISTRATION_REQUIRED, true)
 
     conf.registerKryoClasses(Array(classOf[Class1], classOf[Class2]))
-    assert(conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
-      Seq(classOf[Class1].getName, classOf[Class2].getName).toSet)
+    assert(
+      conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
+        Seq(classOf[Class1].getName, classOf[Class2].getName).toSet)
 
     conf.registerKryoClasses(Array(classOf[Class3]))
-    assert(conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
-      Seq(classOf[Class1].getName, classOf[Class2].getName, classOf[Class3].getName).toSet)
+    assert(
+      conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
+        Seq(classOf[Class1].getName, classOf[Class2].getName, classOf[Class3].getName).toSet)
 
     conf.registerKryoClasses(Array(classOf[Class2]))
-    assert(conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
-      Seq(classOf[Class1].getName, classOf[Class2].getName, classOf[Class3].getName).toSet)
+    assert(
+      conf.get(KRYO_CLASSES_TO_REGISTER).toSet ===
+        Seq(classOf[Class1].getName, classOf[Class2].getName, classOf[Class3].getName).toSet)
 
     // Kryo doesn't expose a way to discover registered classes, but at least make sure this doesn't
     // blow up.
@@ -380,8 +389,9 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
       .set("spark.hadoop.hive.server2.keystore.password", "1234")
       .set("spark.hadoop.javax.jdo.option.ConnectionPassword", "1234")
       .set("spark.regular.property", "regular_value")
-    assert(conf.toDebugString ==
-      s"""
+    assert(
+      conf.toDebugString ==
+        s"""
         |dummy.password=${Utils.REDACTION_REPLACEMENT_TEXT}
         |spark.hadoop.hive.server2.keystore.password=${Utils.REDACTION_REPLACEMENT_TEXT}
         |spark.hadoop.javax.jdo.option.ConnectionPassword=${Utils.REDACTION_REPLACEMENT_TEXT}
@@ -403,7 +413,7 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
   }
 
   val defaultIllegalValue = "SomeIllegalValue"
-  val illegalValueTests : Map[String, (SparkConf, String) => Any] = Map(
+  val illegalValueTests: Map[String, (SparkConf, String) => Any] = Map(
     "getTimeAsSeconds" -> (_.getTimeAsSeconds(_)),
     "getTimeAsSeconds with default" -> (_.getTimeAsSeconds(_, defaultIllegalValue)),
     "getTimeAsMs" -> (_.getTimeAsMs(_)),
@@ -420,8 +430,7 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     "getInt" -> (_.getInt(_, 0)),
     "getLong" -> (_.getLong(_, 0L)),
     "getDouble" -> (_.getDouble(_, 0.0)),
-    "getBoolean" -> (_.getBoolean(_, false))
-  )
+    "getBoolean" -> (_.getBoolean(_, false)))
 
   illegalValueTests.foreach { case (name, getValue) =>
     test(s"SPARK-24337: $name throws an useful error message with key name") {
@@ -441,7 +450,8 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     conf.set(TASK_FPGA_ID.amountConf, "1")
     var taskResourceRequirement =
       parseResourceRequirements(conf, SPARK_TASK_PREFIX)
-        .map(req => (req.resourceName, req.amount)).toMap
+        .map(req => (req.resourceName, req.amount))
+        .toMap
 
     assert(taskResourceRequirement.size == 2)
     assert(taskResourceRequirement(GPU) == 2)
@@ -450,9 +460,9 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     conf.remove(TASK_FPGA_ID.amountConf)
     // Ignore invalid prefix
     conf.set(new ResourceID("spark.invalid.prefix", FPGA).amountConf, "1")
-    taskResourceRequirement =
-      parseResourceRequirements(conf, SPARK_TASK_PREFIX)
-        .map(req => (req.resourceName, req.amount)).toMap
+    taskResourceRequirement = parseResourceRequirements(conf, SPARK_TASK_PREFIX)
+      .map(req => (req.resourceName, req.amount))
+      .toMap
     assert(taskResourceRequirement.size == 1)
     assert(taskResourceRequirement.get(FPGA).isEmpty)
   }
@@ -463,61 +473,75 @@ class SparkConfSuite extends SparkFunSuite with LocalSparkContext with ResetSyst
     conf.set(TASK_FPGA_ID.amountConf, "0")
     val taskResourceRequirement =
       parseResourceRequirements(conf, SPARK_TASK_PREFIX)
-        .map(req => (req.resourceName, req.amount)).toMap
+        .map(req => (req.resourceName, req.amount))
+        .toMap
 
     assert(taskResourceRequirement.size == 1)
     assert(taskResourceRequirement(GPU) == 2)
   }
 
-
   test("Ensure that we can configure fractional resources for a task") {
     val ratioSlots = Seq(
-      (0.10, 10), (0.11, 9), (0.125, 8), (0.14, 7), (0.16, 6),
-      (0.20, 5), (0.25, 4), (0.33, 3), (0.5, 2), (1.0, 1),
+      (0.10, 10),
+      (0.11, 9),
+      (0.125, 8),
+      (0.14, 7),
+      (0.16, 6),
+      (0.20, 5),
+      (0.25, 4),
+      (0.33, 3),
+      (0.5, 2),
+      (1.0, 1),
       // if the amount is fractional greater than 0.5 and less than 1.0 we throw
-      (0.51, 1), (0.9, 1),
+      (0.51, 1),
+      (0.9, 1),
       // if the amount is greater than one is not whole, we throw
-      (1.5, 0), (2.5, 0),
+      (1.5, 0),
+      (2.5, 0),
       // it's ok if the amount is whole, and greater than 1
       // parts are 1 because we get a whole part of a resource
-      (2.0, 1), (3.0, 1), (4.0, 1))
-    ratioSlots.foreach {
-      case (ratio, slots) =>
-        val conf = new SparkConf()
-        conf.set(TASK_GPU_ID.amountConf, ratio.toString)
-        if (ratio > 1.0 && ratio % 1 != 0) {
-          assertThrows[SparkException] {
-            parseResourceRequirements(conf, SPARK_TASK_PREFIX)
-          }
-        } else {
-          val reqs = parseResourceRequirements(conf, SPARK_TASK_PREFIX)
-          assert(reqs.size == 1)
-          assert(reqs.head.amount == Math.ceil(ratio).toInt)
-          assert(reqs.head.numParts == slots)
+      (2.0, 1),
+      (3.0, 1),
+      (4.0, 1))
+    ratioSlots.foreach { case (ratio, slots) =>
+      val conf = new SparkConf()
+      conf.set(TASK_GPU_ID.amountConf, ratio.toString)
+      if (ratio > 1.0 && ratio % 1 != 0) {
+        assertThrows[SparkException] {
+          parseResourceRequirements(conf, SPARK_TASK_PREFIX)
         }
+      } else {
+        val reqs = parseResourceRequirements(conf, SPARK_TASK_PREFIX)
+        assert(reqs.size == 1)
+        assert(reqs.head.amount == Math.ceil(ratio).toInt)
+        assert(reqs.head.numParts == slots)
+      }
     }
   }
 
   test("Non-task resources are never fractional") {
     val ratioSlots = Seq(
       // if the amount provided is not a whole number, we throw
-      (0.25, 0), (0.5, 0), (1.5, 0),
+      (0.25, 0),
+      (0.5, 0),
+      (1.5, 0),
       // otherwise we are successful at parsing resources
-      (1.0, 1), (2.0, 2), (3.0, 3))
-    ratioSlots.foreach {
-      case (ratio, slots) =>
-        val conf = new SparkConf()
-        conf.set(EXECUTOR_GPU_ID.amountConf, ratio.toString)
-        if (ratio % 1 != 0) {
-          assertThrows[SparkException] {
-            parseResourceRequirements(conf, SPARK_EXECUTOR_PREFIX)
-          }
-        } else {
-          val reqs = parseResourceRequirements(conf, SPARK_EXECUTOR_PREFIX)
-          assert(reqs.size == 1)
-          assert(reqs.head.amount == slots)
-          assert(reqs.head.numParts == 1)
+      (1.0, 1),
+      (2.0, 2),
+      (3.0, 3))
+    ratioSlots.foreach { case (ratio, slots) =>
+      val conf = new SparkConf()
+      conf.set(EXECUTOR_GPU_ID.amountConf, ratio.toString)
+      if (ratio % 1 != 0) {
+        assertThrows[SparkException] {
+          parseResourceRequirements(conf, SPARK_EXECUTOR_PREFIX)
         }
+      } else {
+        val reqs = parseResourceRequirements(conf, SPARK_EXECUTOR_PREFIX)
+        assert(reqs.size == 1)
+        assert(reqs.head.amount == slots)
+        assert(reqs.head.numParts == 1)
+      }
     }
   }
 

@@ -46,15 +46,15 @@ object Utils extends Logging {
 
   def tryWithResource[R <: Closeable, T](createResource: => R)(f: R => T): T = {
     val resource = createResource
-    try f.apply(resource) finally resource.close()
+    try f.apply(resource)
+    finally resource.close()
   }
 
-  def executeCommand(cmd: String*)(
-      implicit podName: String,
+  def executeCommand(cmd: String*)(implicit
+      podName: String,
       kubernetesTestComponents: KubernetesTestComponents): String = {
     val out = new ByteArrayOutputStream()
-    val pod = kubernetesTestComponents
-      .kubernetesClient
+    val pod = kubernetesTestComponents.kubernetesClient
       .pods()
       .inNamespace(kubernetesTestComponents.namespace)
       .withName(podName)
@@ -71,8 +71,7 @@ object Utils extends Logging {
         closeLatch.countDown()
       }
 
-      override def onFailure(e: Throwable, r: Response): Unit = {
-      }
+      override def onFailure(e: Throwable, r: Response): Unit = {}
 
       def waitForInputStreamToConnect(): Unit = {
         openLatch.await()
@@ -101,20 +100,21 @@ object Utils extends Logging {
   }
 
   def createTempFile(contents: String, hostPath: String): String = {
-    val filename = try {
-      val f = File.createTempFile("tmp", ".txt", new File(hostPath))
-      f.deleteOnExit()
-      new PrintWriter(f) {
-        try {
-          write(contents)
-        } finally {
-          close()
+    val filename =
+      try {
+        val f = File.createTempFile("tmp", ".txt", new File(hostPath))
+        f.deleteOnExit()
+        new PrintWriter(f) {
+          try {
+            write(contents)
+          } finally {
+            close()
+          }
         }
+        f.getName
+      } catch {
+        case e: Exception => e.printStackTrace(); throw e;
       }
-      f.getName
-    } catch {
-      case e: Exception => e.printStackTrace(); throw e;
-    }
     filename
   }
 
@@ -122,7 +122,7 @@ object Utils extends Logging {
     val filePathsFound = Files
       .walk(sparkHomeDir)
       .filter(Files.isRegularFile(_))
-      .filter((f: Path) => {f.toFile.getName == fileName})
+      .filter((f: Path) => { f.toFile.getName == fileName })
     // we should not have more than one here under current test build dir
     // we only need one though
     val filePath = filePathsFound
@@ -133,8 +133,10 @@ object Utils extends Logging {
       .headOption
     filePath match {
       case Some(file) => file
-      case _ => throw new SparkException(s"No valid $fileName file was found " +
-        s"under spark home test dir ${sparkHomeDir.toAbsolutePath}!")
+      case _ =>
+        throw new SparkException(
+          s"No valid $fileName file was found " +
+            s"under spark home test dir ${sparkHomeDir.toAbsolutePath}!")
     }
   }
 
@@ -153,23 +155,19 @@ object Utils extends Logging {
   def createTarGzFile(inFile: String, outFile: String): Unit = {
     val oFile = new File(outFile)
     val fileToTarGz = new File(inFile)
-    Utils.tryWithResource(
-      new FileInputStream(fileToTarGz)
-    ) { fis =>
+    Utils.tryWithResource(new FileInputStream(fileToTarGz)) { fis =>
       Utils.tryWithResource(
-        new TarArchiveOutputStream(
-          new GzipCompressorOutputStream(
-            new FileOutputStream(oFile)))
-      ) { tOut =>
-        val tarEntry = new TarArchiveEntry(fileToTarGz, fileToTarGz.getName)
-        // Each entry does not keep the file permission from the input file.
-        // Setting permissions in the input file do not work. Just simply set
-        // to 777.
-        tarEntry.setMode(0x81ff)
-        tOut.putArchiveEntry(tarEntry)
-        fis.transferTo(tOut)
-        tOut.closeArchiveEntry()
-        tOut.finish()
+        new TarArchiveOutputStream(new GzipCompressorOutputStream(new FileOutputStream(oFile)))) {
+        tOut =>
+          val tarEntry = new TarArchiveEntry(fileToTarGz, fileToTarGz.getName)
+          // Each entry does not keep the file permission from the input file.
+          // Setting permissions in the input file do not work. Just simply set
+          // to 777.
+          tarEntry.setMode(0x81ff)
+          tOut.putArchiveEntry(tarEntry)
+          fis.transferTo(tOut)
+          tOut.closeArchiveEntry()
+          tOut.finish()
       }
     }
     oFile.deleteOnExit()

@@ -31,21 +31,21 @@ import org.apache.spark.ui.SparkUI
  *
  * Loaded UIs are valid once created, and can be invalidated once the history provider detects
  * changes in the underlying app data (e.g. an updated event log). Invalidating a UI does not
- * unload it; it just signals the [[ApplicationCache]] that the UI should not be used to serve
- * new requests.
+ * unload it; it just signals the [[ApplicationCache]] that the UI should not be used to serve new
+ * requests.
  *
  * Reloading of the UI with new data requires collaboration between the cache and the provider;
  * the provider invalidates the UI when it detects updated information, and the cache invalidates
- * the cache entry when it detects the UI has been invalidated. That will trigger a callback
- * on the provider to finally clean up any UI state. The cache should hold read locks when
- * using the UI, and the provider should grab the UI's write lock before making destructive
- * operations.
+ * the cache entry when it detects the UI has been invalidated. That will trigger a callback on
+ * the provider to finally clean up any UI state. The cache should hold read locks when using the
+ * UI, and the provider should grab the UI's write lock before making destructive operations.
  *
  * Note that all this means that an invalidated UI will still stay in-memory, and any resources it
  * references will remain open, until the cache either sees that it's invalidated, or evicts it to
  * make room for another UI.
  *
- * @param ui Spark UI
+ * @param ui
+ *   Spark UI
  */
 private[history] case class LoadedAppUI(ui: SparkUI) {
 
@@ -74,10 +74,11 @@ private[history] abstract class ApplicationHistoryProvider {
    * can be expected to list additional known applications once the processing of these
    * application event logs completes.
    *
-   * A History Provider that does not have a notion of count of event logs that may be pending
-   * for processing need not override this method.
+   * A History Provider that does not have a notion of count of event logs that may be pending for
+   * processing need not override this method.
    *
-   * @return Count of application event logs that are currently under process
+   * @return
+   *   Count of application event logs that are currently under process
    */
   def getEventLogsUnderProcess(): Int = {
     0
@@ -86,7 +87,8 @@ private[history] abstract class ApplicationHistoryProvider {
   /**
    * Returns the time the history provider last updated the application history information
    *
-   * @return 0 if this is undefined or unsupported, otherwise the last updated time in millis
+   * @return
+   *   0 if this is undefined or unsupported, otherwise the last updated time in millis
    */
   def getLastUpdatedTime(): Long = {
     0
@@ -95,74 +97,86 @@ private[history] abstract class ApplicationHistoryProvider {
   /**
    * Returns a list of applications available for the history server to show.
    *
-   * @return List of all know applications.
+   * @return
+   *   List of all know applications.
    */
   def getListing(): Iterator[ApplicationInfo]
 
   /**
    * Returns a list of applications available for the history server to show.
    *
-   * @param max The maximum number of applications to return
-   * @param predicate A function that filters the applications to be returned
-   * @return An iterator of matching applications up to the specified maximum
+   * @param max
+   *   The maximum number of applications to return
+   * @param predicate
+   *   A function that filters the applications to be returned
+   * @return
+   *   An iterator of matching applications up to the specified maximum
    */
   def getListing(max: Int)(predicate: ApplicationInfo => Boolean): Iterator[ApplicationInfo]
 
   /**
    * Returns the Spark UI for a specific application.
    *
-   * @param appId The application ID.
-   * @param attemptId The application attempt ID (or None if there is no attempt ID).
-   * @return a [[LoadedAppUI]] instance containing the application's UI and any state information
-   *         for update probes, or `None` if the application/attempt is not found.
+   * @param appId
+   *   The application ID.
+   * @param attemptId
+   *   The application attempt ID (or None if there is no attempt ID).
+   * @return
+   *   a [[LoadedAppUI]] instance containing the application's UI and any state information for
+   *   update probes, or `None` if the application/attempt is not found.
    */
   def getAppUI(appId: String, attemptId: Option[String]): Option[LoadedAppUI]
 
   /**
    * Called when the server is shutting down.
    */
-  def stop(): Unit = { }
+  def stop(): Unit = {}
 
   /**
    * Called when the server is starting up. Implement this function to init the provider and start
    * background threads. With this function we can start provider later after it is created.
    */
-  def start(): Unit = { }
+  def start(): Unit = {}
 
   /**
    * Returns configuration data to be shown in the History Server home page.
    *
-   * @return A map with the configuration data. Data is show in the order returned by the map.
+   * @return
+   *   A map with the configuration data. Data is show in the order returned by the map.
    */
   def getConfig(): Map[String, String] = Map()
 
   /**
    * Writes out the event logs to the output stream provided. The logs will be compressed into a
    * single zip file and written out.
-   * @throws SparkException if the logs for the app id cannot be found.
+   * @throws SparkException
+   *   if the logs for the app id cannot be found.
    */
   @throws(classOf[SparkException])
   def writeEventLogs(appId: String, attemptId: Option[String], zipStream: ZipOutputStream): Unit
 
   /**
-   * @return the [[ApplicationInfo]] for the appId if it exists.
+   * @return
+   *   the [[ApplicationInfo]] for the appId if it exists.
    */
   def getApplicationInfo(appId: String): Option[ApplicationInfo]
 
   /**
-   * @return html text to display when the application list is empty
+   * @return
+   *   html text to display when the application list is empty
    */
   def getEmptyListingHtml(): Seq[Node] = Seq.empty
 
   /**
    * Called when an application UI is unloaded from the history server.
    */
-  def onUIDetached(appId: String, attemptId: Option[String], ui: SparkUI): Unit = { }
+  def onUIDetached(appId: String, attemptId: Option[String], ui: SparkUI): Unit = {}
 
   /**
    * Returns true if the given user has permission to view the UI of the given attempt.
    *
-   * @throws NoSuchElementException if the given attempt doesn't exist
+   * @throws NoSuchElementException
+   *   if the given attempt doesn't exist
    */
   def checkUIViewPermissions(appId: String, attemptId: Option[String], user: String): Boolean
 

@@ -24,8 +24,8 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.streaming.StreamTest
 
 /**
- * Test suite for streaming source naming and validation.
- * Tests cover the naming API, validation rules, and resolution pipeline.
+ * Test suite for streaming source naming and validation. Tests cover the naming API, validation
+ * rules, and resolution pipeline.
  */
 class StreamingQueryEvolutionSuite extends StreamTest {
 
@@ -116,12 +116,14 @@ class StreamingQueryEvolutionSuite extends StreamTest {
 
       val df2 = spark.readStream
         .format("org.apache.spark.sql.streaming.test")
-        .name("duplicate_name")  // Same name - should fail
+        .name("duplicate_name") // Same name - should fail
         .load()
 
       checkError(
         exception = intercept[AnalysisException] {
-          df1.union(df2).writeStream
+          df1
+            .union(df2)
+            .writeStream
             .format("org.apache.spark.sql.streaming.test")
             .option("checkpointLocation", checkpointDir.getCanonicalPath)
             .start()

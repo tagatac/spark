@@ -19,6 +19,7 @@ package org.apache.spark.util
 import org.apache.spark.network.util.JavaUtils
 
 private[spark] trait SparkSystemUtils {
+
   /**
    * The `os.name` system property.
    */

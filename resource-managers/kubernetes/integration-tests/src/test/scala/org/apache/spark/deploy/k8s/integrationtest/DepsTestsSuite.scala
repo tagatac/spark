@@ -52,37 +52,32 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
   val REGION = "us-west-2"
 
   private def getMinioContainer(): Container = {
-    val envVars = Map (
-      "MINIO_ACCESS_KEY" -> ACCESS_KEY,
-      "MINIO_SECRET_KEY" -> SECRET_KEY
-    ).map( envV =>
-      new EnvVarBuilder()
-        .withName(envV._1)
-        .withValue(envV._2)
-        .build()
-    ).toArray
+    val envVars = Map("MINIO_ACCESS_KEY" -> ACCESS_KEY, "MINIO_SECRET_KEY" -> SECRET_KEY)
+      .map(envV =>
+        new EnvVarBuilder()
+          .withName(envV._1)
+          .withValue(envV._2)
+          .build())
+      .toArray
 
-    val resources = Map(
-      "cpu" -> new Quantity("250m"),
-      "memory" -> new Quantity("512M")
-    ).asJava
+    val resources = Map("cpu" -> new Quantity("250m"), "memory" -> new Quantity("512M")).asJava
 
     new ContainerBuilder()
       .withImage("minio/minio:latest")
       .withImagePullPolicy("Always")
       .withName(cName)
       .withArgs("server", "/data")
-      .withPorts(new ContainerPortBuilder()
+      .withPorts(
+        new ContainerPortBuilder()
           .withName(svcName)
           .withProtocol("TCP")
           .withContainerPort(9000)
-        .build()
-      )
-      .withResources(new ResourceRequirementsBuilder()
-        .withLimits(resources)
-        .withRequests(resources)
-        .build()
-      )
+          .build())
+      .withResources(
+        new ResourceRequirementsBuilder()
+          .withLimits(resources)
+          .withRequests(resources)
+          .build())
       .withEnv(envVars: _*)
       .build()
   }
@@ -91,64 +86,65 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
     val labels = Map("app" -> "minio").asJava
     val minioService = new ServiceBuilder()
       .withNewMetadata()
-        .withName(svcName)
+      .withName(svcName)
       .withLabels(labels)
       .endMetadata()
       .withNewSpec()
-        .withPorts(new ServicePortBuilder()
+      .withPorts(
+        new ServicePortBuilder()
           .withName("https")
           .withPort(9000)
           .withProtocol("TCP")
           .withTargetPort(new IntOrString(9000))
-          .build()
-        )
-        .withType("NodePort")
-        .withSelector(labels)
+          .build())
+      .withType("NodePort")
+      .withSelector(labels)
       .endSpec()
       .build()
 
     val minioStatefulSet = new StatefulSetBuilder()
       .withNewMetadata()
-        .withName(cName)
-        .withLabels(labels)
+      .withName(cName)
+      .withLabels(labels)
       .endMetadata()
       .withNewSpec()
-        .withReplicas(1)
-        .withNewSelector()
-          .withMatchLabels(Map("app" -> "minio").asJava)
-        .endSelector()
-        .withServiceName(cName)
-        .withNewTemplate()
-          .withNewMetadata()
-            .withName(cName)
-            .withLabels(labels)
-           .endMetadata()
-          .withNewSpec()
-            .withContainers(getMinioContainer())
-          .endSpec()
-        .endTemplate()
+      .withReplicas(1)
+      .withNewSelector()
+      .withMatchLabels(Map("app" -> "minio").asJava)
+      .endSelector()
+      .withServiceName(cName)
+      .withNewTemplate()
+      .withNewMetadata()
+      .withName(cName)
+      .withLabels(labels)
+      .endMetadata()
+      .withNewSpec()
+      .withContainers(getMinioContainer())
+      .endSpec()
+      .endTemplate()
       .endSpec()
       .build()
 
     // try until the service from a previous test is deleted
-    Eventually.eventually(TIMEOUT, INTERVAL) (kubernetesTestComponents
-      .kubernetesClient
-      .services()
-      .inNamespace(kubernetesTestComponents.namespace)
-      .resource(minioService).create())
+    Eventually.eventually(TIMEOUT, INTERVAL)(
+      kubernetesTestComponents.kubernetesClient
+        .services()
+        .inNamespace(kubernetesTestComponents.namespace)
+        .resource(minioService)
+        .create())
 
     // try until the stateful set of a previous test is deleted
-    Eventually.eventually(TIMEOUT, INTERVAL) (kubernetesTestComponents
-      .kubernetesClient
-      .apps()
-      .statefulSets()
-      .inNamespace(kubernetesTestComponents.namespace)
-      .resource(minioStatefulSet).create())
+    Eventually.eventually(TIMEOUT, INTERVAL)(
+      kubernetesTestComponents.kubernetesClient
+        .apps()
+        .statefulSets()
+        .inNamespace(kubernetesTestComponents.namespace)
+        .resource(minioStatefulSet)
+        .create())
   }
 
   private def deleteMinioStorage(): Unit = {
-    kubernetesTestComponents
-      .kubernetesClient
+    kubernetesTestComponents.kubernetesClient
       .apps()
       .statefulSets()
       .inNamespace(kubernetesTestComponents.namespace)
@@ -156,8 +152,7 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
       .withGracePeriod(0)
       .delete()
 
-    kubernetesTestComponents
-      .kubernetesClient
+    kubernetesTestComponents.kubernetesClient
       .services()
       .inNamespace(kubernetesTestComponents.namespace)
       .withName(svcName)
@@ -170,7 +165,8 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
       val fileName = Utils.createTempFile(FILE_CONTENTS, HOST_PATH)
       sparkAppConf.set("spark.files", s"$HOST_PATH/$fileName")
       val examplesJar = Utils.getTestFileAbsolutePath(getExamplesJarName(), sparkHomeDir)
-      runSparkRemoteCheckAndVerifyCompletion(appResource = examplesJar,
+      runSparkRemoteCheckAndVerifyCompletion(
+        appResource = examplesJar,
         appArgs = Array(fileName),
         timeout = Option(DEPS_TIMEOUT))
     })
@@ -207,8 +203,7 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
         expectedExecutorLogOnCompletion = Seq(localFileName, remoteFileName),
         driverPodChecker = doBasicDriverPodCheck,
         executorPodChecker = doBasicExecutorPodCheck,
-        isJVM = true
-      )
+        isJVM = true)
     })
   }
 
@@ -218,24 +213,26 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
       Utils.createTarGzFile(s"$HOST_PATH/$fileName", s"$HOST_PATH/$fileName.tar.gz")
       sparkAppConf.set(ARCHIVES.key, s"$HOST_PATH/$fileName.tar.gz#test_tar_gz")
       val examplesJar = Utils.getTestFileAbsolutePath(getExamplesJarName(), sparkHomeDir)
-      runSparkRemoteCheckAndVerifyCompletion(appResource = examplesJar,
+      runSparkRemoteCheckAndVerifyCompletion(
+        appResource = examplesJar,
         appArgs = Array(s"test_tar_gz/$fileName"),
         timeout = Option(DEPS_TIMEOUT))
     }
   }
 
-  test(
-    "SPARK-33748: Launcher python client respecting PYSPARK_PYTHON", k8sTestTag, MinikubeTag) {
+  test("SPARK-33748: Launcher python client respecting PYSPARK_PYTHON", k8sTestTag, MinikubeTag) {
     val fileName = Utils.createTempFile(
       """
         |#!/usr/bin/env bash
         |export IS_CUSTOM_PYTHON=1
         |python3 "$@"
-      """.stripMargin, HOST_PATH)
+      """.stripMargin,
+      HOST_PATH)
     Utils.createTarGzFile(s"$HOST_PATH/$fileName", s"$HOST_PATH/$fileName.tgz")
     sparkAppConf.set(ARCHIVES.key, s"$HOST_PATH/$fileName.tgz#test_env")
     val pySparkFiles = Utils.getTestFileAbsolutePath("python_executable_check.py", sparkHomeDir)
-    testPython(pySparkFiles,
+    testPython(
+      pySparkFiles,
       Seq(
         s"PYSPARK_PYTHON: ./test_env/$fileName",
         s"PYSPARK_DRIVER_PYTHON: ./test_env/$fileName",
@@ -246,19 +243,23 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
 
   test(
     "SPARK-33748: Launcher python client respecting " +
-      s"${PYSPARK_PYTHON.key} and ${PYSPARK_DRIVER_PYTHON.key}", k8sTestTag, MinikubeTag) {
+      s"${PYSPARK_PYTHON.key} and ${PYSPARK_DRIVER_PYTHON.key}",
+    k8sTestTag,
+    MinikubeTag) {
     val fileName = Utils.createTempFile(
       """
         |#!/usr/bin/env bash
         |export IS_CUSTOM_PYTHON=1
         |python3 "$@"
-      """.stripMargin, HOST_PATH)
+      """.stripMargin,
+      HOST_PATH)
     Utils.createTarGzFile(s"$HOST_PATH/$fileName", s"$HOST_PATH/$fileName.tgz")
     sparkAppConf.set(ARCHIVES.key, s"$HOST_PATH/$fileName.tgz#test_env")
     sparkAppConf.set(PYSPARK_PYTHON.key, s"./test_env/$fileName")
     sparkAppConf.set(PYSPARK_DRIVER_PYTHON.key, "python3")
     val pySparkFiles = Utils.getTestFileAbsolutePath("python_executable_check.py", sparkHomeDir)
-    testPython(pySparkFiles,
+    testPython(
+      pySparkFiles,
       Seq(
         s"PYSPARK_PYTHON: ./test_env/$fileName",
         "PYSPARK_DRIVER_PYTHON: python3",
@@ -309,7 +310,8 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
       accessKey: String = ACCESS_KEY,
       secretKey: String = SECRET_KEY): S3Client = {
     val credentials = AwsBasicCredentials.create(accessKey, secretKey)
-    val s3client = S3Client.builder()
+    val s3client = S3Client
+      .builder()
       .credentialsProvider(StaticCredentialsProvider.create(credentials))
       .endpointOverride(URI.create(endPoint))
       .region(Region.of(REGION))
@@ -321,7 +323,8 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
     Eventually.eventually(TIMEOUT, INTERVAL) {
       try {
         val s3client = getS3Client(endPoint, accessKey, secretKey)
-        val createBucketRequest = CreateBucketRequest.builder()
+        val createBucketRequest = CreateBucketRequest
+          .builder()
           .bucket(BUCKET)
           .build()
         s3client.createBucket(createBucketRequest)
@@ -340,7 +343,8 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
     Eventually.eventually(TIMEOUT, INTERVAL) {
       try {
         val s3client = getS3Client(endPoint)
-        val putObjectRequest = PutObjectRequest.builder()
+        val putObjectRequest = PutObjectRequest
+          .builder()
           .bucket(BUCKET)
           .key(objectKey)
           .build()
@@ -357,7 +361,10 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
     Eventually.eventually(TIMEOUT, INTERVAL) {
       // ns is always available either random or provided by the user
       val rawUrl = Minikube.minikubeServiceAction(
-        serviceName, "-n", kubernetesTestComponents.namespace, "--url")
+        serviceName,
+        "-n",
+        kubernetesTestComponents.namespace,
+        "--url")
       val url = rawUrl match {
         case fuzzyUrlMatcher(junk, url, extra) =>
           logDebug(s"Service url matched junk ${junk} - url ${url} - extra ${extra}")
@@ -370,7 +377,7 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
     }
   }
 
-  private def getServiceHostAndPort(minioUrlStr : String) : (String, Int) = {
+  private def getServiceHostAndPort(minioUrlStr: String): (String, Int) = {
     val minioUrl = new URI(minioUrlStr).toURL
     (minioUrl.getHost, minioUrl.getPort)
   }
@@ -380,7 +387,8 @@ private[spark] trait DepsTestsSuite { k8sSuite: KubernetesSuite =>
       minioUrlStr: String): Unit = {
     val (minioHost, minioPort) = getServiceHostAndPort(minioUrlStr)
     val packages = s"org.apache.hadoop:hadoop-aws:${VersionInfo.getVersion}"
-    conf.set("spark.hadoop.fs.s3a.access.key", ACCESS_KEY)
+    conf
+      .set("spark.hadoop.fs.s3a.access.key", ACCESS_KEY)
       .set("spark.hadoop.fs.s3a.secret.key", SECRET_KEY)
       .set("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
       .set("spark.hadoop.fs.s3a.endpoint", s"$minioHost:$minioPort")

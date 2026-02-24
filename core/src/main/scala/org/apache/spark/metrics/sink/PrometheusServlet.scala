@@ -28,19 +28,18 @@ import org.apache.spark.annotation.{DeveloperApi, Since, Unstable}
 import org.apache.spark.ui.JettyUtils._
 
 /**
- * :: DeveloperApi ::
- * This exposes the metrics of the given registry with Prometheus format.
+ * :: DeveloperApi :: This exposes the metrics of the given registry with Prometheus format.
  *
- * The output is consistent with /metrics/json result in terms of item ordering
- * and with the previous result of Spark JMX Sink + Prometheus JMX Converter combination
- * in terms of key string format.
+ * The output is consistent with /metrics/json result in terms of item ordering and with the
+ * previous result of Spark JMX Sink + Prometheus JMX Converter combination in terms of key string
+ * format.
  *
  * This is used by Spark MetricsSystem internally and Spark K8s operator.
  */
 @Unstable
 @DeveloperApi
-private[spark] class PrometheusServlet(
-    val property: Properties, val registry: MetricRegistry) extends Sink {
+private[spark] class PrometheusServlet(val property: Properties, val registry: MetricRegistry)
+    extends Sink {
 
   val SERVLET_KEY_PATH = "path"
 
@@ -48,9 +47,10 @@ private[spark] class PrometheusServlet(
 
   def getHandlers(conf: SparkConf): Array[ServletContextHandler] = {
     Array[ServletContextHandler](
-      createServletHandler(servletPath,
-        new ServletParams(request => getMetricsSnapshot(request), "text/plain"), conf)
-    )
+      createServletHandler(
+        servletPath,
+        new ServletParams(request => getMetricsSnapshot(request), "text/plain"),
+        conf))
   }
 
   def getMetricsSnapshot(request: HttpServletRequest): String = getMetricsSnapshot()
@@ -126,9 +126,9 @@ private[spark] class PrometheusServlet(
     s"metrics_${key.replaceAll("[^a-zA-Z0-9]", "_")}_"
   }
 
-  override def start(): Unit = { }
+  override def start(): Unit = {}
 
-  override def stop(): Unit = { }
+  override def stop(): Unit = {}
 
-  override def report(): Unit = { }
+  override def report(): Unit = {}
 }

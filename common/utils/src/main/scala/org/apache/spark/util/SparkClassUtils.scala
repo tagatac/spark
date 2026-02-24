@@ -31,8 +31,8 @@ private[spark] trait SparkClassUtils {
 
   // scalastyle:off classforname
   /**
-   * Preferred alternative to Class.forName(className), as well as
-   * Class.forName(className, initialize, loader) with current thread's ContextClassLoader.
+   * Preferred alternative to Class.forName(className), as well as Class.forName(className,
+   * initialize, loader) with current thread's ContextClassLoader.
    */
   def classForName[C](
       className: String,
@@ -41,8 +41,9 @@ private[spark] trait SparkClassUtils {
     if (!noSparkClassLoader) {
       Class.forName(className, initialize, getContextOrSparkClassLoader).asInstanceOf[Class[C]]
     } else {
-      Class.forName(className, initialize, Thread.currentThread().getContextClassLoader).
-        asInstanceOf[Class[C]]
+      Class
+        .forName(className, initialize, Thread.currentThread().getContextClassLoader)
+        .asInstanceOf[Class[C]]
     }
     // scalastyle:on classforname
   }
@@ -53,18 +54,19 @@ private[spark] trait SparkClassUtils {
   }
 
   /**
-   * Determines whether the provided class is loadable in the current thread and assignable
-   * from the target class.
+   * Determines whether the provided class is loadable in the current thread and assignable from
+   * the target class.
    *
-   * @param clazz the fully qualified class name of the class to check
-   *              for loadability and inheritance from `parent`
-   * @param targetClass the target class which the class represented. If target
-   *               is null, only checks if the class is loadable
-   * @return true if `clazz` is loadable and assignable from `target`, otherwise false
+   * @param clazz
+   *   the fully qualified class name of the class to check for loadability and inheritance from
+   *   `parent`
+   * @param targetClass
+   *   the target class which the class represented. If target is null, only checks if the class
+   *   is loadable
+   * @return
+   *   true if `clazz` is loadable and assignable from `target`, otherwise false
    */
-  def classIsLoadableAndAssignableFrom(
-      clazz: String,
-      targetClass: Class[_]): Boolean = {
+  def classIsLoadableAndAssignableFrom(clazz: String, targetClass: Class[_]): Boolean = {
     Try {
       val cls = classForName(clazz, initialize = false)
       targetClass == null || targetClass.isAssignableFrom(cls)
@@ -100,8 +102,8 @@ private[spark] trait SparkClassUtils {
   }
 
   /**
-   * Remove trailing dollar signs from qualified class name,
-   * and return the trailing part after the last dollar sign in the middle
+   * Remove trailing dollar signs from qualified class name, and return the trailing part after
+   * the last dollar sign in the middle
    */
   @scala.annotation.tailrec
   final def stripDollars(s: String): String = {
@@ -118,8 +120,7 @@ private[spark] trait SparkClassUtils {
         // This is the same behavior as getClass.getSimpleName
         s.substring(lastDollarIndex + 1)
       }
-    }
-    else {
+    } else {
       // The last char is a dollar sign
       // Find last non-dollar char
       val lastNonDollarChar = s.findLast(_ != '$')

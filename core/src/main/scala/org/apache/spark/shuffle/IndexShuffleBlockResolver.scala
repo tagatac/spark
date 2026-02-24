@@ -48,9 +48,8 @@ import org.apache.spark.util.collection.OpenHashSet
  * Data of shuffle blocks from the same map task are stored in a single consolidated data file.
  * The offsets of the data blocks in the data file are stored in a separate index file.
  *
- * We use the name of the shuffle data's shuffleBlockId with reduce ID set to 0 and add ".data"
- * as the filename postfix for data file, and ".index" as the filename postfix for index file.
- *
+ * We use the name of the shuffle data's shuffleBlockId with reduce ID set to 0 and add ".data" as
+ * the filename postfix for data file, and ".index" as the filename postfix for index file.
  */
 // Note: Changes to the format in this file should be kept in sync with
 // org.apache.spark.network.shuffle.ExternalShuffleBlockResolver#getSortBasedShuffleBlockData().
@@ -59,8 +58,9 @@ private[spark] class IndexShuffleBlockResolver(
     // var for testing
     var _blockManager: BlockManager,
     val taskIdMapsForShuffle: ConcurrentMap[Int, OpenHashSet[Long]])
-  extends ShuffleBlockResolver
-  with Logging with MigratableResolver {
+    extends ShuffleBlockResolver
+    with Logging
+    with MigratableResolver {
 
   def this(conf: SparkConf) = {
     this(conf, null, new ConcurrentHashMap[Int, OpenHashSet[Long]]())
@@ -79,7 +79,9 @@ private[spark] class IndexShuffleBlockResolver(
   private val transportConf = {
     val securityManager = new SecurityManager(conf)
     SparkTransportConf.fromSparkConf(
-      conf, "shuffle", sslOptions = Some(securityManager.getRpcSSLOptions()))
+      conf,
+      "shuffle",
+      sslOptions = Some(securityManager.getRpcSSLOptions()))
   }
 
   private val remoteShuffleMaxDisk: Option[Long] =
@@ -97,7 +99,7 @@ private[spark] class IndexShuffleBlockResolver(
     val allBlocks = blockManager.diskBlockManager.getAllBlocks()
     allBlocks.flatMap {
       case ShuffleIndexBlockId(shuffleId, mapId, _)
-        if Option(shuffleIdsToSkip.getIfPresent(shuffleId)).isEmpty =>
+          if Option(shuffleIdsToSkip.getIfPresent(shuffleId)).isEmpty =>
         Some(ShuffleBlockInfo(shuffleId, mapId))
       case _ =>
         None
@@ -112,8 +114,8 @@ private[spark] class IndexShuffleBlockResolver(
   }
 
   private def getShuffleBytesStored(): Long = {
-    val shuffleFiles: Seq[File] = getStoredShuffles().map {
-      si => getDataFile(si.shuffleId, si.mapId)
+    val shuffleFiles: Seq[File] = getStoredShuffles().map { si =>
+      getDataFile(si.shuffleId, si.mapId)
     }
     shuffleFiles.map(_.length()).sum
   }
@@ -129,7 +131,7 @@ private[spark] class IndexShuffleBlockResolver(
    * When the dirs parameter is None then use the disk manager's local directories. Otherwise,
    * read from the specified directories.
    */
-   def getDataFile(shuffleId: Int, mapId: Long, dirs: Option[Array[String]]): File = {
+  def getDataFile(shuffleId: Int, mapId: Long, dirs: Option[Array[String]]): File = {
     val blockId = ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID)
     dirs
       .map(d =>
@@ -143,10 +145,7 @@ private[spark] class IndexShuffleBlockResolver(
    * When the dirs parameter is None then use the disk manager's local directories. Otherwise,
    * read from the specified directories.
    */
-  def getIndexFile(
-      shuffleId: Int,
-      mapId: Long,
-      dirs: Option[Array[String]] = None): File = {
+  def getIndexFile(shuffleId: Int, mapId: Long, dirs: Option[Array[String]] = None): File = {
     val blockId = ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID)
     dirs
       .map(d =>
@@ -161,7 +160,8 @@ private[spark] class IndexShuffleBlockResolver(
       reduceId: Int,
       dirs: Option[Array[String]] = None): File = {
     blockManager.diskBlockManager.getMergedShuffleFile(
-      ShuffleMergedDataBlockId(appId, shuffleId, shuffleMergeId, reduceId), dirs)
+      ShuffleMergedDataBlockId(appId, shuffleId, shuffleMergeId, reduceId),
+      dirs)
   }
 
   private def getMergedBlockIndexFile(
@@ -171,7 +171,8 @@ private[spark] class IndexShuffleBlockResolver(
       reduceId: Int,
       dirs: Option[Array[String]] = None): File = {
     blockManager.diskBlockManager.getMergedShuffleFile(
-      ShuffleMergedIndexBlockId(appId, shuffleId, shuffleMergeId, reduceId), dirs)
+      ShuffleMergedIndexBlockId(appId, shuffleId, shuffleMergeId, reduceId),
+      dirs)
   }
 
   private def getMergedBlockMetaFile(
@@ -181,7 +182,8 @@ private[spark] class IndexShuffleBlockResolver(
       reduceId: Int,
       dirs: Option[Array[String]] = None): File = {
     blockManager.diskBlockManager.getMergedShuffleFile(
-      ShuffleMergedMetaBlockId(appId, shuffleId, shuffleMergeId, reduceId), dirs)
+      ShuffleMergedMetaBlockId(appId, shuffleId, shuffleMergeId, reduceId),
+      dirs)
   }
 
   /**
@@ -207,8 +209,8 @@ private[spark] class IndexShuffleBlockResolver(
   }
 
   /**
-   * Check whether the given index and data files match each other.
-   * If so, return the partition lengths in the data file. Otherwise return null.
+   * Check whether the given index and data files match each other. If so, return the partition
+   * lengths in the data file. Otherwise return null.
    */
   private def checkIndexAndDataFile(index: File, data: File, blocks: Int): Array[Long] = {
     // the index file should have `block + 1` longs as offset.
@@ -217,12 +219,13 @@ private[spark] class IndexShuffleBlockResolver(
     }
     val lengths = new Array[Long](blocks)
     // Read the lengths of blocks
-    val in = try {
-      new DataInputStream(new NioBufferedFileInputStream(index))
-    } catch {
-      case e: IOException =>
-        return null
-    }
+    val in =
+      try {
+        new DataInputStream(new NioBufferedFileInputStream(index))
+      } catch {
+        case e: IOException =>
+          return null
+      }
     try {
       // Convert the offsets into lengths of each block
       var offset = in.readLong()
@@ -252,19 +255,20 @@ private[spark] class IndexShuffleBlockResolver(
   }
 
   /**
-   * Write a provided shuffle block as a stream. Used for block migrations.
-   * ShuffleBlockBatchIds must contain the full range represented in the ShuffleIndexBlock.
-   * Requires the caller to delete any shuffle index blocks where the shuffle block fails to
-   * put.
+   * Write a provided shuffle block as a stream. Used for block migrations. ShuffleBlockBatchIds
+   * must contain the full range represented in the ShuffleIndexBlock. Requires the caller to
+   * delete any shuffle index blocks where the shuffle block fails to put.
    */
-  override def putShuffleBlockAsStream(blockId: BlockId, serializerManager: SerializerManager):
-      StreamCallbackWithID = {
+  override def putShuffleBlockAsStream(
+      blockId: BlockId,
+      serializerManager: SerializerManager): StreamCallbackWithID = {
     // Throw an exception if we have exceeded maximum shuffle files stored
     remoteShuffleMaxDisk.foreach { maxBytes =>
       val bytesUsed = getShuffleBytesStored()
       if (maxBytes < bytesUsed) {
         throw SparkException.internalError(
-          s"Not storing remote shuffles $bytesUsed exceeds $maxBytes", category = "SHUFFLE")
+          s"Not storing remote shuffles $bytesUsed exceeds $maxBytes",
+          category = "SHUFFLE")
       }
     }
     val file = blockId match {
@@ -273,8 +277,10 @@ private[spark] class IndexShuffleBlockResolver(
       case ShuffleDataBlockId(shuffleId, mapId, _) =>
         getDataFile(shuffleId, mapId)
       case _ =>
-        throw SparkException.internalError(s"Unexpected shuffle block transfer $blockId as " +
-          s"${blockId.getClass().getSimpleName()}", category = "SHUFFLE")
+        throw SparkException.internalError(
+          s"Unexpected shuffle block transfer $blockId as " +
+            s"${blockId.getClass().getSimpleName()}",
+          category = "SHUFFLE")
     }
     val fileTmp = createTempFile(file)
 
@@ -307,15 +313,13 @@ private[spark] class IndexShuffleBlockResolver(
         }
         blockId match {
           case ShuffleIndexBlockId(shuffleId, mapId, _) =>
-            val mapTaskIds = taskIdMapsForShuffle.computeIfAbsent(
-              shuffleId, _ => new OpenHashSet[Long](8)
-            )
+            val mapTaskIds =
+              taskIdMapsForShuffle.computeIfAbsent(shuffleId, _ => new OpenHashSet[Long](8))
             mapTaskIds.synchronized { mapTaskIds.add(mapId) }
 
           case ShuffleDataBlockId(shuffleId, mapId, _) =>
-            val mapTaskIds = taskIdMapsForShuffle.computeIfAbsent(
-              shuffleId, _ => new OpenHashSet[Long](8)
-            )
+            val mapTaskIds =
+              taskIdMapsForShuffle.computeIfAbsent(shuffleId, _ => new OpenHashSet[Long](8))
             mapTaskIds.synchronized { mapTaskIds.add(mapId) }
 
           case _ => // Unreachable
@@ -343,14 +347,14 @@ private[spark] class IndexShuffleBlockResolver(
       val indexFile = getIndexFile(shuffleId, mapId)
       val indexBlockId = ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID)
       val indexFileSize = indexFile.length()
-      val indexBlockData = new FileSegmentManagedBuffer(
-        transportConf, indexFile, 0, indexFileSize)
+      val indexBlockData =
+        new FileSegmentManagedBuffer(transportConf, indexFile, 0, indexFileSize)
 
       // Load the data block
       val dataFile = getDataFile(shuffleId, mapId)
       val dataBlockId = ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID)
-      val dataBlockData = new FileSegmentManagedBuffer(
-        transportConf, dataFile, 0, dataFile.length())
+      val dataBlockData =
+        new FileSegmentManagedBuffer(transportConf, dataFile, 0, dataFile.length())
 
       // Make sure the index exist.
       if (!indexFile.exists()) {
@@ -370,23 +374,19 @@ private[spark] class IndexShuffleBlockResolver(
     }
   }
 
-
   /**
-   * Commit the data and metadata files as an atomic operation, use the existing ones, or
-   * replace them with new ones. Note that the metadata parameters (`lengths`, `checksums`)
-   * will be updated to match the existing ones if use the existing ones.
+   * Commit the data and metadata files as an atomic operation, use the existing ones, or replace
+   * them with new ones. Note that the metadata parameters (`lengths`, `checksums`) will be
+   * updated to match the existing ones if use the existing ones.
    *
    * There're two kinds of metadata files:
    *
-   * - index file
-   * An index file contains the offsets of each block, plus a final offset at the end
-   * for the end of the output file. It will be used by [[getBlockData]] to figure out
-   * where each block begins and ends.
-   *
-   * - checksum file (optional)
-   * An checksum file contains the checksum of each block. It will be used to diagnose
-   * the cause when a block is corrupted. Note that empty `checksums` indicate that
-   * checksum is disabled.
+   *   - index file An index file contains the offsets of each block, plus a final offset at the
+   *     end for the end of the output file. It will be used by [[getBlockData]] to figure out
+   *     where each block begins and ends.
+   *   - checksum file (optional) An checksum file contains the checksum of each block. It will be
+   *     used to diagnose the cause when a block is corrupted. Note that empty `checksums`
+   *     indicate that checksum is disabled.
    */
   def writeMetadataFileAndCommit(
       shuffleId: Int,
@@ -399,7 +399,8 @@ private[spark] class IndexShuffleBlockResolver(
 
     val checksumEnabled = checksums.nonEmpty
     val (checksumFileOpt, checksumTmpOpt) = if (checksumEnabled) {
-      assert(lengths.length == checksums.length,
+      assert(
+        lengths.length == checksums.length,
         "The size of partition lengths and checksums should be equal")
       val checksumFile = getChecksumFile(shuffleId, mapId, algorithm)
       (Some(checksumFile), Some(createTempFile(checksumFile)))
@@ -463,22 +464,26 @@ private[spark] class IndexShuffleBlockResolver(
     } finally {
       logDebug(s"Shuffle index for mapId $mapId: ${lengths.mkString("[", ",", "]")}")
       if (indexTmp.exists() && !indexTmp.delete()) {
-        logError(log"Failed to delete temporary index file at " +
-          log"${MDC(PATH, indexTmp.getAbsolutePath)}")
+        logError(
+          log"Failed to delete temporary index file at " +
+            log"${MDC(PATH, indexTmp.getAbsolutePath)}")
       }
       checksumTmpOpt.foreach { checksumTmp =>
         if (checksumTmp.exists()) {
           try {
             if (!checksumTmp.delete()) {
-              logError(log"Failed to delete temporary checksum file at " +
-                log"${MDC(LogKeys.PATH, checksumTmp.getAbsolutePath)}")
+              logError(
+                log"Failed to delete temporary checksum file at " +
+                  log"${MDC(LogKeys.PATH, checksumTmp.getAbsolutePath)}")
             }
           } catch {
             case e: Exception =>
               // Unlike index deletion, we won't propagate the error for the checksum file since
               // checksum is only a best-effort.
-              logError(log"Failed to delete temporary checksum file " +
-                log"at ${MDC(PATH, checksumTmp.getAbsolutePath)}", e)
+              logError(
+                log"Failed to delete temporary checksum file " +
+                  log"at ${MDC(PATH, checksumTmp.getAbsolutePath)}",
+                e)
           }
         }
       }
@@ -486,26 +491,25 @@ private[spark] class IndexShuffleBlockResolver(
   }
 
   /**
-   * Write the metadata file (index or checksum). Metadata values will be firstly write into
-   * the tmp file and the tmp file will be renamed to the target file at the end to avoid dirty
+   * Write the metadata file (index or checksum). Metadata values will be firstly write into the
+   * tmp file and the tmp file will be renamed to the target file at the end to avoid dirty
    * writes.
-   * @param metaValues The metadata values
-   * @param tmpFile The temp file
-   * @param targetFile The target file
-   * @param propagateError Whether to propagate the error for file operation. Unlike index file,
-   *                       checksum is only a best-effort so we won't fail the whole task due to
-   *                       the error from checksum.
+   * @param metaValues
+   *   The metadata values
+   * @param tmpFile
+   *   The temp file
+   * @param targetFile
+   *   The target file
+   * @param propagateError
+   *   Whether to propagate the error for file operation. Unlike index file, checksum is only a
+   *   best-effort so we won't fail the whole task due to the error from checksum.
    */
   private def writeMetadataFile(
       metaValues: Array[Long],
       tmpFile: File,
       targetFile: File,
       propagateError: Boolean): Unit = {
-    val out = new DataOutputStream(
-      new BufferedOutputStream(
-        new FileOutputStream(tmpFile)
-      )
-    )
+    val out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(tmpFile)))
     Utils.tryWithSafeFinally {
       metaValues.foreach(out.writeLong)
     } {
@@ -520,25 +524,34 @@ private[spark] class IndexShuffleBlockResolver(
       if (propagateError) {
         throw SparkCoreErrors.failedRenameTempFileError(tmpFile, targetFile)
       } else {
-        logWarning(log"fail to rename file ${MDC(TEMP_FILE, tmpFile)} " +
-          log"to ${MDC(TARGET_PATH, targetFile)}")
+        logWarning(
+          log"fail to rename file ${MDC(TEMP_FILE, tmpFile)} " +
+            log"to ${MDC(TARGET_PATH, targetFile)}")
       }
     }
   }
 
   /**
    * This is only used for reading local merged block data. In such cases, all chunks in the
-   * merged shuffle file need to be identified at once, so the ShuffleBlockFetcherIterator
-   * knows how to consume local merged shuffle file as multiple chunks.
+   * merged shuffle file need to be identified at once, so the ShuffleBlockFetcherIterator knows
+   * how to consume local merged shuffle file as multiple chunks.
    */
   override def getMergedBlockData(
       blockId: ShuffleMergedBlockId,
       dirs: Option[Array[String]]): Seq[ManagedBuffer] = {
     val indexFile =
-      getMergedBlockIndexFile(conf.getAppId, blockId.shuffleId, blockId.shuffleMergeId,
-        blockId.reduceId, dirs)
-    val dataFile = getMergedBlockDataFile(conf.getAppId, blockId.shuffleId,
-      blockId.shuffleMergeId, blockId.reduceId, dirs)
+      getMergedBlockIndexFile(
+        conf.getAppId,
+        blockId.shuffleId,
+        blockId.shuffleMergeId,
+        blockId.reduceId,
+        dirs)
+    val dataFile = getMergedBlockDataFile(
+      conf.getAppId,
+      blockId.shuffleId,
+      blockId.shuffleMergeId,
+      blockId.reduceId,
+      dirs)
     // Load all the indexes in order to identify all chunks in the specified merged shuffle file.
     val size = indexFile.length.toInt
     val offsets = Utils.tryWithResource {
@@ -551,7 +564,9 @@ private[spark] class IndexShuffleBlockResolver(
     // Number of chunks is number of indexes - 1
     val numChunks = size / 8 - 1
     for (index <- 0 until numChunks) yield {
-      new FileSegmentManagedBuffer(transportConf, dataFile,
+      new FileSegmentManagedBuffer(
+        transportConf,
+        dataFile,
         offsets.get(index),
         offsets.get(index + 1) - offsets.get(index))
     }
@@ -564,12 +579,20 @@ private[spark] class IndexShuffleBlockResolver(
       blockId: ShuffleMergedBlockId,
       dirs: Option[Array[String]]): MergedBlockMeta = {
     val indexFile =
-      getMergedBlockIndexFile(conf.getAppId, blockId.shuffleId,
-        blockId.shuffleMergeId, blockId.reduceId, dirs)
+      getMergedBlockIndexFile(
+        conf.getAppId,
+        blockId.shuffleId,
+        blockId.shuffleMergeId,
+        blockId.reduceId,
+        dirs)
     val size = indexFile.length.toInt
     val numChunks = (size / 8) - 1
-    val metaFile = getMergedBlockMetaFile(conf.getAppId, blockId.shuffleId,
-      blockId.shuffleMergeId, blockId.reduceId, dirs)
+    val metaFile = getMergedBlockMetaFile(
+      conf.getAppId,
+      blockId.shuffleId,
+      blockId.shuffleMergeId,
+      blockId.reduceId,
+      dirs)
     val chunkBitMaps = new FileSegmentManagedBuffer(transportConf, metaFile, 0L, metaFile.length)
     new MergedBlockMeta(numChunks, chunkBitMaps)
   }
@@ -613,9 +636,7 @@ private[spark] class IndexShuffleBlockResolver(
       .getOrElse(blockManager.diskBlockManager.getFile(fileName))
   }
 
-  override def getBlockData(
-      blockId: BlockId,
-      dirs: Option[Array[String]]): ManagedBuffer = {
+  override def getBlockData(blockId: BlockId, dirs: Option[Array[String]]): ManagedBuffer = {
     val (shuffleId, mapId, startReduceId, endReduceId) = blockId match {
       case id: ShuffleBlockId =>
         (id.shuffleId, id.mapId, id.reduceId, id.reduceId + 1)
@@ -623,7 +644,8 @@ private[spark] class IndexShuffleBlockResolver(
         (batchId.shuffleId, batchId.mapId, batchId.startReduceId, batchId.endReduceId)
       case _ =>
         throw SparkException.internalError(
-          s"unexpected shuffle block id format: $blockId", category = "SHUFFLE")
+          s"unexpected shuffle block id format: $blockId",
+          category = "SHUFFLE")
     }
     // The block is actually going to be a range of a single map output file for this map, so
     // find out the consolidated file, then the offset within that from our index
@@ -645,8 +667,9 @@ private[spark] class IndexShuffleBlockResolver(
       val actualPosition = channel.position()
       val expectedPosition = endReduceId * 8L + 8
       if (actualPosition != expectedPosition) {
-        throw SparkException.internalError(s"SPARK-22982: Incorrect channel position after index" +
-          s" file reads: expected $expectedPosition but actual position was $actualPosition.",
+        throw SparkException.internalError(
+          s"SPARK-22982: Incorrect channel position after index" +
+            s" file reads: expected $expectedPosition but actual position was $actualPosition.",
           category = "SHUFFLE")
       }
       new FileSegmentManagedBuffer(
@@ -662,8 +685,7 @@ private[spark] class IndexShuffleBlockResolver(
   override def getBlocksForShuffle(shuffleId: Int, mapId: Long): Seq[BlockId] = {
     Seq(
       ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID),
-      ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID)
-    )
+      ShuffleDataBlockId(shuffleId, mapId, NOOP_REDUCE_ID))
   }
 
   override def stop(): Unit = {}

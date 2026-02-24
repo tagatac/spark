@@ -39,11 +39,10 @@ import org.apache.spark.util.Utils
  * The base class of writer which will write event logs into file.
  *
  * The following configurable parameters are available to tune the behavior of writing:
- *   spark.eventLog.compress - Whether to compress logged events
- *   spark.eventLog.compression.codec - The codec to compress logged events
- *   spark.eventLog.overwrite - Whether to overwrite any existing files
- *   spark.eventLog.buffer.kb - Buffer size to use when writing to output streams
- *   spark.eventLog.excludedPatterns - Specifes a comma-separated event names to be excluded
+ * spark.eventLog.compress - Whether to compress logged events spark.eventLog.compression.codec -
+ * The codec to compress logged events spark.eventLog.overwrite - Whether to overwrite any
+ * existing files spark.eventLog.buffer.kb - Buffer size to use when writing to output streams
+ * spark.eventLog.excludedPatterns - Specifes a comma-separated event names to be excluded
  *
  * Note that descendant classes can maintain its own parameters: refer the javadoc of each class
  * for more details.
@@ -52,15 +51,17 @@ import org.apache.spark.util.Utils
  */
 abstract class EventLogFileWriter(
     appId: String,
-    appAttemptId : Option[String],
+    appAttemptId: Option[String],
     logBaseDir: URI,
     sparkConf: SparkConf,
-    hadoopConf: Configuration) extends Logging {
+    hadoopConf: Configuration)
+    extends Logging {
 
   protected val shouldCompress = sparkConf.get(EVENT_LOG_COMPRESS) &&
-      !sparkConf.get(EVENT_LOG_COMPRESSION_CODEC).equalsIgnoreCase("none")
-  protected val excludedPatterns = sparkConf.get(EVENT_LOG_EXCLUDED_PATTERNS)
-      .map(name => s"""{"Event":"$name"""")
+    !sparkConf.get(EVENT_LOG_COMPRESSION_CODEC).equalsIgnoreCase("none")
+  protected val excludedPatterns = sparkConf
+    .get(EVENT_LOG_EXCLUDED_PATTERNS)
+    .map(name => s"""{"Event":"$name"""")
   protected val shouldOverwrite = sparkConf.get(EVENT_LOG_OVERWRITE)
   protected val outputBufferSize = sparkConf.get(EVENT_LOG_OUTPUT_BUFFER_SIZE).toInt * 1024
   protected val fileSystem = Utils.getHadoopFileSystem(logBaseDir, hadoopConf)
@@ -106,7 +107,8 @@ abstract class EventLogFileWriter(
       }
 
     try {
-      val cstream = compressionCodec.map(_.compressedContinuousOutputStream(dstream))
+      val cstream = compressionCodec
+        .map(_.compressedContinuousOutputStream(dstream))
         .getOrElse(dstream)
       val bstream = new BufferedOutputStream(cstream, outputBufferSize)
       fileSystem.setPermission(path, EventLogFileWriter.LOG_FILE_PERMISSIONS)
@@ -150,8 +152,9 @@ abstract class EventLogFileWriter(
   protected def renameFile(src: Path, dest: Path, overwrite: Boolean): Unit = {
     if (fileSystem.exists(dest)) {
       if (overwrite) {
-        logWarning(log"Event log ${MDC(EVENT_LOG_DESTINATION, dest)} already exists. " +
-          log"Overwriting...")
+        logWarning(
+          log"Event log ${MDC(EVENT_LOG_DESTINATION, dest)} already exists. " +
+            log"Overwriting...")
         if (!fileSystem.delete(dest, true)) {
           logWarning(log"Error deleting ${MDC(EVENT_LOG_DESTINATION, dest)}")
         }
@@ -222,14 +225,14 @@ object EventLogFileWriter {
  */
 class SingleEventLogFileWriter(
     appId: String,
-    appAttemptId : Option[String],
+    appAttemptId: Option[String],
     logBaseDir: URI,
     sparkConf: SparkConf,
     hadoopConf: Configuration)
-  extends EventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
+    extends EventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
 
-  override val logPath: String = SingleEventLogFileWriter.getLogPath(logBaseDir, appId,
-    appAttemptId, compressionCodecName)
+  override val logPath: String =
+    SingleEventLogFileWriter.getLogPath(logBaseDir, appId, appAttemptId, compressionCodecName)
 
   protected def inProgressPath = logPath + EventLogFileWriter.IN_PROGRESS
 
@@ -246,8 +249,8 @@ class SingleEventLogFileWriter(
   }
 
   /**
-   * Stop logging events. The event log file will be renamed so that it loses the
-   * ".inprogress" suffix.
+   * Stop logging events. The event log file will be renamed so that it loses the ".inprogress"
+   * suffix.
    */
   override def stop(): Unit = {
     closeWriter()
@@ -256,24 +259,29 @@ class SingleEventLogFileWriter(
 }
 
 object SingleEventLogFileWriter {
+
   /**
    * Return a file-system-safe path to the log file for the given application.
    *
-   * Note that because we currently only create a single log file for each application,
-   * we must encode all the information needed to parse this event log in the file name
-   * instead of within the file itself. Otherwise, if the file is compressed, for instance,
-   * we won't know which codec to use to decompress the metadata needed to open the file in
-   * the first place.
+   * Note that because we currently only create a single log file for each application, we must
+   * encode all the information needed to parse this event log in the file name instead of within
+   * the file itself. Otherwise, if the file is compressed, for instance, we won't know which
+   * codec to use to decompress the metadata needed to open the file in the first place.
    *
-   * The log file name will identify the compression codec used for the contents, if any.
-   * For example, app_123 for an uncompressed log, app_123.lzf for an LZF-compressed log.
+   * The log file name will identify the compression codec used for the contents, if any. For
+   * example, app_123 for an uncompressed log, app_123.lzf for an LZF-compressed log.
    *
-   * @param logBaseDir Directory where the log file will be written.
-   * @param appId A unique app ID.
-   * @param appAttemptId A unique attempt id of appId. May be the empty string.
-   * @param compressionCodecName Name to identify the codec used to compress the contents
-   *                             of the log, or None if compression is not enabled.
-   * @return A path which consists of file-system-safe characters.
+   * @param logBaseDir
+   *   Directory where the log file will be written.
+   * @param appId
+   *   A unique app ID.
+   * @param appAttemptId
+   *   A unique attempt id of appId. May be the empty string.
+   * @param compressionCodecName
+   *   Name to identify the codec used to compress the contents of the log, or None if compression
+   *   is not enabled.
+   * @return
+   *   A path which consists of file-system-safe characters.
    */
   def getLogPath(
       logBaseDir: URI,
@@ -289,27 +297,28 @@ object SingleEventLogFileWriter {
 /**
  * The writer to write event logs into multiple log files, rolled over via configured size.
  *
- * The class creates one directory per application, and stores event log files as well as
- * metadata files. The name of directory and files in the directory would follow:
+ * The class creates one directory per application, and stores event log files as well as metadata
+ * files. The name of directory and files in the directory would follow:
  *
- * - The name of directory: eventlog_v2_appId(_[appAttemptId])
- * - The prefix of name on event files: events_[index]_[appId](_[appAttemptId])(.[codec])
- *   - "index" would be monotonically increasing value (say, sequence)
- * - The name of metadata (app. status) file name: appstatus_[appId](_[appAttemptId])(.inprogress)
+ *   - The name of directory: eventlog_v2_appId(_[appAttemptId])
+ *   - The prefix of name on event files: events_[index]_[appId](_[appAttemptId])(.[codec])
+ *     - "index" would be monotonically increasing value (say, sequence)
+ *   - The name of metadata (app. status) file name:
+ *     appstatus_[appId](_[appAttemptId])(.inprogress)
  *
  * The writer will roll over the event log file when configured size is reached. Note that the
- * writer doesn't check the size on file being open for write: the writer tracks the count of bytes
- * written before compression is applied.
+ * writer doesn't check the size on file being open for write: the writer tracks the count of
+ * bytes written before compression is applied.
  *
  * For metadata files, the class will leverage zero-byte file, as it provides minimized cost.
  */
 class RollingEventLogFilesWriter(
     appId: String,
-    appAttemptId : Option[String],
+    appAttemptId: Option[String],
     logBaseDir: URI,
     sparkConf: SparkConf,
     hadoopConf: Configuration)
-  extends EventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
+    extends EventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
 
   import RollingEventLogFilesWriter._
 
@@ -356,22 +365,21 @@ class RollingEventLogFilesWriter(
     closeWriter()
 
     index += 1
-    currentEventLogFilePath = getEventLogFilePath(logDirForAppPath, appId, appAttemptId, index,
-      compressionCodecName)
+    currentEventLogFilePath =
+      getEventLogFilePath(logDirForAppPath, appId, appAttemptId, index, compressionCodecName)
 
     initLogFile(currentEventLogFilePath) { os =>
       countingOutputStream = Some(new CountingOutputStream(os))
-      new PrintWriter(
-        new OutputStreamWriter(countingOutputStream.get, StandardCharsets.UTF_8))
+      new PrintWriter(new OutputStreamWriter(countingOutputStream.get, StandardCharsets.UTF_8))
     }
   }
 
   override def stop(): Unit = {
     closeWriter()
-    val appStatusPathIncomplete = getAppStatusFilePath(logDirForAppPath, appId, appAttemptId,
-      inProgress = true)
-    val appStatusPathComplete = getAppStatusFilePath(logDirForAppPath, appId, appAttemptId,
-      inProgress = false)
+    val appStatusPathIncomplete =
+      getAppStatusFilePath(logDirForAppPath, appId, appAttemptId, inProgress = true)
+    val appStatusPathComplete =
+      getAppStatusFilePath(logDirForAppPath, appId, appAttemptId, inProgress = false)
     renameFile(appStatusPathIncomplete, appStatusPathComplete, overwrite = true)
   }
 
@@ -380,8 +388,8 @@ class RollingEventLogFilesWriter(
   private def createAppStatusFile(inProgress: Boolean): Unit = {
     val appStatusPath = getAppStatusFilePath(logDirForAppPath, appId, appAttemptId, inProgress)
     // SPARK-30860: use the class method to avoid the umask causing permission issues
-    val outputStream = FileSystem.create(fileSystem, appStatusPath,
-      EventLogFileWriter.LOG_FILE_PERMISSIONS)
+    val outputStream =
+      FileSystem.create(fileSystem, appStatusPath, EventLogFileWriter.LOG_FILE_PERMISSIONS)
     // we intentionally create zero-byte file to minimize the cost
     outputStream.close()
   }
@@ -393,8 +401,10 @@ object RollingEventLogFilesWriter {
   private[history] val APPSTATUS_FILE_NAME_PREFIX = "appstatus_"
 
   def getAppEventLogDirPath(logBaseDir: URI, appId: String, appAttemptId: Option[String]): Path =
-    new Path(new Path(logBaseDir), EVENT_LOG_DIR_NAME_PREFIX +
-      EventLogFileWriter.nameForAppAndAttempt(appId, appAttemptId))
+    new Path(
+      new Path(logBaseDir),
+      EVENT_LOG_DIR_NAME_PREFIX +
+        EventLogFileWriter.nameForAppAndAttempt(appId, appAttemptId))
 
   def getAppStatusFilePath(
       appLogDir: Path,

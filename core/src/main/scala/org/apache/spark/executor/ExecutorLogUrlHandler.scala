@@ -54,12 +54,17 @@ private[spark] class ExecutorLogUrlHandler(logUrlPattern: Option[String]) extend
     val allAttributeKeysExceptLogFiles = allAttributeKeys.filter(_ != "LOG_FILES")
 
     if (allPatternsExceptFileName.diff(allAttributeKeysExceptLogFiles).nonEmpty) {
-      logFailToRenewLogUrls("some of required attributes are missing in app's event log.",
-        allPatternsExceptFileName, allAttributeKeys)
+      logFailToRenewLogUrls(
+        "some of required attributes are missing in app's event log.",
+        allPatternsExceptFileName,
+        allAttributeKeys)
       logUrls
     } else if (allPatterns.contains("FILE_NAME") && !allAttributeKeys.contains("LOG_FILES")) {
-      logFailToRenewLogUrls("'FILE_NAME' parameter is provided, but file information is " +
-        "missing in app's event log.", allPatternsExceptFileName, allAttributeKeys)
+      logFailToRenewLogUrls(
+        "'FILE_NAME' parameter is provided, but file information is " +
+          "missing in app's event log.",
+        allPatternsExceptFileName,
+        allAttributeKeys)
       logUrls
     } else {
       val updatedUrl = allPatternsExceptFileName.foldLeft(urlPattern) { case (orig, patt) =>
@@ -69,9 +74,12 @@ private[spark] class ExecutorLogUrlHandler(logUrlPattern: Option[String]) extend
 
       if (allPatterns.contains("FILE_NAME")) {
         // allAttributeKeys should contain "LOG_FILES"
-        attributes("LOG_FILES").split(",").map { file =>
-          file -> updatedUrl.replace("{{FILE_NAME}}", file)
-        }.toMap
+        attributes("LOG_FILES")
+          .split(",")
+          .map { file =>
+            file -> updatedUrl.replace("{{FILE_NAME}}", file)
+          }
+          .toMap
       } else {
         Map("log" -> updatedUrl)
       }
@@ -83,10 +91,11 @@ private[spark] class ExecutorLogUrlHandler(logUrlPattern: Option[String]) extend
       allPatterns: Set[String],
       allAttributes: Set[String]): Unit = {
     if (informedForMissingAttributes.compareAndSet(false, true)) {
-      logInfo(log"Fail to renew executor log urls: ${MDC(LogKeys.REASON, reason)}." +
-        log" Required: ${MDC(LogKeys.REGEX, allPatterns)} / " +
-        log"available: ${MDC(LogKeys.ATTRIBUTE_MAP, allAttributes)}." +
-        log" Falling back to show app's original log urls.")
+      logInfo(
+        log"Fail to renew executor log urls: ${MDC(LogKeys.REASON, reason)}." +
+          log" Required: ${MDC(LogKeys.REGEX, allPatterns)} / " +
+          log"available: ${MDC(LogKeys.ATTRIBUTE_MAP, allAttributes)}." +
+          log" Falling back to show app's original log urls.")
     }
   }
 }

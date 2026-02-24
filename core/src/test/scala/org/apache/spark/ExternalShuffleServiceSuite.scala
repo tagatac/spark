@@ -40,10 +40,10 @@ import org.apache.spark.util.{ThreadUtils, Utils}
 import org.apache.spark.util.io.ChunkedByteBuffer
 
 /**
- * This suite creates an external shuffle server and routes all shuffle fetches through it.
- * Note that failures in this suite may arise due to changes in Spark that invalidate expectations
- * set up in `ExternalBlockHandler`, such as changing the format of shuffle files or how
- * we hash files into folders.
+ * This suite creates an external shuffle server and routes all shuffle fetches through it. Note
+ * that failures in this suite may arise due to changes in Spark that invalidate expectations set
+ * up in `ExternalBlockHandler`, such as changing the format of shuffle files or how we hash files
+ * into folders.
  */
 class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
   var server: TransportServer = _
@@ -67,13 +67,13 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
   }
 
   override def afterAll(): Unit = {
-    Utils.tryLogNonFatalError{
+    Utils.tryLogNonFatalError {
       server.close()
     }
-    Utils.tryLogNonFatalError{
+    Utils.tryLogNonFatalError {
       rpcHandler.close()
     }
-    Utils.tryLogNonFatalError{
+    Utils.tryLogNonFatalError {
       transportContext.close()
     }
     super.afterAll()
@@ -94,7 +94,8 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
     // Therefore, we should wait until all executors are up
     TestUtils.waitUntilExecutorsUp(sc, 2, 60000)
 
-    val rdd = sc.parallelize(0 until 1000, 10)
+    val rdd = sc
+      .parallelize(0 until 1000, 10)
       .map { i => (i, 1) }
       .reduceByKey(_ + _)
 
@@ -103,14 +104,14 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
 
     // Invalidate the registered executors, disallowing access to their shuffle blocks (without
     // deleting the actual shuffle files, so we could access them without the shuffle service).
-    rpcHandler.applicationRemoved(sc.conf.getAppId, false /* cleanupLocalDirs */)
+    rpcHandler.applicationRemoved(sc.conf.getAppId, false /* cleanupLocalDirs */ )
 
     // Now Spark will receive FetchFailed, and not retry the stage due to "spark.test.noStageRetry"
     // being set.
     val e = intercept[SparkException] {
       rdd.count()
     }
-    e.getMessage should include ("Fetch failure will not retry stage due to testing config")
+    e.getMessage should include("Fetch failure will not retry stage due to testing config")
   }
 
   test("SPARK-25888: using external shuffle service fetching disk persisted blocks") {
@@ -125,7 +126,8 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
     try {
       val list = List[Int](1, 2, 3, 4)
       val broadcast = sc.broadcast(list)
-      val rdd = sc.parallelize(0 until 100, 2)
+      val rdd = sc
+        .parallelize(0 until 100, 2)
         .map { i => (i, broadcast.value.size) }
         .persist(StorageLevel.DISK_ONLY)
 
@@ -135,26 +137,29 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
       val bms = eventually(timeout(2.seconds), interval(100.milliseconds)) {
         val locations = sc.env.blockManager.master.getLocations(blockId)
         assert(locations.size === 2)
-        assert(locations.map(_.port).contains(server.getPort),
+        assert(
+          locations.map(_.port).contains(server.getPort),
           "external shuffle service port should be contained")
         locations
       }
 
       val dirManager = sc.env.blockManager.hostLocalDirManager
-          .getOrElse(fail("No host local dir manager"))
+        .getOrElse(fail("No host local dir manager"))
 
       val promises = bms.map { case bmid =>
-          val promise = Promise[File]()
-          dirManager.getHostLocalDirs(bmid.host, bmid.port, Seq(bmid.executorId).toArray) {
-            case scala.util.Success(res) => res.foreach { case (eid, dirs) =>
-              val file = new File(ExecutorDiskUtils.getFilePath(dirs,
-                sc.env.blockManager.subDirsPerLocalDir, blockId.name))
+        val promise = Promise[File]()
+        dirManager.getHostLocalDirs(bmid.host, bmid.port, Seq(bmid.executorId).toArray) {
+          case scala.util.Success(res) =>
+            res.foreach { case (eid, dirs) =>
+              val file = new File(
+                ExecutorDiskUtils
+                  .getFilePath(dirs, sc.env.blockManager.subDirsPerLocalDir, blockId.name))
               promise.success(file)
             }
-            case scala.util.Failure(error) => promise.failure(error)
-          }
-          promise.future
+          case scala.util.Failure(error) => promise.failure(error)
         }
+        promise.future
+      }
       val filesToCheck = promises.map(p => ThreadUtils.awaitResult(p, Duration(2, "sec")))
 
       filesToCheck.foreach(f => {
@@ -173,7 +178,8 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
       eventually(timeout(2.seconds), interval(100.milliseconds)) {
         val locations = sc.env.blockManager.master.getLocations(blockId)
         assert(locations.size === 1)
-        assert(locations.map(_.port).contains(server.getPort),
+        assert(
+          locations.map(_.port).contains(server.getPort),
           "external shuffle service port should be contained")
       }
 
@@ -200,7 +206,8 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
       eventually(timeout(2.seconds), interval(100.milliseconds)) {
         val broadcastBlockId = BroadcastBlockId(broadcast.id, "piece0")
         val locStatusForMemBroadcast =
-          sc.env.blockManager.master.getLocationsAndStatus(broadcastBlockId, Utils.localHostName())
+          sc.env.blockManager.master
+            .getLocationsAndStatus(broadcastBlockId, Utils.localHostName())
         assert(locStatusForMemBroadcast.isDefined)
         assert(locStatusForMemBroadcast.get.localDirs.isEmpty)
         assert(locStatusForMemBroadcast.get.locations.head.executorId == "driver")
@@ -210,7 +217,10 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
       val byteBuffer = ByteBuffer.wrap(Array[Byte](7))
       val bytes = new ChunkedByteBuffer(Array(byteBuffer))
       val diskBroadcastId = BroadcastBlockId(Long.MaxValue, "piece0")
-      sc.env.blockManager.putBytes(diskBroadcastId, bytes, StorageLevel.DISK_ONLY,
+      sc.env.blockManager.putBytes(
+        diskBroadcastId,
+        bytes,
+        StorageLevel.DISK_ONLY,
         tellMaster = true)
       eventually(timeout(2.seconds), interval(100.milliseconds)) {
         val locStatusForDiskBroadcast =
@@ -238,7 +248,8 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
     }
   }
 
-  test("SPARK-37618: external shuffle service removes shuffle blocks from deallocated executors") {
+  test(
+    "SPARK-37618: external shuffle service removes shuffle blocks from deallocated executors") {
     for (enabled <- Seq(true, false)) {
       // Use local disk reading to get location of shuffle files on disk
       val confWithLocalDiskReading = conf.clone
@@ -247,9 +258,11 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
         .set(config.EXECUTOR_REMOVE_DELAY.key, "0s")
       sc = new SparkContext("local-cluster[1,1,1024]", "test", confWithLocalDiskReading)
       sc.env.blockManager.externalShuffleServiceEnabled should equal(true)
-      sc.env.blockManager.blockStoreClient.getClass should equal(classOf[ExternalBlockStoreClient])
+      sc.env.blockManager.blockStoreClient.getClass should equal(
+        classOf[ExternalBlockStoreClient])
       try {
-        val rdd = sc.parallelize(0 until 100, 2)
+        val rdd = sc
+          .parallelize(0 until 100, 2)
           .map { i => (i, 1) }
           .repartition(1)
 
@@ -263,21 +276,25 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
         val promises = mapOutputs.map { case (bmid, blocks) =>
           val promise = Promise[collection.Seq[File]]()
           dirManager.getHostLocalDirs(bmid.host, bmid.port, Seq(bmid.executorId).toArray) {
-            case scala.util.Success(res) => res.foreach { case (eid, dirs) =>
-              val files = blocks.flatMap { case (blockId, _, _) =>
-                val shuffleBlockId = blockId.asInstanceOf[ShuffleBlockId]
-                Seq(
-                  ShuffleDataBlockId(shuffleBlockId.shuffleId, shuffleBlockId.mapId,
-                    shuffleBlockId.reduceId).name,
-                  ShuffleIndexBlockId(shuffleBlockId.shuffleId, shuffleBlockId.mapId,
-                    shuffleBlockId.reduceId).name
-                ).map { blockId =>
-                  new File(ExecutorDiskUtils.getFilePath(dirs,
-                    sc.env.blockManager.subDirsPerLocalDir, blockId))
+            case scala.util.Success(res) =>
+              res.foreach { case (eid, dirs) =>
+                val files = blocks.flatMap { case (blockId, _, _) =>
+                  val shuffleBlockId = blockId.asInstanceOf[ShuffleBlockId]
+                  Seq(
+                    ShuffleDataBlockId(
+                      shuffleBlockId.shuffleId,
+                      shuffleBlockId.mapId,
+                      shuffleBlockId.reduceId).name,
+                    ShuffleIndexBlockId(
+                      shuffleBlockId.shuffleId,
+                      shuffleBlockId.mapId,
+                      shuffleBlockId.reduceId).name).map { blockId =>
+                    new File(ExecutorDiskUtils
+                      .getFilePath(dirs, sc.env.blockManager.subDirsPerLocalDir, blockId))
+                  }
                 }
+                promise.success(files)
               }
-              promise.success(files)
-            }
             case scala.util.Failure(error) => promise.failure(error)
           }
           promise.future
@@ -324,9 +341,11 @@ class ExternalShuffleServiceSuite extends ShuffleSuite with Eventually {
         conf.clone.set(config.SHUFFLE_SERVICE_FETCH_RDD_ENABLED, enabled)
       sc = new SparkContext("local-cluster[1,1,1024]", "test", confWithRddFetch)
       sc.env.blockManager.externalShuffleServiceEnabled should equal(true)
-      sc.env.blockManager.blockStoreClient.getClass should equal(classOf[ExternalBlockStoreClient])
+      sc.env.blockManager.blockStoreClient.getClass should equal(
+        classOf[ExternalBlockStoreClient])
       try {
-        val rdd = sc.parallelize(0 until 100, 2)
+        val rdd = sc
+          .parallelize(0 until 100, 2)
           .map { i => (i, 1) }
           .persist(StorageLevel.MEMORY_ONLY)
 

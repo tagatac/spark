@@ -25,8 +25,8 @@ class ExecuteImmediateEndToEndSuite extends QueryTest with SharedSparkSession {
     try {
       spark.sql("DECLARE parm = 'Hello';")
 
-      val originalQuery = spark.sql(
-        "EXECUTE IMMEDIATE 'SELECT :parm' USING system.session.parm AS parm;")
+      val originalQuery =
+        spark.sql("EXECUTE IMMEDIATE 'SELECT :parm' USING system.session.parm AS parm;")
       val newQuery = spark.sql("EXECUTE IMMEDIATE 'SELECT :parm' USING system.session.parm;")
 
       assert(originalQuery.columns sameElements newQuery.columns)
@@ -40,7 +40,7 @@ class ExecuteImmediateEndToEndSuite extends QueryTest with SharedSparkSession {
   test("SQL Scripting not supported inside EXECUTE IMMEDIATE") {
     val executeImmediateText = "EXECUTE IMMEDIATE 'BEGIN SELECT 1; END'"
     checkError(
-      exception = intercept[AnalysisException ] {
+      exception = intercept[AnalysisException] {
         spark.sql(executeImmediateText)
       },
       condition = "SQL_SCRIPT_IN_EXECUTE_IMMEDIATE",

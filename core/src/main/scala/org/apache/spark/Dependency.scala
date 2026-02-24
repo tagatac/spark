@@ -34,26 +34,27 @@ import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.Utils
 
 /**
- * :: DeveloperApi ::
- * Base class for dependencies.
+ * :: DeveloperApi :: Base class for dependencies.
  */
 @DeveloperApi
 abstract class Dependency[T] extends Serializable {
   def rdd: RDD[T]
 }
 
-
 /**
- * :: DeveloperApi ::
- * Base class for dependencies where each partition of the child RDD depends on a small number
- * of partitions of the parent RDD. Narrow dependencies allow for pipelined execution.
+ * :: DeveloperApi :: Base class for dependencies where each partition of the child RDD depends on
+ * a small number of partitions of the parent RDD. Narrow dependencies allow for pipelined
+ * execution.
  */
 @DeveloperApi
 abstract class NarrowDependency[T](_rdd: RDD[T]) extends Dependency[T] {
+
   /**
    * Get the parent partitions for a child partition.
-   * @param partitionId a partition of the child RDD
-   * @return the partitions of the parent RDD that the child partition depends upon
+   * @param partitionId
+   *   a partition of the child RDD
+   * @return
+   *   the partitions of the parent RDD that the child partition depends upon
    */
   def getParents(partitionId: Int): Seq[Int]
 
@@ -65,20 +66,26 @@ object ShuffleDependency {
 }
 
 /**
- * :: DeveloperApi ::
- * Represents a dependency on the output of a shuffle stage. Note that in the case of shuffle,
- * the RDD is transient since we don't need it on the executor side.
+ * :: DeveloperApi :: Represents a dependency on the output of a shuffle stage. Note that in the
+ * case of shuffle, the RDD is transient since we don't need it on the executor side.
  *
- * @param _rdd the parent RDD
- * @param partitioner partitioner used to partition the shuffle output
- * @param serializer [[org.apache.spark.serializer.Serializer Serializer]] to use. If not set
- *                   explicitly then the default serializer, as specified by `spark.serializer`
- *                   config option, will be used.
- * @param keyOrdering key ordering for RDD's shuffles
- * @param aggregator map/reduce-side aggregator for RDD's shuffle
- * @param mapSideCombine whether to perform partial aggregation (also known as map-side combine)
- * @param shuffleWriterProcessor the processor to control the write behavior in ShuffleMapTask
- * @param rowBasedChecksums the row-based checksums for each shuffle partition
+ * @param _rdd
+ *   the parent RDD
+ * @param partitioner
+ *   partitioner used to partition the shuffle output
+ * @param serializer
+ *   [[org.apache.spark.serializer.Serializer Serializer]] to use. If not set explicitly then the
+ *   default serializer, as specified by `spark.serializer` config option, will be used.
+ * @param keyOrdering
+ *   key ordering for RDD's shuffles
+ * @param aggregator
+ *   map/reduce-side aggregator for RDD's shuffle
+ * @param mapSideCombine
+ *   whether to perform partial aggregation (also known as map-side combine)
+ * @param shuffleWriterProcessor
+ *   the processor to control the write behavior in ShuffleMapTask
+ * @param rowBasedChecksums
+ *   the row-based checksums for each shuffle partition
  */
 @DeveloperApi
 class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
@@ -92,7 +99,8 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
     val rowBasedChecksums: Array[RowBasedChecksum] = ShuffleDependency.EMPTY_ROW_BASED_CHECKSUMS,
     private val _checksumMismatchFullRetryEnabled: Boolean = false,
     val checksumMismatchQueryLevelRollbackEnabled: Boolean = false)
-  extends Dependency[Product2[K, V]] with Logging {
+    extends Dependency[Product2[K, V]]
+    with Logging {
 
   def this(
       rdd: RDD[_ <: Product2[K, V]],
@@ -110,8 +118,7 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
       aggregator,
       mapSideCombine,
       shuffleWriterProcessor,
-      ShuffleDependency.EMPTY_ROW_BASED_CHECKSUMS
-    )
+      ShuffleDependency.EMPTY_ROW_BASED_CHECKSUMS)
   }
 
   if (mapSideCombine) {
@@ -134,23 +141,23 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
   // is enabled
   private[this] var _shuffleMergeAllowed = canShuffleMergeBeEnabled()
 
-  val shuffleHandle: ShuffleHandle = _rdd.context.env.shuffleManager.registerShuffle(
-    shuffleId, this)
+  val shuffleHandle: ShuffleHandle =
+    _rdd.context.env.shuffleManager.registerShuffle(shuffleId, this)
 
   private[spark] def setShuffleMergeAllowed(shuffleMergeAllowed: Boolean): Unit = {
     _shuffleMergeAllowed = shuffleMergeAllowed
   }
 
-  def shuffleMergeEnabled : Boolean = shuffleMergeAllowed && mergerLocs.nonEmpty
+  def shuffleMergeEnabled: Boolean = shuffleMergeAllowed && mergerLocs.nonEmpty
 
-  def shuffleMergeAllowed : Boolean = _shuffleMergeAllowed
+  def shuffleMergeAllowed: Boolean = _shuffleMergeAllowed
 
   def checksumMismatchFullRetryEnabled: Boolean =
     _checksumMismatchFullRetryEnabled && !canShuffleMergeBeEnabled()
 
   /**
-   * Stores the location of the list of chosen external shuffle services for handling the
-   * shuffle merge requests from mappers in this shuffle map stage.
+   * Stores the location of the list of chosen external shuffle services for handling the shuffle
+   * merge requests from mappers in this shuffle map stage.
    */
   private[spark] var mergerLocs: Seq[BlockManagerId] = Nil
 
@@ -161,8 +168,8 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
   private[this] var _shuffleMergeFinalized: Boolean = false
 
   /**
-   * shuffleMergeId is used to uniquely identify merging process of shuffle
-   * by an indeterminate stage attempt.
+   * shuffleMergeId is used to uniquely identify merging process of shuffle by an indeterminate
+   * stage attempt.
    */
   private[this] var _shuffleMergeId: Int = 0
 
@@ -184,8 +191,8 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
   }
 
   /**
-   * Returns true if push-based shuffle is disabled or if the shuffle merge for
-   * this shuffle is finalized.
+   * Returns true if push-based shuffle is disabled or if the shuffle merge for this shuffle is
+   * finalized.
    */
   def shuffleMergeFinalized: Boolean = {
     if (shuffleMergeEnabled) {
@@ -204,25 +211,28 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
   }
 
   private def canShuffleMergeBeEnabled(): Boolean = {
-    val isPushShuffleEnabled = Utils.isPushBasedShuffleEnabled(rdd.sparkContext.conf,
+    val isPushShuffleEnabled = Utils.isPushBasedShuffleEnabled(
+      rdd.sparkContext.conf,
       // invoked at driver
       isDriver = true)
     if (isPushShuffleEnabled && rdd.isBarrier()) {
       logWarning("Push-based shuffle is currently not supported for barrier stages")
     }
     isPushShuffleEnabled && numPartitions > 0 &&
-      // TODO: SPARK-35547: Push based shuffle is currently unsupported for Barrier stages
-      !rdd.isBarrier()
+    // TODO: SPARK-35547: Push based shuffle is currently unsupported for Barrier stages
+    !rdd.isBarrier()
   }
 
   @transient private[this] val shufflePushCompleted = new RoaringBitmap()
 
   /**
-   * Mark a given map task as push completed in the tracking bitmap.
-   * Using the bitmap ensures that the same map task launched multiple times due to
-   * either speculation or stage retry is only counted once.
-   * @param mapIndex Map task index
-   * @return number of map tasks with block push completed
+   * Mark a given map task as push completed in the tracking bitmap. Using the bitmap ensures that
+   * the same map task launched multiple times due to either speculation or stage retry is only
+   * counted once.
+   * @param mapIndex
+   *   Map task index
+   * @return
+   *   number of map tasks with block push completed
    */
   private[spark] def incPushCompleted(mapIndex: Int): Int = {
     shufflePushCompleted.add(mapIndex)
@@ -249,36 +259,37 @@ class ShuffleDependency[K: ClassTag, V: ClassTag, C: ClassTag](
         log"for ${MDC(RDD_DESCRIPTION, _rdd)} " +
         log"with ${MDC(NUM_PARTITIONS2, numPartitions)} partitions" +
         log" is possibly too large, which could cause the driver to crash with an out-of-memory" +
-        log" error. Consider decreasing the number of partitions in this shuffle stage."
-    )
+        log" error. Consider decreasing the number of partitions in this shuffle stage.")
   }
 
   _rdd.sparkContext.cleaner.foreach(_.registerShuffleForCleanup(this))
   _rdd.sparkContext.shuffleDriverComponents.registerShuffle(shuffleId)
 }
 
-
 /**
- * :: DeveloperApi ::
- * Represents a one-to-one dependency between partitions of the parent and child RDDs.
+ * :: DeveloperApi :: Represents a one-to-one dependency between partitions of the parent and
+ * child RDDs.
  */
 @DeveloperApi
 class OneToOneDependency[T](rdd: RDD[T]) extends NarrowDependency[T](rdd) {
   override def getParents(partitionId: Int): List[Int] = List(partitionId)
 }
 
-
 /**
- * :: DeveloperApi ::
- * Represents a one-to-one dependency between ranges of partitions in the parent and child RDDs.
- * @param rdd the parent RDD
- * @param inStart the start of the range in the parent RDD
- * @param outStart the start of the range in the child RDD
- * @param length the length of the range
+ * :: DeveloperApi :: Represents a one-to-one dependency between ranges of partitions in the
+ * parent and child RDDs.
+ * @param rdd
+ *   the parent RDD
+ * @param inStart
+ *   the start of the range in the parent RDD
+ * @param outStart
+ *   the start of the range in the child RDD
+ * @param length
+ *   the length of the range
  */
 @DeveloperApi
 class RangeDependency[T](rdd: RDD[T], inStart: Int, outStart: Int, length: Int)
-  extends NarrowDependency[T](rdd) {
+    extends NarrowDependency[T](rdd) {
 
   override def getParents(partitionId: Int): List[Int] = {
     if (partitionId >= outStart && partitionId < outStart + length) {

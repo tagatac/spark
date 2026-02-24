@@ -74,14 +74,12 @@ class ReplSuite extends SparkFunSuite {
 
   def assertContains(message: String, output: String): Unit = {
     val isContain = output.contains(message)
-    assert(isContain,
-      "Interpreter output did not contain '" + message + "':\n" + output)
+    assert(isContain, "Interpreter output did not contain '" + message + "':\n" + output)
   }
 
   def assertDoesNotContain(message: String, output: String): Unit = {
     val isContain = output.contains(message)
-    assert(!isContain,
-      "Interpreter output contained '" + message + "':\n" + output)
+    assert(!isContain, "Interpreter output contained '" + message + "':\n" + output)
   }
 
   test("SPARK-15236: use Hive catalog") {
@@ -92,7 +90,8 @@ class ReplSuite extends SparkFunSuite {
     rootLogger.setLevel(Level.INFO)
     try {
       Main.conf.set(CATALOG_IMPLEMENTATION.key, "hive")
-      val output = runInterpreter("local",
+      val output = runInterpreter(
+        "local",
         """
       |spark.sql("drop table if exists t_15236")
     """.stripMargin)
@@ -118,7 +117,8 @@ class ReplSuite extends SparkFunSuite {
     rootLogger.setLevel(Level.INFO)
     try {
       Main.conf.set(CATALOG_IMPLEMENTATION.key, "in-memory")
-      val output = runInterpreter("local",
+      val output = runInterpreter(
+        "local",
         """
           |spark.sql("drop table if exists t_16236")
         """.stripMargin)
@@ -134,7 +134,8 @@ class ReplSuite extends SparkFunSuite {
     // Test that the value that a broadcast var had when it was created is used,
     // even if that variable is then modified in the driver program
     // TODO: This doesn't actually work for arrays when we run in local mode!
-    val output = runInterpreter("local",
+    val output = runInterpreter(
+      "local",
       """
         |var array = new Array[Int](5)
         |val broadcastArray = sc.broadcast(array)
@@ -149,7 +150,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("line wrapper only initialized once when used as encoder outer scope") {
-    val output = runInterpreter("local",
+    val output = runInterpreter(
+      "local",
       """
         |val fileName = "repl-test-" + System.currentTimeMillis
         |val tmpDir = System.getProperty("java.io.tmpdir")
@@ -166,7 +168,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("define case class and create Dataset together with paste mode") {
-    val output = runInterpreterInPasteMode("local-cluster[1,1,1024]",
+    val output = runInterpreterInPasteMode(
+      "local-cluster[1,1,1024]",
       """
         |import spark.implicits._
         |case class TestClass(value: Int)
@@ -177,8 +180,9 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test(":replay should work correctly") {
-   val output = runInterpreter("local",
-     """
+    val output = runInterpreter(
+      "local",
+      """
      |sc
      |:replay
      """.stripMargin)
@@ -186,7 +190,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("spark-shell should find imported types in class constructors and extends clause") {
-    val output = runInterpreter("local",
+    val output = runInterpreter(
+      "local",
       """
         |import org.apache.spark.Partition
         |class P(p: Partition)
@@ -196,7 +201,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("spark-shell should shadow val/def definitions correctly") {
-    val output1 = runInterpreter("local",
+    val output1 = runInterpreter(
+      "local",
       """
         |def myMethod() = "first definition"
         |val tmp = myMethod(); val out = tmp
@@ -205,7 +211,8 @@ class ReplSuite extends SparkFunSuite {
       """.stripMargin)
     assertContains("second definition aabbcc", output1)
 
-    val output2 = runInterpreter("local",
+    val output2 = runInterpreter(
+      "local",
       """
         |val a = 1
         |val b = a; val c = b;
@@ -217,7 +224,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("SPARK-26633: ExecutorClassLoader.getResourceAsStream find REPL classes") {
-    val output = runInterpreterInPasteMode("local-cluster[1,1,1024]",
+    val output = runInterpreterInPasteMode(
+      "local-cluster[1,1,1024]",
       """
         |case class TestClass(value: Int)
         |
@@ -285,15 +293,17 @@ class ReplSuite extends SparkFunSuite {
     val infoLogMessage2 = "infoLogMessage3 should be output"
     val debugLogMessage1 = "debugLogMessage1 should be output"
 
-    val out = try {
-      val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
-      context.setConfigLocation(log4jprops.toUri())
+    val out =
+      try {
+        val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
+        context.setConfigLocation(log4jprops.toUri())
 
-      // Re-initialization is needed to set SparkShellLoggingFilter to ConsoleAppender
-      Main.initializeForcefully(true, false)
-      // scalastyle:off
-      runInterpreter("local",
-        s"""
+        // Re-initialization is needed to set SparkShellLoggingFilter to ConsoleAppender
+        Main.initializeForcefully(true, false)
+        // scalastyle:off
+        runInterpreter(
+          "local",
+          s"""
            |import java.io.{ByteArrayOutputStream, PrintStream}
            |
            |import org.apache.logging.log4j.{Level, LogManager}
@@ -340,16 +350,16 @@ class ReplSuite extends SparkFunSuite {
            |  System.setErr(defaultErrStream)
            |}
            |""".stripMargin)
-    } finally {
-      // Restore log4j settings for this suite
-      val log4jproperties = Thread.currentThread()
-        .getContextClassLoader.getResource("log4j2.properties")
-      val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
-      context.reconfigure()
-      context.setConfigLocation(log4jproperties.toURI)
-      context.updateLoggers()
-      Logging.sparkShellThresholdLevel = originalReplThresholdLevel
-    }
+      } finally {
+        // Restore log4j settings for this suite
+        val log4jproperties =
+          Thread.currentThread().getContextClassLoader.getResource("log4j2.properties")
+        val context = LogManager.getContext(false).asInstanceOf[LoggerContext]
+        context.reconfigure()
+        context.setConfigLocation(log4jproperties.toURI)
+        context.updateLoggers()
+        Logging.sparkShellThresholdLevel = originalReplThresholdLevel
+      }
     // scalastyle:on
 
     // Ensure stderr configuration is successfully restored.
@@ -404,7 +414,8 @@ class ReplSuite extends SparkFunSuite {
         .getResourceAsStream("/" + clsName.replace(".", "/") + ".class")
       val intSumUdfPath = new File(tempDir, "IntSumUdf.class")
       Files.copy(intSumUdfStream, intSumUdfPath.toPath)
-      val output = runInterpreterInPasteMode("local",
+      val output = runInterpreterInPasteMode(
+        "local",
         s"""
            |import org.apache.spark.sql.api.java.UDF2
            |import org.apache.spark.sql.types.DataTypes
@@ -426,7 +437,8 @@ class ReplSuite extends SparkFunSuite {
       assertDoesNotContain("assertion failed", output)
 
       // The UDF should not work in a new REPL session.
-      val anotherOutput = runInterpreterInPasteMode("local",
+      val anotherOutput = runInterpreterInPasteMode(
+        "local",
         s"""
            |val r = spark.range(5)
            |  .withColumn("id2", col("id") + 1)
@@ -447,7 +459,8 @@ class ReplSuite extends SparkFunSuite {
         .getResourceAsStream("/" + clsName.replace(".", "/") + ".class")
       val intSumUdfPath = new File(tempDir, "IntSumUdf.class")
       Files.copy(intSumUdfStream, intSumUdfPath.toPath)
-      val output = runInterpreterInPasteMode("local",
+      val output = runInterpreterInPasteMode(
+        "local",
         s"""
            |import org.apache.spark.sql.functions.udf
            |
@@ -471,7 +484,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("SPARK-53129: spark-shell imports java.net._ by default") {
-    val output = runInterpreter("local",
+    val output = runInterpreter(
+      "local",
       """
         |new URI("https://spark.apache.org")
       """.stripMargin)
@@ -479,7 +493,8 @@ class ReplSuite extends SparkFunSuite {
   }
 
   test("SPARK-53131: spark-shell imports java.nio.file._ by default") {
-    val output = runInterpreter("local",
+    val output = runInterpreter(
+      "local",
       """
         |Path.of("/tmp")
       """.stripMargin)

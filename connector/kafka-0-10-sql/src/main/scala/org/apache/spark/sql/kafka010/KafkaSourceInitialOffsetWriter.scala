@@ -29,7 +29,7 @@ import org.apache.spark.util.Utils
 private[kafka010] class KafkaSourceInitialOffsetWriter(
     sparkSession: SparkSession,
     metadataPath: String)
-  extends HDFSMetadataLog[KafkaSourceOffset](sparkSession, metadataPath) {
+    extends HDFSMetadataLog[KafkaSourceOffset](sparkSession, metadataPath) {
 
   val VERSION = 1
 

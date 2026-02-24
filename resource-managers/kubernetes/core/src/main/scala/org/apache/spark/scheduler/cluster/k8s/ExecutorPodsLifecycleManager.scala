@@ -40,7 +40,8 @@ private[spark] class ExecutorPodsLifecycleManager(
     val conf: SparkConf,
     kubernetesClient: KubernetesClient,
     snapshotsStore: ExecutorPodsSnapshotsStore,
-    clock: Clock = new SystemClock()) extends Logging {
+    clock: Clock = new SystemClock())
+    extends Logging {
 
   import ExecutorPodsLifecycleManager._
 
@@ -52,7 +53,8 @@ private[spark] class ExecutorPodsLifecycleManager(
   // to avoid doing so. Expire cache entries so that this data structure doesn't grow beyond
   // bounds.
   private lazy val removedExecutorsCache =
-    CacheBuilder.newBuilder()
+    CacheBuilder
+      .newBuilder()
       .expireAfterWrite(conf.get(KUBERNETES_DELETED_EXECUTORS_CACHE_TIMEOUT), TimeUnit.SECONDS)
       .build[java.lang.Long, java.lang.Long]()
 
@@ -66,7 +68,8 @@ private[spark] class ExecutorPodsLifecycleManager(
 
   private val PATCH_CONTEXT = PatchContext.of(PatchType.STRATEGIC_MERGE)
 
-  private val sparkContainerName = conf.get(KUBERNETES_EXECUTOR_PODTEMPLATE_CONTAINER_NAME)
+  private val sparkContainerName = conf
+    .get(KUBERNETES_EXECUTOR_PODTEMPLATE_CONTAINER_NAME)
     .getOrElse(DEFAULT_EXECUTOR_CONTAINER_NAME)
 
   protected val maxNumExecutorFailures = ExecutorFailureTracker.maxNumExecutorFailures(conf)
@@ -82,8 +85,9 @@ private[spark] class ExecutorPodsLifecycleManager(
     snapshotsStore.addSubscriber(eventProcessingInterval) { executorPodsSnapshot =>
       onNewSnapshots(schedulerBackend, executorPodsSnapshot)
       if (failureTracker.numFailedExecutors > maxNumExecutorFailures) {
-        logError(log"Max number of executor failures " +
-          log"(${MDC(LogKeys.MAX_EXECUTOR_FAILURES, maxNumExecutorFailures)}) reached")
+        logError(
+          log"Max number of executor failures " +
+            log"(${MDC(LogKeys.MAX_EXECUTOR_FAILURES, maxNumExecutorFailures)}) reached")
         stopApplication(EXCEED_MAX_EXECUTOR_FAILURES)
       }
     }
@@ -114,22 +118,24 @@ private[spark] class ExecutorPodsLifecycleManager(
           case _state if isPodInactive(_state.pod) =>
             inactivatedPods -= execId
 
-          case deleted@PodDeleted(_) =>
+          case deleted @ PodDeleted(_) =>
             execIdsRemovedInThisRound += execId
             if (removeExecutorFromSpark(schedulerBackend, deleted, execId)) {
-              logDebug(s"Snapshot reported deleted executor with id $execId," +
-                s" pod name ${state.pod.getMetadata.getName}")
+              logDebug(
+                s"Snapshot reported deleted executor with id $execId," +
+                  s" pod name ${state.pod.getMetadata.getName}")
             }
             inactivatedPods -= execId
 
-          case failed@PodFailed(_) =>
+          case failed @ PodFailed(_) =>
             val deleteFromK8s = execIdsRemovedInThisRound.add(execId)
             if (onFinalNonDeletedState(failed, execId, schedulerBackend, deleteFromK8s)) {
-              logDebug(s"Snapshot reported failed executor with id $execId," +
-                s" pod name ${state.pod.getMetadata.getName}")
+              logDebug(
+                s"Snapshot reported failed executor with id $execId," +
+                  s" pod name ${state.pod.getMetadata.getName}")
             }
 
-          case succeeded@PodSucceeded(_) =>
+          case succeeded @ PodSucceeded(_) =>
             val deleteFromK8s = execIdsRemovedInThisRound.add(execId)
             if (onFinalNonDeletedState(succeeded, execId, schedulerBackend, deleteFromK8s)) {
               if (schedulerBackend.isExecutorActive(execId.toString)) {
@@ -137,8 +143,9 @@ private[spark] class ExecutorPodsLifecycleManager(
                   log"${MDC(LogKeys.EXECUTOR_ID, execId)}, even though the application has not " +
                   log"requested for it to be removed.")
               } else {
-                logDebug(s"Snapshot reported succeeded executor with id $execId," +
-                  s" pod name ${state.pod.getMetadata.getName}.")
+                logDebug(
+                  s"Snapshot reported succeeded executor with id $execId," +
+                    s" pod name ${state.pod.getMetadata.getName}.")
               }
             }
 
@@ -163,11 +170,11 @@ private[spark] class ExecutorPodsLifecycleManager(
       lastFullSnapshotTs = snapshots.last.fullSnapshotTs
       val lostExecutorsWithRegistrationTs =
         schedulerBackend.getExecutorsWithRegistrationTs().map(t => (t._1.toLong, t._2)) --
-        snapshots.last.executorPods.keySet -- execIdsRemovedInThisRound
+          snapshots.last.executorPods.keySet -- execIdsRemovedInThisRound
 
       lostExecutorsWithRegistrationTs.foreach { case (lostExecId, lostExecRegistrationTs) =>
         if (removedExecutorsCache.getIfPresent(lostExecId) == null &&
-            lastFullSnapshotTs - lostExecRegistrationTs > missingPodDetectDelta) {
+          lastFullSnapshotTs - lostExecRegistrationTs > missingPodDetectDelta) {
           val exitReasonMessage = s"The executor with ID $lostExecId (registered at " +
             s"$lostExecRegistrationTs ms) was not found in the cluster at the polling time " +
             s"($lastFullSnapshotTs ms) which is after the accepted detect delta time " +
@@ -176,10 +183,8 @@ private[spark] class ExecutorPodsLifecycleManager(
             "The executor may have been deleted but the driver missed the deletion event. " +
             "Marking this executor as failed."
           logDebug(exitReasonMessage)
-          val exitReason = ExecutorExited(
-            UNKNOWN_EXIT_CODE,
-            exitCausedByApp = false,
-            exitReasonMessage)
+          val exitReason =
+            ExecutorExited(UNKNOWN_EXIT_CODE, exitCausedByApp = false, exitReasonMessage)
           schedulerBackend.doRemoveExecutor(lostExecId.toString, exitReason)
         }
       }
@@ -221,23 +226,26 @@ private[spark] class ExecutorPodsLifecycleManager(
           .withName(updatedPod.getMetadata.getName)
 
         if (podToDelete.get() != null &&
-            podToDelete.get.getMetadata.getDeletionTimestamp == null) {
+          podToDelete.get.getMetadata.getDeletionTimestamp == null) {
           podToDelete.delete()
         }
       } else if (!inactivatedPods.contains(execId) && !isPodInactive(updatedPod)) {
         // If the config is set to keep the executor  around, mark the pod as "inactive" so it
         // can be ignored in future updates from the API server.
-        logDebug(s"Marking executor ${updatedPod.getMetadata.getName} as inactive since " +
-          "deletion is disabled.")
+        logDebug(
+          s"Marking executor ${updatedPod.getMetadata.getName} as inactive since " +
+            "deletion is disabled.")
         kubernetesClient
           .pods()
           .inNamespace(namespace)
           .withName(updatedPod.getMetadata.getName)
-          .patch(PATCH_CONTEXT, new PodBuilder()
-            .editOrNewMetadata()
+          .patch(
+            PATCH_CONTEXT,
+            new PodBuilder()
+              .editOrNewMetadata()
               .addToLabels(SPARK_EXECUTOR_INACTIVE_LABEL, "true")
-            .endMetadata()
-            .build())
+              .endMetadata()
+              .build())
 
         inactivatedPods += execId
       }
@@ -279,7 +287,6 @@ private[spark] class ExecutorPodsLifecycleManager(
     val reasonStr = reason.map(r => s"The API gave the following brief reason: ${r}")
     val msgStr = message.map(m => s"The API gave the following message: ${m}")
 
-
     s"""
        |${exitMsg}
        |${reasonStr.getOrElse("")}
@@ -292,12 +299,15 @@ private[spark] class ExecutorPodsLifecycleManager(
   }
 
   private def findExitCode(podState: FinalPodState): Int = {
-    podState.pod.getStatus.getContainerStatuses.asScala.find { containerStatus =>
-      containerStatus.getName == sparkContainerName &&
+    podState.pod.getStatus.getContainerStatuses.asScala
+      .find { containerStatus =>
+        containerStatus.getName == sparkContainerName &&
         containerStatus.getState.getTerminated != null
-    }.map { terminatedContainer =>
-      terminatedContainer.getState.getTerminated.getExitCode.toInt
-    }.getOrElse(UNKNOWN_EXIT_CODE)
+      }
+      .map { terminatedContainer =>
+        terminatedContainer.getState.getTerminated.getExitCode.toInt
+      }
+      .getOrElse(UNKNOWN_EXIT_CODE)
   }
 
   private def isPodInactive(pod: Pod): Boolean = {

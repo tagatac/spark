@@ -61,7 +61,7 @@ class VectorsSuite extends SparkFunSuite {
   }
 
   test("dense vector construction from a double array") {
-   val vec = Vectors.dense(arr).asInstanceOf[DenseVector]
+    val vec = Vectors.dense(arr).asInstanceOf[DenseVector]
     assert(vec.size === arr.length)
     assert(vec.values.eq(arr))
   }
@@ -74,7 +74,8 @@ class VectorsSuite extends SparkFunSuite {
   }
 
   test("sparse vector construction with unordered elements") {
-    val vec = Vectors.sparse(n, indices.zip(values).reverse.toImmutableArraySeq)
+    val vec = Vectors
+      .sparse(n, indices.zip(values).reverse.toImmutableArraySeq)
       .asInstanceOf[SparseVector]
     assert(vec.size === n)
     assert(vec.indices === indices)
@@ -145,10 +146,12 @@ class VectorsSuite extends SparkFunSuite {
     assert(vec8.argmax === 0)
 
     // Check for case when sparse vector is non-empty but the values are empty
-    val vec9 = Vectors.sparse(100, Array.empty[Int], Array.empty[Double]).asInstanceOf[SparseVector]
+    val vec9 =
+      Vectors.sparse(100, Array.empty[Int], Array.empty[Double]).asInstanceOf[SparseVector]
     assert(vec9.argmax === 0)
 
-    val vec10 = Vectors.sparse(1, Array.empty[Int], Array.empty[Double]).asInstanceOf[SparseVector]
+    val vec10 =
+      Vectors.sparse(1, Array.empty[Int], Array.empty[Double]).asInstanceOf[SparseVector]
     assert(vec10.argmax === 0)
   }
 
@@ -213,7 +216,7 @@ class VectorsSuite extends SparkFunSuite {
     val vectors = Seq(
       Vectors.dense(Array.empty[Double]),
       Vectors.dense(1.0),
-      Vectors.dense(1.0E6, 0.0, -2.0e-7),
+      Vectors.dense(1.0e6, 0.0, -2.0e-7),
       Vectors.sparse(0, Array.empty[Int], Array.empty[Double]),
       Vectors.sparse(1, Array(0), Array(1.0)),
       Vectors.sparse(3, Array(0, 2), Array(1.0, -2.0)))
@@ -297,16 +300,19 @@ class VectorsSuite extends SparkFunSuite {
       val denseVector1 = Vectors.dense(sparseVector1.toArray)
       val denseVector2 = Vectors.dense(sparseVector2.toArray)
 
-      val squaredDist = sparseVector1.toArray.zip(sparseVector2.toArray).map {
-        case (a, b) => (a - b) * (a - b)
-      }.sum
+      val squaredDist = sparseVector1.toArray
+        .zip(sparseVector2.toArray)
+        .map { case (a, b) =>
+          (a - b) * (a - b)
+        }
+        .sum
 
       // SparseVector vs. SparseVector
-      assert(Vectors.sqdist(sparseVector1, sparseVector2) ~== squaredDist relTol 1E-8)
+      assert(Vectors.sqdist(sparseVector1, sparseVector2) ~== squaredDist relTol 1e-8)
       // DenseVector  vs. SparseVector
-      assert(Vectors.sqdist(denseVector1, sparseVector2) ~== squaredDist relTol 1E-8)
+      assert(Vectors.sqdist(denseVector1, sparseVector2) ~== squaredDist relTol 1e-8)
       // DenseVector  vs. DenseVector
-      assert(Vectors.sqdist(denseVector1, denseVector2) ~== squaredDist relTol 1E-8)
+      assert(Vectors.sqdist(denseVector1, denseVector2) ~== squaredDist relTol 1e-8)
     }
   }
 
@@ -353,23 +359,27 @@ class VectorsSuite extends SparkFunSuite {
     val dv = Vectors.dense(0.0, -1.2, 3.1, 0.0, -4.5, 1.9)
     val sv = Vectors.sparse(6, Seq((1, -1.2), (2, 3.1), (3, 0.0), (4, -4.5), (5, 1.9)))
 
-    assert(Vectors.norm(dv, 1.0) ~== dv.toArray.foldLeft(0.0)((a, v) =>
-      a + math.abs(v)) relTol 1E-8)
-    assert(Vectors.norm(sv, 1.0) ~== sv.toArray.foldLeft(0.0)((a, v) =>
-      a + math.abs(v)) relTol 1E-8)
+    assert(
+      Vectors.norm(dv, 1.0) ~== dv.toArray.foldLeft(0.0)((a, v) => a + math.abs(v)) relTol 1e-8)
+    assert(
+      Vectors.norm(sv, 1.0) ~== sv.toArray.foldLeft(0.0)((a, v) => a + math.abs(v)) relTol 1e-8)
 
     assert(Vectors.norm(dv, 2.0) ~== math.sqrt(dv.toArray.foldLeft(0.0)((a, v) =>
-      a + v * v)) relTol 1E-8)
+      a + v * v)) relTol 1e-8)
     assert(Vectors.norm(sv, 2.0) ~== math.sqrt(sv.toArray.foldLeft(0.0)((a, v) =>
-      a + v * v)) relTol 1E-8)
+      a + v * v)) relTol 1e-8)
 
-    assert(Vectors.norm(dv, Double.PositiveInfinity) ~== dv.toArray.map(math.abs).max relTol 1E-8)
-    assert(Vectors.norm(sv, Double.PositiveInfinity) ~== sv.toArray.map(math.abs).max relTol 1E-8)
+    assert(Vectors.norm(dv, Double.PositiveInfinity) ~== dv.toArray.map(math.abs).max relTol 1e-8)
+    assert(Vectors.norm(sv, Double.PositiveInfinity) ~== sv.toArray.map(math.abs).max relTol 1e-8)
 
-    assert(Vectors.norm(dv, 3.7) ~== math.pow(dv.toArray.foldLeft(0.0)((a, v) =>
-      a + math.pow(math.abs(v), 3.7)), 1.0 / 3.7) relTol 1E-8)
-    assert(Vectors.norm(sv, 3.7) ~== math.pow(sv.toArray.foldLeft(0.0)((a, v) =>
-      a + math.pow(math.abs(v), 3.7)), 1.0 / 3.7) relTol 1E-8)
+    assert(
+      Vectors.norm(dv, 3.7) ~== math.pow(
+        dv.toArray.foldLeft(0.0)((a, v) => a + math.pow(math.abs(v), 3.7)),
+        1.0 / 3.7) relTol 1e-8)
+    assert(
+      Vectors.norm(sv, 3.7) ~== math.pow(
+        sv.toArray.foldLeft(0.0)((a, v) => a + math.pow(math.abs(v), 3.7)),
+        1.0 / 3.7) relTol 1e-8)
   }
 
   test("Vector numActive and numNonzeros") {
@@ -534,7 +544,7 @@ class VectorsSuite extends SparkFunSuite {
   test("dot product only supports vectors of same size") {
     val vSize4 = Vectors.dense(arr)
     val vSize1 = Vectors.zeros(1)
-    intercept[IllegalArgumentException]{ vSize1.dot(vSize4) }
+    intercept[IllegalArgumentException] { vSize1.dot(vSize4) }
   }
 
   test("dense vector dot product") {
@@ -559,8 +569,7 @@ class VectorsSuite extends SparkFunSuite {
       Vectors.dense(arr),
       Vectors.zeros(n),
       Vectors.sparse(n, indices, values),
-      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)
-    ).foreach { vec =>
+      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)).foreach { vec =>
       val (indices, values) = vec.iterator.toArray.unzip
       assert(Array.range(0, vec.size) === indices)
       assert(vec.toArray === values)
@@ -572,8 +581,7 @@ class VectorsSuite extends SparkFunSuite {
       Vectors.dense(arr),
       Vectors.zeros(n),
       Vectors.sparse(n, indices, values),
-      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)
-    ).foreach { vec =>
+      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)).foreach { vec =>
       val indicesBuilder = ArrayBuilder.make[Int]
       val valuesBuilder = ArrayBuilder.make[Double]
       vec.foreachActive { case (i, v) =>
@@ -591,8 +599,7 @@ class VectorsSuite extends SparkFunSuite {
       Vectors.dense(arr),
       Vectors.zeros(n),
       Vectors.sparse(n, indices, values),
-      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)
-    ).foreach { vec =>
+      Vectors.sparse(n, Array.emptyIntArray, Array.emptyDoubleArray)).foreach { vec =>
       val indicesBuilder = ArrayBuilder.make[Int]
       val valuesBuilder = ArrayBuilder.make[Double]
       vec.foreachActive { case (i, v) =>

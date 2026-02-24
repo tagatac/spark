@@ -20,13 +20,10 @@ package org.apache.spark
 import org.scalatest.wordspec.AnyWordSpec
 
 /**
- * This test is just for demonstration purpose.
- * Real test suites in Spark codebase should use SparkFunSuite.
+ * This test is just for demonstration purpose. Real test suites in Spark codebase should use
+ * SparkFunSuite.
  */
-class WordSpecSparkTestSuite
-  extends AnyWordSpec
-    with SparkTestSuite
-    with LocalSparkContext {
+class WordSpecSparkTestSuite extends AnyWordSpec with SparkTestSuite with LocalSparkContext {
 
   override def beforeAll(): Unit = {
     super.beforeAll()

@@ -82,7 +82,7 @@ class TestStepWithExecConf extends KubernetesExecutorCustomFeatureConfigStep {
   override def configurePod(pod: SparkPod): SparkPod = {
     val k8sPodBuilder = new PodBuilder(pod.pod)
       .editOrNewMetadata()
-       // The annotation key = TEST_ANNOTATION_KEY, value = TEST_ANNOTATION_VALUE
+      // The annotation key = TEST_ANNOTATION_KEY, value = TEST_ANNOTATION_VALUE
       .addToAnnotations("executor-annotation-key", executorConf.get("executor-annotation-key"))
       .endMetadata()
     val k8sPod = k8sPodBuilder.build()

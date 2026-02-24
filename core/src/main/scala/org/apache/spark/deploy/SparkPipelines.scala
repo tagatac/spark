@@ -50,8 +50,8 @@ object SparkPipelines extends Logging {
   }
 
   /**
-   * Split the arguments into spark-submit args (--master, --remote, etc.) and pipeline args
-   * (run, --spec, etc.).
+   * Split the arguments into spark-submit args (--master, --remote, etc.) and pipeline args (run,
+   * --spec, etc.).
    */
   private def splitArgs(args: Array[String]): (Seq[String], Seq[String]) = {
     val sparkSubmitArgs = new ArrayBuffer[String]()
@@ -72,8 +72,7 @@ object SparkPipelines extends Logging {
           if (apiMode.toLowerCase(Locale.ROOT) != "connect") {
             logError(
               s"$SPARK_API_MODE must be 'connect' (was '$apiMode'). " +
-                "Declarative Pipelines currently only supports Spark Connect."
-            )
+                "Declarative Pipelines currently only supports Spark Connect.")
             throw SparkUserAppException(SparkExitCode.EXIT_FAILURE)
           }
         } else if (Seq("--name", "-h", "--help").contains(opt)) {

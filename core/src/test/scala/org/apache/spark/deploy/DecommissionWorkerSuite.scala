@@ -40,10 +40,7 @@ import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.Utils
 
-class DecommissionWorkerSuite
-  extends SparkFunSuite
-    with Logging
-    with LocalSparkContext {
+class DecommissionWorkerSuite extends SparkFunSuite with Logging with LocalSparkContext {
 
   private var masterAndWorkerConf: SparkConf = null
   private var masterAndWorkerSecurityManager: SecurityManager = null
@@ -83,8 +80,8 @@ class DecommissionWorkerSuite
   }
 
   // Unlike TestUtils.withListener, it also waits for the job to be done
-  def withListener(sc: SparkContext, listener: RootStageAwareListener)
-                  (body: SparkListener => Unit): Unit = {
+  def withListener(sc: SparkContext, listener: RootStageAwareListener)(
+      body: SparkListener => Unit): Unit = {
     sc.addSparkListener(listener)
     try {
       body(listener)
@@ -121,9 +118,12 @@ class DecommissionWorkerSuite
       }
     }
     withListener(sc, listener) { _ =>
-      val jobResult = sc.parallelize(1 to 1, 1).map { _ =>
-        Thread.sleep(5 * 1000L); 1
-      }.count()
+      val jobResult = sc
+        .parallelize(1 to 1, 1)
+        .map { _ =>
+          Thread.sleep(5 * 1000L); 1
+        }
+        .count()
       assert(jobResult === 1)
     }
     // single task job that gets to run numTimesToKillWorkers + 1 times.
@@ -136,12 +136,14 @@ class DecommissionWorkerSuite
       // If a task has been killed then it shouldn't be successful
       val taskSuccessExpected = !taskIdsKilled.getOrDefault(taskInfo.taskId, false)
       val taskSuccessActual = taskInfo.successful
-      assert(taskSuccessActual === taskSuccessExpected,
+      assert(
+        taskSuccessActual === taskSuccessExpected,
         s"Expected task success $taskSuccessActual == $taskSuccessExpected")
     }
   }
 
-  test("decommission workers ensure that shuffle output is regenerated even with shuffle service") {
+  test(
+    "decommission workers ensure that shuffle output is regenerated even with shuffle service") {
     createWorkers(2)
     val ss = new ExternalShuffleServiceHolder()
 
@@ -149,8 +151,7 @@ class DecommissionWorkerSuite
       config.Tests.TEST_NO_STAGE_RETRY.key -> "true",
       config.SHUFFLE_MANAGER.key -> "sort",
       config.SHUFFLE_SERVICE_ENABLED.key -> "true",
-      config.SHUFFLE_SERVICE_PORT.key -> ss.getPort.toString
-    )
+      config.SHUFFLE_SERVICE_PORT.key -> ss.getPort.toString)
     TestUtils.waitUntilExecutorsUp(sc, 2, 60000)
 
     // Here we will create a 2 stage job: The first stage will have two tasks and the second stage
@@ -177,11 +178,17 @@ class DecommissionWorkerSuite
         }
       }
       withListener(sc, listener) { _ =>
-        val jobResult = sc.parallelize(1 to 2, 2).mapPartitionsWithIndex((pid, _) => {
-          val sleepTimeSeconds = if (pid == 0) 1 else 10
-          Thread.sleep(sleepTimeSeconds * 1000L)
-          List(1).iterator
-        }, preservesPartitioning = true).repartition(1).sum()
+        val jobResult = sc
+          .parallelize(1 to 2, 2)
+          .mapPartitionsWithIndex(
+            (pid, _) => {
+              val sleepTimeSeconds = if (pid == 0) 1 else 10
+              Thread.sleep(sleepTimeSeconds * 1000L)
+              List(1).iterator
+            },
+            preservesPartitioning = true)
+          .repartition(1)
+          .sum()
         assert(jobResult === 2)
       }
       val tasksSeen = listener.getTasksFinished()
@@ -228,38 +235,51 @@ class DecommissionWorkerSuite
         val taskInfo = taskEnd.taskInfo
         if (taskInfo.executorId == executorToDecom && taskInfo.attemptNumber == 0 &&
           taskEnd.stageAttemptId == 0 && taskEnd.stageId == 0) {
-          decommissionWorkerOnMaster(workerToDecom,
+          decommissionWorkerOnMaster(
+            workerToDecom,
             "decommission worker after task on it is done")
         }
       }
     }
     withListener(sc, listener) { _ =>
-      val jobResult = sc.parallelize(1 to 2, 2).mapPartitionsWithIndex((_, _) => {
-        val executorId = SparkEnv.get.executorId
-        val context = TaskContext.get()
-        // Only sleep in the first attempt to create the required window for decommissioning.
-        // Subsequent attempts don't need to be delayed to speed up the test.
-        if (context.attemptNumber() == 0 && context.stageAttemptNumber() == 0) {
-          val sleepTimeSeconds = if (executorId == executorToDecom) 10 else 1
-          Thread.sleep(sleepTimeSeconds * 1000L)
-        }
-        List(1).iterator
-      }, preservesPartitioning = true)
-        .repartition(1).mapPartitions(iter => {
-        val context = TaskContext.get()
-        if (context.attemptNumber() == 0 && context.stageAttemptNumber() == 0) {
-          // Wait a bit for the decommissioning to be triggered in the listener
-          Thread.sleep(5000)
-          // MapIndex is explicitly -1 to force the entire host to be decommissioned
-          // However, this will cause both the tasks in the preceding stage since the host here is
-          // "localhost" (shortcoming of this single-machine unit test in that all the workers
-          // are actually on the same host)
-          throw new FetchFailedException(BlockManagerId(executorToDecom,
-            workerToDecom.host, workerToDecom.port), 0, 0, -1, 0, "Forcing fetch failure")
-        }
-        val sumVal: List[Int] = List(iter.sum)
-        sumVal.iterator
-      }, preservesPartitioning = true)
+      val jobResult = sc
+        .parallelize(1 to 2, 2)
+        .mapPartitionsWithIndex(
+          (_, _) => {
+            val executorId = SparkEnv.get.executorId
+            val context = TaskContext.get()
+            // Only sleep in the first attempt to create the required window for decommissioning.
+            // Subsequent attempts don't need to be delayed to speed up the test.
+            if (context.attemptNumber() == 0 && context.stageAttemptNumber() == 0) {
+              val sleepTimeSeconds = if (executorId == executorToDecom) 10 else 1
+              Thread.sleep(sleepTimeSeconds * 1000L)
+            }
+            List(1).iterator
+          },
+          preservesPartitioning = true)
+        .repartition(1)
+        .mapPartitions(
+          iter => {
+            val context = TaskContext.get()
+            if (context.attemptNumber() == 0 && context.stageAttemptNumber() == 0) {
+              // Wait a bit for the decommissioning to be triggered in the listener
+              Thread.sleep(5000)
+              // MapIndex is explicitly -1 to force the entire host to be decommissioned
+              // However, this will cause both the tasks in the preceding stage since the host here is
+              // "localhost" (shortcoming of this single-machine unit test in that all the workers
+              // are actually on the same host)
+              throw new FetchFailedException(
+                BlockManagerId(executorToDecom, workerToDecom.host, workerToDecom.port),
+                0,
+                0,
+                -1,
+                0,
+                "Forcing fetch failure")
+            }
+            val sumVal: List[Int] = List(iter.sum)
+            sumVal.iterator
+          },
+          preservesPartitioning = true)
         .sum()
       assert(jobResult === 2)
     }
@@ -303,14 +323,14 @@ class DecommissionWorkerSuite
 
     protected def handleRootTaskStart(start: SparkListenerTaskStart) = {}
 
-    private def getSignature(taskInfo: TaskInfo, stageId: Int, stageAttemptId: Int):
-    String = {
+    private def getSignature(taskInfo: TaskInfo, stageId: Int, stageAttemptId: Int): String = {
       s"${stageId}:${stageAttemptId}:" +
         s"${taskInfo.index}:${taskInfo.attemptNumber}-${taskInfo.status}"
     }
 
     override def onTaskStart(taskStart: SparkListenerTaskStart): Unit = {
-      val signature = getSignature(taskStart.taskInfo, taskStart.stageId, taskStart.stageAttemptId)
+      val signature =
+        getSignature(taskStart.taskInfo, taskStart.stageId, taskStart.stageAttemptId)
       logInfo(s"Task started: $signature")
       if (isRootStageId(taskStart.stageId)) {
         rootTasksStarted.add(taskStart.taskInfo)
@@ -350,7 +370,8 @@ class DecommissionWorkerSuite
       wi.executors.values.foreach { e =>
         val executorIdString = e.id.toString
         val oldWorkerInfo = executorIdToWorkerInfo.put(executorIdString, wi)
-        assert(oldWorkerInfo.isEmpty,
+        assert(
+          oldWorkerInfo.isEmpty,
           s"Executor $executorIdString already present on another worker ${oldWorkerInfo}")
       }
     }
@@ -381,8 +402,16 @@ class DecommissionWorkerSuite
     val rpcAddressToRpcEnv: mutable.HashMap[RpcAddress, RpcEnv] = mutable.HashMap.empty
     workerRpcEnvs.foreach { rpcEnv =>
       val workDir = Utils.createTempDir(namePrefix = this.getClass.getSimpleName()).toString
-      val worker = new Worker(rpcEnv, 0, cores, memory, Array(masterRpcEnv.address),
-        Worker.ENDPOINT_NAME, workDir, masterAndWorkerConf, masterAndWorkerSecurityManager)
+      val worker = new Worker(
+        rpcEnv,
+        0,
+        cores,
+        memory,
+        Array(masterRpcEnv.address),
+        Worker.ENDPOINT_NAME,
+        workDir,
+        masterAndWorkerConf,
+        masterAndWorkerSecurityManager)
       rpcEnv.setupEndpoint(Worker.ENDPOINT_NAME, worker)
       workers.append(worker)
       val oldRpcEnv = rpcAddressToRpcEnv.put(rpcEnv.address, rpcEnv)
@@ -401,8 +430,10 @@ class DecommissionWorkerSuite
         val rpcEnv = rpcAddressToRpcEnv(rpcAddress)
         assert(rpcEnv != null, s"Cannot find the worker for $rpcAddress")
         val oldRpcEnv = workerIdToRpcEnvs.put(workerInfo.id, rpcEnv)
-        assert(oldRpcEnv.isEmpty, s"Detected duplicate rpcEnv ${oldRpcEnv} for worker " +
-          s"${workerInfo.id}")
+        assert(
+          oldRpcEnv.isEmpty,
+          s"Detected duplicate rpcEnv ${oldRpcEnv} for worker " +
+            s"${workerInfo.id}")
       }
     }
     logInfo(s"Created ${workers.size} workers")
@@ -447,8 +478,8 @@ class DecommissionWorkerSuite
   private class ExternalShuffleServiceHolder() {
     // The external shuffle service can start with default configs and not get polluted by the
     // other configs used in this test.
-    private val transportConf = SparkTransportConf.fromSparkConf(new SparkConf(),
-      "shuffle", numUsableCores = 2)
+    private val transportConf =
+      SparkTransportConf.fromSparkConf(new SparkConf(), "shuffle", numUsableCores = 2)
     private val rpcHandler = new ExternalBlockHandler(transportConf, null)
     private val transportContext = new TransportContext(transportConf, rpcHandler)
     private val server = transportContext.createServer()

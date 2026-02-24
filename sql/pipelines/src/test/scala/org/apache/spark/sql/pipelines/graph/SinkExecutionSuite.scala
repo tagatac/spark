@@ -32,8 +32,7 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
       sinkName: String,
       flowName: String,
       format: String,
-      sinkOptions: Map[String, String] = Map.empty
-  ): DataflowGraph = {
+      sinkOptions: Map[String, String] = Map.empty): DataflowGraph = {
     val registrationContext = new TestGraphRegistrationContext(spark) {
       registerTemporaryView("a", query = dfFlowFunc(inputs))
       registerSink(sinkName, format, sinkOptions)
@@ -51,12 +50,8 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
 
     val unresolvedGraph =
       createDataflowGraph(ints.toDF(), "sink_a", "flow_to_sink_a", "memory")
-    val updateContext = TestPipelineUpdateContext(
-      spark,
-      unresolvedGraph,
-      storageRoot,
-      failOnErrorEvent = true
-    )
+    val updateContext =
+      TestPipelineUpdateContext(spark, unresolvedGraph, storageRoot, failOnErrorEvent = true)
     updateContext.pipelineExecution.startPipeline()
     updateContext.pipelineExecution.awaitCompletion()
 
@@ -64,8 +59,7 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
       storageRoot,
       updateContext.pipelineExecution.graphExecution.get,
       TableIdentifier("sink_a"),
-      TableIdentifier("flow_to_sink_a")
-    )
+      TableIdentifier("flow_to_sink_a"))
 
     checkAnswer(spark.sql("SELECT * FROM flow_to_sink_a"), Seq(1, 2, 3, 4).toDF().collect().toSeq)
   }
@@ -82,16 +76,9 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
         "parquet_sink",
         "flow_to_parquet_sink",
         "parquet",
-        Map(
-          "path" -> externalDeltaPath.getPath
-        )
-      )
+        Map("path" -> externalDeltaPath.getPath))
 
-      val updateContext = TestPipelineUpdateContext(
-        spark,
-        unresolvedGraph,
-        storageRoot
-      )
+      val updateContext = TestPipelineUpdateContext(spark, unresolvedGraph, storageRoot)
       updateContext.pipelineExecution.startPipeline()
       updateContext.pipelineExecution.awaitCompletion()
 
@@ -99,13 +86,11 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
         storageRoot,
         updateContext.pipelineExecution.graphExecution.get,
         TableIdentifier("parquet_sink"),
-        TableIdentifier("flow_to_parquet_sink")
-      )
+        TableIdentifier("flow_to_parquet_sink"))
 
       checkAnswer(
         spark.read.format("parquet").load(externalDeltaPath.getPath),
-        Seq(1, 2, 3, 4).toDF().collect().toSeq
-      )
+        Seq(1, 2, 3, 4).toDF().collect().toSeq)
     }
   }
 
@@ -115,8 +100,7 @@ class SinkExecutionSuite extends ExecutionTest with SharedSparkSession {
       sinkIdentifier: TableIdentifier,
       flowIdentifier: TableIdentifier): Unit = {
     val expectedCheckpointLocation = new Path(
-      rootDirectory + s"/_checkpoints/${sinkIdentifier.table}/${flowIdentifier.table}/0"
-    )
+      rootDirectory + s"/_checkpoints/${sinkIdentifier.table}/${flowIdentifier.table}/0")
     val streamingQuery = graphExecution
       .flowExecutions(flowIdentifier)
       .asInstanceOf[StreamingFlowExecution]

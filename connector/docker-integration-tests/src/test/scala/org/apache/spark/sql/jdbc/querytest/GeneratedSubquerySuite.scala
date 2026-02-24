@@ -28,8 +28,8 @@ import org.apache.spark.sql.jdbc.{DockerJDBCIntegrationSuite, PostgresDatabaseOn
 import org.apache.spark.tags.DockerTest
 
 /**
- * This suite is used to generate subqueries, and test Spark against Postgres.
- * To run this test suite for a specific version (e.g., postgres:18.2-alpine):
+ * This suite is used to generate subqueries, and test Spark against Postgres. To run this test
+ * suite for a specific version (e.g., postgres:18.2-alpine):
  * {{{
  *   ENABLE_DOCKER_INTEGRATION_TESTS=1 POSTGRES_DOCKER_IMAGE_NAME=postgres:18.2-alpine
  *     ./build/sbt -Pdocker-integration-tests
@@ -47,8 +47,8 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
   // Table definitions
   private val INNER_TABLE_NAME = "inner_table"
   private val INNER_TABLE_SCHEMA = Seq(
-  Attribute(FIRST_COLUMN, Some(INNER_TABLE_NAME)),
-  Attribute(SECOND_COLUMN, Some(INNER_TABLE_NAME)))
+    Attribute(FIRST_COLUMN, Some(INNER_TABLE_NAME)),
+    Attribute(SECOND_COLUMN, Some(INNER_TABLE_NAME)))
   private val INNER_TABLE = TableRelation(INNER_TABLE_NAME, INNER_TABLE_SCHEMA)
 
   private val OUTER_TABLE_NAME = "outer_table"
@@ -79,11 +79,16 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
 
   /**
    * Function to generate a subquery given the following parameters:
-   * @param innerTable The relation within the subquery.
-   * @param correlationConditions Conditions referencing both inner and outer tables.
-   * @param isDistinct Whether the result of the subquery is to be de-duplicated.
-   * @param operatorInSubquery The operator to be included in this subquery.
-   * @param isScalarSubquery Whether the subquery is a scalar subquery or not.
+   * @param innerTable
+   *   The relation within the subquery.
+   * @param correlationConditions
+   *   Conditions referencing both inner and outer tables.
+   * @param isDistinct
+   *   Whether the result of the subquery is to be de-duplicated.
+   * @param operatorInSubquery
+   *   The operator to be included in this subquery.
+   * @param isScalarSubquery
+   *   Whether the subquery is a scalar subquery or not.
    */
   private def generateSubquery(
       innerTable: Relation,
@@ -129,13 +134,12 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
     // For the OrderBy, consider whether or not the result of the subquery is required to be sorted.
     // This is to maintain test determinism. This is affected by whether the subquery has a limit
     // clause or an offset clause.
-    val orderByClause = if (
-      requiresExactlyOneRowOutput || operatorInSubquery.isInstanceOf[LimitAndOffset]
-    ) {
-      Some(OrderByClause(projections))
-    } else {
-      None
-    }
+    val orderByClause =
+      if (requiresExactlyOneRowOutput || operatorInSubquery.isInstanceOf[LimitAndOffset]) {
+        Some(OrderByClause(projections))
+      } else {
+        None
+      }
 
     // For the Limit clause, consider whether the subquery needs to return 1 row, or whether the
     // operator to be included is a Limit.
@@ -154,20 +158,31 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
     }
 
     Query(
-      selectClause, fromClause, whereClause, groupByClause, orderByClause, limitAndOffsetClause
-    )
+      selectClause,
+      fromClause,
+      whereClause,
+      groupByClause,
+      orderByClause,
+      limitAndOffsetClause)
   }
 
   /**
    * Generate a query (that has a subquery) with the given parameters.
-   * @param innerTable Table within the subquery.
-   * @param outerTable Table outside of the subquery, in the main query.
+   * @param innerTable
+   *   Table within the subquery.
+   * @param outerTable
+   *   Table outside of the subquery, in the main query.
    * @param subqueryAlias
-   * @param subqueryLocation The clause of the main query where the subquery is located.
-   * @param subqueryType The type of subquery, such as SCALAR, RELATION, PREDICATE
-   * @param correlationConditions The correlated conditions of subquery.
-   * @param isDistinct Whether subquery results is to be de-duplicated, i.e. have a DISTINCT clause.
-   * @param operatorInSubquery The operator to be included in the subquery.
+   * @param subqueryLocation
+   *   The clause of the main query where the subquery is located.
+   * @param subqueryType
+   *   The type of subquery, such as SCALAR, RELATION, PREDICATE
+   * @param correlationConditions
+   *   The correlated conditions of subquery.
+   * @param isDistinct
+   *   Whether subquery results is to be de-duplicated, i.e. have a DISTINCT clause.
+   * @param operatorInSubquery
+   *   The operator to be included in the subquery.
    */
   private def generateQuery(
       innerTable: Relation,
@@ -179,13 +194,20 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
       isDistinct: Boolean,
       operatorInSubquery: Operator): Query = {
 
-    val isScalarSubquery = Seq(SubqueryType.ATTRIBUTE,
-      SubqueryType.SCALAR_PREDICATE_EQUALS, SubqueryType.SCALAR_PREDICATE_NOT_EQUALS,
-      SubqueryType.SCALAR_PREDICATE_LESS_THAN, SubqueryType.SCALAR_PREDICATE_LESS_THAN_OR_EQUALS,
+    val isScalarSubquery = Seq(
+      SubqueryType.ATTRIBUTE,
+      SubqueryType.SCALAR_PREDICATE_EQUALS,
+      SubqueryType.SCALAR_PREDICATE_NOT_EQUALS,
+      SubqueryType.SCALAR_PREDICATE_LESS_THAN,
+      SubqueryType.SCALAR_PREDICATE_LESS_THAN_OR_EQUALS,
       SubqueryType.SCALAR_PREDICATE_GREATER_THAN,
       SubqueryType.SCALAR_PREDICATE_GREATER_THAN_OR_EQUALS).contains(subqueryType)
     val subqueryOrganization = generateSubquery(
-      innerTable, correlationConditions, isDistinct, operatorInSubquery, isScalarSubquery)
+      innerTable,
+      correlationConditions,
+      isDistinct,
+      operatorInSubquery,
+      isScalarSubquery)
 
     val (queryProjection, selectClause, fromClause, whereClause) = subqueryLocation match {
       case SubqueryLocation.SELECT =>
@@ -204,8 +226,8 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
           case a: Alias => Attribute(name = a.name, qualifier = Some(subqueryAlias))
         }
         val selectClause = SelectClause(subqueryOutput)
-        val subqueryRelation = SubqueryRelation(subqueryAlias, subqueryOutput,
-          subqueryOrganization)
+        val subqueryRelation =
+          SubqueryRelation(subqueryAlias, subqueryOutput, subqueryOrganization)
         val fromClause = FromClause(Seq(subqueryRelation))
         (subqueryOutput, selectClause, fromClause, None)
       case SubqueryLocation.WHERE =>
@@ -238,8 +260,13 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
     }
     val orderByClause = Some(OrderByClause(queryProjection))
 
-    Query(selectClause, fromClause, whereClause, groupByClause = None,
-      orderByClause, limitAndOffsetClause = None)
+    Query(
+      selectClause,
+      fromClause,
+      whereClause,
+      groupByClause = None,
+      orderByClause,
+      limitAndOffsetClause = None)
   }
 
   private def getPostgresResult(stmt: Statement, sql: String): Array[Row] = {
@@ -264,53 +291,53 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
       (INNER_TABLE, NULL_TABLE),
       (NULL_TABLE, OUTER_TABLE),
       (NO_MATCH_TABLE, OUTER_TABLE),
-      (INNER_TABLE, NO_MATCH_TABLE)
-    )
+      (INNER_TABLE, NO_MATCH_TABLE))
 
     val innerSubqueryAlias = "innerSubqueryAlias"
     val subqueryAlias = "subqueryAlias"
     val aggregationFunctionAlias = "aggFunctionAlias"
     val joinTypes = Seq(JoinType.INNER, JoinType.LEFT_OUTER, JoinType.RIGHT_OUTER)
-    val setOperations = Seq(
-      SetOperationType.UNION, SetOperationType.EXCEPT, SetOperationType.INTERSECT)
+    val setOperations =
+      Seq(SetOperationType.UNION, SetOperationType.EXCEPT, SetOperationType.INTERSECT)
 
     // Generate combinations of the inner table to have joins and set operations (with the
     // JOIN_TABLE).
-    val allRelationCombinations = tableCombinations.flatMap {
-      case (innerTable, outerTable) =>
-        val joins = joinTypes.map(joinType => JoinedRelation(
+    val allRelationCombinations = tableCombinations.flatMap { case (innerTable, outerTable) =>
+      val joins = joinTypes.map(joinType =>
+        JoinedRelation(
           leftRelation = innerTable,
           rightRelation = JOIN_TABLE,
           // Hardcoded keys for join condition.
           condition = Equals(innerTable.output.head, JOIN_TABLE.output.head),
           joinType = joinType))
-        // Hardcoded select all for set operation.
-        val leftTableQuery = Query(SelectClause(innerTable.output), FromClause(Seq(innerTable)))
-        val rightTableQuery = Query(SelectClause(JOIN_TABLE.output), FromClause(Seq(JOIN_TABLE)))
-        val setOps = setOperations.map(setOp =>
-          SetOperation(leftTableQuery, rightTableQuery, setOp))
-          .map(plan => {
-            val output = innerTable.output.map(a => a.copy(qualifier = Some(innerSubqueryAlias)))
-            SubqueryRelation(name = innerSubqueryAlias, output = output, inner = plan)
-          })
-        (Seq(innerTable) ++ joins ++ setOps).map(inner => (inner, outerTable))
+      // Hardcoded select all for set operation.
+      val leftTableQuery = Query(SelectClause(innerTable.output), FromClause(Seq(innerTable)))
+      val rightTableQuery = Query(SelectClause(JOIN_TABLE.output), FromClause(Seq(JOIN_TABLE)))
+      val setOps = setOperations
+        .map(setOp => SetOperation(leftTableQuery, rightTableQuery, setOp))
+        .map(plan => {
+          val output = innerTable.output.map(a => a.copy(qualifier = Some(innerSubqueryAlias)))
+          SubqueryRelation(name = innerSubqueryAlias, output = output, inner = plan)
+        })
+      (Seq(innerTable) ++ joins ++ setOps).map(inner => (inner, outerTable))
     }
 
     def subqueryTypeChoices(subqueryLocation: SubqueryLocation.Value): Seq[SubqueryType.Value] = {
       subqueryLocation match {
         case SubqueryLocation.SELECT => Seq(SubqueryType.ATTRIBUTE)
         case SubqueryLocation.FROM => Seq(SubqueryType.RELATION)
-        case SubqueryLocation.WHERE => Seq(
-          SubqueryType.SCALAR_PREDICATE_LESS_THAN,
-          SubqueryType.SCALAR_PREDICATE_LESS_THAN_OR_EQUALS,
-          SubqueryType.SCALAR_PREDICATE_GREATER_THAN,
-          SubqueryType.SCALAR_PREDICATE_GREATER_THAN_OR_EQUALS,
-          SubqueryType.SCALAR_PREDICATE_EQUALS,
-          SubqueryType.SCALAR_PREDICATE_NOT_EQUALS,
-          SubqueryType.IN,
-          SubqueryType.NOT_IN,
-          SubqueryType.EXISTS,
-          SubqueryType.NOT_EXISTS)
+        case SubqueryLocation.WHERE =>
+          Seq(
+            SubqueryType.SCALAR_PREDICATE_LESS_THAN,
+            SubqueryType.SCALAR_PREDICATE_LESS_THAN_OR_EQUALS,
+            SubqueryType.SCALAR_PREDICATE_GREATER_THAN,
+            SubqueryType.SCALAR_PREDICATE_GREATER_THAN_OR_EQUALS,
+            SubqueryType.SCALAR_PREDICATE_EQUALS,
+            SubqueryType.SCALAR_PREDICATE_NOT_EQUALS,
+            SubqueryType.IN,
+            SubqueryType.NOT_IN,
+            SubqueryType.EXISTS,
+            SubqueryType.NOT_EXISTS)
       }
     }
 
@@ -321,10 +348,13 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
         case _ => Seq(true, false)
       }
 
-    def generateCorrelationConditions(innerTable: Relation, outerTable: Relation,
-                                      isCorrelated: Boolean): Seq[Seq[Predicate]] = {
+    def generateCorrelationConditions(
+        innerTable: Relation,
+        outerTable: Relation,
+        isCorrelated: Boolean): Seq[Seq[Predicate]] = {
       if (isCorrelated) {
-        Seq(Seq(Equals(innerTable.output.head, outerTable.output.head)),
+        Seq(
+          Seq(Equals(innerTable.output.head, outerTable.output.head)),
           Seq(NotEquals(innerTable.output.head, outerTable.output.head)),
           Seq(LessThan(innerTable.output.head, outerTable.output.head)),
           Seq(LessThanOrEquals(innerTable.output.head, outerTable.output.head)),
@@ -346,14 +376,15 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
     def limitAndOffsetChoices(): Seq[LimitAndOffset] = {
       val limitValues = Seq(0, 1, 10)
       val offsetValues = Seq(0, 1, 10)
-      limitValues.flatMap(
-        limit => offsetValues.map(
-          offset => LimitAndOffset(limit, offset)
-        )
-      ).filter(lo => !(lo.limitValue == 0 && lo.offsetValue == 0))
+      limitValues
+        .flatMap(limit => offsetValues.map(offset => LimitAndOffset(limit, offset)))
+        .filter(lo => !(lo.limitValue == 0 && lo.offsetValue == 0))
     }
 
-    case class SubquerySpec(query: String, isCorrelated: Boolean, subqueryType: SubqueryType.Value)
+    case class SubquerySpec(
+        query: String,
+        isCorrelated: Boolean,
+        subqueryType: SubqueryType.Value)
 
     val generatedQuerySpecs = scala.collection.mutable.Set[SubquerySpec]()
 
@@ -372,9 +403,10 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
         .map(af => Alias(af, aggregationFunctionAlias))
       val groupByOptions = Seq(true, false)
       // Generate all combinations of (aggFunction = sum/count, groupBy = true/false).
-      val combinations = aggFunctions.flatMap(agg => groupByOptions.map(groupBy => (agg, groupBy)))
-      val aggregates = combinations.map {
-        case (af, groupBy) => Aggregate(Seq(af), if (groupBy) Seq(groupByColumn) else Seq())
+      val combinations =
+        aggFunctions.flatMap(agg => groupByOptions.map(groupBy => (agg, groupBy)))
+      val aggregates = combinations.map { case (af, groupBy) =>
+        Aggregate(Seq(af), if (groupBy) Seq(groupByColumn) else Seq())
       }
 
       val subqueryOperators = limitAndOffsetChoices() ++ aggregates
@@ -383,15 +415,24 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
         subqueryOperator <- subqueryOperators
         isDistinct <- distinctChoices(subqueryOperator)
       } {
-        generatedQuerySpecs += SubquerySpec(generateQuery(innerTable, outerTable,
-          subqueryAlias, subqueryLocation, subqueryType, correlationCondition, isDistinct,
-          subqueryOperator).toString + ";", isCorrelated, subqueryType)
+        generatedQuerySpecs += SubquerySpec(
+          generateQuery(
+            innerTable,
+            outerTable,
+            subqueryAlias,
+            subqueryLocation,
+            subqueryType,
+            correlationCondition,
+            isDistinct,
+            subqueryOperator).toString + ";",
+          isCorrelated,
+          subqueryType)
       }
     }
 
     // Partition the queries by (isCorrelated, subqueryLocation, SubqueryType).
-    val partitionedQueries = generatedQuerySpecs.groupBy(query =>
-      (query.isCorrelated, query.subqueryType))
+    val partitionedQueries =
+      generatedQuerySpecs.groupBy(query => (query.isCorrelated, query.subqueryType))
 
     // Create separate test case for each partition.
     partitionedQueries.foreach { case ((isCorrelated, subqueryType), querySpec) =>
@@ -463,8 +504,8 @@ class GeneratedSubquerySuite extends DockerJDBCIntegrationSuite with QueryGenera
         // Run generated queries on both Spark and Postgres, and test against each other.
         shuffledQueries.take(GeneratedSubquerySuite.NUM_QUERIES_PER_TEST).foreach { sqlStr =>
           if (!GeneratedSubquerySuite.KNOWN_QUERIES_WITH_DIFFERENT_RESULTS.contains(sqlStr)) {
-            val stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY,
-              ResultSet.CONCUR_READ_ONLY)
+            val stmt =
+              conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
             val sparkDf = localSparkSession.sql(sqlStr)
             val postgresResult = getPostgresResult(stmt, sqlStr)
             QueryTest.checkAnswer(sparkDf, postgresResult.toSeq)

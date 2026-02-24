@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.spark.streaming.scheduler
 
 import scala.util.Random
@@ -34,39 +33,45 @@ import org.apache.spark.util.{Clock, Utils}
  * executors based on the statistics of the streaming computation. This is different from the core
  * dynamic allocation policy; the core policy relies on executors being idle for a while, but the
  * micro-batch model of streaming prevents any particular executors from being idle for a long
- * time. Instead, the measure of "idle-ness" needs to be based on the time taken to process
- * each batch.
+ * time. Instead, the measure of "idle-ness" needs to be based on the time taken to process each
+ * batch.
  *
  * At a high level, the policy implemented by this class is as follows:
- * - Use StreamingListener interface get batch processing times of completed batches
- * - Periodically take the average batch completion times and compare with the batch interval
- * - If (avg. proc. time / batch interval) >= scaling up ratio, then request more executors.
- *   The number of executors requested is based on the ratio = (avg. proc. time / batch interval).
- * - If (avg. proc. time / batch interval) <= scaling down ratio, then try to kill an executor that
- *   is not running a receiver.
+ *   - Use StreamingListener interface get batch processing times of completed batches
+ *   - Periodically take the average batch completion times and compare with the batch interval
+ *   - If (avg. proc. time / batch interval) >= scaling up ratio, then request more executors. The
+ *     number of executors requested is based on the ratio = (avg. proc. time / batch interval).
+ *   - If (avg. proc. time / batch interval) <= scaling down ratio, then try to kill an executor
+ *     that is not running a receiver.
  *
  * This features should ideally be used in conjunction with backpressure, as backpressure ensures
  * system stability, while executors are being readjusted.
  *
  * Note that an initial set of executors (spark.executor.instances) was allocated when the
- * SparkContext was created. This class scales executors up/down after the StreamingContext
- * has started.
+ * SparkContext was created. This class scales executors up/down after the StreamingContext has
+ * started.
  */
 private[streaming] class ExecutorAllocationManager(
     client: ExecutorAllocationClient,
     receiverTracker: ReceiverTracker,
     conf: SparkConf,
     batchDurationMs: Long,
-    clock: Clock) extends StreamingListener with Logging {
+    clock: Clock)
+    extends StreamingListener
+    with Logging {
 
   private val scalingIntervalSecs = conf.get(STREAMING_DYN_ALLOCATION_SCALING_INTERVAL)
   private val scalingUpRatio = conf.get(STREAMING_DYN_ALLOCATION_SCALING_UP_RATIO)
   private val scalingDownRatio = conf.get(STREAMING_DYN_ALLOCATION_SCALING_DOWN_RATIO)
-  private val minNumExecutors = conf.get(STREAMING_DYN_ALLOCATION_MIN_EXECUTORS)
+  private val minNumExecutors = conf
+    .get(STREAMING_DYN_ALLOCATION_MIN_EXECUTORS)
     .getOrElse(math.max(1, receiverTracker.numReceivers()))
   private val maxNumExecutors = conf.get(STREAMING_DYN_ALLOCATION_MAX_EXECUTORS)
-  private val timer = new RecurringTimer(clock, scalingIntervalSecs * 1000,
-    _ => manageAllocation(), "streaming-executor-allocation-manager")
+  private val timer = new RecurringTimer(
+    clock,
+    scalingIntervalSecs * 1000,
+    _ => manageAllocation(),
+    "streaming-executor-allocation-manager")
 
   @volatile private var batchProcTimeSum = 0L
   @volatile private var batchProcTimeCount = 0
@@ -75,10 +80,11 @@ private[streaming] class ExecutorAllocationManager(
 
   def start(): Unit = {
     timer.start()
-    logInfo(log"ExecutorAllocationManager started with ratios = " +
-      log"[${MDC(LogKeys.SCALING_UP_RATIO, scalingUpRatio)}, " +
-      log"${MDC(LogKeys.SCALING_DOWN_RATIO, scalingDownRatio)}] and interval = " +
-      log"${MDC(LogKeys.INTERVAL, scalingIntervalSecs)} sec")
+    logInfo(
+      log"ExecutorAllocationManager started with ratios = " +
+        log"[${MDC(LogKeys.SCALING_UP_RATIO, scalingUpRatio)}, " +
+        log"${MDC(LogKeys.SCALING_DOWN_RATIO, scalingDownRatio)}] and interval = " +
+        log"${MDC(LogKeys.INTERVAL, scalingIntervalSecs)} sec")
   }
 
   def stop(): Unit = {
@@ -87,18 +93,20 @@ private[streaming] class ExecutorAllocationManager(
   }
 
   /**
-   * Manage executor allocation by requesting or killing executors based on the collected
-   * batch statistics.
+   * Manage executor allocation by requesting or killing executors based on the collected batch
+   * statistics.
    */
   private def manageAllocation(): Unit = synchronized {
-    logInfo(log"Managing executor allocation with ratios = [" +
-      log"${MDC(LogKeys.SCALING_UP_RATIO, scalingUpRatio)}, " +
-      log"${MDC(LogKeys.SCALING_DOWN_RATIO, scalingDownRatio)}]")
+    logInfo(
+      log"Managing executor allocation with ratios = [" +
+        log"${MDC(LogKeys.SCALING_UP_RATIO, scalingUpRatio)}, " +
+        log"${MDC(LogKeys.SCALING_DOWN_RATIO, scalingDownRatio)}]")
     if (batchProcTimeCount > 0) {
       val averageBatchProcTime = batchProcTimeSum / batchProcTimeCount
       val ratio = averageBatchProcTime.toDouble / batchDurationMs
-      logInfo(log"Average: ${MDC(LogKeys.AVG_BATCH_PROC_TIME, averageBatchProcTime)}, " +
-        log"ratio = ${MDC(LogKeys.RATIO, ratio)}")
+      logInfo(
+        log"Average: ${MDC(LogKeys.AVG_BATCH_PROC_TIME, averageBatchProcTime)}, " +
+          log"ratio = ${MDC(LogKeys.RATIO, ratio)}")
       if (ratio >= scalingUpRatio) {
         logDebug("Requesting executors")
         val numNewExecutors = math.max(math.round(ratio).toInt, 1)
@@ -124,8 +132,7 @@ private[streaming] class ExecutorAllocationManager(
       Map(ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID -> targetTotalExecutors),
       Map(ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID -> 0),
       Map.empty)
-    logInfo(log"Requested total ${MDC(LogKeys.NUM_EXECUTORS,
-      targetTotalExecutors)} executors")
+    logInfo(log"Requested total ${MDC(LogKeys.NUM_EXECUTORS, targetTotalExecutors)} executors")
   }
 
   /** Kill an executor that is not running any receiver, if possible */
@@ -135,16 +142,17 @@ private[streaming] class ExecutorAllocationManager(
 
     if (allExecIds.nonEmpty && allExecIds.size > minNumExecutors) {
       val execIdsWithReceivers = receiverTracker.allocatedExecutors().values.flatten.toSeq
-      logInfo(log"Executors with receivers (${MDC(LogKeys.NUM_EXECUTORS,
-        execIdsWithReceivers.size)}): " +
-        log"${MDC(LogKeys.EXECUTOR_IDS, execIdsWithReceivers)}")
+      logInfo(
+        log"Executors with receivers (${MDC(LogKeys.NUM_EXECUTORS, execIdsWithReceivers.size)}): " +
+          log"${MDC(LogKeys.EXECUTOR_IDS, execIdsWithReceivers)}")
 
       val removableExecIds = allExecIds.diff(execIdsWithReceivers)
       logDebug(s"Removable executors (${removableExecIds.size}): ${removableExecIds}")
       if (removableExecIds.nonEmpty) {
         val execIdToRemove = removableExecIds(Random.nextInt(removableExecIds.size))
         if (conf.get(DECOMMISSION_ENABLED)) {
-          client.decommissionExecutor(execIdToRemove,
+          client.decommissionExecutor(
+            execIdToRemove,
             ExecutorDecommissionInfo("spark scale down", None),
             adjustTargetNumExecutors = true)
         } else {
@@ -194,8 +202,7 @@ private[streaming] object ExecutorAllocationManager extends Logging {
   def isDynamicAllocationEnabled(conf: SparkConf): Boolean = {
     val streamingDynamicAllocationEnabled = Utils.isStreamingDynamicAllocationEnabled(conf)
     if (Utils.isDynamicAllocationEnabled(conf) && streamingDynamicAllocationEnabled) {
-      throw new IllegalArgumentException(
-        """
+      throw new IllegalArgumentException("""
           |Dynamic Allocation cannot be enabled for both streaming and core at the same time.
           |Please disable core Dynamic Allocation by setting spark.dynamicAllocation.enabled to
           |false to use Dynamic Allocation in streaming.

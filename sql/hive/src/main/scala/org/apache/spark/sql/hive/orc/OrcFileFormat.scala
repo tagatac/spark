@@ -52,13 +52,14 @@ import org.apache.spark.sql.types._
 import org.apache.spark.util.SerializableConfiguration
 
 /**
- * `FileFormat` for reading ORC files. If this is moved or renamed, please update
- * `DataSource`'s backwardCompatibilityMap.
+ * `FileFormat` for reading ORC files. If this is moved or renamed, please update `DataSource`'s
+ * backwardCompatibilityMap.
  */
-case class OrcFileFormat() extends FileFormat
-  with DataSourceRegister
-  with SessionStateHelper
-  with Serializable {
+case class OrcFileFormat()
+    extends FileFormat
+    with DataSourceRegister
+    with SessionStateHelper
+    with Serializable {
 
   override def shortName(): String = "orc"
 
@@ -71,13 +72,15 @@ case class OrcFileFormat() extends FileFormat
     val orcOptions = new OrcOptions(options, getSqlConf(sparkSession))
     if (orcOptions.mergeSchema) {
       SchemaMergeUtils.mergeSchemasInParallel(
-        sparkSession, options, files, OrcFileOperator.readOrcSchemasInParallel)
+        sparkSession,
+        options,
+        files,
+        OrcFileOperator.readOrcSchemasInParallel)
     } else {
       OrcFileOperator.readSchema(
         files.map(_.getPath.toString),
         Some(getHadoopConf(sparkSession, options)),
-        orcOptions.ignoreCorruptFiles
-      )
+        orcOptions.ignoreCorruptFiles)
     }
   }
 
@@ -223,7 +226,7 @@ case class OrcFileFormat() extends FileFormat
 }
 
 private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
-  extends HiveInspectors {
+    extends HiveInspectors {
 
   def serialize(row: InternalRow): Writable = {
     wrapOrcStruct(cachedOrcStruct, structOI, row)
@@ -243,16 +246,18 @@ private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
   // Object inspector converted from the schema of the relation to be serialized.
   val structOI = {
     val typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(dataSchema.catalogString)
-    OrcStruct.createObjectInspector(typeInfo.asInstanceOf[StructTypeInfo])
+    OrcStruct
+      .createObjectInspector(typeInfo.asInstanceOf[StructTypeInfo])
       .asInstanceOf[SettableStructObjectInspector]
   }
 
   private[this] val cachedOrcStruct = structOI.create().asInstanceOf[OrcStruct]
 
   // Wrapper functions used to wrap Spark SQL input arguments into Hive specific format
-  private[this] val wrappers = dataSchema.zip(structOI.getAllStructFieldRefs().asScala.toSeq).map {
-    case (f, i) => wrapperFor(i.getFieldObjectInspector, f.dataType)
-  }
+  private[this] val wrappers =
+    dataSchema.zip(structOI.getAllStructFieldRefs().asScala.toSeq).map { case (f, i) =>
+      wrapperFor(i.getFieldObjectInspector, f.dataType)
+    }
 
   private[this] def wrapOrcStruct(
       struct: OrcStruct,
@@ -266,8 +271,7 @@ private[orc] class OrcSerializer(dataSchema: StructType, conf: Configuration)
       oi.setStructFieldData(
         struct,
         fieldRefs.get(i),
-        wrappers(i)(row.get(i, dataSchema(i).dataType))
-      )
+        wrappers(i)(row.get(i, dataSchema(i).dataType)))
       i += 1
     }
   }
@@ -277,17 +281,19 @@ private[orc] class OrcOutputWriter(
     val path: String,
     dataSchema: StructType,
     context: TaskAttemptContext)
-  extends OutputWriter with Logging {
+    extends OutputWriter
+    with Logging {
 
   private[this] val serializer = new OrcSerializer(dataSchema, context.getConfiguration)
 
   private val recordWriter: RecordWriter[NullWritable, Writable] = {
-    new OrcOutputFormat().getRecordWriter(
-      new Path(path).getFileSystem(context.getConfiguration),
-      context.getConfiguration.asInstanceOf[JobConf],
-      path,
-      Reporter.NULL
-    ).asInstanceOf[RecordWriter[NullWritable, Writable]]
+    new OrcOutputFormat()
+      .getRecordWriter(
+        new Path(path).getFileSystem(context.getConfiguration),
+        context.getConfiguration.asInstanceOf[JobConf],
+        path,
+        Reporter.NULL)
+      .asInstanceOf[RecordWriter[NullWritable, Writable]]
   }
 
   override def write(row: InternalRow): Unit = {
@@ -336,18 +342,17 @@ private[orc] object OrcFileFormat extends HiveInspectors with Logging {
     val forcePositionalEvolution = OrcConf.FORCE_POSITIONAL_EVOLUTION.getBoolean(conf)
 
     def unwrap(oi: StructObjectInspector): Iterator[InternalRow] = {
-      val (fieldRefs, fieldOrdinals) = requiredSchema.zipWithIndex.map {
-        case (field, ordinal) =>
-          var ref: objectinspector.StructField = null
-          if (forcePositionalEvolution) {
-            ref = oi.getAllStructFieldRefs.get(dataSchema.fieldIndex(field.name))
-          } else {
-            ref = oi.getStructFieldRef(field.name)
-            if (ref == null) {
-              ref = oi.getStructFieldRef("_col" + dataSchema.fieldIndex(field.name))
-            }
+      val (fieldRefs, fieldOrdinals) = requiredSchema.zipWithIndex.map { case (field, ordinal) =>
+        var ref: objectinspector.StructField = null
+        if (forcePositionalEvolution) {
+          ref = oi.getAllStructFieldRefs.get(dataSchema.fieldIndex(field.name))
+        } else {
+          ref = oi.getStructFieldRef(field.name)
+          if (ref == null) {
+            ref = oi.getStructFieldRef("_col" + dataSchema.fieldIndex(field.name))
           }
-          ref -> ordinal
+        }
+        ref -> ordinal
       }.unzip
 
       val unwrappers = fieldRefs.map(r => if (r == null) null else unwrapperFor(r))
@@ -374,7 +379,9 @@ private[orc] object OrcFileFormat extends HiveInspectors with Logging {
   }
 
   def setRequiredColumns(
-      conf: Configuration, dataSchema: StructType, requestedSchema: StructType): Unit = {
+      conf: Configuration,
+      dataSchema: StructType,
+      requestedSchema: StructType): Unit = {
     val ids = requestedSchema.map(a => dataSchema.fieldIndex(a.name): Integer)
     val (sortedIDs, sortedNames) = ids.zip(requestedSchema.fieldNames).sorted.unzip
     HiveShim.appendReadColumns(conf, sortedIDs, sortedNames)

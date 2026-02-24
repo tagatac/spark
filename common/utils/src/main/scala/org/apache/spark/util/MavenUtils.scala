@@ -94,26 +94,29 @@ private[spark] object MavenUtils extends Logging {
    *   Sequence of Maven coordinates
    */
   def extractMavenCoordinates(coordinates: String): Seq[MavenCoordinate] = {
-    coordinates.split(",").map { p =>
-      val splits = p.replace("/", ":").split(":")
-      require(
-        splits.length == 3,
-        s"Provided Maven Coordinates must be in the form " +
-          s"'groupId:artifactId:version'. The coordinate provided is: $p")
-      require(
-        splits(0) != null && splits(0).trim.nonEmpty,
-        s"The groupId cannot be null or " +
-          s"be whitespace. The groupId provided is: ${splits(0)}")
-      require(
-        splits(1) != null && splits(1).trim.nonEmpty,
-        s"The artifactId cannot be null or " +
-          s"be whitespace. The artifactId provided is: ${splits(1)}")
-      require(
-        splits(2) != null && splits(2).trim.nonEmpty,
-        s"The version cannot be null or " +
-          s"be whitespace. The version provided is: ${splits(2)}")
-      MavenCoordinate(splits(0), splits(1), splits(2))
-    }.toImmutableArraySeq
+    coordinates
+      .split(",")
+      .map { p =>
+        val splits = p.replace("/", ":").split(":")
+        require(
+          splits.length == 3,
+          s"Provided Maven Coordinates must be in the form " +
+            s"'groupId:artifactId:version'. The coordinate provided is: $p")
+        require(
+          splits(0) != null && splits(0).trim.nonEmpty,
+          s"The groupId cannot be null or " +
+            s"be whitespace. The groupId provided is: ${splits(0)}")
+        require(
+          splits(1) != null && splits(1).trim.nonEmpty,
+          s"The artifactId cannot be null or " +
+            s"be whitespace. The artifactId provided is: ${splits(1)}")
+        require(
+          splits(2) != null && splits(2).trim.nonEmpty,
+          s"The version cannot be null or " +
+            s"be whitespace. The version provided is: ${splits(2)}")
+        MavenCoordinate(splits(0), splits(1), splits(2))
+      }
+      .toImmutableArraySeq
   }
 
   /** Path of the local Maven cache. */
@@ -214,7 +217,8 @@ private[spark] object MavenUtils extends Logging {
         if (artifactInfo.getExt == "jar") {
           true
         } else {
-          logInfo(log"Skipping non-jar dependency ${MDC(LogKeys.ARTIFACT_ID, artifactInfo.getId)}")
+          logInfo(
+            log"Skipping non-jar dependency ${MDC(LogKeys.ARTIFACT_ID, artifactInfo.getId)}")
           false
         }
       }
@@ -228,7 +232,8 @@ private[spark] object MavenUtils extends Logging {
         }
         cacheDirectory.getAbsolutePath + File.separator +
           s"${artifact.getOrganisation}_${artifact.getName}-${artifact.getRevision}$classifier.jar"
-      }.toImmutableArraySeq
+      }
+      .toImmutableArraySeq
   }
 
   /** Adds the given maven coordinates to Ivy's module descriptor. */
@@ -326,7 +331,8 @@ private[spark] object MavenUtils extends Logging {
       if (ivySettings.getDefaultIvyUserDir == null && ivySettings.getDefaultCache == null) {
         // To protect old Ivy-based systems like old Spark from Apache Ivy 2.5.2's incompatibility.
         // `processIvyPathArg` can overwrite these later.
-        val alternateIvyDir = System.getProperty("ivy.home",
+        val alternateIvyDir = System.getProperty(
+          "ivy.home",
           System.getProperty("user.home") + File.separator + ".ivy2.5.2")
         ivySettings.setDefaultIvyUserDir(new File(alternateIvyDir))
         ivySettings.setDefaultCache(new File(alternateIvyDir, "cache"))
@@ -344,7 +350,8 @@ private[spark] object MavenUtils extends Logging {
   private[util] def processIvyPathArg(ivySettings: IvySettings, ivyPath: Option[String]): Unit = {
     val alternateIvyDir = ivyPath.filterNot(_.trim.isEmpty).getOrElse {
       // To protect old Ivy-based systems like old Spark from Apache Ivy 2.5.2's incompatibility.
-      System.getProperty("ivy.home",
+      System.getProperty(
+        "ivy.home",
         System.getProperty("user.home") + File.separator + ".ivy2.5.2")
     }
     ivySettings.setDefaultIvyUserDir(new File(alternateIvyDir))
@@ -371,7 +378,7 @@ private[spark] object MavenUtils extends Logging {
         cr.add(brr)
         // scalastyle:off println
         printStream.println(s"$repo added as a remote repository with the name: ${brr.getName}")
-        // scalastyle:on println
+      // scalastyle:on println
       }
 
       ivySettings.addResolver(cr)
@@ -411,14 +418,12 @@ private[spark] object MavenUtils extends Logging {
    * Clear invalid cache files in ivy. The cache file is usually at
    * ~/.ivy2/cache/${groupId}/${artifactId}/ivy-${version}.xml,
    * ~/.ivy2/cache/${groupId}/${artifactId}/ivy-${version}.xml.original, and
-   * ~/.ivy2/cache/${groupId}/${artifactId}/ivydata-${version}.properties.
-   * Because when using `local-m2` repo as a cache, some invalid files were created.
-   * If not deleted here, an error prompt similar to `unknown resolver local-m2-cache`
-   * will be generated, making some confusion for users.
+   * ~/.ivy2/cache/${groupId}/${artifactId}/ivydata-${version}.properties. Because when using
+   * `local-m2` repo as a cache, some invalid files were created. If not deleted here, an error
+   * prompt similar to `unknown resolver local-m2-cache` will be generated, making some confusion
+   * for users.
    */
-  private def clearInvalidIvyCacheFiles(
-      mdId: ModuleRevisionId,
-      defaultCacheFile: File): Unit = {
+  private def clearInvalidIvyCacheFiles(mdId: ModuleRevisionId, defaultCacheFile: File): Unit = {
     val cacheFiles = Seq(
       s"${mdId.getOrganisation}${File.separator}${mdId.getName}${File.separator}" +
         s"ivy-${mdId.getRevision}.xml",
@@ -514,9 +519,10 @@ private[spark] object MavenUtils extends Logging {
           val failedReports = rr.getArtifactsReports(DownloadStatus.FAILED, true)
           if (failedReports.nonEmpty && noCacheIvySettings.isDefined) {
             val failedArtifacts = failedReports.map(r => r.getArtifact)
-            logInfo(log"Download failed: " +
-              log"${MDC(LogKeys.ARTIFACTS, failedArtifacts.mkString("[", ", ", "]"))}, " +
-              log"attempt to retry while skipping local-m2-cache.")
+            logInfo(
+              log"Download failed: " +
+                log"${MDC(LogKeys.ARTIFACTS, failedArtifacts.mkString("[", ", ", "]"))}, " +
+                log"attempt to retry while skipping local-m2-cache.")
             failedArtifacts.foreach(artifact => {
               clearInvalidIvyCacheFiles(artifact.getModuleRevisionId, ivySettings.getDefaultCache)
             })
@@ -529,9 +535,11 @@ private[spark] object MavenUtils extends Logging {
             if (noCacheRr.hasError) {
               throw new RuntimeException(noCacheRr.getAllProblemMessages.toString)
             }
-            noCacheIvy.retrieve(noCacheRr.getModuleDescriptor.getModuleRevisionId, retrieveOptions)
-            val dependencyPaths = resolveDependencyPaths(
-              noCacheRr.getArtifacts.toArray, packagesDirectory)
+            noCacheIvy.retrieve(
+              noCacheRr.getModuleDescriptor.getModuleRevisionId,
+              retrieveOptions)
+            val dependencyPaths =
+              resolveDependencyPaths(noCacheRr.getArtifacts.toArray, packagesDirectory)
             noCacheIvy.popContext()
 
             dependencyPaths
@@ -548,7 +556,10 @@ private[spark] object MavenUtils extends Logging {
       } finally {
         System.setOut(sysOut)
         if (md != null) {
-          clearIvyResolutionFiles(md.getModuleRevisionId, ivySettings.getDefaultCache, ivyConfName)
+          clearIvyResolutionFiles(
+            md.getModuleRevisionId,
+            ivySettings.getDefaultCache,
+            ivyConfName)
         }
       }
     }
@@ -566,12 +577,13 @@ private[spark] object MavenUtils extends Logging {
   }
 
   private def isInvalidQueryString(tokens: Array[String]): Boolean = {
-    tokens.length != 2 || SparkStringUtils.isBlank(tokens(0)) || SparkStringUtils.isBlank(tokens(1))
+    tokens.length != 2 || SparkStringUtils.isBlank(tokens(0)) || SparkStringUtils.isBlank(
+      tokens(1))
   }
 
   /**
-   * Parse URI query string's parameter value of `transitive`, `exclude` and `repos`.
-   * Other invalid parameters will be ignored.
+   * Parse URI query string's parameter value of `transitive`, `exclude` and `repos`. Other
+   * invalid parameters will be ignored.
    *
    * @param uri
    *   Ivy URI need to be downloaded.
@@ -582,13 +594,11 @@ private[spark] object MavenUtils extends Logging {
    *      this parameter value is case-insensitive. This mimics Hive's behaviour for parsing the
    *      transitive parameter. Invalid value will be treat as false. Example: Input:
    *      exclude=org.mortbay.jetty:jetty&transitive=true Output: true
-   *
-   *    2. exclude: comma separated exclusions to apply when resolving transitive dependencies,
+   *   2. exclude: comma separated exclusions to apply when resolving transitive dependencies,
    *      consists of `group:module` pairs separated by commas. Example: Input:
    *      excludeorg.mortbay.jetty:jetty,org.eclipse.jetty:jetty-http Output:
    *      [org.mortbay.jetty:jetty,org.eclipse.jetty:jetty-http]
-   *
-   *    3. repos: comma separated repositories to use when resolving dependencies.
+   *   3. repos: comma separated repositories to use when resolving dependencies.
    */
   def parseQueryParams(uri: URI): (Boolean, String, String) = {
     val uriQuery = uri.getQuery
@@ -649,8 +659,7 @@ private[spark] object MavenUtils extends Logging {
       val invalidParams = groupedParams.keys.filterNot(validParams.contains).toSeq
       if (invalidParams.nonEmpty) {
         logWarning(
-          log"Invalid parameters `${MDC(LogKeys.INVALID_PARAMS,
-            invalidParams.sorted.mkString(","))}` " +
+          log"Invalid parameters `${MDC(LogKeys.INVALID_PARAMS, invalidParams.sorted.mkString(","))}` " +
             log"found in Ivy URI query `${MDC(LogKeys.URI, uriQuery)}`.")
       }
 

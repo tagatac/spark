@@ -59,14 +59,16 @@ object KubernetesClientUtils extends Logging {
   @Since("3.1.0")
   val configMapNameDriver: String = configMapName(s"spark-drv-${KubernetesUtils.uniqueID()}")
 
-  private def buildStringFromPropertiesMap(configMapName: String,
+  private def buildStringFromPropertiesMap(
+      configMapName: String,
       propertiesMap: Map[String, String]): String = {
     val properties = new Properties()
     propertiesMap.foreach { case (k, v) =>
       properties.setProperty(k, v)
     }
     val propertiesWriter = new StringWriter()
-    properties.store(propertiesWriter,
+    properties.store(
+      propertiesWriter,
       s"Java properties built from Kubernetes config map with name: $configMapName")
     propertiesWriter.toString
   }
@@ -80,7 +82,10 @@ object KubernetesClientUtils extends Logging {
       configMapName: String,
       sparkConf: SparkConf,
       resolvedPropertiesMap: JMap[String, String]): JMap[String, String] = synchronized {
-    buildSparkConfDirFilesMap(configMapName, sparkConf, resolvedPropertiesMap.asScala.toMap).asJava
+    buildSparkConfDirFilesMap(
+      configMapName,
+      sparkConf,
+      resolvedPropertiesMap.asScala.toMap).asJava
   }
 
   /**
@@ -109,38 +114,44 @@ object KubernetesClientUtils extends Logging {
 
   @Since("3.1.0")
   def buildKeyToPathObjects(confFilesMap: Map[String, String]): Seq[KeyToPath] = {
-    confFilesMap.map {
-      case (fileName: String, _: String) =>
-        val filePermissionMode = 420  // 420 is decimal for octal literal 0644.
+    confFilesMap
+      .map { case (fileName: String, _: String) =>
+        val filePermissionMode = 420 // 420 is decimal for octal literal 0644.
         new KeyToPath(fileName, filePermissionMode, fileName)
-    }.toList.sortBy(x => x.getKey) // List is sorted to make mocking based tests work
+      }
+      .toList
+      .sortBy(x => x.getKey) // List is sorted to make mocking based tests work
   }
 
   /**
-   * Build a ConfigMap that will hold the content for environment variable SPARK_CONF_DIR
-   * on remote pods. (Java-friendly)
+   * Build a ConfigMap that will hold the content for environment variable SPARK_CONF_DIR on
+   * remote pods. (Java-friendly)
    */
   @Since("4.1.0")
-  def buildConfigMapJava(configMapName: String, confFileMap: JMap[String, String],
+  def buildConfigMapJava(
+      configMapName: String,
+      confFileMap: JMap[String, String],
       withLabels: JMap[String, String]): ConfigMap = {
     buildConfigMap(configMapName, confFileMap.asScala.toMap, withLabels.asScala.toMap)
   }
 
   /**
-   * Build a Config Map that will hold the content for environment variable SPARK_CONF_DIR
-   * on remote pods.
+   * Build a Config Map that will hold the content for environment variable SPARK_CONF_DIR on
+   * remote pods.
    */
   @Since("3.1.0")
-  def buildConfigMap(configMapName: String, confFileMap: Map[String, String],
+  def buildConfigMap(
+      configMapName: String,
+      confFileMap: Map[String, String],
       withLabels: Map[String, String] = Map()): ConfigMap = {
     val configMapNameSpace =
       confFileMap.getOrElse(KUBERNETES_NAMESPACE.key, KUBERNETES_NAMESPACE.defaultValueString)
     new ConfigMapBuilder()
       .withNewMetadata()
-        .withName(configMapName)
-        .withNamespace(configMapNameSpace)
-        .withLabels(withLabels.asJava)
-        .endMetadata()
+      .withName(configMapName)
+      .withNamespace(configMapNameSpace)
+      .withLabels(withLabels.asJava)
+      .endMetadata()
       .withImmutable(true)
       .addToData(confFileMap.asJava)
       .build()
@@ -154,8 +165,8 @@ object KubernetesClientUtils extends Logging {
 
   // exposed for testing
   private[submit] def loadSparkConfDirFiles(conf: SparkConf): Map[String, String] = {
-    val confDir = Option(conf.getenv(ENV_SPARK_CONF_DIR)).orElse(
-      conf.getOption("spark.home").map(dir => s"$dir/conf"))
+    val confDir = Option(conf.getenv(ENV_SPARK_CONF_DIR))
+      .orElse(conf.getOption("spark.home").map(dir => s"$dir/conf"))
     val maxSize = conf.get(Config.CONFIG_MAP_MAXSIZE)
     if (confDir.isDefined) {
       val confFiles: Seq[File] = listConfFiles(confDir.get, maxSize)
@@ -176,20 +187,24 @@ object KubernetesClientUtils extends Logging {
           }
         } catch {
           case e: MalformedInputException =>
-            logWarning(log"Unable to read a non UTF-8 encoded file " +
-              log"${MDC(PATH, file.getAbsolutePath)}. Skipping...", e)
+            logWarning(
+              log"Unable to read a non UTF-8 encoded file " +
+                log"${MDC(PATH, file.getAbsolutePath)}. Skipping...",
+              e)
         } finally {
           source.close()
         }
       }
       if (truncatedMap.nonEmpty) {
-        logInfo(log"Spark configuration files loaded from ${MDC(PATH, confDir)} : " +
-          log"${MDC(PATHS, truncatedMap.keys.mkString(","))}")
+        logInfo(
+          log"Spark configuration files loaded from ${MDC(PATH, confDir)} : " +
+            log"${MDC(PATHS, truncatedMap.keys.mkString(","))}")
       }
       if (skippedFiles.nonEmpty) {
-        logWarning(log"Skipped conf file(s) ${MDC(PATHS, skippedFiles.mkString(","))}, due to " +
-          log"size constraint. Please see, config: " +
-          log"`${MDC(CONFIG, Config.CONFIG_MAP_MAXSIZE.key)}` for more details.")
+        logWarning(
+          log"Skipped conf file(s) ${MDC(PATHS, skippedFiles.mkString(","))}, due to " +
+            log"size constraint. Please see, config: " +
+            log"`${MDC(CONFIG, Config.CONFIG_MAP_MAXSIZE.key)}` for more details.")
       }
       truncatedMap.toMap
     } else {

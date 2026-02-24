@@ -48,16 +48,25 @@ import org.apache.spark.storage.StorageLevel
 /**
  * Params for Factorization Machines
  */
-private[ml] trait FactorizationMachinesParams extends PredictorParams
-  with HasMaxIter with HasStepSize with HasTol with HasSolver with HasSeed
-  with HasFitIntercept with HasRegParam with HasWeightCol {
+private[ml] trait FactorizationMachinesParams
+    extends PredictorParams
+    with HasMaxIter
+    with HasStepSize
+    with HasTol
+    with HasSolver
+    with HasSeed
+    with HasFitIntercept
+    with HasRegParam
+    with HasWeightCol {
 
   /**
    * Param for dimensionality of the factors (&gt;= 0)
    * @group param
    */
   @Since("3.0.0")
-  final val factorSize: IntParam = new IntParam(this, "factorSize",
+  final val factorSize: IntParam = new IntParam(
+    this,
+    "factorSize",
     "Dimensionality of the factor vectors, " +
       "which are used to get pairwise interactions between variables",
     ParamValidators.gt(0))
@@ -71,8 +80,8 @@ private[ml] trait FactorizationMachinesParams extends PredictorParams
    * @group param
    */
   @Since("3.0.0")
-  final val fitLinear: BooleanParam = new BooleanParam(this, "fitLinear",
-    "whether to fit linear term (aka 1-way term)")
+  final val fitLinear: BooleanParam =
+    new BooleanParam(this, "fitLinear", "whether to fit linear term (aka 1-way term)")
 
   /** @group getParam */
   @Since("3.0.0")
@@ -83,7 +92,9 @@ private[ml] trait FactorizationMachinesParams extends PredictorParams
    * @group param
    */
   @Since("3.0.0")
-  final val miniBatchFraction: DoubleParam = new DoubleParam(this, "miniBatchFraction",
+  final val miniBatchFraction: DoubleParam = new DoubleParam(
+    this,
+    "miniBatchFraction",
     "fraction of the input data set that should be used for one iteration of gradient descent",
     ParamValidators.inRange(0, 1, false, true))
 
@@ -96,28 +107,39 @@ private[ml] trait FactorizationMachinesParams extends PredictorParams
    * @group param
    */
   @Since("3.0.0")
-  final val initStd: DoubleParam = new DoubleParam(this, "initStd",
-    "standard deviation of initial coefficients", ParamValidators.gt(0))
+  final val initStd: DoubleParam = new DoubleParam(
+    this,
+    "initStd",
+    "standard deviation of initial coefficients",
+    ParamValidators.gt(0))
 
   /** @group getParam */
   @Since("3.0.0")
   final def getInitStd: Double = $(initStd)
 
   /**
-   * The solver algorithm for optimization.
-   * Supported options: "gd", "adamW".
-   * Default: "adamW"
+   * The solver algorithm for optimization. Supported options: "gd", "adamW". Default: "adamW"
    *
    * @group param
    */
   @Since("3.0.0")
-  final override val solver: Param[String] = new Param[String](this, "solver",
+  final override val solver: Param[String] = new Param[String](
+    this,
+    "solver",
     "The solver algorithm for optimization. Supported options: " +
       s"${supportedSolvers.mkString(", ")}. (Default adamW)",
     ParamValidators.inArray[String](supportedSolvers))
 
-  setDefault(factorSize -> 8, fitIntercept -> true, fitLinear -> true, regParam -> 0.0,
-    miniBatchFraction -> 1.0, initStd -> 0.01, maxIter -> 100, stepSize -> 1.0, tol -> 1E-6,
+  setDefault(
+    factorSize -> 8,
+    fitIntercept -> true,
+    fitLinear -> true,
+    regParam -> 0.0,
+    miniBatchFraction -> 1.0,
+    initStd -> 0.01,
+    maxIter -> 100,
+    stepSize -> 1.0,
+    tol -> 1e-6,
     solver -> AdamW)
 }
 
@@ -128,16 +150,15 @@ private[ml] trait FactorizationMachines extends FactorizationMachinesParams {
     val initialCoefficients =
       OldVectors.dense(
         Array.fill($(factorSize) * numFeatures)(rnd.nextGaussian() * $(initStd)) ++
-        (if ($(fitLinear)) new Array[Double](numFeatures) else Array.emptyDoubleArray) ++
-        (if ($(fitIntercept)) new Array[Double](1) else Array.emptyDoubleArray))
+          (if ($(fitLinear)) new Array[Double](numFeatures) else Array.emptyDoubleArray) ++
+          (if ($(fitIntercept)) new Array[Double](1) else Array.emptyDoubleArray))
     initialCoefficients
   }
 
   private[ml] def trainImpl(
       data: RDD[(Double, OldVector)],
       numFeatures: Int,
-      loss: String
-    ): (Vector, Array[Double]) = {
+      loss: String): (Vector, Array[Double]) = {
 
     // initialize coefficients
     val initialCoefficients = initCoefficients(numFeatures)
@@ -154,7 +175,8 @@ private[ml] trait FactorizationMachines extends FactorizationMachinesParams {
       .setRegParam($(regParam))
       .setMiniBatchFraction($(miniBatchFraction))
       .setConvergenceTol($(tol))
-    val (coefficients, lossHistory) = optimizer.optimizeWithLossReturned(data, initialCoefficients)
+    val (coefficients, lossHistory) =
+      optimizer.optimizeWithLossReturned(data, initialCoefficients)
     (coefficients.asML, lossHistory)
   }
 }
@@ -193,15 +215,19 @@ private[ml] object FactorizationMachines {
       factorSize: Int,
       fitIntercept: Boolean,
       fitLinear: Boolean,
-      numFeatures: Int
-    ): BaseFactorizationMachinesGradient = {
+      numFeatures: Int): BaseFactorizationMachinesGradient = {
 
     lossFunc match {
       case LogisticLoss =>
-        new LogisticFactorizationMachinesGradient(factorSize, fitIntercept, fitLinear, numFeatures)
+        new LogisticFactorizationMachinesGradient(
+          factorSize,
+          fitIntercept,
+          fitLinear,
+          numFeatures)
       case SquaredError =>
         new MSEFactorizationMachinesGradient(factorSize, fitIntercept, fitLinear, numFeatures)
-      case _ => throw new IllegalArgumentException(s"loss function type $lossFunc is invalidation")
+      case _ =>
+        throw new IllegalArgumentException(s"loss function type $lossFunc is invalidation")
     }
   }
 
@@ -210,23 +236,27 @@ private[ml] object FactorizationMachines {
       numFeatures: Int,
       factorSize: Int,
       fitIntercept: Boolean,
-      fitLinear: Boolean
-    ): (Double, Vector, Matrix) = {
+      fitLinear: Boolean): (Double, Vector, Matrix) = {
 
     val coefficientsSize = numFeatures * factorSize +
       (if (fitLinear) numFeatures else 0) + (if (fitIntercept) 1 else 0)
-    require(coefficientsSize == coefficients.size,
+    require(
+      coefficientsSize == coefficients.size,
       s"coefficients.size did not match the excepted size ${coefficientsSize}")
 
     val intercept = if (fitIntercept) coefficients(coefficients.size - 1) else 0.0
     val linear: Vector = if (fitLinear) {
-      new DenseVector(coefficients.toArray.slice(
-        numFeatures * factorSize, numFeatures * factorSize + numFeatures))
+      new DenseVector(
+        coefficients.toArray
+          .slice(numFeatures * factorSize, numFeatures * factorSize + numFeatures))
     } else {
       Vectors.sparse(numFeatures, Seq.empty)
     }
-    val factors = new DenseMatrix(numFeatures, factorSize,
-      coefficients.toArray.slice(0, numFeatures * factorSize), true)
+    val factors = new DenseMatrix(
+      numFeatures,
+      factorSize,
+      coefficients.toArray.slice(0, numFeatures * factorSize),
+      true)
     (intercept, linear.compressed, factors.compressed)
   }
 
@@ -235,8 +265,7 @@ private[ml] object FactorizationMachines {
       linear: Vector,
       factors: Matrix,
       fitIntercept: Boolean,
-      fitLinear: Boolean
-    ): Vector = {
+      fitLinear: Boolean): Vector = {
 
     val coefficients = factors.toDense.values ++
       (if (fitLinear) linear.toArray else Array.emptyDoubleArray) ++
@@ -248,8 +277,7 @@ private[ml] object FactorizationMachines {
       features: Vector,
       intercept: Double,
       linear: Vector,
-      factors: Matrix
-    ): Double = {
+      factors: Matrix): Double = {
     var rawPrediction = intercept + features.dot(linear)
     (0 until factors.numCols).foreach { f =>
       var sumSquare = 0.0
@@ -269,49 +297,41 @@ private[ml] object FactorizationMachines {
 /**
  * Params for FMRegressor
  */
-private[regression] trait FMRegressorParams extends FactorizationMachinesParams {
-}
+private[regression] trait FMRegressorParams extends FactorizationMachinesParams {}
 
 // scalastyle:off line.size.limit
 /**
- * Factorization Machines learning algorithm for regression.
- * It supports normal gradient descent and AdamW solver.
+ * Factorization Machines learning algorithm for regression. It supports normal gradient descent
+ * and AdamW solver.
  *
- * The implementation is based on:
- * <a href="https://web.archive.org/web/20191225211603/https://www.csie.ntu.edu.tw/~b97053/paper/Rendle2010FM.pdf">
+ * The implementation is based on: <a
+ * href="https://web.archive.org/web/20191225211603/https://www.csie.ntu.edu.tw/~b97053/paper/Rendle2010FM.pdf">
  * S. Rendle. "Factorization machines" 2010</a>.
  *
- * FM is able to estimate interactions even in problems with huge sparsity
- * (like advertising and recommendation system).
- * FM formula is:
- * <blockquote>
- *   $$
- *   \begin{align}
- *   y = w_0 + \sum\limits^n_{i-1} w_i x_i +
- *     \sum\limits^n_{i=1} \sum\limits^n_{j=i+1} \langle v_i, v_j \rangle x_i x_j
- *   \end{align}
- *   $$
- * </blockquote>
- * First two terms denote global bias and linear term (as same as linear regression),
- * and last term denotes pairwise interactions term. v_i describes the i-th variable
- * with k factors.
+ * FM is able to estimate interactions even in problems with huge sparsity (like advertising and
+ * recommendation system). FM formula is: <blockquote> $$ \begin{align} y = w_0 +
+ * \sum\limits^n_{i-1} w_i x_i + \sum\limits^n_{i=1} \sum\limits^n_{j=i+1} \langle v_i, v_j
+ * \rangle x_i x_j \end{align} $$ </blockquote> First two terms denote global bias and linear term
+ * (as same as linear regression), and last term denotes pairwise interactions term. v_i describes
+ * the i-th variable with k factors.
  *
  * FM regression model uses MSE loss which can be solved by gradient descent method, and
  * regularization terms like L2 are usually added to the loss function to prevent overfitting.
  */
 // scalastyle:on line.size.limit
 @Since("3.0.0")
-class FMRegressor @Since("3.0.0") (
-    @Since("3.0.0") override val uid: String)
-  extends Regressor[Vector, FMRegressor, FMRegressionModel]
-  with FactorizationMachines with FMRegressorParams with DefaultParamsWritable with Logging {
+class FMRegressor @Since("3.0.0") (@Since("3.0.0") override val uid: String)
+    extends Regressor[Vector, FMRegressor, FMRegressionModel]
+    with FactorizationMachines
+    with FMRegressorParams
+    with DefaultParamsWritable
+    with Logging {
 
   @Since("3.0.0")
   def this() = this(Identifiable.randomUID("fmr"))
 
   /**
-   * Set the dimensionality of the factors.
-   * Default is 8.
+   * Set the dimensionality of the factors. Default is 8.
    *
    * @group setParam
    */
@@ -319,8 +339,7 @@ class FMRegressor @Since("3.0.0") (
   def setFactorSize(value: Int): this.type = set(factorSize, value)
 
   /**
-   * Set whether to fit intercept term.
-   * Default is true.
+   * Set whether to fit intercept term. Default is true.
    *
    * @group setParam
    */
@@ -328,8 +347,7 @@ class FMRegressor @Since("3.0.0") (
   def setFitIntercept(value: Boolean): this.type = set(fitIntercept, value)
 
   /**
-   * Set whether to fit linear term.
-   * Default is true.
+   * Set whether to fit linear term. Default is true.
    *
    * @group setParam
    */
@@ -337,8 +355,7 @@ class FMRegressor @Since("3.0.0") (
   def setFitLinear(value: Boolean): this.type = set(fitLinear, value)
 
   /**
-   * Set the L2 regularization parameter.
-   * Default is 0.0.
+   * Set the L2 regularization parameter. Default is 0.0.
    *
    * @group setParam
    */
@@ -346,8 +363,7 @@ class FMRegressor @Since("3.0.0") (
   def setRegParam(value: Double): this.type = set(regParam, value)
 
   /**
-   * Set the mini-batch fraction parameter.
-   * Default is 1.0.
+   * Set the mini-batch fraction parameter. Default is 1.0.
    *
    * @group setParam
    */
@@ -355,8 +371,7 @@ class FMRegressor @Since("3.0.0") (
   def setMiniBatchFraction(value: Double): this.type = set(miniBatchFraction, value)
 
   /**
-   * Set the standard deviation of initial coefficients.
-   * Default is 0.01.
+   * Set the standard deviation of initial coefficients. Default is 0.01.
    *
    * @group setParam
    */
@@ -364,8 +379,7 @@ class FMRegressor @Since("3.0.0") (
   def setInitStd(value: Double): this.type = set(initStd, value)
 
   /**
-   * Set the maximum number of iterations.
-   * Default is 100.
+   * Set the maximum number of iterations. Default is 100.
    *
    * @group setParam
    */
@@ -373,8 +387,7 @@ class FMRegressor @Since("3.0.0") (
   def setMaxIter(value: Int): this.type = set(maxIter, value)
 
   /**
-   * Set the initial step size for the first step (like learning rate).
-   * Default is 1.0.
+   * Set the initial step size for the first step (like learning rate). Default is 1.0.
    *
    * @group setParam
    */
@@ -382,8 +395,7 @@ class FMRegressor @Since("3.0.0") (
   def setStepSize(value: Double): this.type = set(stepSize, value)
 
   /**
-   * Set the convergence tolerance of iterations.
-   * Default is 1E-6.
+   * Set the convergence tolerance of iterations. Default is 1E-6.
    *
    * @group setParam
    */
@@ -391,9 +403,8 @@ class FMRegressor @Since("3.0.0") (
   def setTol(value: Double): this.type = set(tol, value)
 
   /**
-   * Set the solver algorithm used for optimization.
-   * Supported options: "gd", "adamW".
-   * Default: "adamW"
+   * Set the solver algorithm used for optimization. Supported options: "gd", "adamW". Default:
+   * "adamW"
    *
    * @group setParam
    */
@@ -408,32 +419,39 @@ class FMRegressor @Since("3.0.0") (
   @Since("3.0.0")
   def setSeed(value: Long): this.type = set(seed, value)
 
-  override protected def train(
-      dataset: Dataset[_]
-    ): FMRegressionModel = instrumented { instr =>
-
+  override protected def train(dataset: Dataset[_]): FMRegressionModel = instrumented { instr =>
     instr.logPipelineStage(this)
     instr.logDataset(dataset)
-    instr.logParams(this, factorSize, fitIntercept, fitLinear, regParam,
-      miniBatchFraction, initStd, maxIter, stepSize, tol, solver)
+    instr.logParams(
+      this,
+      factorSize,
+      fitIntercept,
+      fitLinear,
+      regParam,
+      miniBatchFraction,
+      initStd,
+      maxIter,
+      stepSize,
+      tol,
+      solver)
 
     val numFeatures = getNumFeatures(dataset, $(featuresCol))
     instr.logNumFeatures(numFeatures)
 
     val handlePersistence = dataset.storageLevel == StorageLevel.NONE
 
-    val data = dataset.select(
-      checkRegressionLabels($(labelCol)),
-      checkNonNanVectors($(featuresCol))
-    ).rdd.map { case Row(l: Double, v: Vector) => (l, OldVectors.fromML(v))
-    }.setName("training instances")
+    val data = dataset
+      .select(checkRegressionLabels($(labelCol)), checkNonNanVectors($(featuresCol)))
+      .rdd
+      .map { case Row(l: Double, v: Vector) => (l, OldVectors.fromML(v)) }
+      .setName("training instances")
 
     if (handlePersistence) data.persist(StorageLevel.MEMORY_AND_DISK)
 
     val (coefficients, _) = trainImpl(data, numFeatures, SquaredError)
 
-    val (intercept, linear, factors) = splitCoefficients(
-      coefficients, numFeatures, $(factorSize), $(fitIntercept), $(fitLinear))
+    val (intercept, linear, factors) =
+      splitCoefficients(coefficients, numFeatures, $(factorSize), $(fitIntercept), $(fitLinear))
 
     if (handlePersistence) data.unpersist()
 
@@ -469,8 +487,9 @@ class FMRegressionModel private[regression] (
     @Since("3.0.0") val intercept: Double,
     @Since("3.0.0") val linear: Vector,
     @Since("3.0.0") val factors: Matrix)
-  extends RegressionModel[Vector, FMRegressionModel]
-  with FMRegressorParams with MLWritable {
+    extends RegressionModel[Vector, FMRegressionModel]
+    with FMRegressorParams
+    with MLWritable {
 
   // For ml connect only
   private[ml] def this() = this("", Double.NaN, Vectors.empty, Matrices.empty)
@@ -512,10 +531,7 @@ class FMRegressionModel private[regression] (
 
 @Since("3.0.0")
 object FMRegressionModel extends MLReadable[FMRegressionModel] {
-  private[ml] case class Data(
-     intercept: Double,
-     linear: Vector,
-     factors: Matrix)
+  private[ml] case class Data(intercept: Double, linear: Vector, factors: Matrix)
 
   private[ml] def serializeData(data: Data, dos: DataOutputStream): Unit = {
     import ReadWriteUtils._
@@ -539,8 +555,9 @@ object FMRegressionModel extends MLReadable[FMRegressionModel] {
   override def load(path: String): FMRegressionModel = super.load(path)
 
   /** [[MLWriter]] instance for [[FMRegressionModel]] */
-  private[FMRegressionModel] class FMRegressionModelWriter(
-      instance: FMRegressionModel) extends MLWriter with Logging {
+  private[FMRegressionModel] class FMRegressionModelWriter(instance: FMRegressionModel)
+      extends MLWriter
+      with Logging {
 
     override protected def saveImpl(path: String): Unit = {
       DefaultParamsWriter.saveMetadata(instance, path, sparkSession)
@@ -566,9 +583,9 @@ object FMRegressionModel extends MLReadable[FMRegressionModel] {
 }
 
 /**
- * Factorization Machines base gradient class
- * Implementing the raw FM formula, include raw prediction and raw gradient,
- * then inherit the base class to implement special gradient class(like logloss, mse).
+ * Factorization Machines base gradient class Implementing the raw FM formula, include raw
+ * prediction and raw gradient, then inherit the base class to implement special gradient
+ * class(like logloss, mse).
  *
  * Factorization Machines raw formula:
  * {{{
@@ -597,8 +614,8 @@ object FMRegressionModel extends MLReadable[FMRegressionModel] {
  * {{{
  *   \hat{y} = p\left( y_{fm} \right)
  * }}}
- * p is the prediction function, for binary classification task is sigmoid.
- * The loss function gradient formula:
+ * p is the prediction function, for binary classification task is sigmoid. The loss function
+ * gradient formula:
  * {{{
  *   \frac{\partial}{\partial\theta} l\left( \hat{y},y \right) =
  *   \frac{\partial}{\partial\theta} l\left( p\left( y_{fm} \right),y \right) =
@@ -606,14 +623,15 @@ object FMRegressionModel extends MLReadable[FMRegressionModel] {
  *   \frac{\partial \hat{y}}{\partial y_{fm}} \cdot
  *   \frac{\partial y_{fm}}{\partial\theta}
  * }}}
- * Last term is same for all task, so be implemented in base gradient class.
- * last term named rawGradient in following code, and first two term named multiplier.
+ * Last term is same for all task, so be implemented in base gradient class. last term named
+ * rawGradient in following code, and first two term named multiplier.
  */
 private[ml] abstract class BaseFactorizationMachinesGradient(
     factorSize: Int,
     fitIntercept: Boolean,
     fitLinear: Boolean,
-    numFeatures: Int) extends Gradient {
+    numFeatures: Int)
+    extends Gradient {
 
   override def compute(
       data: OldVector,
@@ -663,8 +681,7 @@ private[ml] abstract class BaseFactorizationMachinesGradient(
   private def getRawGradient(
       data: OldVector,
       weights: OldVector,
-      sumVX: Array[Double]
-    ): OldVector = {
+      sumVX: Array[Double]): OldVector = {
     data match {
       // Usually Factorization Machines is used, there will be a lot of sparse features.
       // So need to optimize the gradient descent of sparse vector.
@@ -720,8 +737,7 @@ private[ml] abstract class BaseFactorizationMachinesGradient(
 }
 
 /**
- * FM with logistic loss
- * prediction formula:
+ * FM with logistic loss prediction formula:
  * {{{
  *   \hat{y} = \sigmoid(y_{fm})
  * }}}
@@ -741,11 +757,12 @@ private[ml] class LogisticFactorizationMachinesGradient(
     fitIntercept: Boolean,
     fitLinear: Boolean,
     numFeatures: Int)
-  extends BaseFactorizationMachinesGradient(
-    factorSize: Int,
-    fitIntercept: Boolean,
-    fitLinear: Boolean,
-    numFeatures: Int) with Logging {
+    extends BaseFactorizationMachinesGradient(
+      factorSize: Int,
+      fitIntercept: Boolean,
+      fitLinear: Boolean,
+      numFeatures: Int)
+    with Logging {
 
   override def getPrediction(rawPrediction: Double): Double = {
     1.0 / (1.0 + math.exp(-rawPrediction))
@@ -762,8 +779,7 @@ private[ml] class LogisticFactorizationMachinesGradient(
 }
 
 /**
- * FM with mse
- * prediction formula:
+ * FM with mse prediction formula:
  * {{{
  *   \hat{y} = y_{fm}
  * }}}
@@ -783,11 +799,12 @@ private[ml] class MSEFactorizationMachinesGradient(
     fitIntercept: Boolean,
     fitLinear: Boolean,
     numFeatures: Int)
-  extends BaseFactorizationMachinesGradient(
-    factorSize: Int,
-    fitIntercept: Boolean,
-    fitLinear: Boolean,
-    numFeatures: Int) with Logging {
+    extends BaseFactorizationMachinesGradient(
+      factorSize: Int,
+      fitIntercept: Boolean,
+      fitLinear: Boolean,
+      numFeatures: Int)
+    with Logging {
 
   override def getPrediction(rawPrediction: Double): Double = {
     rawPrediction
@@ -805,15 +822,13 @@ private[ml] class MSEFactorizationMachinesGradient(
 /**
  * AdamW optimizer.
  *
- * The implementation is based upon:
- * <a href="https://arxiv.org/pdf/1711.05101.pdf">
- * Loshchilov I, Hutter F. "DECOUPLED WEIGHT DECAY REGULARIZATION" 2019</a>.
+ * The implementation is based upon: <a href="https://arxiv.org/pdf/1711.05101.pdf"> Loshchilov I,
+ * Hutter F. "DECOUPLED WEIGHT DECAY REGULARIZATION" 2019</a>.
  *
- * The main contribution of this paper is to improve regularization in Adam
- * by decoupling the weight decay from the gradient-based update.
- * This paper proposed a simple modification to recover the original formulation of
- * weight decay regularization by decoupling the weight decay from the optimization steps
- * taken w.r.t. the loss function.
+ * The main contribution of this paper is to improve regularization in Adam by decoupling the
+ * weight decay from the gradient-based update. This paper proposed a simple modification to
+ * recover the original formulation of weight decay regularization by decoupling the weight decay
+ * from the optimization steps taken w.r.t. the loss function.
  */
 private[ml] class AdamWUpdater(weightSize: Int) extends Updater with Logging {
   val beta1: Double = 0.9
@@ -826,12 +841,11 @@ private[ml] class AdamWUpdater(weightSize: Int) extends Updater with Logging {
   var beta2T: Double = 1.0
 
   override def compute(
-    weightsOld: OldVector,
-    gradient: OldVector,
-    stepSize: Double,
-    iter: Int,
-    regParam: Double
-  ): (OldVector, Double) = {
+      weightsOld: OldVector,
+      gradient: OldVector,
+      stepSize: Double,
+      iter: Int,
+      regParam: Double): (OldVector, Double) = {
     val w: BV[Double] = weightsOld.asBreeze.toDenseVector
     val lr = stepSize // learning rate
     if (stepSize > 0) {

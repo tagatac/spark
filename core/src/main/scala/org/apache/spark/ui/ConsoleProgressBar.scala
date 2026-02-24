@@ -51,7 +51,10 @@ private[spark] class ConsoleProgressBar(sc: SparkContext) extends Logging {
   // Schedule a refresh thread to run periodically
   private val timer = ThreadUtils.newDaemonSingleThreadScheduledExecutor("refresh progress")
   private val timerFuture = timer.scheduleAtFixedRate(
-    () => refresh(), firstDelayMSec, updatePeriodMSec, TimeUnit.MILLISECONDS)
+    () => refresh(),
+    firstDelayMSec,
+    updatePeriodMSec,
+    TimeUnit.MILLISECONDS)
 
   /**
    * Try to refresh the progress bar in every cycle
@@ -61,35 +64,40 @@ private[spark] class ConsoleProgressBar(sc: SparkContext) extends Logging {
     if (now - lastFinishTime < firstDelayMSec) {
       return
     }
-    val stages = sc.statusStore.activeStages()
+    val stages = sc.statusStore
+      .activeStages()
       .filter { s => now - s.submissionTime.get.getTime() > firstDelayMSec }
     if (stages.length > 0) {
-      show(now, stages.take(3))  // display at most 3 stages in same time
+      show(now, stages.take(3)) // display at most 3 stages in same time
     }
   }
 
   /**
-   * Show progress bar in console. The progress bar is displayed in the next line
-   * after your last output, keeps overwriting itself to hold in one line. The logging will follow
-   * the progress bar, then progress bar will be showed in next line without overwrite logs.
+   * Show progress bar in console. The progress bar is displayed in the next line after your last
+   * output, keeps overwriting itself to hold in one line. The logging will follow the progress
+   * bar, then progress bar will be showed in next line without overwrite logs.
    */
   private def show(now: Long, stages: Seq[StageData]): Unit = {
     val width = TerminalWidth / stages.length
-    val bar = stages.map { s =>
-      val total = s.numTasks
-      val header = s"[Stage ${s.stageId}:"
-      val tailer = s"(${s.numCompleteTasks} + ${s.numActiveTasks}) / $total]"
-      val w = width - header.length - tailer.length
-      val bar = if (w > 0) {
-        val percent = w * s.numCompleteTasks / total
-        (0 until w).map { i =>
-          if (i < percent) "=" else if (i == percent) ">" else " "
-        }.mkString("")
-      } else {
-        ""
+    val bar = stages
+      .map { s =>
+        val total = s.numTasks
+        val header = s"[Stage ${s.stageId}:"
+        val tailer = s"(${s.numCompleteTasks} + ${s.numActiveTasks}) / $total]"
+        val w = width - header.length - tailer.length
+        val bar = if (w > 0) {
+          val percent = w * s.numCompleteTasks / total
+          (0 until w)
+            .map { i =>
+              if (i < percent) "=" else if (i == percent) ">" else " "
+            }
+            .mkString("")
+        } else {
+          ""
+        }
+        header + bar + tailer
       }
-      header + bar + tailer
-    }.mkString("")
+      .mkString("")
 
     // only refresh if it's changed OR after 1 minute (or the ssh connection will be closed
     // after idle some time)
@@ -120,7 +128,7 @@ private[spark] class ConsoleProgressBar(sc: SparkContext) extends Logging {
   }
 
   /**
-   * Tear down the timer thread.  The timer thread is a GC root, and it retains the entire
+   * Tear down the timer thread. The timer thread is a GC root, and it retains the entire
    * SparkContext if it's not terminated.
    */
   def stop(): Unit = {

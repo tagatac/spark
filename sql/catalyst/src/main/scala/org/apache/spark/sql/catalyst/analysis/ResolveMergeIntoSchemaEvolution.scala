@@ -29,7 +29,6 @@ import org.apache.spark.sql.errors.QueryCompilationErrors
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.types.StructType
 
-
 /**
  * A rule that resolves schema evolution for MERGE INTO.
  *
@@ -40,21 +39,20 @@ object ResolveMergeIntoSchemaEvolution extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
     // This rule should run only if all assignments are resolved, except those
     // that will be satisfied by schema evolution
-    case m@MergeIntoTable(_, _, _, _, _, _, _) if m.evaluateSchemaEvolution =>
+    case m @ MergeIntoTable(_, _, _, _, _, _, _) if m.evaluateSchemaEvolution =>
       val changes = m.changesForSchemaEvolution
       if (changes.isEmpty) {
         m
       } else {
         val finalAttrMapping = ArrayBuffer.empty[(Attribute, Attribute)]
-        val newTarget = m.targetTable.transform {
-          case r: DataSourceV2Relation =>
-            val referencedSourceSchema = MergeIntoTable.sourceSchemaForSchemaEvolution(m)
-            val newTarget = performSchemaEvolution(r, referencedSourceSchema, changes)
-            val oldTargetOutput = m.targetTable.output
-            val newTargetOutput = newTarget.output
-            val attributeMapping = oldTargetOutput.zip(newTargetOutput)
-            finalAttrMapping ++= attributeMapping
-            newTarget
+        val newTarget = m.targetTable.transform { case r: DataSourceV2Relation =>
+          val referencedSourceSchema = MergeIntoTable.sourceSchemaForSchemaEvolution(m)
+          val newTarget = performSchemaEvolution(r, referencedSourceSchema, changes)
+          val oldTargetOutput = m.targetTable.output
+          val newTargetOutput = newTarget.output
+          val attributeMapping = oldTargetOutput.zip(newTargetOutput)
+          finalAttrMapping ++= attributeMapping
+          newTarget
         }
         val res = m.copy(targetTable = newTarget)
         res.rewriteAttrs(AttributeMap(finalAttrMapping.toSeq))
@@ -74,11 +72,14 @@ object ResolveMergeIntoSchemaEvolution extends Rule[LogicalPlan] {
         val remainingChanges = MergeIntoTable.schemaChanges(newSchema, referencedSourceSchema)
         if (remainingChanges.nonEmpty) {
           throw QueryCompilationErrors.unsupportedTableChangesInAutoSchemaEvolutionError(
-            remainingChanges, i.toQualifiedNameParts(c))
+            remainingChanges,
+            i.toQualifiedNameParts(c))
         }
         relation.copy(table = newTable, output = DataTypeUtils.toAttributes(newSchema))
-      case _ => logWarning(s"Schema Evolution enabled but data source $relation " +
-        s"does not support it, skipping.")
+      case _ =>
+        logWarning(
+          s"Schema Evolution enabled but data source $relation " +
+            s"does not support it, skipping.")
         relation
     }
   }

@@ -25,25 +25,27 @@ import org.apache.spark.sql.pipelines.logging.{FlowProgressEventLogger, Pipeline
 
 /**
  * An implementation of the PipelineUpdateContext trait used in production.
- * @param unresolvedGraph The graph (unresolved) to be executed in this update.
- * @param eventCallback A callback function to be called when an event is added to the event buffer.
- * @param refreshTables Filter for which tables should be refreshed when performing this update.
- * @param fullRefreshTables Filter for which tables should be full refreshed
- *                          when performing this update.
+ * @param unresolvedGraph
+ *   The graph (unresolved) to be executed in this update.
+ * @param eventCallback
+ *   A callback function to be called when an event is added to the event buffer.
+ * @param refreshTables
+ *   Filter for which tables should be refreshed when performing this update.
+ * @param fullRefreshTables
+ *   Filter for which tables should be full refreshed when performing this update.
  */
 class PipelineUpdateContextImpl(
     override val unresolvedGraph: DataflowGraph,
     override val eventCallback: PipelineEvent => Unit,
     override val refreshTables: TableFilter = AllTables,
     override val fullRefreshTables: TableFilter = NoTables,
-    override val storageRoot: String
-) extends PipelineUpdateContext {
+    override val storageRoot: String)
+    extends PipelineUpdateContext {
 
   PipelineUpdateContextImpl.validateStorageRoot(storageRoot)
 
   override val spark: SparkSession = SparkSession.getActiveSession.getOrElse(
-    throw new IllegalStateException("SparkSession is not available")
-  )
+    throw new IllegalStateException("SparkSession is not available"))
 
   override val flowProgressEventLogger: FlowProgressEventLogger =
     new FlowProgressEventLogger(eventCallback = eventCallback)
@@ -61,8 +63,7 @@ object PipelineUpdateContextImpl {
       throw new SparkException(
         errorClass = "PIPELINE_STORAGE_ROOT_INVALID",
         messageParameters = Map("storage_root" -> storageRoot),
-        cause = null
-      )
+        cause = null)
     }
   }
 }

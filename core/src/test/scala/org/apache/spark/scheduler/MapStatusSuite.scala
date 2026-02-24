@@ -40,28 +40,27 @@ class MapStatusSuite extends SparkFunSuite {
     assert(MapStatus.compressSize(1L) === 1)
     assert(MapStatus.compressSize(2L) === 8)
     assert(MapStatus.compressSize(10L) === 25)
-    assert((MapStatus.compressSize(1000000L) & 0xFF) === 145)
-    assert((MapStatus.compressSize(1000000000L) & 0xFF) === 218)
+    assert((MapStatus.compressSize(1000000L) & 0xff) === 145)
+    assert((MapStatus.compressSize(1000000000L) & 0xff) === 218)
     // This last size is bigger than we can encode in a byte, so check that we just return 255
-    assert((MapStatus.compressSize(1000000000000000000L) & 0xFF) === 255)
+    assert((MapStatus.compressSize(1000000000000000000L) & 0xff) === 255)
   }
 
   test("decompressSize") {
     assert(MapStatus.decompressSize(0) === 0)
     for (size <- Seq(2L, 10L, 100L, 50000L, 1000000L, 1000000000L)) {
       val size2 = MapStatus.decompressSize(MapStatus.compressSize(size))
-      assert(size2 >= 0.99 * size && size2 <= 1.11 * size,
+      assert(
+        size2 >= 0.99 * size && size2 <= 1.11 * size,
         "size " + size + " decompressed to " + size2 + ", which is out of range")
     }
   }
 
   test("MapStatus should never report non-empty blocks' sizes as 0") {
     import Math._
-    for (
-      numSizes <- Seq(1, 10, 100, 1000, 10000);
+    for (numSizes <- Seq(1, 10, 100, 1000, 10000);
       mean <- Seq(0L, 100L, 10000L, Int.MaxValue.toLong);
-      stddev <- Seq(0.0, 0.01, 0.5, 1.0)
-    ) {
+      stddev <- Seq(0.0, 0.01, 0.5, 1.0)) {
       val sizes = Array.fill[Long](numSizes)(abs(round(Random.nextGaussian() * stddev)) + mean)
       val status = MapStatus(BlockManagerId("a", "b", 10), sizes, -1)
       val status1 = compressAndDecompressMapStatus(status)
@@ -105,7 +104,8 @@ class MapStatusSuite extends SparkFunSuite {
 
   test("SPARK-22540: ensure HighlyCompressedMapStatus calculates correct avgSize") {
     val threshold = 1000
-    val conf = new SparkConf().set(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD.key, threshold.toString)
+    val conf =
+      new SparkConf().set(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD.key, threshold.toString)
     val env = mock(classOf[SparkEnv])
     doReturn(conf).when(env).conf
     SparkEnv.set(env)
@@ -136,8 +136,7 @@ class MapStatusSuite extends SparkFunSuite {
     (1 to 200000).foreach(i =>
       if (i % 200 != 0) {
         r.add(i)
-      }
-    )
+      })
     val size1 = r.getSizeInBytes
     val success = r.runOptimize()
     r.trim()
@@ -151,8 +150,7 @@ class MapStatusSuite extends SparkFunSuite {
     (1 to 200000).foreach(i =>
       if (i % 200 == 0) {
         r.add(i)
-      }
-    )
+      })
     val size1 = r.getSizeInBytes
     val success = r.runOptimize()
     r.trim()
@@ -161,8 +159,9 @@ class MapStatusSuite extends SparkFunSuite {
     assert(!success)
   }
 
-  test("Blocks which are bigger than SHUFFLE_ACCURATE_BLOCK_THRESHOLD should not be " +
-    "underestimated.") {
+  test(
+    "Blocks which are bigger than SHUFFLE_ACCURATE_BLOCK_THRESHOLD should not be " +
+      "underestimated.") {
     val conf = new SparkConf().set(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD.key, "1000")
     val env = mock(classOf[SparkEnv])
     doReturn(conf).when(env).conf
@@ -178,8 +177,8 @@ class MapStatusSuite extends SparkFunSuite {
     val array = arrayStream.toByteArray
     val objectInput = new ObjectInputStream(new ByteArrayInputStream(array))
     val status2 = objectInput.readObject().asInstanceOf[HighlyCompressedMapStatus]
-    (1001 to 2000).foreach {
-      case part => assert(status2.getSizeForBlock(part) >= sizes(part))
+    (1001 to 2000).foreach { case part =>
+      assert(status2.getSizeForBlock(part) >= sizes(part))
     }
   }
 
@@ -198,8 +197,9 @@ class MapStatusSuite extends SparkFunSuite {
     MapStatus.decompressSize(MapStatus.compressSize(size))
   }
 
-  test("SPARK-36967: HighlyCompressedMapStatus should record accurately the size " +
-    "of skewed shuffle blocks") {
+  test(
+    "SPARK-36967: HighlyCompressedMapStatus should record accurately the size " +
+      "of skewed shuffle blocks") {
     val emptyBlocksLength = 3
     val smallAndUntrackedBlocksLength = 2889
     val trackedSkewedBlocksLength = 20
@@ -230,8 +230,9 @@ class MapStatusSuite extends SparkFunSuite {
       assert(status1.getSizeForBlock(emptyBlocksLength + i) === avg)
     }
     for (i <- 0 until trackedSkewedBlocksLength) {
-      assert(status1.getSizeForBlock(emptyBlocksLength + smallAndUntrackedBlocksLength + i) ===
-        compressAndDecompressSize(trackedSkewedBlocks(i)),
+      assert(
+        status1.getSizeForBlock(emptyBlocksLength + smallAndUntrackedBlocksLength + i) ===
+          compressAndDecompressSize(trackedSkewedBlocks(i)),
         "Only tracked skewed block size is accurate")
     }
   }
@@ -264,8 +265,9 @@ class MapStatusSuite extends SparkFunSuite {
     val allBlocks = emptyBlocks ++: nonEmptyBlocks
 
     val skewThreshold = Utils.median(allBlocks, false) * accurateBlockSkewedFactor
-    assert(nonEmptyBlocks.count(_ > skewThreshold) ==
-      untrackedSkewedBlocksLength + trackedSkewedBlocksLength,
+    assert(
+      nonEmptyBlocks.count(_ > skewThreshold) ==
+        untrackedSkewedBlocksLength + trackedSkewedBlocksLength,
       "number of skewed block sizes")
 
     val smallAndUntrackedBlocks =
@@ -284,8 +286,9 @@ class MapStatusSuite extends SparkFunSuite {
       assert(status1.getSizeForBlock(i) === avg)
     }
     for (i <- 0 until trackedSkewedBlocksLength) {
-      assert(status1.getSizeForBlock(allBlocks.length - trackedSkewedBlocksLength + i) ===
-        compressAndDecompressSize(trackedSkewedBlocksSizes(i)),
+      assert(
+        status1.getSizeForBlock(allBlocks.length - trackedSkewedBlocksLength + i) ===
+          compressAndDecompressSize(trackedSkewedBlocksSizes(i)),
         "Only tracked skewed block size is accurate")
     }
   }

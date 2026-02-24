@@ -58,7 +58,10 @@ class KubernetesClusterManagerSuite extends SparkFunSuite with BeforeAndAfter {
   }
 
   test("constructing a AbstractPodsAllocator works") {
-    val validConfigs = List("statefulset", "deployment", "direct",
+    val validConfigs = List(
+      "statefulset",
+      "deployment",
+      "direct",
       classOf[StatefulSetPodsAllocator].getName,
       classOf[DeploymentPodsAllocator].getName,
       classOf[ExecutorPodsAllocator].getName)

@@ -49,16 +49,18 @@ private case class DeserializedMemoryEntry[T](
     value: Array[T],
     size: Long,
     memoryMode: MemoryMode,
-    classTag: ClassTag[T]) extends MemoryEntry[T] {
-}
+    classTag: ClassTag[T])
+    extends MemoryEntry[T] {}
 private case class SerializedMemoryEntry[T](
     buffer: ChunkedByteBuffer,
     memoryMode: MemoryMode,
-    classTag: ClassTag[T]) extends MemoryEntry[T] {
+    classTag: ClassTag[T])
+    extends MemoryEntry[T] {
   def size: Long = buffer.size
 }
 
 private[storage] trait BlockEvictionHandler {
+
   /**
    * Drop a block from memory, possibly putting it on disk if applicable. Called when the memory
    * store reaches its limit and needs to free up space.
@@ -68,7 +70,8 @@ private[storage] trait BlockEvictionHandler {
    * The caller of this method must hold a write lock on the block before calling this method.
    * This method does not release the write lock.
    *
-   * @return the block's new effective StorageLevel.
+   * @return
+   *   the block's new effective StorageLevel.
    */
   private[storage] def dropFromMemory[T: ClassTag](
       blockId: BlockId,
@@ -76,8 +79,8 @@ private[storage] trait BlockEvictionHandler {
 }
 
 /**
- * Stores blocks in memory, either as Arrays of deserialized Java objects or as
- * serialized ByteBuffers.
+ * Stores blocks in memory, either as Arrays of deserialized Java objects or as serialized
+ * ByteBuffers.
  */
 private[spark] class MemoryStore(
     conf: SparkConf,
@@ -85,7 +88,7 @@ private[spark] class MemoryStore(
     serializerManager: SerializerManager,
     memoryManager: MemoryManager,
     blockEvictionHandler: BlockEvictionHandler)
-  extends Logging {
+    extends Logging {
 
   // Note: all changes to memory allocations, notably putting blocks, evicting blocks, and
   // acquiring or releasing unroll memory, must be synchronized on `memoryManager`!
@@ -109,21 +112,23 @@ private[spark] class MemoryStore(
   }
 
   if (maxMemory < unrollMemoryThreshold) {
-    logWarning(log"Max memory ${MDC(NUM_BYTES, Utils.bytesToString(maxMemory))} " +
-      log"is less than the initial memory " +
-      log"threshold ${MDC(MAX_SIZE, Utils.bytesToString(unrollMemoryThreshold))} " +
-      log"needed to store a block in memory. Please configure Spark with more memory.")
+    logWarning(
+      log"Max memory ${MDC(NUM_BYTES, Utils.bytesToString(maxMemory))} " +
+        log"is less than the initial memory " +
+        log"threshold ${MDC(MAX_SIZE, Utils.bytesToString(unrollMemoryThreshold))} " +
+        log"needed to store a block in memory. Please configure Spark with more memory.")
   }
 
-  logInfo(log"MemoryStore started with capacity " +
-    log"${MDC(MEMORY_SIZE, Utils.bytesToString(maxMemory))}")
+  logInfo(
+    log"MemoryStore started with capacity " +
+      log"${MDC(MEMORY_SIZE, Utils.bytesToString(maxMemory))}")
 
   /** Total storage memory used including unroll memory, in bytes. */
   private def memoryUsed: Long = memoryManager.storageMemoryUsed
 
   /**
-   * Amount of storage memory, in bytes, used for caching blocks.
-   * This does not include memory used for unrolling.
+   * Amount of storage memory, in bytes, used for caching blocks. This does not include memory
+   * used for unrolling.
    */
   private def blocksMemoryUsed: Long = memoryManager.synchronized {
     memoryUsed - currentUnrollMemory
@@ -141,7 +146,8 @@ private[spark] class MemoryStore(
    *
    * The caller should guarantee that `size` is correct.
    *
-   * @return true if the put() succeeded, false otherwise.
+   * @return
+   *   true if the put() succeeded, false otherwise.
    */
   def putBytes[T: ClassTag](
       blockId: BlockId,
@@ -157,9 +163,10 @@ private[spark] class MemoryStore(
       entries.synchronized {
         entries.put(blockId, entry)
       }
-      logInfo(log"Block ${MDC(BLOCK_ID, blockId)} stored as bytes in memory " +
-        log"(estimated size ${MDC(SIZE, Utils.bytesToString(size))}, " +
-        log"free ${MDC(MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))})")
+      logInfo(
+        log"Block ${MDC(BLOCK_ID, blockId)} stored as bytes in memory " +
+          log"(estimated size ${MDC(SIZE, Utils.bytesToString(size))}, " +
+          log"free ${MDC(MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))})")
       true
     } else {
       false
@@ -169,23 +176,27 @@ private[spark] class MemoryStore(
   /**
    * Attempt to put the given block in memory store as values or bytes.
    *
-   * It's possible that the iterator is too large to materialize and store in memory. To avoid
-   * OOM exceptions, this method will gradually unroll the iterator while periodically checking
+   * It's possible that the iterator is too large to materialize and store in memory. To avoid OOM
+   * exceptions, this method will gradually unroll the iterator while periodically checking
    * whether there is enough free memory. If the block is successfully materialized, then the
    * temporary unroll memory used during the materialization is "transferred" to storage memory,
    * so we won't acquire more memory than is actually needed to store the block.
    *
-   * @param blockId The block id.
-   * @param values The values which need be stored.
-   * @param classTag the [[ClassTag]] for the block.
-   * @param memoryMode The values saved memory mode(ON_HEAP or OFF_HEAP).
-   * @param valuesHolder A holder that supports storing record of values into memory store as
-   *        values or bytes.
-   * @return if the block is stored successfully, return the stored data size. Else return the
-   *         memory has reserved for unrolling the block (There are two reasons for store failed:
-   *         First, the block is partially-unrolled; second, the block is entirely unrolled and
-   *         the actual stored data size is larger than reserved, but we can't request extra
-   *         memory).
+   * @param blockId
+   *   The block id.
+   * @param values
+   *   The values which need be stored.
+   * @param classTag
+   *   the [[ClassTag]] for the block.
+   * @param memoryMode
+   *   The values saved memory mode(ON_HEAP or OFF_HEAP).
+   * @param valuesHolder
+   *   A holder that supports storing record of values into memory store as values or bytes.
+   * @return
+   *   if the block is stored successfully, return the stored data size. Else return the memory
+   *   has reserved for unrolling the block (There are two reasons for store failed: First, the
+   *   block is partially-unrolled; second, the block is entirely unrolled and the actual stored
+   *   data size is larger than reserved, but we can't request extra memory).
    */
   private def putIterator[T](
       blockId: BlockId,
@@ -211,13 +222,13 @@ private[spark] class MemoryStore(
     var unrollMemoryUsedByThisBlock = 0L
 
     // Request enough memory to begin unrolling
-    keepUnrolling =
-      reserveUnrollMemoryForThisTask(blockId, initialMemoryThreshold, memoryMode)
+    keepUnrolling = reserveUnrollMemoryForThisTask(blockId, initialMemoryThreshold, memoryMode)
 
     if (!keepUnrolling) {
-      logWarning(log"Failed to reserve initial memory threshold of " +
-        log"${MDC(NUM_BYTES, Utils.bytesToString(initialMemoryThreshold))} " +
-        log"for computing block ${MDC(BLOCK_ID, blockId)} in memory.")
+      logWarning(
+        log"Failed to reserve initial memory threshold of " +
+          log"${MDC(NUM_BYTES, Utils.bytesToString(initialMemoryThreshold))} " +
+          log"for computing block ${MDC(BLOCK_ID, blockId)} in memory.")
     } else {
       unrollMemoryUsedByThisBlock += initialMemoryThreshold
     }
@@ -235,8 +246,7 @@ private[spark] class MemoryStore(
         // If our vector's size has exceeded the threshold, request more memory
         if (currentSize >= memoryThreshold) {
           val amountToRequest = (currentSize * memoryGrowthFactor - memoryThreshold).toLong
-          keepUnrolling =
-            reserveUnrollMemoryForThisTask(blockId, amountToRequest, memoryMode)
+          keepUnrolling = reserveUnrollMemoryForThisTask(blockId, amountToRequest, memoryMode)
           if (keepUnrolling) {
             unrollMemoryUsedByThisBlock += amountToRequest
           }
@@ -280,9 +290,10 @@ private[spark] class MemoryStore(
           entries.put(blockId, entry)
         }
 
-        logInfo(log"Block ${MDC(BLOCK_ID, blockId)} stored as values in memory " +
-          log"(estimated size ${MDC(MEMORY_SIZE, Utils.bytesToString(entry.size))}, free " +
-          log"${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))})")
+        logInfo(
+          log"Block ${MDC(BLOCK_ID, blockId)} stored as values in memory " +
+            log"(estimated size ${MDC(MEMORY_SIZE, Utils.bytesToString(entry.size))}, free " +
+            log"${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))})")
         Right(entry.size)
       } else {
         // We ran out of space while unrolling the values for this block
@@ -299,12 +310,12 @@ private[spark] class MemoryStore(
   /**
    * Attempt to put the given block in memory store as values.
    *
-   * @return in case of success, the estimated size of the stored data. In case of failure, return
-   *         an iterator containing the values of the block. The returned iterator will be backed
-   *         by the combination of the partially-unrolled block and the remaining elements of the
-   *         original input iterator. The caller must either fully consume this iterator or call
-   *         `close()` on it in order to free the storage memory consumed by the partially-unrolled
-   *         block.
+   * @return
+   *   in case of success, the estimated size of the stored data. In case of failure, return an
+   *   iterator containing the values of the block. The returned iterator will be backed by the
+   *   combination of the partially-unrolled block and the remaining elements of the original
+   *   input iterator. The caller must either fully consume this iterator or call `close()` on it
+   *   in order to free the storage memory consumed by the partially-unrolled block.
    */
   private[storage] def putIteratorAsValues[T](
       blockId: BlockId,
@@ -323,24 +334,25 @@ private[spark] class MemoryStore(
           valuesHolder.arrayValues.iterator
         }
 
-        Left(new PartiallyUnrolledIterator(
-          this,
-          memoryMode,
-          unrollMemoryUsedByThisBlock,
-          unrolled = unrolledIterator,
-          rest = values))
+        Left(
+          new PartiallyUnrolledIterator(
+            this,
+            memoryMode,
+            unrollMemoryUsedByThisBlock,
+            unrolled = unrolledIterator,
+            rest = values))
     }
   }
 
   /**
    * Attempt to put the given block in memory store as bytes.
    *
-   * @return in case of success, the estimated size of the stored data. In case of failure,
-   *         return a handle which allows the caller to either finish the serialization by
-   *         spilling to disk or to deserialize the partially-serialized block and reconstruct
-   *         the original input iterator. The caller must either fully consume this result
-   *         iterator or call `discard()` on it in order to free the storage memory consumed by the
-   *         partially-unrolled block.
+   * @return
+   *   in case of success, the estimated size of the stored data. In case of failure, return a
+   *   handle which allows the caller to either finish the serialization by spilling to disk or to
+   *   deserialize the partially-serialized block and reconstruct the original input iterator. The
+   *   caller must either fully consume this result iterator or call `discard()` on it in order to
+   *   free the storage memory consumed by the partially-unrolled block.
    */
   private[storage] def putIteratorAsBytes[T](
       blockId: BlockId,
@@ -353,32 +365,34 @@ private[spark] class MemoryStore(
     // Initial per-task memory to request for unrolling blocks (bytes).
     val initialMemoryThreshold = unrollMemoryThreshold
     val chunkSize = if (initialMemoryThreshold > ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH) {
-      logWarning(log"Initial memory threshold of " +
-        log"${MDC(NUM_BYTES, Utils.bytesToString(initialMemoryThreshold))} " +
-        log"is too large to be set as chunk size. Chunk size has been capped to " +
-        log"${MDC(MAX_SIZE, Utils.bytesToString(ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH))}")
+      logWarning(
+        log"Initial memory threshold of " +
+          log"${MDC(NUM_BYTES, Utils.bytesToString(initialMemoryThreshold))} " +
+          log"is too large to be set as chunk size. Chunk size has been capped to " +
+          log"${MDC(MAX_SIZE, Utils.bytesToString(ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH))}")
       ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH
     } else {
       initialMemoryThreshold.toInt
     }
 
-    val valuesHolder = new SerializedValuesHolder[T](blockId, chunkSize, classTag,
-      memoryMode, serializerManager)
+    val valuesHolder =
+      new SerializedValuesHolder[T](blockId, chunkSize, classTag, memoryMode, serializerManager)
 
     val res = putIterator(blockId, values, classTag, memoryMode, valuesHolder) match {
       case Right(storedSize) => Right(storedSize)
       case Left(unrollMemoryUsedByThisBlock) =>
-        Left(new PartiallySerializedBlock(
-          this,
-          serializerManager,
-          blockId,
-          valuesHolder.serializationStream,
-          valuesHolder.redirectableStream,
-          unrollMemoryUsedByThisBlock,
-          memoryMode,
-          valuesHolder.bbos,
-          values,
-          classTag))
+        Left(
+          new PartiallySerializedBlock(
+            this,
+            serializerManager,
+            blockId,
+            valuesHolder.serializationStream,
+            valuesHolder.redirectableStream,
+            unrollMemoryUsedByThisBlock,
+            memoryMode,
+            valuesHolder.bbos,
+            values,
+            classTag))
     }
 
     Option(TaskContext.get()).foreach(_.killTaskIfInterrupted())
@@ -391,7 +405,8 @@ private[spark] class MemoryStore(
       case null => None
       case _: DeserializedMemoryEntry[_] =>
         throw SparkException.internalError(
-          "should only call getBytes on serialized blocks", category = "STORAGE")
+          "should only call getBytes on serialized blocks",
+          category = "STORAGE")
       case SerializedMemoryEntry(bytes, _, _) => Some(bytes)
     }
   }
@@ -402,7 +417,8 @@ private[spark] class MemoryStore(
       case null => None
       case e: SerializedMemoryEntry[_] =>
         throw SparkException.internalError(
-          "should only call getValues on deserialized blocks", category = "STORAGE")
+          "should only call getValues on deserialized blocks",
+          category = "STORAGE")
       case DeserializedMemoryEntry(values, _, _, _) =>
         val x = Some(values)
         x.map(_.iterator)
@@ -412,16 +428,17 @@ private[spark] class MemoryStore(
   def freeMemoryEntry[T <: MemoryEntry[_]](entry: T): Unit = {
     entry match {
       case SerializedMemoryEntry(buffer, _, _) => buffer.dispose()
-      case e: DeserializedMemoryEntry[_] => e.value.foreach {
-        case o: AutoCloseable =>
-          try {
-            o.close()
-          } catch {
-            case NonFatal(e) =>
-              logWarning("Fail to close a memory entry", e)
-          }
-        case _ =>
-      }
+      case e: DeserializedMemoryEntry[_] =>
+        e.value.foreach {
+          case o: AutoCloseable =>
+            try {
+              o.close()
+            } catch {
+              case NonFatal(e) =>
+                logWarning("Fail to close a memory entry", e)
+            }
+          case _ =>
+        }
     }
   }
 
@@ -432,8 +449,9 @@ private[spark] class MemoryStore(
     if (entry != null) {
       freeMemoryEntry(entry)
       memoryManager.releaseStorageMemory(entry.size, entry.memoryMode)
-      logDebug(s"Block $blockId of size ${entry.size} dropped " +
-        s"from memory (free ${maxMemory - blocksMemoryUsed})")
+      logDebug(
+        s"Block $blockId of size ${entry.size} dropped " +
+          s"from memory (free ${maxMemory - blocksMemoryUsed})")
       true
     } else {
       false
@@ -459,15 +477,19 @@ private[spark] class MemoryStore(
   }
 
   /**
-   * Try to evict blocks to free up a given amount of space to store a particular block.
-   * Can fail if either the block is bigger than our memory or it would require replacing
-   * another block from the same RDD (which leads to a wasteful cyclic replacement pattern for
-   * RDDs that don't fit into memory that we want to avoid).
+   * Try to evict blocks to free up a given amount of space to store a particular block. Can fail
+   * if either the block is bigger than our memory or it would require replacing another block
+   * from the same RDD (which leads to a wasteful cyclic replacement pattern for RDDs that don't
+   * fit into memory that we want to avoid).
    *
-   * @param blockId the ID of the block we are freeing space for, if any
-   * @param space the size of this block
-   * @param memoryMode the type of memory to free (on- or off-heap)
-   * @return the amount of memory (in bytes) freed by eviction
+   * @param blockId
+   *   the ID of the block we are freeing space for, if any
+   * @param space
+   *   the size of this block
+   * @param memoryMode
+   *   the type of memory to free (on- or off-heap)
+   * @return
+   *   the amount of memory (in bytes) freed by eviction
    */
   private[spark] def evictBlocksToFreeSpace(
       blockId: Option[BlockId],
@@ -523,8 +545,9 @@ private[spark] class MemoryStore(
       if (freedMemory >= space) {
         var lastSuccessfulBlock = -1
         try {
-          logInfo(log"${MDC(NUM_BLOCKS, selectedBlocks.size)} blocks selected for dropping " +
-            log"(${MDC(MEMORY_SIZE, Utils.bytesToString(freedMemory))} bytes)")
+          logInfo(
+            log"${MDC(NUM_BLOCKS, selectedBlocks.size)} blocks selected for dropping " +
+              log"(${MDC(MEMORY_SIZE, Utils.bytesToString(freedMemory))} bytes)")
           selectedBlocks.indices.foreach { idx =>
             val blockId = selectedBlocks(idx)
             val entry = entries.synchronized {
@@ -541,7 +564,7 @@ private[spark] class MemoryStore(
           }
           logInfo(
             log"After dropping ${MDC(NUM_BLOCKS, selectedBlocks.size)} blocks, free memory is" +
-            log"${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))}")
+              log"${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(maxMemory - blocksMemoryUsed))}")
           freedMemory
         } finally {
           // like BlockManager.doPut, we use a finally rather than a catch to avoid having to deal
@@ -581,7 +604,8 @@ private[spark] class MemoryStore(
   /**
    * Reserve memory for unrolling the given block for this task.
    *
-   * @return whether the request is granted.
+   * @return
+   *   whether the request is granted.
    */
   def reserveUnrollMemoryForThisTask(
       blockId: BlockId,
@@ -602,10 +626,12 @@ private[spark] class MemoryStore(
   }
 
   /**
-   * Release memory used by this task for unrolling blocks.
-   * If the amount is not specified, remove the current task's allocation altogether.
+   * Release memory used by this task for unrolling blocks. If the amount is not specified, remove
+   * the current task's allocation altogether.
    */
-  def releaseUnrollMemoryForThisTask(memoryMode: MemoryMode, memory: Long = Long.MaxValue): Unit = {
+  def releaseUnrollMemoryForThisTask(
+      memoryMode: MemoryMode,
+      memory: Long = Long.MaxValue): Unit = {
     val taskAttemptId = currentTaskAttemptId()
     memoryManager.synchronized {
       val unrollMemoryMap = memoryMode match {
@@ -653,23 +679,24 @@ private[spark] class MemoryStore(
   private def logMemoryUsage(): Unit = {
     logInfo(
       log"Memory use = ${MDC(CURRENT_MEMORY_SIZE, Utils.bytesToString(blocksMemoryUsed))} " +
-      log"(blocks) + ${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(currentUnrollMemory))} " +
-      log"(scratch space shared across ${MDC(NUM_TASKS, numTasksUnrolling)} " +
-      log"tasks(s)) = ${MDC(STORAGE_MEMORY_SIZE, Utils.bytesToString(memoryUsed))}. " +
-      log"Storage limit = ${MDC(MAX_MEMORY_SIZE, Utils.bytesToString(maxMemory))}.")
+        log"(blocks) + ${MDC(FREE_MEMORY_SIZE, Utils.bytesToString(currentUnrollMemory))} " +
+        log"(scratch space shared across ${MDC(NUM_TASKS, numTasksUnrolling)} " +
+        log"tasks(s)) = ${MDC(STORAGE_MEMORY_SIZE, Utils.bytesToString(memoryUsed))}. " +
+        log"Storage limit = ${MDC(MAX_MEMORY_SIZE, Utils.bytesToString(maxMemory))}.")
   }
 
   /**
    * Log a warning for failing to unroll a block.
    *
-   * @param blockId ID of the block we are trying to unroll.
-   * @param finalVectorSize Final size of the vector before unrolling failed.
+   * @param blockId
+   *   ID of the block we are trying to unroll.
+   * @param finalVectorSize
+   *   Final size of the vector before unrolling failed.
    */
   private def logUnrollFailureMessage(blockId: BlockId, finalVectorSize: Long): Unit = {
     logWarning(
       log"Not enough space to cache ${MDC(BLOCK_ID, blockId)} in memory! " +
-        log"(computed ${MDC(NUM_BYTES, Utils.bytesToString(finalVectorSize))} so far)"
-    )
+        log"(computed ${MDC(NUM_BYTES, Utils.bytesToString(finalVectorSize))} so far)")
     logMemoryUsage()
   }
 }
@@ -684,10 +711,10 @@ private trait ValuesHolder[T] {
   def estimatedSize(): Long
 
   /**
-   * Note: After this method is called, the ValuesHolder is invalid, we can't store data and
-   * get estimate size again.
-   * @return a MemoryEntryBuilder which is used to build a memory entry and get the stored data
-   *         size.
+   * Note: After this method is called, the ValuesHolder is invalid, we can't store data and get
+   * estimate size again.
+   * @return
+   *   a MemoryEntryBuilder which is used to build a memory entry and get the stored data size.
    */
   def getBuilder(): MemoryEntryBuilder[T]
 }
@@ -695,9 +722,8 @@ private trait ValuesHolder[T] {
 /**
  * A holder for storing the deserialized values.
  */
-private class DeserializedValuesHolder[T](
-    classTag: ClassTag[T],
-    memoryMode: MemoryMode) extends ValuesHolder[T] {
+private class DeserializedValuesHolder[T](classTag: ClassTag[T], memoryMode: MemoryMode)
+    extends ValuesHolder[T] {
   // Underlying vector for unrolling the block
   var vector = new SizeTrackingVector[T]()(classTag)
   var arrayValues: Array[T] = null
@@ -730,7 +756,8 @@ private class SerializedValuesHolder[T](
     chunkSize: Int,
     classTag: ClassTag[T],
     memoryMode: MemoryMode,
-    serializerManager: SerializerManager) extends ValuesHolder[T] {
+    serializerManager: SerializerManager)
+    extends ValuesHolder[T] {
   val allocator = memoryMode match {
     case MemoryMode.ON_HEAP => ByteBuffer.allocate _
     case MemoryMode.OFF_HEAP => Platform.allocateDirectBuffer _
@@ -767,12 +794,16 @@ private class SerializedValuesHolder[T](
 /**
  * The result of a failed [[MemoryStore.putIteratorAsValues()]] call.
  *
- * @param memoryStore  the memoryStore, used for freeing memory.
- * @param memoryMode   the memory mode (on- or off-heap).
- * @param unrollMemory the amount of unroll memory used by the values in `unrolled`.
- * @param unrolled     an iterator for the partially-unrolled values.
- * @param rest         the rest of the original iterator passed to
- *                     [[MemoryStore.putIteratorAsValues()]].
+ * @param memoryStore
+ *   the memoryStore, used for freeing memory.
+ * @param memoryMode
+ *   the memory mode (on- or off-heap).
+ * @param unrollMemory
+ *   the amount of unroll memory used by the values in `unrolled`.
+ * @param unrolled
+ *   an iterator for the partially-unrolled values.
+ * @param rest
+ *   the rest of the original iterator passed to [[MemoryStore.putIteratorAsValues()]].
  */
 private[storage] class PartiallyUnrolledIterator[T](
     memoryStore: MemoryStore,
@@ -780,7 +811,7 @@ private[storage] class PartiallyUnrolledIterator[T](
     unrollMemory: Long,
     private[this] var unrolled: Iterator[T],
     rest: Iterator[T])
-  extends Iterator[T] {
+    extends Iterator[T] {
 
   private def releaseUnrollMemory(): Unit = {
     memoryStore.releaseUnrollMemoryForThisTask(memoryMode, unrollMemory)
@@ -834,18 +865,27 @@ private[storage] class RedirectableOutputStream extends OutputStream {
 /**
  * The result of a failed [[MemoryStore.putIteratorAsBytes()]] call.
  *
- * @param memoryStore the MemoryStore, used for freeing memory.
- * @param serializerManager the SerializerManager, used for deserializing values.
- * @param blockId the block id.
- * @param serializationStream a serialization stream which writes to [[redirectableOutputStream]].
- * @param redirectableOutputStream an OutputStream which can be redirected to a different sink.
- * @param unrollMemory the amount of unroll memory used by the values in `unrolled`.
- * @param memoryMode whether the unroll memory is on- or off-heap
- * @param bbos byte buffer output stream containing the partially-serialized values.
- *                     [[redirectableOutputStream]] initially points to this output stream.
- * @param rest         the rest of the original iterator passed to
- *                     [[MemoryStore.putIteratorAsValues()]].
- * @param classTag the [[ClassTag]] for the block.
+ * @param memoryStore
+ *   the MemoryStore, used for freeing memory.
+ * @param serializerManager
+ *   the SerializerManager, used for deserializing values.
+ * @param blockId
+ *   the block id.
+ * @param serializationStream
+ *   a serialization stream which writes to [[redirectableOutputStream]].
+ * @param redirectableOutputStream
+ *   an OutputStream which can be redirected to a different sink.
+ * @param unrollMemory
+ *   the amount of unroll memory used by the values in `unrolled`.
+ * @param memoryMode
+ *   whether the unroll memory is on- or off-heap
+ * @param bbos
+ *   byte buffer output stream containing the partially-serialized values.
+ *   [[redirectableOutputStream]] initially points to this output stream.
+ * @param rest
+ *   the rest of the original iterator passed to [[MemoryStore.putIteratorAsValues()]].
+ * @param classTag
+ *   the [[ClassTag]] for the block.
  */
 private[storage] class PartiallySerializedBlock[T](
     memoryStore: MemoryStore,
@@ -890,7 +930,8 @@ private[storage] class PartiallySerializedBlock[T](
     }
     if (discarded) {
       throw SparkException.internalError(
-        "Cannot call methods on a discarded PartiallySerializedBlock", category = "STORAGE")
+        "Cannot call methods on a discarded PartiallySerializedBlock",
+        category = "STORAGE")
     }
   }
 
@@ -945,7 +986,8 @@ private[storage] class PartiallySerializedBlock[T](
     serializationStream.close()
     // `unrolled`'s underlying buffers will be freed once this input stream is fully read:
     val unrolledIter = serializerManager.dataDeserializeStream(
-      blockId, unrolledBuffer.toInputStream(dispose = true))(classTag)
+      blockId,
+      unrolledBuffer.toInputStream(dispose = true))(classTag)
     // The unroll memory will be freed once `unrolledIter` is fully consumed in
     // PartiallyUnrolledIterator. If the iterator is not consumed by the end of the task then any
     // extra unroll memory will automatically be freed by a `finally` block in `Task`.

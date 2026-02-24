@@ -32,13 +32,13 @@ import org.apache.spark.util.Utils.isTesting
 
 /**
  * Manager of resource profiles. The manager allows one place to keep the actual ResourceProfiles
- * and everywhere else we can use the ResourceProfile Id to save on space.
- * Note we never remove a resource profile at this point. Its expected this number is small
- * so this shouldn't be much overhead.
+ * and everywhere else we can use the ResourceProfile Id to save on space. Note we never remove a
+ * resource profile at this point. Its expected this number is small so this shouldn't be much
+ * overhead.
  */
 @Evolving
-private[spark] class ResourceProfileManager(sparkConf: SparkConf,
-    listenerBus: LiveListenerBus) extends Logging {
+private[spark] class ResourceProfileManager(sparkConf: SparkConf, listenerBus: LiveListenerBus)
+    extends Logging {
   private val resourceProfileIdToResourceProfile = new HashMap[Int, ResourceProfile]()
 
   private val (readLock, writeLock) = {
@@ -51,8 +51,8 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
   private val isYarn = master.isDefined && master.get.equals("yarn")
   private val isK8s = SparkMasterRegex.isK8s(master)
   private val isStandaloneOrLocalCluster = master.isDefined && (
-      master.get.startsWith("spark://") || master.get.startsWith("local-cluster")
-    )
+    master.get.startsWith("spark://") || master.get.startsWith("local-cluster")
+  )
   private val notRunningUnitTests = !isTesting
   private val testExceptionThrown = sparkConf.get(RESOURCE_PROFILE_MANAGER_TESTING)
 
@@ -71,8 +71,9 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
     if (rp.isInstanceOf[TaskResourceProfile] && !dynamicEnabled) {
       if ((notRunningUnitTests || testExceptionThrown) &&
         !(isStandaloneOrLocalCluster || isYarn || isK8s)) {
-        throw new SparkException("TaskResourceProfiles are only supported for Standalone, " +
-          "Yarn and Kubernetes cluster for now when dynamic allocation is disabled.")
+        throw new SparkException(
+          "TaskResourceProfiles are only supported for Standalone, " +
+            "Yarn and Kubernetes cluster for now when dynamic allocation is disabled.")
       }
     } else {
       val isNotDefaultProfile = rp.id != ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID
@@ -87,16 +88,18 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
       if ((notRunningUnitTests || testExceptionThrown) &&
         (notYarnOrK8sOrStandaloneAndNotDefaultProfile ||
           YarnOrK8sOrStandaloneNotDynAllocAndNotDefaultProfile)) {
-        throw new SparkException("ResourceProfiles are only supported on YARN and Kubernetes " +
-          "and Standalone with dynamic allocation enabled.")
+        throw new SparkException(
+          "ResourceProfiles are only supported on YARN and Kubernetes " +
+            "and Standalone with dynamic allocation enabled.")
       }
 
       if (isStandaloneOrLocalCluster && dynamicEnabled && rp.getExecutorCores.isEmpty &&
         sparkConf.getOption(config.EXECUTOR_CORES.key).isEmpty) {
-        logWarning("Neither executor cores is set for resource profile, nor spark.executor.cores " +
-          "is explicitly set, you may get more executors allocated than expected. " +
-          "It's recommended to set executor cores explicitly. " +
-          "Please check SPARK-30299 for more details.")
+        logWarning(
+          "Neither executor cores is set for resource profile, nor spark.executor.cores " +
+            "is explicitly set, you may get more executors allocated than expected. " +
+            "It's recommended to set executor cores explicitly. " +
+            "Please check SPARK-30299 for more details.")
       }
     }
 
@@ -104,19 +107,19 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
   }
 
   /**
-   * Check whether a task with specific taskRpId can be scheduled to executors
-   * with executorRpId.
+   * Check whether a task with specific taskRpId can be scheduled to executors with executorRpId.
    *
    * Here are the rules:
-   * 1. When dynamic allocation is disabled, only [[TaskResourceProfile]] is supported,
-   *    and tasks with [[TaskResourceProfile]] can be scheduled to executors with default
-   *    resource profile.
-   * 2. For other scenarios(when dynamic allocation is enabled), tasks can be scheduled to
-   *    executors where resource profile exactly matches.
+   *   1. When dynamic allocation is disabled, only [[TaskResourceProfile]] is supported, and
+   *      tasks with [[TaskResourceProfile]] can be scheduled to executors with default resource
+   *      profile.
+   *   2. For other scenarios(when dynamic allocation is enabled), tasks can be scheduled to
+   *      executors where resource profile exactly matches.
    */
   private[spark] def canBeScheduled(taskRpId: Int, executorRpId: Int): Boolean = {
-    assert(resourceProfileIdToResourceProfile.contains(taskRpId) &&
-      resourceProfileIdToResourceProfile.contains(executorRpId),
+    assert(
+      resourceProfileIdToResourceProfile.contains(taskRpId) &&
+        resourceProfileIdToResourceProfile.contains(executorRpId),
       "Tasks and executors must have valid resource profile id")
     val taskRp = resourceProfileFromId(taskRpId)
 
@@ -153,9 +156,9 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
   def resourceProfileFromId(rpId: Int): ResourceProfile = {
     readLock.lock()
     try {
-      resourceProfileIdToResourceProfile.getOrElse(rpId,
-        throw new SparkException(s"ResourceProfileId $rpId not found!")
-      )
+      resourceProfileIdToResourceProfile.getOrElse(
+        rpId,
+        throw new SparkException(s"ResourceProfileId $rpId not found!"))
     } finally {
       readLock.unlock()
     }
@@ -168,9 +171,11 @@ private[spark] class ResourceProfileManager(sparkConf: SparkConf,
   def getEquivalentProfile(rp: ResourceProfile): Option[ResourceProfile] = {
     readLock.lock()
     try {
-      resourceProfileIdToResourceProfile.find { case (_, rpEntry) =>
-        rpEntry.resourcesEqual(rp)
-      }.map(_._2)
+      resourceProfileIdToResourceProfile
+        .find { case (_, rpEntry) =>
+          rpEntry.resourcesEqual(rp)
+        }
+        .map(_._2)
     } finally {
       readLock.unlock()
     }

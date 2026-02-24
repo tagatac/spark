@@ -45,12 +45,10 @@ class CommitterBindingSuite extends SparkFunSuite {
   private val successMarker = "mapreduce.fileoutputcommitter.marksuccessfuljobs"
 
   /**
-   * Does the
-   * [[BindingParquetOutputCommitter]] committer bind to the schema-specific
-   * committer declared for the destination path? And that lifecycle events
-   * are correctly propagated?
-   * This only works with a hadoop build where BindingPathOutputCommitter
-   * does passthrough of stream capabilities, so check that first.
+   * Does the [[BindingParquetOutputCommitter]] committer bind to the schema-specific committer
+   * declared for the destination path? And that lifecycle events are correctly propagated? This
+   * only works with a hadoop build where BindingPathOutputCommitter does passthrough of stream
+   * capabilities, so check that first.
    */
   test("BindingParquetOutputCommitter binds to the inner committer") {
 
@@ -62,7 +60,8 @@ class CommitterBindingSuite extends SparkFunSuite {
     StubPathOutputCommitterBinding.bindWithDynamicPartitioning(conf, "http")
     val tContext: TaskAttemptContext = new TaskAttemptContextImpl(conf, taskAttemptId0)
     val parquet = new BindingParquetOutputCommitter(path, tContext)
-    val inner = parquet.boundCommitter().asInstanceOf[StubPathOutputCommitterWithDynamicPartioning]
+    val inner =
+      parquet.boundCommitter().asInstanceOf[StubPathOutputCommitterWithDynamicPartioning]
     parquet.setupJob(tContext)
     assert(inner.jobSetup, s"$inner job not setup")
     parquet.setupTask(tContext)
@@ -87,7 +86,8 @@ class CommitterBindingSuite extends SparkFunSuite {
       // through the BindingPathOutputCommitter used by the
       // parquet committer, so verify that it goes through
       // to the stub committer.
-      assert(parquet.hasCapability(CAPABILITY_DYNAMIC_PARTITIONING),
+      assert(
+        parquet.hasCapability(CAPABILITY_DYNAMIC_PARTITIONING),
         s"committer $parquet does not declare dynamic partition support")
     }
   }
@@ -95,7 +95,8 @@ class CommitterBindingSuite extends SparkFunSuite {
   /**
    * Create a a new job. Sets the task attempt ID.
    *
-   * @return the new job
+   * @return
+   *   the new job
    */
   def newJob(outDir: Path): Job = {
     val job = Job.getInstance(new Configuration())
@@ -125,10 +126,10 @@ class CommitterBindingSuite extends SparkFunSuite {
 
       val committer2 = result.asInstanceOf[PathOutputCommitProtocol]
 
-      assert(committer.destination === committer2.destination,
+      assert(
+        committer.destination === committer2.destination,
         "destination mismatch on round trip")
-      assert(committer.destPath === committer2.destPath,
-        "destPath mismatch on round trip")
+      assert(committer.destPath === committer2.destPath, "destPath mismatch on round trip")
     } finally {
       JavaUtils.closeQuietly(out)
       JavaUtils.closeQuietly(in)
@@ -137,9 +138,8 @@ class CommitterBindingSuite extends SparkFunSuite {
   }
 
   test("local filesystem instantiation") {
-    val instance = FileCommitProtocol.instantiate(
-      pathCommitProtocolClassname,
-      jobId, "file:///tmp", false)
+    val instance =
+      FileCommitProtocol.instantiate(pathCommitProtocolClassname, jobId, "file:///tmp", false)
 
     val protocol = instance.asInstanceOf[PathOutputCommitProtocol]
     assert("file:///tmp" === protocol.destination)
@@ -190,11 +190,9 @@ class CommitterBindingSuite extends SparkFunSuite {
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1)
     StubPathOutputCommitterBinding.bindWithDynamicPartitioning(conf, "http")
     val tContext = new TaskAttemptContextImpl(conf, taskAttemptId0)
-    val committer: PathOutputCommitProtocol = FileCommitProtocol.instantiate(
-      pathCommitProtocolClassname,
-      jobId,
-      path.toUri.toString,
-      true).asInstanceOf[PathOutputCommitProtocol]
+    val committer: PathOutputCommitProtocol = FileCommitProtocol
+      .instantiate(pathCommitProtocolClassname, jobId, path.toUri.toString, true)
+      .asInstanceOf[PathOutputCommitProtocol]
     committer.setupJob(tContext)
     committer.setupTask(tContext)
     verifyAbsTempFileWorks(tContext, committer)
@@ -206,9 +204,8 @@ class CommitterBindingSuite extends SparkFunSuite {
    */
   test("FileOutputCommitter through PathOutputCommitProtocol") {
     // temp path; use a unique filename
-    val jobCommitDir = File.createTempFile(
-      "FileOutputCommitter-through-PathOutputCommitProtocol",
-      "")
+    val jobCommitDir =
+      File.createTempFile("FileOutputCommitter-through-PathOutputCommitProtocol", "")
     try {
       // delete the temp file and create a temp dir.
       jobCommitDir.delete();
@@ -221,11 +218,9 @@ class CommitterBindingSuite extends SparkFunSuite {
       conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1)
       bindToFileOutputCommitterFactory(conf, "file")
       val tContext = new TaskAttemptContextImpl(conf, taskAttemptId0)
-      val committer: PathOutputCommitProtocol = FileCommitProtocol.instantiate(
-        pathCommitProtocolClassname,
-        jobId,
-        jobUri.toString,
-        true).asInstanceOf[PathOutputCommitProtocol]
+      val committer: PathOutputCommitProtocol = FileCommitProtocol
+        .instantiate(pathCommitProtocolClassname, jobId, jobUri.toString, true)
+        .asInstanceOf[PathOutputCommitProtocol]
       committer.setupJob(tContext)
       committer.setupTask(tContext)
       verifyAbsTempFileWorks(tContext, committer)
@@ -237,32 +232,33 @@ class CommitterBindingSuite extends SparkFunSuite {
   /**
    * Verify that a committer supports `newTaskTempFileAbsPath()`.
    *
-   * @param tContext task context
-   * @param committer committer
+   * @param tContext
+   *   task context
+   * @param committer
+   *   committer
    */
   private def verifyAbsTempFileWorks(
-    tContext: TaskAttemptContextImpl,
-    committer: FileCommitProtocol): Unit = {
+      tContext: TaskAttemptContextImpl,
+      committer: FileCommitProtocol): Unit = {
     val spec = FileNameSpec(".lotus.", ".123")
-    val absPath = committer.newTaskTempFileAbsPath(
-      tContext,
-      "/tmp",
-      spec)
+    val absPath = committer.newTaskTempFileAbsPath(tContext, "/tmp", spec)
     assert(absPath.endsWith(".123"), s"wrong suffix in $absPath")
     assert(absPath.contains("lotus"), s"wrong prefix in $absPath")
   }
 
   /**
-   * Given a hadoop configuration, explicitly set up the factory binding for the scheme
-   * to a committer factory which always creates FileOutputCommitters.
+   * Given a hadoop configuration, explicitly set up the factory binding for the scheme to a
+   * committer factory which always creates FileOutputCommitters.
    *
-   * @param conf   config to patch
-   * @param scheme filesystem scheme.
+   * @param conf
+   *   config to patch
+   * @param scheme
+   *   filesystem scheme.
    */
   def bindToFileOutputCommitterFactory(conf: Configuration, scheme: String): Unit = {
-    conf.set(OUTPUTCOMMITTER_FACTORY_SCHEME + "." + scheme,
+    conf.set(
+      OUTPUTCOMMITTER_FACTORY_SCHEME + "." + scheme,
       "org.apache.hadoop.mapreduce.lib.output.FileOutputCommitterFactory")
   }
 
 }
-

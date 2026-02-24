@@ -28,37 +28,39 @@ import org.apache.spark.ui.{CspNonce, SparkUITab, UIUtils, WebUIPage}
 import org.apache.spark.ui.UIUtils.{formatImportJavaScript, prependBaseUri}
 import org.apache.spark.ui.flamegraph.FlamegraphNode
 
-private[ui] class ExecutorThreadDumpPage(
-    parent: SparkUITab,
-    sc: Option[SparkContext]) extends WebUIPage("threadDump") {
+private[ui] class ExecutorThreadDumpPage(parent: SparkUITab, sc: Option[SparkContext])
+    extends WebUIPage("threadDump") {
 
   private val flamegraphEnabled = sc.isDefined && sc.get.conf.get(UI_FLAMEGRAPH_ENABLED)
 
   def render(request: HttpServletRequest): Seq[Node] = {
-    val executorId = Option(request.getParameter("executorId")).map { executorId =>
-      UIUtils.decodeURLParameter(executorId)
-    }.getOrElse {
-      throw new IllegalArgumentException(s"Missing executorId parameter")
-    }
+    val executorId = Option(request.getParameter("executorId"))
+      .map { executorId =>
+        UIUtils.decodeURLParameter(executorId)
+      }
+      .getOrElse {
+        throw new IllegalArgumentException(s"Missing executorId parameter")
+      }
     val time = System.currentTimeMillis()
     val maybeThreadDump = sc.get.getExecutorThreadDump(executorId)
 
-    val content = maybeThreadDump.map { threadDump =>
-      val dumpRows = threadDump.map { thread =>
-        val threadId = thread.threadId
-        val blockedBy = thread.blockedByThreadId match {
-          case Some(blockingThreadId) =>
-            <div>
+    val content = maybeThreadDump
+      .map { threadDump =>
+        val dumpRows = threadDump.map { thread =>
+          val threadId = thread.threadId
+          val blockedBy = thread.blockedByThreadId match {
+            case Some(blockingThreadId) =>
+              <div>
               Blocked by <a href={s"#${blockingThreadId}_td_id"}>
               Thread {blockingThreadId} {thread.blockedByLock}</a>
             </div>
-          case None => Text("")
-        }
-        val synchronizers = thread.synchronizers.map(l => s"Lock($l)")
-        val monitors = thread.monitors.map(m => s"Monitor($m)")
-        val heldLocks = (synchronizers ++ monitors).mkString(", ")
+            case None => Text("")
+          }
+          val synchronizers = thread.synchronizers.map(l => s"Lock($l)")
+          val monitors = thread.monitors.map(m => s"Monitor($m)")
+          val heldLocks = (synchronizers ++ monitors).mkString(", ")
 
-        <tr id={s"thread_${threadId}_tr"} class="accordion-heading"
+          <tr id={s"thread_${threadId}_tr"} class="accordion-heading"
             data-thread-id={threadId.toString}>
           <td id={s"${threadId}_td_id"}>{threadId}</td>
           <td id={s"${threadId}_td_name"}>{thread.threadName}</td>
@@ -66,15 +68,16 @@ private[ui] class ExecutorThreadDumpPage(
           <td id={s"${threadId}_td_locking"}>{blockedBy}{heldLocks}</td>
           <td id={s"${threadId}_td_stacktrace"} class="d-none">{thread.stackTrace.html}</td>
         </tr>
-      }
+        }
 
-    <div class="row">
+        <div class="row">
       <div class="col-12">
         <p>Updated at {UIUtils.formatDate(time)}</p>
         {threadDumpSummary(threadDump)}
-        { if (flamegraphEnabled) {
-            drawExecutorFlamegraph(request, threadDump) }
-          else {
+        {
+          if (flamegraphEnabled) {
+            drawExecutorFlamegraph(request, threadDump)
+          } else {
             Seq.empty
           }
         }
@@ -93,7 +96,9 @@ private[ui] class ExecutorThreadDumpPage(
           <div class="thead-stack-trace-table-button" style="display: flex; align-items: center;">
             <a class="expandbutton" data-action="expandAllThreadStackTrace">Expand All</a>
             <a class="expandbutton d-none" data-action="collapseAllThreadStackTrace">Collapse All</a>
-            <a class="downloadbutton" href={"data:text/plain;charset=utf-8," + threadDump.map(_.toString).mkString} download={"threaddump_" + executorId + ".txt"}>Download</a>
+            <a class="downloadbutton" href={
+            "data:text/plain;charset=utf-8," + threadDump.map(_.toString).mkString
+          } download={"threaddump_" + executorId + ".txt"}>Download</a>
             <div class="form-inline">
               <div class="bs-example" data-example-id="simple-form-inline">
                 <div class="form-group">
@@ -107,7 +112,9 @@ private[ui] class ExecutorThreadDumpPage(
           </div>
           <p></p>
         }
-        <table class={UIUtils.TABLE_CLASS_STRIPED + " accordion-group" + " sortable" + " thead-stack-trace-table collapsible-table"}>
+        <table class={
+          UIUtils.TABLE_CLASS_STRIPED + " accordion-group" + " sortable" + " thead-stack-trace-table collapsible-table"
+        }>
           <thead>
             <th data-action="collapseAllThreadStackTrace" data-toggle-button="false">Thread ID</th>
             <th data-action="collapseAllThreadStackTrace" data-toggle-button="false">Thread Name</th>
@@ -123,14 +130,21 @@ private[ui] class ExecutorThreadDumpPage(
         </table>
       </div>
     </div>
-    }.getOrElse(Text("Error fetching thread dump"))
+      }
+      .getOrElse(Text("Error fetching thread dump"))
     UIUtils.headerSparkPage(request, s"Thread dump for executor $executorId", content, parent)
   }
 
-  private def drawExecutorFlamegraph(request: HttpServletRequest, thread: Array[ThreadStackTrace]): Seq[Node] = {
+  private def drawExecutorFlamegraph(
+      request: HttpServletRequest,
+      thread: Array[ThreadStackTrace]): Seq[Node] = {
     val js =
       s"""
-         |${formatImportJavaScript(request, "/static/flamegraph.js", "drawFlamegraph", "toggleFlamegraph")}
+         |${formatImportJavaScript(
+          request,
+          "/static/flamegraph.js",
+          "drawFlamegraph",
+          "toggleFlamegraph")}
          |
          |drawFlamegraph();
          |toggleFlamegraph();
@@ -144,17 +158,22 @@ private[ui] class ExecutorThreadDumpPage(
           </h4>
         </span>
       </div>
-      <div id="executor-flamegraph-data" class="d-none">{FlamegraphNode(thread).toJsonString}</div>
+      <div id="executor-flamegraph-data" class="d-none">{
+      FlamegraphNode(thread).toJsonString
+    }</div>
       <div id="executor-flamegraph-chart">
-        <link rel="stylesheet" type="text/css" href={prependBaseUri(request, "/static/d3-flamegraph.css")}></link>
+        <link rel="stylesheet" type="text/css" href={
+      prependBaseUri(request, "/static/d3-flamegraph.css")
+    }></link>
         <script src={UIUtils.prependBaseUri(request, "/static/d3.min.js")}></script>
         <script src={UIUtils.prependBaseUri(request, "/static/d3-flamegraph.min.js")}></script>
-        <script type="module" src={UIUtils.prependBaseUri(request, "/static/flamegraph.js")}></script>
+        <script type="module" src={
+      UIUtils.prependBaseUri(request, "/static/flamegraph.js")
+    }></script>
         <script type="module" nonce={CspNonce.get}>{Unparsed(js)}</script>
       </div>
     </div>
   }
-
 
   private def threadDumpSummary(threadDump: Array[ThreadStackTrace]): Seq[Node] = {
     val totalCount = threadDump.length
@@ -164,21 +183,26 @@ private[ui] class ExecutorThreadDumpPage(
             data-collapse-table="thread-dump-summary-table">
         <h4>
           <span class="collapse-table-arrow arrow-open"></span>
-          <a>Thread Dump Summary: { totalCount }</a>
+          <a>Thread Dump Summary: {totalCount}</a>
         </h4>
       </span>
-      <table class={UIUtils.TABLE_CLASS_STRIPED + " accordion-group" + " sortable" + " thread-dump-summary-table collapsible-table"}>
+      <table class={
+      UIUtils.TABLE_CLASS_STRIPED + " accordion-group" + " sortable" + " thread-dump-summary-table collapsible-table"
+    }>
         <thead><th>Thread State</th><th>Count</th><th>Percentage</th></thead>
         <tbody>
           {
-          threadDump.groupBy(_.threadState).map { case (state, threads) =>
-            <tr>
+      threadDump
+        .groupBy(_.threadState)
+        .map { case (state, threads) =>
+          <tr>
               <td>{state}</td>
               <td>{threads.length}</td>
               <td>{"%.2f%%".format(threads.length * 100.0 / totalCount)}</td>
             </tr>
-          }.toSeq
-          }
+        }
+        .toSeq
+    }
         </tbody>
       </table>
     </div>

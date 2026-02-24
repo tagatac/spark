@@ -33,21 +33,25 @@ import org.apache.spark.sql.streaming.Trigger
 import org.apache.spark.util.{Clock, SystemClock, ThreadUtils, Utils}
 
 /**
- * Executes all the flows in the given graph in topological order. Each flow processes
- * all available data before downstream flows are triggered.
+ * Executes all the flows in the given graph in topological order. Each flow processes all
+ * available data before downstream flows are triggered.
  *
- * @param graphForExecution the graph to execute.
- * @param env the context in which the graph is executed.
- * @param onCompletion a callback to execute after all streams are done. The boolean
- *                     argument is true if the execution was successful.
- * @param clock a clock used to determine the time of execution.
+ * @param graphForExecution
+ *   the graph to execute.
+ * @param env
+ *   the context in which the graph is executed.
+ * @param onCompletion
+ *   a callback to execute after all streams are done. The boolean argument is true if the
+ *   execution was successful.
+ * @param clock
+ *   a clock used to determine the time of execution.
  */
 class TriggeredGraphExecution(
     graphForExecution: DataflowGraph,
     env: PipelineUpdateContext,
     onCompletion: RunTerminationReason => Unit = _ => (),
-    clock: Clock = new SystemClock()
-) extends GraphExecution(graphForExecution, env) {
+    clock: Clock = new SystemClock())
+    extends GraphExecution(graphForExecution, env) {
 
   /**
    * [Visible for testing] A map to store stream state of all flows which should be materialized.
@@ -59,9 +63,8 @@ class TriggeredGraphExecution(
   }
 
   /**
-   * Keeps track of flow failure information required for retry logic.
-   * This only contains values for flows that either failed previously or are currently in the
-   * failed state.
+   * Keeps track of flow failure information required for retry logic. This only contains values
+   * for flows that either failed previously or are currently in the failed state.
    */
   private val failureTracker = {
     new ConcurrentHashMap[TableIdentifier, TriggeredFailureInfo]().asScala
@@ -70,8 +73,7 @@ class TriggeredGraphExecution(
   /** Back-off strategy used to determine duration between retries. */
   private val backoffStrategy = ExponentialBackoffStrategy(
     maxTime = (env.spark.sessionState.conf.watchdogMaxRetryTimeInSeconds * 1000).millis,
-    stepSize = (env.spark.sessionState.conf.watchdogMinRetryTimeInSeconds * 1000).millis
-  )
+    stepSize = (env.spark.sessionState.conf.watchdogMinRetryTimeInSeconds * 1000).millis)
 
   override def streamTrigger(flow: Flow): Trigger = {
     Trigger.AvailableNow()
@@ -110,7 +112,8 @@ class TriggeredGraphExecution(
       }
     val thread = buildTopologicalExecutionThread()
     UncaughtExceptionHandler.addHandler(
-      thread, {
+      thread,
+      {
         case _: InterruptedException =>
         case _ =>
           try {
@@ -121,36 +124,32 @@ class TriggeredGraphExecution(
           } finally {
             onCompletion(UnexpectedRunFailure())
           }
-      }
-    )
+      })
     thread.start()
     topologicalExecutionThread = Some(thread)
   }
 
   /** Used to control how many flows are executing at once. */
   private val concurrencyLimit: Semaphore = new Semaphore(
-    env.spark.sessionState.conf.maxConcurrentFlows
-  )
+    env.spark.sessionState.conf.maxConcurrentFlows)
 
   /**
    * Runs the pipeline in a topological order.
    *
-   * Non-accepting states: Queued, Running
-   * Accepting states: Successful, TerminatedWithError, Skipped, Cancelled, Excluded
-   * All [[Flow]]s which can write to a stream begin in a queued state. The following state
-   * transitions describe the topological execution of a [[DataflowGraph]].
+   * Non-accepting states: Queued, Running Accepting states: Successful, TerminatedWithError,
+   * Skipped, Cancelled, Excluded All [[Flow]]s which can write to a stream begin in a queued
+   * state. The following state transitions describe the topological execution of a
+   * [[DataflowGraph]].
    *
-   * Queued -> Running if Flow has no parents or the parent tables of the queued [[Flow]]
-   *   have run successfully.
-   * Running -> Successful if the stream associated with the [[Flow]] succeeds.
+   * Queued -> Running if Flow has no parents or the parent tables of the queued [[Flow]] have run
+   * successfully. Running -> Successful if the stream associated with the [[Flow]] succeeds.
    * Running -> TerminatedWithError if the stream associated with the [[Flow]] stops with an
-   *   exception.
+   * exception.
    *
-   * Non-fatally failed flows are retried with exponential back-off a bounded no. of times.
-   * If a flow cannot be retried, all downstream flows of the failed flow are moved to Skipped
-   * state.
-   * Running -> Cancelled if the stream associated with the [[Flow]] is stopped mid-run by
-   * calling `stop`. All remaining [[Flow]]s in queue are moved to state Skipped.
+   * Non-fatally failed flows are retried with exponential back-off a bounded no. of times. If a
+   * flow cannot be retried, all downstream flows of the failed flow are moved to Skipped state.
+   * Running -> Cancelled if the stream associated with the [[Flow]] is stopped mid-run by calling
+   * `stop`. All remaining [[Flow]]s in queue are moved to state Skipped.
    *
    * The execution is over once there are no [[Flow]]s left running or in the queue.
    */
@@ -185,8 +184,8 @@ class TriggeredGraphExecution(
       if ((runningFlows + availablePermits) < env.spark.sessionState.conf.maxConcurrentFlows) {
         val errorStr =
           s"The max concurrency is ${env.spark.sessionState.conf.maxConcurrentFlows}, but " +
-          s"there are only $availablePermits permits available with $runningFlows flows running. " +
-          s"If this happens consistently, it's possible we're leaking permits."
+            s"there are only $availablePermits permits available with $runningFlows flows running. " +
+            s"If this happens consistently, it's possible we're leaking permits."
         logError(errorStr)
         if (Utils.isTesting) {
           throw new IllegalStateException(errorStr)
@@ -270,19 +269,16 @@ class TriggeredGraphExecution(
     }
     logInfo(
       log"Flow ${MDC(LogKeys.FLOW_NAME, flowIdentifier)} has COMPLETED " +
-      log"in TriggeredFlowExecution."
-    )
+        log"in TriggeredFlowExecution.")
   }
 
   /**
    * Record the specified flow as failed and any downstream flows as failed.
    *
-   * @param e The error that caused the query to fail.
+   * @param e
+   *   The error that caused the query to fail.
    */
-  private def recordFailed(
-      flowIdentifier: TableIdentifier,
-      e: Throwable
-  ): Unit = {
+  private def recordFailed(flowIdentifier: TableIdentifier, e: Throwable): Unit = {
     logError(log"Flow ${MDC(LogKeys.FLOW_NAME, flowIdentifier)} failed", e)
     concurrencyLimit.synchronized {
       concurrencyLimit.release()
@@ -301,10 +297,7 @@ class TriggeredGraphExecution(
           ex = e,
           flowDisplayName = flow.displayName,
           currentNumTries = prevFailureCount + 1,
-          maxAllowedRetries = maxRetryAttemptsForFlow(flowIdentifier)
-        )
-      )
-    )
+          maxAllowedRetries = maxRetryAttemptsForFlow(flowIdentifier))))
     if (graphForExecution.resolvedFlow(flow.identifier).df.isStreaming) {
       // Batch query failure log comes from the batch execution thread.
       PipelinesErrors.checkStreamingErrorsAndRetry(
@@ -316,13 +309,8 @@ class TriggeredGraphExecution(
         prevFailureCount = prevFailureCount,
         maxRetries = maxRetryAttemptsForFlow(flowIdentifier),
         onRetry = {
-          env.flowProgressEventLogger.recordFailed(
-            flow = flow,
-            exception = e,
-            logAsWarn = true
-          )
-        }
-      )
+          env.flowProgressEventLogger.recordFailed(flow = flow, exception = e, logAsWarn = true)
+        })
     }
 
     // Don't skip downstream outputs yet if this flow still has retries left and didn't fail
@@ -345,16 +333,15 @@ class TriggeredGraphExecution(
       pipelineState.put(flowIdentifier, StreamState.SKIPPED)
       logWarning(
         log"Flow ${MDC(LogKeys.FLOW_NAME, flowIdentifier)} SKIPPED due " +
-        log"to upstream failure(s)."
-      )
+          log"to upstream failure(s).")
       env.flowProgressEventLogger.recordSkippedOnUpStreamFailure(flow)
     }
   }
 
   private def flowsWithState(state: StreamState): Set[TableIdentifier] = {
     pipelineState
-      .filter {
-        case (_, flowState) => flowState == state
+      .filter { case (_, flowState) =>
+        flowState == state
       }
       .keySet
       .toSet
@@ -371,7 +358,7 @@ class TriggeredGraphExecution(
       .get(flowIdentifier)
       .map { failureInfo =>
         failureInfo.lastFailTimestamp +
-        backoffStrategy.waitDuration(failureInfo.numFailures).toMillis
+          backoffStrategy.waitDuration(failureInfo.numFailures).toMillis
       }
       .getOrElse(-1)
   }
@@ -387,14 +374,12 @@ class TriggeredGraphExecution(
     flowsWithState(StreamState.QUEUED).foreach(recordSkippedIfSelected)
 
     val flowsFailedToStop = ThreadUtils
-      .parmap(flowsWithState(StreamState.RUNNING).toSeq, "stop-flow", maxThreads = 10) { flowName =>
-        pipelineState.put(flowName, StreamState.CANCELED)
-        flowExecutions.get(flowName).map { f =>
-          (
-            f.identifier,
-            Try(stopFlow(f))
-          )
-        }
+      .parmap(flowsWithState(StreamState.RUNNING).toSeq, "stop-flow", maxThreads = 10) {
+        flowName =>
+          pipelineState.put(flowName, StreamState.CANCELED)
+          flowExecutions.get(flowName).map { f =>
+            (f.identifier, Try(stopFlow(f)))
+          }
       }
       .filter(_.nonEmpty)
       .filter(_.get._2.isFailure)
@@ -419,17 +404,14 @@ class TriggeredGraphExecution(
     }
 
     val executionFailureOpt = failureTracker.iterator
-      .map {
-        case (flowIdentifier, failureInfo) =>
-          (
-            graphForExecution.flow(flowIdentifier),
-            failureInfo.lastException,
-            failureInfo.lastExceptionAction
-          )
+      .map { case (flowIdentifier, failureInfo) =>
+        (
+          graphForExecution.flow(flowIdentifier),
+          failureInfo.lastException,
+          failureInfo.lastExceptionAction)
       }
-      .collectFirst {
-        case (_, _, GraphExecution.StopFlowExecution(reason)) =>
-          reason.runTerminationReason
+      .collectFirst { case (_, _, GraphExecution.StopFlowExecution(reason)) =>
+        reason.runTerminationReason
       }
 
     executionFailureOpt.getOrElse(UnexpectedRunFailure())
@@ -486,10 +468,6 @@ object TriggeredGraphExecution {
    * didn't have any data to process) or excluded (if they were not selected in a refresh
    * selection.)
    */
-  private val TERMINAL_NON_FAILURE_STREAM_STATES: Set[StreamState] = Set(
-    StreamState.SUCCESSFUL,
-    StreamState.SKIPPED,
-    StreamState.EXCLUDED,
-    StreamState.IDLE
-  )
+  private val TERMINAL_NON_FAILURE_STREAM_STATES: Set[StreamState] =
+    Set(StreamState.SUCCESSFUL, StreamState.SKIPPED, StreamState.EXCLUDED, StreamState.IDLE)
 }

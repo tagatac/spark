@@ -37,7 +37,6 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     super.afterEach()
   }
 
-
   test("create persisted views") {
     val session = spark
     import session.implicits._
@@ -45,9 +44,8 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     val viewName = "mypersistedview"
     val viewIdentifier = fullyQualifiedIdentifier(viewName)
 
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"CREATE VIEW $viewName AS SELECT * FROM range(1, 4);"
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"CREATE VIEW $viewName AS SELECT * FROM range(1, 4);")
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -56,15 +54,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     val executedGraph = updateContext.pipelineExecution.graphExecution.get.graphForExecution
     verifyPersistedViewMetadata(
       graph = executedGraph,
-      viewMetadata = Map(
-        viewIdentifier -> "SELECT * FROM range(1, 4)"
-      )
-    )
+      viewMetadata = Map(viewIdentifier -> "SELECT * FROM range(1, 4)"))
 
-    checkAnswer(
-      spark.sql(s"SELECT * FROM $viewIdentifier"),
-      Seq(1L, 2L, 3L).toDF()
-    )
+    checkAnswer(spark.sql(s"SELECT * FROM $viewIdentifier"), Seq(1L, 2L, 3L).toDF())
   }
 
   test("persisted view reads from external table") {
@@ -79,9 +71,8 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     spark.sql(s"CREATE TABLE $tableIdentifier AS SELECT * FROM range(1, 4)")
 
     val source = tableIdentifier.toString
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"CREATE VIEW $viewName AS SELECT * FROM $source;"
-    )
+    val unresolvedDataflowGraph =
+      unresolvedDataflowGraphFromSql(sqlText = s"CREATE VIEW $viewName AS SELECT * FROM $source;")
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -91,25 +82,18 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     verifyPersistedViewMetadata(
       graph = graph,
-      viewMetadata = Map(
-        viewIdentifier -> s"SELECT * FROM $source"
-      )
-    )
+      viewMetadata = Map(viewIdentifier -> s"SELECT * FROM $source"))
 
-    checkAnswer(
-      spark.sql(s"SELECT * FROM $viewIdentifier"),
-      Seq(1L, 2L, 3L).toDF()
-    )
+    checkAnswer(spark.sql(s"SELECT * FROM $viewIdentifier"), Seq(1L, 2L, 3L).toDF())
   }
 
   test("persisted view reads from a temporary view") {
     val viewName = "pv"
     val pv = fullyQualifiedIdentifier(viewName)
 
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""CREATE TEMPORARY VIEW temp_view AS SELECT * FROM range(1, 4);
-                   |CREATE VIEW $viewName AS SELECT * FROM temp_view;""".stripMargin
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"""CREATE TEMPORARY VIEW temp_view AS SELECT * FROM range(1, 4);
+                   |CREATE VIEW $viewName AS SELECT * FROM temp_view;""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
 
@@ -125,15 +109,12 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
         "objName" -> pv.toString,
         "obj" -> "view",
         "tempObjName" -> "`temp_view`",
-        "tempObj" -> "temporary view"
-      )
-    )
+        "tempObj" -> "temporary view"))
   }
 
   test("persisted view reads from a non-existent dataset") {
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"CREATE VIEW myview AS SELECT * FROM nonexistent_view;"
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"CREATE VIEW myview AS SELECT * FROM nonexistent_view;")
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
 
@@ -150,10 +131,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
   test("persisted view reads from a streaming source") {
     val viewName = "mypersistedview"
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""CREATE STREAMING TABLE source AS SELECT * FROM STREAM($externalTable1Ident);
-                   |CREATE VIEW $viewName AS SELECT * FROM STREAM(source);""".stripMargin
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"""CREATE STREAMING TABLE source AS SELECT * FROM STREAM($externalTable1Ident);
+                   |CREATE VIEW $viewName AS SELECT * FROM STREAM(source);""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
 
@@ -164,15 +144,13 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     assertAnalysisException(
       ex,
-      errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_PERSISTED_VIEW"
-    )
+      errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_PERSISTED_VIEW")
   }
 
   test("persisted view reads from an external streaming source") {
     val viewName = "mypersistedview"
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"CREATE VIEW $viewName AS SELECT * FROM STREAM($externalTable1Ident);"
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"CREATE VIEW $viewName AS SELECT * FROM STREAM($externalTable1Ident);")
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
 
@@ -183,19 +161,17 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     assertAnalysisException(
       ex,
-      errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_PERSISTED_VIEW"
-    )
+      errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_PERSISTED_VIEW")
   }
 
   test("persisted view reads from another persisted view") {
     val session = spark
     import session.implicits._
 
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""CREATE VIEW pv3 AS SELECT * FROM pv2;
+    val unresolvedDataflowGraph =
+      unresolvedDataflowGraphFromSql(sqlText = s"""CREATE VIEW pv3 AS SELECT * FROM pv2;
                    |CREATE VIEW pv2 AS SELECT * FROM pv1;
-                   |CREATE VIEW pv1 AS SELECT * FROM range(1, 4);""".stripMargin
-    )
+                   |CREATE VIEW pv1 AS SELECT * FROM range(1, 4);""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -208,22 +184,17 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
       viewMetadata = Map(
         fullyQualifiedIdentifier("pv1") -> "SELECT * FROM range(1, 4)",
         fullyQualifiedIdentifier("pv2") -> s"SELECT * FROM pv1",
-        fullyQualifiedIdentifier("pv3") -> s"SELECT * FROM pv2"
-      )
-    )
+        fullyQualifiedIdentifier("pv3") -> s"SELECT * FROM pv2"))
 
     checkAnswer(
       spark.sql(buildSelectQuery(fullyQualifiedIdentifier("pv3"))),
-      Seq(1L, 2L, 3L).toDF()
-    )
+      Seq(1L, 2L, 3L).toDF())
   }
 
   test("persisted view reads from a failed persisted view") {
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText = s"""
         |CREATE VIEW pv2 AS SELECT * FROM pv1;
-        |CREATE VIEW pv1 AS SELECT 1 + 1;""".stripMargin
-    )
+        |CREATE VIEW pv1 AS SELECT 1 + 1;""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -235,16 +206,14 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
       fullyQualifiedIdentifier("pv1"),
       expectedFlowStatus = FlowStatus.FAILED,
       expectedEventLevel = EventLevel.ERROR,
-      errorChecker = _.getMessage.contains("CREATE_PERMANENT_VIEW_WITHOUT_ALIAS")
-    )
+      errorChecker = _.getMessage.contains("CREATE_PERMANENT_VIEW_WITHOUT_ALIAS"))
 
     // assert that pv2 is skipped (as it depends on pv1)
     assertFlowProgressEvent(
       updateContext.eventBuffer,
       fullyQualifiedIdentifier("pv2"),
       expectedFlowStatus = FlowStatus.SKIPPED,
-      expectedEventLevel = EventLevel.INFO
-    )
+      expectedEventLevel = EventLevel.INFO)
   }
 
   test("persisted view reads from MV") {
@@ -257,10 +226,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     val mvIdentifier = fullyQualifiedIdentifier("mymv")
 
     val source = mvIdentifier.toString
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""CREATE MATERIALIZED VIEW mymv AS SELECT * FROM RANGE(1, 4);
-                   |CREATE VIEW $viewName AS SELECT * FROM $source;""".stripMargin
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"""CREATE MATERIALIZED VIEW mymv AS SELECT * FROM RANGE(1, 4);
+                   |CREATE VIEW $viewName AS SELECT * FROM $source;""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -270,15 +238,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     verifyPersistedViewMetadata(
       graph = graph,
-      viewMetadata = Map(
-        viewIdentifier -> s"SELECT * FROM $source"
-      )
-    )
+      viewMetadata = Map(viewIdentifier -> s"SELECT * FROM $source"))
 
-    checkAnswer(
-      spark.sql(s"SELECT * FROM $viewIdentifier"),
-      Seq(1L, 2L, 3L).toDF()
-    )
+    checkAnswer(spark.sql(s"SELECT * FROM $viewIdentifier"), Seq(1L, 2L, 3L).toDF())
   }
 
   test("persisted view reads from ST") {
@@ -291,10 +253,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     val stIdentifier = fullyQualifiedIdentifier("myst")
 
     val source = stIdentifier.toString
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""CREATE STREAMING TABLE myst AS SELECT * FROM STREAM($externalTable1Ident);
-                   |CREATE VIEW $viewName AS SELECT * FROM $source;""".stripMargin
-    )
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText =
+      s"""CREATE STREAMING TABLE myst AS SELECT * FROM STREAM($externalTable1Ident);
+                   |CREATE VIEW $viewName AS SELECT * FROM $source;""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -304,15 +265,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     verifyPersistedViewMetadata(
       graph = graph,
-      viewMetadata = Map(
-        viewIdentifier -> s"SELECT * FROM $source"
-      )
-    )
+      viewMetadata = Map(viewIdentifier -> s"SELECT * FROM $source"))
 
-    checkAnswer(
-      spark.sql(s"SELECT * FROM $viewIdentifier"),
-      Seq(0L, 1L, 2L).toDF()
-    )
+    checkAnswer(spark.sql(s"SELECT * FROM $viewIdentifier"), Seq(0L, 1L, 2L).toDF())
   }
 
   test("mv reading from a persisted view") {
@@ -322,11 +277,9 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
     val viewName = "pv"
     val viewIdentifier = fullyQualifiedIdentifier(viewName)
 
-    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(
-      sqlText = s"""
+    val unresolvedDataflowGraph = unresolvedDataflowGraphFromSql(sqlText = s"""
         |CREATE VIEW $viewName AS SELECT * FROM range(1, 4);
-        |CREATE MATERIALIZED VIEW myviewreader AS SELECT * FROM $viewName;""".stripMargin
-    )
+        |CREATE MATERIALIZED VIEW myviewreader AS SELECT * FROM $viewName;""".stripMargin)
     val updateContext =
       TestPipelineUpdateContext(spark, unresolvedDataflowGraph, storageRoot)
     updateContext.pipelineExecution.startPipeline()
@@ -336,35 +289,24 @@ class ViewSuite extends ExecutionTest with SharedSparkSession {
 
     verifyPersistedViewMetadata(
       graph = graph,
-      viewMetadata = Map(
-        viewIdentifier -> "SELECT * FROM range(1, 4)"
-      )
-    )
+      viewMetadata = Map(viewIdentifier -> "SELECT * FROM range(1, 4)"))
 
     val q = buildSelectQuery(fullyQualifiedIdentifier("myviewreader"))
 
-    checkAnswer(
-      spark.sql(q),
-      Seq(1L, 2L, 3L).toDF()
-    )
-    checkAnswer(
-      spark.sql(s"SELECT * FROM $viewIdentifier"),
-      Seq(1L, 2L, 3L).toDF()
-    )
+    checkAnswer(spark.sql(q), Seq(1L, 2L, 3L).toDF())
+    checkAnswer(spark.sql(s"SELECT * FROM $viewIdentifier"), Seq(1L, 2L, 3L).toDF())
 
   }
 
   private def verifyPersistedViewMetadata(
       graph: DataflowGraph,
-      viewMetadata: Map[TableIdentifier, String]
-  ): Unit = {
-    viewMetadata.foreach {
-      case (key, value) =>
-        val viewOpt = graph.view.get(key)
-        assert(viewOpt.isDefined)
-        val view = viewOpt.get
-        assert(view.isInstanceOf[PersistedView])
-        assert(view.sqlText.isDefined && view.sqlText.get == value)
+      viewMetadata: Map[TableIdentifier, String]): Unit = {
+    viewMetadata.foreach { case (key, value) =>
+      val viewOpt = graph.view.get(key)
+      assert(viewOpt.isDefined)
+      val view = viewOpt.get
+      assert(view.isInstanceOf[PersistedView])
+      assert(view.sqlText.isDefined && view.sqlText.get == value)
     }
   }
 

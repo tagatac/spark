@@ -29,15 +29,13 @@ import org.apache.spark.serializer.Serializer
  *
  * Implementation of this class can be plugged in as recovery mode alternative for Spark's
  * Standalone mode.
- *
  */
 @DeveloperApi
 abstract class StandaloneRecoveryModeFactory(conf: SparkConf, serializer: Serializer) {
 
   /**
-   * PersistenceEngine defines how the persistent data(Information about worker, driver etc..)
-   * is handled for recovery.
-   *
+   * PersistenceEngine defines how the persistent data(Information about worker, driver etc..) is
+   * handled for recovery.
    */
   def createPersistenceEngine(): PersistenceEngine
 
@@ -48,17 +46,19 @@ abstract class StandaloneRecoveryModeFactory(conf: SparkConf, serializer: Serial
 }
 
 /**
- * LeaderAgent in this case is a no-op. Since leader is forever leader as the actual
- * recovery is made by restoring from filesystem.
+ * LeaderAgent in this case is a no-op. Since leader is forever leader as the actual recovery is
+ * made by restoring from filesystem.
  */
 private[master] class FileSystemRecoveryModeFactory(conf: SparkConf, serializer: Serializer)
-  extends StandaloneRecoveryModeFactory(conf, serializer) with Logging {
+    extends StandaloneRecoveryModeFactory(conf, serializer)
+    with Logging {
 
   val recoveryDir = conf.get(RECOVERY_DIRECTORY)
 
   def createPersistenceEngine(): PersistenceEngine = {
     logInfo(log"Persisting recovery state to directory: ${MDC(LogKeys.PATH, recoveryDir)}")
-    val codec = conf.get(RECOVERY_COMPRESSION_CODEC).map(c => CompressionCodec.createCodec(conf, c))
+    val codec =
+      conf.get(RECOVERY_COMPRESSION_CODEC).map(c => CompressionCodec.createCodec(conf, c))
     new FileSystemPersistenceEngine(recoveryDir, serializer, codec)
   }
 
@@ -68,16 +68,18 @@ private[master] class FileSystemRecoveryModeFactory(conf: SparkConf, serializer:
 }
 
 /**
- * LeaderAgent in this case is a no-op. Since leader is forever leader as the actual
- * recovery is made by restoring from RocksDB.
+ * LeaderAgent in this case is a no-op. Since leader is forever leader as the actual recovery is
+ * made by restoring from RocksDB.
  */
 private[master] class RocksDBRecoveryModeFactory(conf: SparkConf, serializer: Serializer)
-  extends StandaloneRecoveryModeFactory(conf, serializer) with Logging {
+    extends StandaloneRecoveryModeFactory(conf, serializer)
+    with Logging {
 
   def createPersistenceEngine(): PersistenceEngine = {
     val recoveryDir = conf.get(RECOVERY_DIRECTORY)
-    logInfo(log"Persisting recovery state to directory: " +
-      log"${MDC(LogKeys.PATH, recoveryDir)}")
+    logInfo(
+      log"Persisting recovery state to directory: " +
+        log"${MDC(LogKeys.PATH, recoveryDir)}")
     new RocksDBPersistenceEngine(recoveryDir, serializer)
   }
 
@@ -87,7 +89,7 @@ private[master] class RocksDBRecoveryModeFactory(conf: SparkConf, serializer: Se
 }
 
 private[master] class ZooKeeperRecoveryModeFactory(conf: SparkConf, serializer: Serializer)
-  extends StandaloneRecoveryModeFactory(conf, serializer) {
+    extends StandaloneRecoveryModeFactory(conf, serializer) {
 
   def createPersistenceEngine(): PersistenceEngine = {
     new ZooKeeperPersistenceEngine(conf, serializer)

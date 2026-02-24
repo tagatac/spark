@@ -24,7 +24,6 @@ import scala.jdk.CollectionConverters._
 import org.apache.spark._
 import org.apache.spark.util.Utils
 
-
 class RDDCleanerSuite extends SparkFunSuite with LocalRootDirsTest {
 
   test("RDD shuffle cleanup standalone") {

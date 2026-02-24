@@ -35,12 +35,13 @@ import org.apache.spark.io.CompressionCodec
 import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
+abstract class EventLogFileWritersSuite
+    extends SparkFunSuite
+    with LocalSparkContext
+    with BeforeAndAfter {
 
-abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkContext
-  with BeforeAndAfter {
-
-  protected val fileSystem = Utils.getHadoopFileSystem("/",
-    SparkHadoopUtil.get.newConfiguration(new SparkConf()))
+  protected val fileSystem =
+    Utils.getHadoopFileSystem("/", SparkHadoopUtil.get.newConfiguration(new SparkConf()))
   protected var testDir: File = _
   protected var testDirPath: Path = _
 
@@ -56,7 +57,10 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
   test("create EventLogFileWriter with enable/disable rolling") {
     def buildWriterAndVerify(conf: SparkConf, expectedClazz: Class[_]): Unit = {
       val writer = EventLogFileWriter(
-        getUniqueApplicationId, None, testDirPath.toUri, conf,
+        getUniqueApplicationId,
+        None,
+        testDirPath.toUri,
+        conf,
         SparkHadoopUtil.get.newConfiguration(conf))
       val writerClazz = writer.getClass
       assert(expectedClazz === writerClazz)
@@ -85,7 +89,11 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
       val attemptId = None
 
       val conf = getLoggingConf(testDirPath, codecShortName)
-      val writer = createWriter(appId, attemptId, testDirPath.toUri, conf,
+      val writer = createWriter(
+        appId,
+        attemptId,
+        testDirPath.toUri,
+        conf,
         SparkHadoopUtil.get.newConfiguration(conf))
 
       writer.start()
@@ -119,7 +127,11 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
     val conf = getLoggingConf(testDirPath, None)
     conf.set(EVENT_LOG_EXCLUDED_PATTERNS, Seq("B", "C"))
 
-    val writer = createWriter(appId, attemptId, testDirPath.toUri, conf,
+    val writer = createWriter(
+      appId,
+      attemptId,
+      testDirPath.toUri,
+      conf,
       SparkHadoopUtil.get.newConfiguration(conf))
 
     writer.start()
@@ -128,8 +140,12 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
     }
     writer.stop()
 
-    verifyWriteEventLogFile(appId, attemptId, testDirPath.toUri,
-      None, Seq("""{"Event":"A"}""", """{"Event":"D"}"""))
+    verifyWriteEventLogFile(
+      appId,
+      attemptId,
+      testDirPath.toUri,
+      None,
+      Seq("""{"Event":"A"}""", """{"Event":"D"}"""))
   }
 
   protected def readLinesFromEventLogFile(log: Path, fs: FileSystem): List[String] = {
@@ -143,7 +159,7 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
 
   protected def createWriter(
       appId: String,
-      appAttemptId : Option[String],
+      appAttemptId: Option[String],
       logBaseDir: URI,
       sparkConf: SparkConf,
       hadoopConf: Configuration): EventLogFileWriter
@@ -154,7 +170,7 @@ abstract class EventLogFileWritersSuite extends SparkFunSuite with LocalSparkCon
    */
   protected def verifyWriteEventLogFile(
       appId: String,
-      appAttemptId : Option[String],
+      appAttemptId: Option[String],
       logBaseDir: URI,
       compressionCodecShortName: Option[String],
       expectedLines: Seq[String] = Seq.empty): Unit
@@ -194,8 +210,8 @@ class ErrorThrowingOutputStream extends OutputStream {
 }
 
 /**
- * A testable subclass of SingleEventLogFileWriter that exposes the writer field
- * and closeWriter method for testing.
+ * A testable subclass of SingleEventLogFileWriter that exposes the writer field and closeWriter
+ * method for testing.
  */
 class TestableSingleEventLogFileWriter(
     appId: String,
@@ -203,7 +219,7 @@ class TestableSingleEventLogFileWriter(
     logBaseDir: URI,
     sparkConf: SparkConf,
     hadoopConf: Configuration)
-  extends SingleEventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
+    extends SingleEventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
 
   def setWriterForTest(pw: PrintWriter): Unit = {
     writer = Some(pw)
@@ -222,8 +238,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     val conf = getLoggingConf(testDirPath, None)
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
 
-    val writer = new TestableSingleEventLogFileWriter(
-      appId, attemptId, testDirPath.toUri, conf, hadoopConf)
+    val writer =
+      new TestableSingleEventLogFileWriter(appId, attemptId, testDirPath.toUri, conf, hadoopConf)
 
     // Create a PrintWriter with an ErrorThrowingOutputStream
     val errorStream = new ErrorThrowingOutputStream()
@@ -243,7 +259,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     }
 
     val warningMessages = logAppender.loggingEvents.map(_.getMessage.getFormattedMessage)
-    assert(warningMessages.exists(_.contains("Spark detects errors while flushing")),
+    assert(
+      warningMessages.exists(_.contains("Spark detects errors while flushing")),
       s"Expected warning message not found. Messages: $warningMessages")
   }
 
@@ -253,8 +270,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     val conf = getLoggingConf(testDirPath, None)
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
 
-    val writer = new TestableSingleEventLogFileWriter(
-      appId, attemptId, testDirPath.toUri, conf, hadoopConf)
+    val writer =
+      new TestableSingleEventLogFileWriter(appId, attemptId, testDirPath.toUri, conf, hadoopConf)
 
     // Create a PrintWriter with an ErrorThrowingOutputStream that errors on close
     val errorStream = new ErrorThrowingOutputStream()
@@ -277,7 +294,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     }
 
     val warningMessages = logAppender.loggingEvents.map(_.getMessage.getFormattedMessage)
-    assert(warningMessages.exists(_.contains("Spark detects errors while closing")),
+    assert(
+      warningMessages.exists(_.contains("Spark detects errors while closing")),
       s"Expected warning message not found. Messages: $warningMessages")
   }
 
@@ -287,8 +305,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     val conf = getLoggingConf(testDirPath, None)
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
 
-    val writer = new TestableSingleEventLogFileWriter(
-      appId, attemptId, testDirPath.toUri, conf, hadoopConf)
+    val writer =
+      new TestableSingleEventLogFileWriter(appId, attemptId, testDirPath.toUri, conf, hadoopConf)
 
     // Create a normal PrintWriter with no errors
     val normalStream = new ErrorThrowingOutputStream()
@@ -302,7 +320,8 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
     }
 
     val warningMessages = logAppender.loggingEvents.map(_.getMessage.getFormattedMessage)
-    assert(!warningMessages.exists(_.contains("Spark detects errors")),
+    assert(
+      !warningMessages.exists(_.contains("Spark detects errors")),
       s"Unexpected warning message found. Messages: $warningMessages")
   }
 
@@ -337,19 +356,20 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
   test("Event log name") {
     val baseDirUri = Utils.resolveURI("/base-dir")
     // without compression
-    assert(s"${baseDirUri.toString}/app1" === SingleEventLogFileWriter.getLogPath(
-      baseDirUri, "app1", None, None))
+    assert(
+      s"${baseDirUri.toString}/app1" === SingleEventLogFileWriter
+        .getLogPath(baseDirUri, "app1", None, None))
     // with compression
-    assert(s"${baseDirUri.toString}/app1.lzf" ===
-      SingleEventLogFileWriter.getLogPath(baseDirUri, "app1", None, Some(CompressionCodec.LZF)))
+    assert(
+      s"${baseDirUri.toString}/app1.lzf" ===
+        SingleEventLogFileWriter.getLogPath(baseDirUri, "app1", None, Some(CompressionCodec.LZF)))
     // illegal characters in app ID
     assert(s"${baseDirUri.toString}/a-fine-mind_dollar_bills__1" ===
-      SingleEventLogFileWriter.getLogPath(baseDirUri,
-        "a fine:mind$dollar{bills}.1", None, None))
+      SingleEventLogFileWriter.getLogPath(baseDirUri, "a fine:mind$dollar{bills}.1", None, None))
     // illegal characters in app ID with compression
     assert(s"${baseDirUri.toString}/a-fine-mind_dollar_bills__1.lz4" ===
-      SingleEventLogFileWriter.getLogPath(baseDirUri,
-        "a fine:mind$dollar{bills}.1", None, Some(CompressionCodec.LZ4)))
+      SingleEventLogFileWriter
+        .getLogPath(baseDirUri, "a fine:mind$dollar{bills}.1", None, Some(CompressionCodec.LZ4)))
   }
 
   override protected def createWriter(
@@ -368,7 +388,10 @@ class SingleEventLogFileWriterSuite extends EventLogFileWritersSuite {
       compressionCodecShortName: Option[String],
       expectedLines: Seq[String]): Unit = {
     // read single event log file
-    val logPath = SingleEventLogFileWriter.getLogPath(logBaseDir, appId, appAttemptId,
+    val logPath = SingleEventLogFileWriter.getLogPath(
+      logBaseDir,
+      appId,
+      appAttemptId,
       compressionCodecShortName)
 
     val finalLogPath = new Path(logPath)
@@ -390,33 +413,44 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
     assert(s"${baseDirUri.toString}/${EVENT_LOG_DIR_NAME_PREFIX}${appId}" === logDir.toString)
 
     // appstatus: inprogress or completed
-    assert(s"$logDir/${APPSTATUS_FILE_NAME_PREFIX}${appId}${EventLogFileWriter.IN_PROGRESS}" ===
-      RollingEventLogFilesWriter.getAppStatusFilePath(logDir, appId, appAttemptId,
-        inProgress = true).toString)
-    assert(s"$logDir/${APPSTATUS_FILE_NAME_PREFIX}${appId}" ===
-      RollingEventLogFilesWriter.getAppStatusFilePath(logDir, appId, appAttemptId,
-        inProgress = false).toString)
+    assert(
+      s"$logDir/${APPSTATUS_FILE_NAME_PREFIX}${appId}${EventLogFileWriter.IN_PROGRESS}" ===
+        RollingEventLogFilesWriter
+          .getAppStatusFilePath(logDir, appId, appAttemptId, inProgress = true)
+          .toString)
+    assert(
+      s"$logDir/${APPSTATUS_FILE_NAME_PREFIX}${appId}" ===
+        RollingEventLogFilesWriter
+          .getAppStatusFilePath(logDir, appId, appAttemptId, inProgress = false)
+          .toString)
 
     // without compression
-    assert(s"$logDir/${EVENT_LOG_FILE_NAME_PREFIX}1_${appId}" ===
-      RollingEventLogFilesWriter.getEventLogFilePath(logDir, appId, appAttemptId, 1, None).toString)
+    assert(
+      s"$logDir/${EVENT_LOG_FILE_NAME_PREFIX}1_${appId}" ===
+        RollingEventLogFilesWriter
+          .getEventLogFilePath(logDir, appId, appAttemptId, 1, None)
+          .toString)
 
     // with compression
-    assert(s"$logDir/${EVENT_LOG_FILE_NAME_PREFIX}1_${appId}.lzf" ===
-      RollingEventLogFilesWriter.getEventLogFilePath(logDir, appId, appAttemptId,
-        1, Some(CompressionCodec.LZF)).toString)
+    assert(
+      s"$logDir/${EVENT_LOG_FILE_NAME_PREFIX}1_${appId}.lzf" ===
+        RollingEventLogFilesWriter
+          .getEventLogFilePath(logDir, appId, appAttemptId, 1, Some(CompressionCodec.LZF))
+          .toString)
 
     // illegal characters in app ID
-    assert(s"${baseDirUri.toString}/${EVENT_LOG_DIR_NAME_PREFIX}a-fine-mind_dollar_bills__1" ===
-      RollingEventLogFilesWriter.getAppEventLogDirPath(baseDirUri,
-        "a fine:mind$dollar{bills}.1", None).toString)
+    assert(
+      s"${baseDirUri.toString}/${EVENT_LOG_DIR_NAME_PREFIX}a-fine-mind_dollar_bills__1" ===
+        RollingEventLogFilesWriter
+          .getAppEventLogDirPath(baseDirUri, "a fine:mind$dollar{bills}.1", None)
+          .toString)
   }
 
   test("Log overwriting") {
     val appId = "test"
     val appAttemptId = None
-    val logDirPath = RollingEventLogFilesWriter.getAppEventLogDirPath(testDir.toURI, appId,
-      appAttemptId)
+    val logDirPath =
+      RollingEventLogFilesWriter.getAppEventLogDirPath(testDir.toURI, appId, appAttemptId)
 
     val conf = getLoggingConf(testDirPath)
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
@@ -449,8 +483,9 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
           expectedLastIndex: Int,
           expectedMaxSizeBytes: Long): Unit = {
         assert(eventLogFiles.forall(f => f.getLen <= expectedMaxSizeBytes))
-        assert((1 to expectedLastIndex) ===
-          eventLogFiles.map(f => getEventLogFileIndex(f.getPath.getName)))
+        assert(
+          (1 to expectedLastIndex) ===
+            eventLogFiles.map(f => getEventLogFileIndex(f.getPath.getName)))
       }
 
       val appId = getUniqueApplicationId
@@ -460,7 +495,11 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
       conf.set(EVENT_LOG_ENABLE_ROLLING, true)
       conf.set(EVENT_LOG_ROLLING_MAX_FILE_SIZE.key, "10m")
 
-      val writer = createWriter(appId, attemptId, testDirPath.toUri, conf,
+      val writer = createWriter(
+        appId,
+        attemptId,
+        testDirPath.toUri,
+        conf,
         SparkHadoopUtil.get.newConfiguration(conf))
 
       writer.start()
@@ -479,8 +518,7 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
       val eventLogFiles2 = listEventLogFiles(logDirPath)
       assertEventLogFilesIndex(eventLogFiles2, 3, 1024 * 1024 * 10)
 
-      verifyWriteEventLogFile(appId, attemptId, testDirPath.toUri,
-        codecShortName, expectedLines)
+      verifyWriteEventLogFile(appId, attemptId, testDirPath.toUri, codecShortName, expectedLines)
     }
   }
 
@@ -493,7 +531,11 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
     conf.set(EVENT_LOG_ROLLING_MAX_FILE_SIZE.key, "1m")
 
     val e = intercept[IllegalArgumentException] {
-      createWriter(appId, attemptId, testDirPath.toUri, conf,
+      createWriter(
+        appId,
+        attemptId,
+        testDirPath.toUri,
+        conf,
         SparkHadoopUtil.get.newConfiguration(conf))
     }
     assert(e.getMessage.contains("should be configured to be at least"))
@@ -531,7 +573,10 @@ class RollingEventLogFilesWriterSuite extends EventLogFileWritersSuite {
   }
 
   private def listEventLogFiles(logDirPath: Path): Seq[FileStatus] = {
-    fileSystem.listStatus(logDirPath).filter(isEventLogFile)
-      .sortBy { fs => getEventLogFileIndex(fs.getPath.getName) }.toImmutableArraySeq
+    fileSystem
+      .listStatus(logDirPath)
+      .filter(isEventLogFile)
+      .sortBy { fs => getEventLogFileIndex(fs.getPath.getName) }
+      .toImmutableArraySeq
   }
 }

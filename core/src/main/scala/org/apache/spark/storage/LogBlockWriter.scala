@@ -31,22 +31,22 @@ import org.apache.spark.util.Utils
 
 /**
  * A class for writing logs directly to a file on disk and save as a block in BlockManager if
- * there are any logs written.
- * `save` or `close` must be called to ensure resources are released properly. `save` will add
- * the log block to BlockManager, while `close` will just release the resources without saving
- * the log block.
+ * there are any logs written. `save` or `close` must be called to ensure resources are released
+ * properly. `save` will add the log block to BlockManager, while `close` will just release the
+ * resources without saving the log block.
  *
  * Notes:
- * - This class does not support concurrent writes.
- * - The writer will be automatically closed when failed to write logs or failed to save the
- *   log block.
- * - Write operations after closing will throw exceptions.
+ *   - This class does not support concurrent writes.
+ *   - The writer will be automatically closed when failed to write logs or failed to save the log
+ *     block.
+ *   - Write operations after closing will throw exceptions.
  */
 private[spark] class LogBlockWriter(
     blockManager: BlockManager,
     logBlockType: LogBlockType,
     sparkConf: SparkConf,
-    bufferSize: Int = 32 * 1024) extends Logging {
+    bufferSize: Int = 32 * 1024)
+    extends Logging {
 
   private[storage] var tmpFile: File = null
 
@@ -66,8 +66,7 @@ private[spark] class LogBlockWriter(
       val bos = new BufferedOutputStream(fos, bufferSize)
       cos = new CountingOutputStream(bos)
       val emptyBlockId = LogBlockId.empty(logBlockType)
-      objOut = blockManager
-        .serializerManager
+      objOut = blockManager.serializerManager
         .blockSerializationStream(emptyBlockId, cos)(LogLine.getClassTag(logBlockType))
     } catch {
       case e: Exception =>
@@ -84,19 +83,19 @@ private[spark] class LogBlockWriter(
   }
 
   /**
-   * Write a log entry to the log block. Exception will be thrown if the writer has been closed
-   * or if there is an error during writing. Caller needs to deal with the exception. Suggest to
+   * Write a log entry to the log block. Exception will be thrown if the writer has been closed or
+   * if there is an error during writing. Caller needs to deal with the exception. Suggest to
    * close the writer when exception is thrown as block data could be corrupted which would lead
    * to issues when reading the log block later.
    *
-   * @param logEntry The log entry to write.
+   * @param logEntry
+   *   The log entry to write.
    */
   def writeLog(logEntry: LogLine): Unit = {
     if (hasBeenClosed) {
       throw SparkException.internalError(
         "Writer already closed. Cannot write more data.",
-        category = "STORAGE"
-      )
+        category = "STORAGE")
     }
 
     try {
@@ -113,8 +112,7 @@ private[spark] class LogBlockWriter(
     if (hasBeenClosed) {
       throw SparkException.internalError(
         "Writer already closed. Cannot save.",
-        category = "STORAGE"
-      )
+        category = "STORAGE")
     }
 
     try {
@@ -127,7 +125,7 @@ private[spark] class LogBlockWriter(
       objOut.close()
       objOut = null
 
-      if(recordsWritten) {
+      if (recordsWritten) {
         totalBytesWritten = cos.getCount
         // Save log block to BlockManager and delete the tmpFile.
         val success = saveToBlockManager(blockId, totalBytesWritten)
@@ -170,8 +168,8 @@ private[spark] class LogBlockWriter(
   }
 
   private[storage] def saveToBlockManager(blockId: LogBlockId, blockSize: Long): Boolean = {
-    blockManager.
-      TempFileBasedBlockStoreUpdater(
+    blockManager
+      .TempFileBasedBlockStoreUpdater(
         blockId,
         StorageLevel.DISK_ONLY,
         LogLine.getClassTag(logBlockType),

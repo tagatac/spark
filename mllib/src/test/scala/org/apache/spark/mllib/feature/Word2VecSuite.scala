@@ -31,7 +31,8 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
   test("Word2Vec") {
     val sentence = "a b ".repeat(100) + "a c ".repeat(10)
     val localDoc = Seq(sentence, sentence)
-    val doc = sc.parallelize(localDoc)
+    val doc = sc
+      .parallelize(localDoc)
       .map(line => line.split(" ").toSeq)
     val model = new Word2Vec().setVectorSize(10).setSeed(42L).fit(doc)
     val syms = model.findSynonyms("a", 2)
@@ -43,15 +44,17 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
     // and a Word2VecMap give the same values.
     val word2VecMap = model.getVectors
     val newModel = new Word2VecModel(word2VecMap)
-    assert(newModel.getVectors.transform((_, v) => v.toSeq) ===
-      word2VecMap.transform((_, v) => v.toSeq))
+    assert(
+      newModel.getVectors.transform((_, v) => v.toSeq) ===
+        word2VecMap.transform((_, v) => v.toSeq))
   }
 
   test("Word2Vec throws exception when vocabulary is empty") {
     intercept[IllegalArgumentException] {
       val sentence = "a b c"
       val localDoc = Seq(sentence, sentence)
-      val doc = sc.parallelize(localDoc)
+      val doc = sc
+        .parallelize(localDoc)
         .map(line => line.split(" ").toSeq)
       new Word2Vec().setMinCount(10).fit(doc)
     }
@@ -63,8 +66,7 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
       ("china", Array(0.50f, 0.50f, 0.50f, 0.50f)),
       ("japan", Array(0.40f, 0.50f, 0.50f, 0.50f)),
       ("taiwan", Array(0.60f, 0.50f, 0.50f, 0.50f)),
-      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f))
-    )
+      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f)))
     val model = new Word2VecModel(word2VecMap)
     val syms = model.findSynonyms("china", num)
     assert(syms.length == num)
@@ -78,8 +80,7 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
       ("china", Array(0.50f, 0.50f, 0.50f, 0.50f)),
       ("japan", Array(0.40f, 0.50f, 0.50f, 0.50f)),
       ("taiwan", Array(0.60f, 0.50f, 0.50f, 0.50f)),
-      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f))
-    )
+      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f)))
     val model = new Word2VecModel(word2VecMap)
     val syms = model.findSynonyms(Vectors.dense(Array(0.52, 0.5, 0.5, 0.5)), num)
     assert(syms.length == num)
@@ -93,8 +94,7 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
       ("china", Array(0.50f, 0.50f, 0.50f, 0.50f)),
       ("japan", Array(0.40f, 0.50f, 0.50f, 0.50f)),
       ("taiwan", Array(0.60f, 0.50f, 0.50f, 0.50f)),
-      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f))
-    )
+      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f)))
     val model = new Word2VecModel(word2VecMap)
 
     val tempDir = Utils.createTempDir()
@@ -103,8 +103,9 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
     try {
       model.save(sc, path)
       val sameModel = Word2VecModel.load(sc, path)
-      assert(sameModel.getVectors.transform((_, v) => v.toSeq) ===
-        model.getVectors.transform((_, v) => v.toSeq))
+      assert(
+        sameModel.getVectors.transform((_, v) => v.toSeq) ===
+          model.getVectors.transform((_, v) => v.toSeq))
     } finally {
       Utils.deleteRecursively(tempDir)
     }
@@ -115,8 +116,8 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
     // backupping old values
     val oldBufferConfValue = spark.conf.get(KRYO_SERIALIZER_BUFFER_SIZE.key, "64m")
     val oldBufferMaxConfValue = spark.conf.get(KRYO_SERIALIZER_MAX_BUFFER_SIZE.key, "64k")
-    val oldSetCommandRejectsSparkCoreConfs = spark.conf.get(
-      SET_COMMAND_REJECTS_SPARK_CORE_CONFS.key, "true")
+    val oldSetCommandRejectsSparkCoreConfs =
+      spark.conf.get(SET_COMMAND_REJECTS_SPARK_CORE_CONFS.key, "true")
 
     // setting test values to trigger partitioning
 
@@ -138,12 +139,15 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
     try {
       model.save(sc, path)
       val sameModel = Word2VecModel.load(sc, path)
-      assert(sameModel.getVectors.transform((_, v) => v.toSeq) ===
-        model.getVectors.transform((_, v) => v.toSeq))
-    }
-    catch {
-      case t: Throwable => fail("exception thrown persisting a model " +
-        "that spans over multiple partitions", t)
+      assert(
+        sameModel.getVectors.transform((_, v) => v.toSeq) ===
+          model.getVectors.transform((_, v) => v.toSeq))
+    } catch {
+      case t: Throwable =>
+        fail(
+          "exception thrown persisting a model " +
+            "that spans over multiple partitions",
+          t)
     } finally {
       Utils.deleteRecursively(tempDir)
       spark.conf.set(KRYO_SERIALIZER_BUFFER_SIZE.key, oldBufferConfValue)
@@ -154,20 +158,16 @@ class Word2VecSuite extends SparkFunSuite with MLlibTestSparkContext {
   }
 
   test("test similarity for word vectors with large values is not Infinity or NaN") {
-    val vecA = Array(-4.331467827487745E21, -5.26707742075006E21,
-      5.63551690626524E21, 2.833692188614257E21, -1.9688159903619345E21, -4.933950659913092E21,
-      -2.7401535502536787E21, -1.418671793782632E20).map(_.toFloat)
-    val vecB = Array(-3.9850175451103232E16, -3.4829783883841536E16,
-      9.421469251534848E15, 4.4069684466679808E16, 7.20936298872832E15, -4.2883302830374912E16,
-      -3.605579947835392E16, -2.8151294422155264E16).map(_.toFloat)
-    val vecC = Array(-1.9227381025734656E16, -3.907009342603264E16,
-      2.110207626838016E15, -4.8770066610651136E16, -1.9734964555743232E16, -3.2206001247617024E16,
-      2.7725358220443648E16, 3.1618718156980224E16).map(_.toFloat)
-    val wordMapIn = Map(
-      ("A", vecA),
-      ("B", vecB),
-      ("C", vecC)
-    )
+    val vecA = Array(-4.331467827487745e21, -5.26707742075006e21, 5.63551690626524e21,
+      2.833692188614257e21, -1.9688159903619345e21, -4.933950659913092e21, -2.7401535502536787e21,
+      -1.418671793782632e20).map(_.toFloat)
+    val vecB = Array(-3.9850175451103232e16, -3.4829783883841536e16, 9.421469251534848e15,
+      4.4069684466679808e16, 7.20936298872832e15, -4.2883302830374912e16, -3.605579947835392e16,
+      -2.8151294422155264e16).map(_.toFloat)
+    val vecC = Array(-1.9227381025734656e16, -3.907009342603264e16, 2.110207626838016e15,
+      -4.8770066610651136e16, -1.9734964555743232e16, -3.2206001247617024e16,
+      2.7725358220443648e16, 3.1618718156980224e16).map(_.toFloat)
+    val wordMapIn = Map(("A", vecA), ("B", vecB), ("C", vecC))
 
     val model = new Word2VecModel(wordMapIn)
     model.findSynonyms("A", 5).foreach { pair =>

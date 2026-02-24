@@ -54,12 +54,14 @@ private[ui] class StoragePage(parent: SparkUITab, store: AppStatusStore) extends
           </h4>
         </span>
         <div class="aggregated-rdds collapsible-table">
-          {UIUtils.listingTable(
-            rddHeader,
-            rddRow(request, _: v1.RDDStorageInfo),
-            rdds,
-            id = Some("storage-by-rdd-table"),
-            tooltipHeaders = tooltips)}
+          {
+        UIUtils.listingTable(
+          rddHeader,
+          rddRow(request, _: v1.RDDStorageInfo),
+          rdds,
+          id = Some("storage-by-rdd-table"),
+          tooltipHeaders = tooltips)
+      }
         </div>
       </div>
     }
@@ -91,8 +93,9 @@ private[ui] class StoragePage(parent: SparkUITab, store: AppStatusStore) extends
     <tr>
       <td>{rdd.id}</td>
       <td>
-        <a href={"%s/storage/rdd/?id=%s".format(
-          UIUtils.prependBaseUri(request, parent.basePath), rdd.id)}>
+        <a href={
+      "%s/storage/rdd/?id=%s".format(UIUtils.prependBaseUri(request, parent.basePath), rdd.id)
+    }>
           {rdd.name}
         </a>
       </td>
@@ -129,17 +132,18 @@ private[ui] class StoragePage(parent: SparkUITab, store: AppStatusStore) extends
 
     <div>
       <h5>Aggregated Block Metrics by Executor</h5>
-      {UIUtils.listingTable(executorMetricsTableHeader, executorMetricsTableRow, blockManagers,
-        id = Some("storage-by-executor-stream-blocks"))}
+      {
+      UIUtils.listingTable(
+        executorMetricsTableHeader,
+        executorMetricsTableRow,
+        blockManagers,
+        id = Some("storage-by-executor-stream-blocks"))
+    }
     </div>
   }
 
-  private val executorMetricsTableHeader = Seq(
-    "Executor ID",
-    "Address",
-    "Total Size in Memory",
-    "Total Size on Disk",
-    "Stream Blocks")
+  private val executorMetricsTableHeader =
+    Seq("Executor ID", "Address", "Total Size in Memory", "Total Size on Disk", "Stream Blocks")
 
   private def executorMetricsTableRow(status: ExecutorStreamSummary): Seq[Node] = {
     <tr>
@@ -167,22 +171,20 @@ private[ui] class StoragePage(parent: SparkUITab, store: AppStatusStore) extends
     } else {
       <div>
         <h5>Blocks</h5>
-        {UIUtils.listingTable(
+        {
+        UIUtils.listingTable(
           streamBlockTableHeader,
           streamBlockTableRow,
           blocks,
           id = Some("storage-by-block-table"),
-          sortable = false)}
+          sortable = false)
+      }
       </div>
     }
   }
 
-  private val streamBlockTableHeader = Seq(
-    "Block ID",
-    "Replication Level",
-    "Location",
-    "Storage Level",
-    "Size")
+  private val streamBlockTableHeader =
+    Seq("Block ID", "Replication Level", "Location", "Storage Level", "Size")
 
   /** Render a stream block */
   private def streamBlockTableRow(block: (String, Seq[StreamBlockData])): Seq[Node] = {
@@ -205,15 +207,15 @@ private[ui] class StoragePage(parent: SparkUITab, store: AppStatusStore) extends
 
     <tr>
       {
-        if (firstSubrow) {
-          <td rowspan={replication.toString}>
+      if (firstSubrow) {
+        <td rowspan={replication.toString}>
             {block.name}
           </td>
           <td rowspan={replication.toString}>
             {replication.toString}
           </td>
-        }
       }
+    }
       <td>{block.hostPort}</td>
       <td>{storageLevel}</td>
       <td>{Utils.bytesToString(size)}</td>

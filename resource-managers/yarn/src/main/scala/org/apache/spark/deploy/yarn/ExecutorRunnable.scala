@@ -56,7 +56,8 @@ private[yarn] class ExecutorRunnable(
     appId: String,
     securityMgr: SecurityManager,
     localResources: Map[String, LocalResource],
-    resourceProfileId: Int) extends Logging {
+    resourceProfileId: Int)
+    extends Logging {
 
   var rpc: YarnRPC = YarnRPC.create(conf)
   var nmClient: NMClient = _
@@ -78,18 +79,25 @@ private[yarn] class ExecutorRunnable(
         |===============================================================================
         |Default YARN executor launch context:
         |  env:
-        |${MDC(EXECUTOR_ENVS, Utils.redact(sparkConf, env.toSeq).map { case (k, v) => s"    $k -> $v\n" }.mkString)}
+        |${MDC(
+          EXECUTOR_ENVS,
+          Utils.redact(sparkConf, env.toSeq).map { case (k, v) => s"    $k -> $v\n" }.mkString)}
         |  command:
-        |    ${MDC(EXECUTOR_LAUNCH_COMMANDS, Utils.redactCommandLineArgs(sparkConf, commands).mkString(" \\ \n      "))}
+        |    ${MDC(
+          EXECUTOR_LAUNCH_COMMANDS,
+          Utils.redactCommandLineArgs(sparkConf, commands).mkString(" \\ \n      "))}
         |
         |  resources:
-        |${MDC(EXECUTOR_RESOURCES, localResources.map { case (k, v) => s"    $k -> $v\n" }.mkString)}
+        |${MDC(
+          EXECUTOR_RESOURCES,
+          localResources.map { case (k, v) => s"    $k -> $v\n" }.mkString)}
         |===============================================================================""".stripMargin
     // scalastyle:on line.size.limit
   }
 
   def startContainer(): java.util.Map[String, ByteBuffer] = {
-    val ctx = Records.newRecord(classOf[ContainerLaunchContext])
+    val ctx = Records
+      .newRecord(classOf[ContainerLaunchContext])
       .asInstanceOf[ContainerLaunchContext]
     val env = prepareEnvironment().asJava
 
@@ -104,8 +112,7 @@ private[yarn] class ExecutorRunnable(
     val commands = prepareCommand()
 
     ctx.setCommands(commands.asJava)
-    ctx.setApplicationACLs(
-      YarnSparkHadoopUtil.getApplicationAclsForYarn(securityMgr).asJava)
+    ctx.setApplicationACLs(YarnSparkHadoopUtil.getApplicationAclsForYarn(securityMgr).asJava)
 
     // If external shuffle service is enabled, register with the Yarn shuffle service already
     // started on the NodeManager and, if authentication is enabled, provide it with our secret
@@ -119,8 +126,10 @@ private[yarn] class ExecutorRunnable(
       nmClient.startContainer(container.get, ctx)
     } catch {
       case ex: Exception =>
-        throw new SparkException(s"Exception while starting container ${container.get.getId}" +
-          s" on host $hostname", ex)
+        throw new SparkException(
+          s"Exception while starting container ${container.get.getId}" +
+            s" on host $hostname",
+          ex)
     }
   }
 
@@ -147,7 +156,8 @@ private[yarn] class ExecutorRunnable(
       val mapper = new ObjectMapper()
       mapper.registerModule(DefaultScalaModule)
       val jsonString = mapper.writeValueAsString(payload)
-      ctx.setServiceData(Collections.singletonMap(serviceName, JavaUtils.stringToBytes(jsonString)))
+      ctx.setServiceData(
+        Collections.singletonMap(serviceName, JavaUtils.stringToBytes(jsonString)))
     }
   }
 
@@ -189,13 +199,20 @@ private[yarn] class ExecutorRunnable(
     val commands = prefixEnv ++
       Seq(Environment.JAVA_HOME.$$() + "/bin/java", "-server") ++
       javaOpts ++
-      Seq("org.apache.spark.executor.YarnCoarseGrainedExecutorBackend",
-        "--driver-url", masterAddress,
-        "--executor-id", executorId,
-        "--hostname", hostname,
-        "--cores", executorCores.toString,
-        "--app-id", appId,
-        "--resourceProfileId", resourceProfileId.toString) ++
+      Seq(
+        "org.apache.spark.executor.YarnCoarseGrainedExecutorBackend",
+        "--driver-url",
+        masterAddress,
+        "--executor-id",
+        executorId,
+        "--hostname",
+        hostname,
+        "--cores",
+        executorCores.toString,
+        "--app-id",
+        appId,
+        "--resourceProfileId",
+        resourceProfileId.toString) ++
       Seq(
         s"1>${ApplicationConstants.LOG_DIR_EXPANSION_VAR}/stdout",
         s"2>${ApplicationConstants.LOG_DIR_EXPANSION_VAR}/stderr")
@@ -208,7 +225,10 @@ private[yarn] class ExecutorRunnable(
     val env = new HashMap[String, String]()
     Client.populateClasspath(null, conf, sparkConf, env, sparkConf.get(EXECUTOR_CLASS_PATH))
 
-    System.getenv().asScala.filter { case (k, _) => k.startsWith("SPARK") }
+    System
+      .getenv()
+      .asScala
+      .filter { case (k, _) => k.startsWith("SPARK") }
       .foreach { case (k, v) => env(k) = v }
 
     sparkConf.getExecutorEnv.foreach { case (key, value) =>

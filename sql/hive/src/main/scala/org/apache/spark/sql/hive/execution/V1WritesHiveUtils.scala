@@ -55,8 +55,7 @@ trait V1WritesHiveUtils {
     val tableDesc = new TableDesc(
       hiveQlTable.getInputFormatClass,
       hiveQlTable.getOutputFormatClass,
-      hiveQlTable.getMetadata
-    )
+      hiveQlTable.getMetadata)
 
     // All partition column names in the format of "<column name 1>/<column name 2>/..."
     val partitionColumns = tableDesc.getProperties.getProperty("partition_columns")
@@ -92,17 +91,24 @@ trait V1WritesHiveUtils {
       }
     }
 
-    partitionColumnNames.takeRight(numDynamicPartitions).map { name =>
-      val attr = query.resolve(name :: Nil, sessionState.analyzer.resolver).getOrElse {
-        throw QueryCompilationErrors.cannotResolveAttributeError(
-          name, query.output.map(_.name).mkString(", "))
-      }.asInstanceOf[Attribute]
-      // SPARK-28054: Hive metastore is not case preserving and keeps partition columns
-      // with lower cased names. Hive will validate the column names in the partition directories
-      // during `loadDynamicPartitions`. Spark needs to write partition directories with lower-cased
-      // column names in order to make `loadDynamicPartitions` work.
-      attr.withName(name.toLowerCase(Locale.ROOT))
-    }.toImmutableArraySeq
+    partitionColumnNames
+      .takeRight(numDynamicPartitions)
+      .map { name =>
+        val attr = query
+          .resolve(name :: Nil, sessionState.analyzer.resolver)
+          .getOrElse {
+            throw QueryCompilationErrors.cannotResolveAttributeError(
+              name,
+              query.output.map(_.name).mkString(", "))
+          }
+          .asInstanceOf[Attribute]
+        // SPARK-28054: Hive metastore is not case preserving and keeps partition columns
+        // with lower cased names. Hive will validate the column names in the partition directories
+        // during `loadDynamicPartitions`. Spark needs to write partition directories with lower-cased
+        // column names in order to make `loadDynamicPartitions` work.
+        attr.withName(name.toLowerCase(Locale.ROOT))
+      }
+      .toImmutableArraySeq
   }
 
   def getOptionsWithHiveBucketWrite(bucketSpec: Option[BucketSpec]): Map[String, String] = {
@@ -129,13 +135,16 @@ trait V1WritesHiveUtils {
     if (isCompressed) {
       hadoopConf.set("mapreduce.output.fileoutputformat.compress", "true")
       fileSinkConf.setCompressed(true)
-      fileSinkConf.setCompressCodec(hadoopConf
-        .get("mapreduce.output.fileoutputformat.compress.codec"))
-      fileSinkConf.setCompressType(hadoopConf
-        .get("mapreduce.output.fileoutputformat.compress.type"))
+      fileSinkConf.setCompressCodec(
+        hadoopConf
+          .get("mapreduce.output.fileoutputformat.compress.codec"))
+      fileSinkConf.setCompressType(
+        hadoopConf
+          .get("mapreduce.output.fileoutputformat.compress.type"))
     } else {
       // Set compression by priority
-      HiveOptions.getHiveWriteCompression(fileSinkConf.getTableInfo, sparkSession.sessionState.conf)
+      HiveOptions
+        .getHiveWriteCompression(fileSinkConf.getTableInfo, sparkSession.sessionState.conf)
         .foreach { case (compression, codec) => hadoopConf.set(compression, codec) }
     }
   }

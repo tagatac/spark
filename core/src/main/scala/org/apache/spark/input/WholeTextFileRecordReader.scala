@@ -39,15 +39,16 @@ private[spark] trait Configurable extends HConfigurable {
 }
 
 /**
- * A [[org.apache.hadoop.mapreduce.RecordReader RecordReader]] for reading a single whole text file
- * out in a key-value pair, where the key is the file path and the value is the entire content of
- * the file.
+ * A [[org.apache.hadoop.mapreduce.RecordReader RecordReader]] for reading a single whole text
+ * file out in a key-value pair, where the key is the file path and the value is the entire
+ * content of the file.
  */
 private[spark] class WholeTextFileRecordReader(
     split: CombineFileSplit,
     context: TaskAttemptContext,
     index: Integer)
-  extends RecordReader[Text, Text] with Configurable {
+    extends RecordReader[Text, Text]
+    with Configurable {
 
   private[this] val path = split.getPath(index)
 
@@ -82,7 +83,6 @@ private[spark] class WholeTextFileRecordReader(
   }
 }
 
-
 /**
  * A [[org.apache.hadoop.mapreduce.lib.input.CombineFileRecordReader CombineFileRecordReader]]
  * that can pass Hadoop Configuration to [[org.apache.hadoop.conf.Configurable Configurable]]
@@ -92,11 +92,11 @@ private[spark] class ConfigurableCombineFileRecordReader[K, V](
     split: InputSplit,
     context: TaskAttemptContext,
     recordReaderClass: Class[_ <: RecordReader[K, V] with HConfigurable])
-  extends CombineFileRecordReader[K, V](
-    split.asInstanceOf[CombineFileSplit],
-    context,
-    recordReaderClass
-  ) with Configurable {
+    extends CombineFileRecordReader[K, V](
+      split.asInstanceOf[CombineFileSplit],
+      context,
+      recordReaderClass)
+    with Configurable {
 
   override def initNextRecordReader(): Boolean = {
     val r = super.initNextRecordReader()

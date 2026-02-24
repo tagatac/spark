@@ -31,17 +31,16 @@ import org.apache.spark.storage.{BlockId, BlockStatus}
 import org.apache.spark.util._
 
 /**
- * :: DeveloperApi ::
- * Metrics tracked during the execution of a task.
+ * :: DeveloperApi :: Metrics tracked during the execution of a task.
  *
  * This class is wrapper around a collection of internal accumulators that represent metrics
- * associated with a task. The local values of these accumulators are sent from the executor
- * to the driver when the task completes. These values are then merged into the corresponding
+ * associated with a task. The local values of these accumulators are sent from the executor to
+ * the driver when the task completes. These values are then merged into the corresponding
  * accumulator previously registered on the driver.
  *
- * The accumulator updates are also sent to the driver periodically (on executor heartbeat)
- * and when the task failed with an exception. The [[TaskMetrics]] object itself should never
- * be sent to the driver.
+ * The accumulator updates are also sent to the driver periodically (on executor heartbeat) and
+ * when the task failed with an exception. The [[TaskMetrics]] object itself should never be sent
+ * to the driver.
  */
 @DeveloperApi
 class TaskMetrics private[spark] () extends Serializable {
@@ -76,8 +75,8 @@ class TaskMetrics private[spark] () extends Serializable {
   def executorRunTime: Long = _executorRunTime.sum
 
   /**
-   * CPU Time the executor spends actually running the task
-   * (including fetching shuffle data) in nanoseconds.
+   * CPU Time the executor spends actually running the task (including fetching shuffle data) in
+   * nanoseconds.
    */
   def executorCpuTime: Long = _executorCpuTime.sum
 
@@ -107,11 +106,11 @@ class TaskMetrics private[spark] () extends Serializable {
   def diskBytesSpilled: Long = _diskBytesSpilled.sum
 
   /**
-   * Peak memory used by internal data structures created during shuffles, aggregations and
-   * joins. The value of this accumulator should be approximately the sum of the peak sizes
-   * across all such data structures created in this task. For SQL jobs, this only tracks all
-   * unsafe operators and ExternalSort.
-   * This is not equal to peakOnHeapExecutionMemory + peakOffHeapExecutionMemory
+   * Peak memory used by internal data structures created during shuffles, aggregations and joins.
+   * The value of this accumulator should be approximately the sum of the peak sizes across all
+   * such data structures created in this task. For SQL jobs, this only tracks all unsafe
+   * operators and ExternalSort. This is not equal to peakOnHeapExecutionMemory +
+   * peakOffHeapExecutionMemory
    */
   // TODO: SPARK-48789: the naming is confusing since this does not really reflect the whole
   //  execution memory. We'd better deprecate this once we have a replacement.
@@ -130,10 +129,9 @@ class TaskMetrics private[spark] () extends Serializable {
   /**
    * Storage statuses of any blocks that have been updated as a result of this task.
    *
-   * Tracking the _updatedBlockStatuses can use a lot of memory.
-   * It is not used anywhere inside of Spark so we would ideally remove it, but its exposed to
-   * the user in SparkListenerTaskEnd so the api is kept for compatibility.
-   * Tracking can be turned off to save memory via config
+   * Tracking the _updatedBlockStatuses can use a lot of memory. It is not used anywhere inside of
+   * Spark so we would ideally remove it, but its exposed to the user in SparkListenerTaskEnd so
+   * the api is kept for compatibility. Tracking can be turned off to save memory via config
    * TASK_METRICS_TRACK_UPDATED_BLOCK_STATUSES.
    */
   def updatedBlockStatuses: Seq[(BlockId, BlockStatus)] = {
@@ -180,14 +178,14 @@ class TaskMetrics private[spark] () extends Serializable {
   val inputMetrics: InputMetrics = new InputMetrics()
 
   /**
-   * Metrics related to writing data externally (e.g. to a distributed filesystem),
-   * defined only in tasks with output.
+   * Metrics related to writing data externally (e.g. to a distributed filesystem), defined only
+   * in tasks with output.
    */
   val outputMetrics: OutputMetrics = new OutputMetrics()
 
   /**
-   * Metrics related to shuffle read aggregated across all shuffle dependencies.
-   * This is defined only if there are shuffle dependencies in this task.
+   * Metrics related to shuffle read aggregated across all shuffle dependencies. This is defined
+   * only if there are shuffle dependencies in this task.
    */
   val shuffleReadMetrics: ShuffleReadMetrics = new ShuffleReadMetrics()
 
@@ -208,9 +206,8 @@ class TaskMetrics private[spark] () extends Serializable {
   /**
    * Create a [[TempShuffleReadMetrics]] for a particular shuffle dependency.
    *
-   * All usages are expected to be followed by a call to [[mergeShuffleReadMetrics]], which
-   * merges the temporary values synchronously. Otherwise, all temporary data collected will
-   * be lost.
+   * All usages are expected to be followed by a call to [[mergeShuffleReadMetrics]], which merges
+   * the temporary values synchronously. Otherwise, all temporary data collected will be lost.
    */
   private[spark] def createTempShuffleReadMetrics(): TempShuffleReadMetrics = synchronized {
     val readMetrics = new TempShuffleReadMetrics
@@ -219,8 +216,8 @@ class TaskMetrics private[spark] () extends Serializable {
   }
 
   /**
-   * Merge values across all temporary [[ShuffleReadMetrics]] into `_shuffleReadMetrics`.
-   * This is expected to be called on executor heartbeat and at the end of a task.
+   * Merge values across all temporary [[ShuffleReadMetrics]] into `_shuffleReadMetrics`. This is
+   * expected to be called on executor heartbeat and at the end of a task.
    */
   private[spark] def mergeShuffleReadMetrics(): Unit = synchronized {
     if (tempShuffleReadMetrics.nonEmpty) {
@@ -230,7 +227,6 @@ class TaskMetrics private[spark] () extends Serializable {
 
   // Only used for test
   private[spark] val testAccum = sys.props.get(IS_TESTING.key).map(_ => new LongAccumulator)
-
 
   import InternalAccumulator._
   @transient private[spark] lazy val nameToAccums = LinkedHashMap(
@@ -270,8 +266,7 @@ class TaskMetrics private[spark] () extends Serializable {
     input.BYTES_READ -> inputMetrics._bytesRead,
     input.RECORDS_READ -> inputMetrics._recordsRead,
     output.BYTES_WRITTEN -> outputMetrics._bytesWritten,
-    output.RECORDS_WRITTEN -> outputMetrics._recordsWritten
-  ) ++ testAccum.map(TEST_ACCUM -> _)
+    output.RECORDS_WRITTEN -> outputMetrics._recordsWritten) ++ testAccum.map(TEST_ACCUM -> _)
 
   @transient private[spark] lazy val internalAccums: Seq[AccumulatorV2[_, _]] =
     nameToAccums.values.toIndexedSeq
@@ -281,8 +276,8 @@ class TaskMetrics private[spark] () extends Serializable {
    * ========================== */
 
   private[spark] def register(sc: SparkContext): Unit = {
-    nameToAccums.foreach {
-      case (name, acc) => acc.register(sc, name = Some(name), countFailedValues = true)
+    nameToAccums.foreach { case (name, acc) =>
+      acc.register(sc, name = Some(name), countFailedValues = true)
     }
   }
 
@@ -294,15 +289,15 @@ class TaskMetrics private[spark] () extends Serializable {
   /**
    * Perform an `op` conversion on the `_externalAccums` within the read lock.
    *
-   * Note `op` is expected to not modify the `_externalAccums` and not being
-   * lazy evaluation for safe concern since `ArrayBuffer` is lazily evaluated.
-   * And we intentionally keeps `_externalAccums` as mutable instead of converting
-   * it to immutable for the performance concern.
+   * Note `op` is expected to not modify the `_externalAccums` and not being lazy evaluation for
+   * safe concern since `ArrayBuffer` is lazily evaluated. And we intentionally keeps
+   * `_externalAccums` as mutable instead of converting it to immutable for the performance
+   * concern.
    */
-  private[spark] def withExternalAccums[T](op: ArrayBuffer[AccumulatorV2[_, _]] => T)
-    : T = withReadLock {
-    op(_externalAccums)
-  }
+  private[spark] def withExternalAccums[T](op: ArrayBuffer[AccumulatorV2[_, _]] => T): T =
+    withReadLock {
+      op(_externalAccums)
+    }
 
   private def withReadLock[B](fn: => B): B = {
     readLock.lock()
@@ -337,7 +332,6 @@ class TaskMetrics private[spark] () extends Serializable {
   }
 }
 
-
 private[spark] object TaskMetrics extends Logging {
   import InternalAccumulator._
 
@@ -371,9 +365,9 @@ private[spark] object TaskMetrics extends Logging {
       if (name == UPDATED_BLOCK_STATUSES) {
         tm.setUpdatedBlockStatuses(value.asInstanceOf[java.util.List[(BlockId, BlockStatus)]])
       } else {
-        tm.nameToAccums.get(name).foreach(
-          _.asInstanceOf[LongAccumulator].setValue(value.asInstanceOf[Long])
-        )
+        tm.nameToAccums
+          .get(name)
+          .foreach(_.asInstanceOf[LongAccumulator].setValue(value.asInstanceOf[Long]))
       }
     }
     tm

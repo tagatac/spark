@@ -39,11 +39,11 @@ import org.apache.spark.util.ArrayImplicits._
  * files and creates a stream out of them. The way it works as follows.
  *
  * At each batch interval, the file system is queried for files in the given directory and
- * detected new files are selected for that batch. In this case "new" means files that
- * became visible to readers during that time period. Some extra care is needed to deal
- * with the fact that files may become visible after they are created. For this purpose, this
- * class remembers the information about the files selected in past batches for
- * a certain duration (say, "remember window") as shown in the figure below.
+ * detected new files are selected for that batch. In this case "new" means files that became
+ * visible to readers during that time period. Some extra care is needed to deal with the fact
+ * that files may become visible after they are created. For this purpose, this class remembers
+ * the information about the files selected in past batches for a certain duration (say, "remember
+ * window") as shown in the figure below.
  *
  * {{{
  *                      |<----- remember window ----->|
@@ -55,46 +55,48 @@ import org.apache.spark.util.ArrayImplicits._
  *                             remembered batches
  * }}}
  *
- * The trailing end of the window is the "ignore threshold" and all files whose mod times
- * are less than this threshold are assumed to have already been selected and are therefore
- * ignored. Files whose mod times are within the "remember window" are checked against files
- * that have already been selected. At a high level, this is how new files are identified in
- * each batch - files whose mod times are greater than the ignore threshold and
- * have not been considered within the remember window. See the documentation on the method
- * `isNewFile` for more details.
+ * The trailing end of the window is the "ignore threshold" and all files whose mod times are less
+ * than this threshold are assumed to have already been selected and are therefore ignored. Files
+ * whose mod times are within the "remember window" are checked against files that have already
+ * been selected. At a high level, this is how new files are identified in each batch - files
+ * whose mod times are greater than the ignore threshold and have not been considered within the
+ * remember window. See the documentation on the method `isNewFile` for more details.
  *
  * This makes some assumptions from the underlying file system that the system is monitoring.
  *
- *  - The clock of the file system is assumed to synchronized with the clock of the machine running
- *    the streaming app.
- *  - If a file is to be visible in the directory listings, it must be visible within a certain
- *    duration of the mod time of the file. This duration is the "remember window", which is set to
- *    1 minute (see `FileInputDStream.minRememberDuration`). Otherwise, the file will never be
- *    selected as the mod time will be less than the ignore threshold when it becomes visible.
- *  - Once a file is visible, the mod time cannot change. If it does due to appends, then the
- *    processing semantics are undefined.
+ *   - The clock of the file system is assumed to synchronized with the clock of the machine
+ *     running the streaming app.
+ *   - If a file is to be visible in the directory listings, it must be visible within a certain
+ *     duration of the mod time of the file. This duration is the "remember window", which is set
+ *     to 1 minute (see `FileInputDStream.minRememberDuration`). Otherwise, the file will never be
+ *     selected as the mod time will be less than the ignore threshold when it becomes visible.
+ *   - Once a file is visible, the mod time cannot change. If it does due to appends, then the
+ *     processing semantics are undefined.
  */
-private[streaming]
-class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
+private[streaming] class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
     _ssc: StreamingContext,
     directory: String,
     filter: Path => Boolean = FileInputDStream.defaultFilter,
     newFilesOnly: Boolean = true,
-    conf: Option[Configuration] = None)
-    (implicit km: ClassTag[K], vm: ClassTag[V], fm: ClassTag[F])
-  extends InputDStream[(K, V)](_ssc) {
+    conf: Option[Configuration] = None)(implicit
+    km: ClassTag[K],
+    vm: ClassTag[V],
+    fm: ClassTag[F])
+    extends InputDStream[(K, V)](_ssc) {
 
   private val serializableConfOpt = conf.map(new SerializableConfiguration(_))
 
   /**
    * Minimum duration of remembering the information of selected files. Defaults to 60 seconds.
    *
-   * Files with mod times older than this "window" of remembering will be ignored. So if new
-   * files are visible within this window, then the file will get selected in the next batch.
+   * Files with mod times older than this "window" of remembering will be ignored. So if new files
+   * are visible within this window, then the file will get selected in the next batch.
    */
   private val minRememberDurationS = {
-    Seconds(ssc.conf.getTimeAsSeconds("spark.streaming.fileStream.minRememberDuration",
-      ssc.conf.get("spark.streaming.minRememberDuration", "60s")))
+    Seconds(
+      ssc.conf.getTimeAsSeconds(
+        "spark.streaming.fileStream.minRememberDuration",
+        ssc.conf.get("spark.streaming.minRememberDuration", "60s")))
   }
 
   // This is a def so that it works during checkpoint recovery:
@@ -131,24 +133,25 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
   @transient private var _path: Path = null
   @transient private var _fs: FileSystem = null
 
-  override def start(): Unit = { }
+  override def start(): Unit = {}
 
-  override def stop(): Unit = { }
+  override def stop(): Unit = {}
 
   /**
-   * Finds the files that were modified since the last time this method was called and makes
-   * a union RDD out of them. Note that this maintains the list of files that were processed
-   * in the latest modification time in the previous call to this method. This is because the
+   * Finds the files that were modified since the last time this method was called and makes a
+   * union RDD out of them. Note that this maintains the list of files that were processed in the
+   * latest modification time in the previous call to this method. This is because the
    * modification time returned by the FileStatus API seems to return times only at the
    * granularity of seconds in HDFS. And new files may have the same modification time as the
-   * latest modification time in the previous call to this method yet was not reported in
-   * the previous call.
+   * latest modification time in the previous call to this method yet was not reported in the
+   * previous call.
    */
   override def compute(validTime: Time): Option[RDD[(K, V)]] = {
     // Find new files
     val newFiles = findNewFiles(validTime.milliseconds)
-    logInfo(log"New files at time ${MDC(LogKeys.BATCH_TIMESTAMP, validTime)}:\n" +
-      log"${MDC(LogKeys.FILE_NAME, newFiles.mkString("\n"))}")
+    logInfo(
+      log"New files at time ${MDC(LogKeys.BATCH_TIMESTAMP, validTime)}:\n" +
+        log"${MDC(LogKeys.FILE_NAME, newFiles.mkString("\n"))}")
     batchTimeToSelectedFiles.synchronized {
       batchTimeToSelectedFiles += ((validTime, newFiles))
     }
@@ -170,20 +173,21 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
       val oldFiles = batchTimeToSelectedFiles.filter(_._1 < (time - rememberDuration))
       batchTimeToSelectedFiles --= oldFiles.keys
       recentlySelectedFiles --= oldFiles.values.flatten
-      logInfo(log"Cleared ${MDC(LogKeys.COUNT, oldFiles.size)} old files that were older " +
-        log"than ${MDC(LogKeys.TIME, time - rememberDuration)}: " +
-        log"${MDC(LogKeys.FILES, oldFiles.keys.mkString(", "))}")
-      logDebug("Cleared files are:\n" +
-        oldFiles.map(p => (p._1, p._2.mkString(", "))).mkString("\n"))
+      logInfo(
+        log"Cleared ${MDC(LogKeys.COUNT, oldFiles.size)} old files that were older " +
+          log"than ${MDC(LogKeys.TIME, time - rememberDuration)}: " +
+          log"${MDC(LogKeys.FILES, oldFiles.keys.mkString(", "))}")
+      logDebug(
+        "Cleared files are:\n" +
+          oldFiles.map(p => (p._1, p._2.mkString(", "))).mkString("\n"))
     }
   }
 
   /**
-   * Find new files for the batch of `currentTime`. This is done by first calculating the
-   * ignore threshold for file mod times, and then getting a list of files filtered based on
-   * the current batch time and the ignore threshold. The ignore threshold is the max of
-   * initial ignore threshold and the trailing end of the remember window (that is, which ever
-   * is later in time).
+   * Find new files for the batch of `currentTime`. This is done by first calculating the ignore
+   * threshold for file mod times, and then getting a list of files filtered based on the current
+   * batch time and the ignore threshold. The ignore threshold is the max of initial ignore
+   * threshold and the trailing end of the remember window (that is, which ever is later in time).
    */
   private def findNewFiles(currentTime: Long): Array[String] = {
     try {
@@ -191,13 +195,15 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
 
       // Calculate ignore threshold
       val modTimeIgnoreThreshold = math.max(
-        initialModTimeIgnoreThreshold,   // initial threshold based on newFilesOnly setting
-        currentTime - durationToRemember.milliseconds  // trailing end of the remember window
+        initialModTimeIgnoreThreshold, // initial threshold based on newFilesOnly setting
+        currentTime - durationToRemember.milliseconds // trailing end of the remember window
       )
-      logDebug(s"Getting new files for time $currentTime, " +
-        s"ignoring files older than $modTimeIgnoreThreshold")
+      logDebug(
+        s"Getting new files for time $currentTime, " +
+          s"ignoring files older than $modTimeIgnoreThreshold")
 
-      val directories = Option(fs.globStatus(directoryPath)).getOrElse(Array.empty[FileStatus])
+      val directories = Option(fs.globStatus(directoryPath))
+        .getOrElse(Array.empty[FileStatus])
         .filter(_.isDirectory)
         .map(_.getPath)
       val newFiles = directories.flatMap(dir =>
@@ -207,10 +213,10 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
       val timeTaken = clock.getTimeMillis() - lastNewFileFindingTime
       logDebug(s"Finding new files took $timeTaken ms")
       if (timeTaken > slideDuration.milliseconds) {
-        logWarning(log"Time taken to find new files ${MDC(ELAPSED_TIME, timeTaken)} exceeds the " +
-          log"batch size. Consider increasing the batch size or reducing the number of files in " +
-          log"the monitored directories."
-        )
+        logWarning(
+          log"Time taken to find new files ${MDC(ELAPSED_TIME, timeTaken)} exceeds the " +
+            log"batch size. Consider increasing the batch size or reducing the number of files in " +
+            log"the monitored directories.")
       }
       newFiles
     } catch {
@@ -227,29 +233,33 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
   /**
    * Identify whether the given `path` is a new file for the batch of `currentTime`. For it to be
    * accepted, it has to pass the following criteria.
-   * - It must pass the user-provided file filter.
-   * - It must be newer than the ignore threshold. It is assumed that files older than the ignore
-   *   threshold have already been considered or are existing files before start
-   *   (when newFilesOnly = true).
-   * - It must not be present in the recently selected files that this class remembers.
-   * - It must not be newer than the time of the batch (i.e. `currentTime` for which this
-   *   file is being tested. This can occur if the driver was recovered, and the missing batches
-   *   (during downtime) are being generated. In that case, a batch of time T may be generated
-   *   at time T+x. Say x = 5. If that batch T contains file of mod time T+5, then bad things can
-   *   happen. Let's say the selected files are remembered for 60 seconds.  At time t+61,
-   *   the batch of time t is forgotten, and the ignore threshold is still T+1.
-   *   The files with mod time T+5 are not remembered and cannot be ignored (since, t+5 > t+1).
-   *   Hence they can get selected as new files again. To prevent this, files whose mod time is more
-   *   than current batch time are not considered.
-   * @param fileStatus file status
-   * @param currentTime time of the batch
-   * @param modTimeIgnoreThreshold the ignore threshold
-   * @return true if the file has been modified within the batch window
+   *   - It must pass the user-provided file filter.
+   *   - It must be newer than the ignore threshold. It is assumed that files older than the
+   *     ignore threshold have already been considered or are existing files before start (when
+   *     newFilesOnly = true).
+   *   - It must not be present in the recently selected files that this class remembers.
+   *   - It must not be newer than the time of the batch (i.e. `currentTime` for which this file
+   *     is being tested. This can occur if the driver was recovered, and the missing batches
+   *     (during downtime) are being generated. In that case, a batch of time T may be generated
+   *     at time T+x. Say x = 5. If that batch T contains file of mod time T+5, then bad things
+   *     can happen. Let's say the selected files are remembered for 60 seconds. At time t+61, the
+   *     batch of time t is forgotten, and the ignore threshold is still T+1. The files with mod
+   *     time T+5 are not remembered and cannot be ignored (since, t+5 > t+1). Hence they can get
+   *     selected as new files again. To prevent this, files whose mod time is more than current
+   *     batch time are not considered.
+   * @param fileStatus
+   *   file status
+   * @param currentTime
+   *   time of the batch
+   * @param modTimeIgnoreThreshold
+   *   the ignore threshold
+   * @return
+   *   true if the file has been modified within the batch window
    */
   private def isNewFile(
-     fileStatus: FileStatus,
-     currentTime: Long,
-     modTimeIgnoreThreshold: Long): Boolean = {
+      fileStatus: FileStatus,
+      currentTime: Long,
+      modTimeIgnoreThreshold: Long): Boolean = {
     val path = fileStatus.getPath
     val pathStr = path.toString
     // Reject file if it does not satisfy filter
@@ -282,18 +292,20 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
   private def filesToRDD(files: Seq[String]): RDD[(K, V)] = {
     val fileRDDs = files.map { file =>
       val rdd = serializableConfOpt.map(_.value) match {
-        case Some(config) => context.sparkContext.newAPIHadoopFile(
-          file,
-          fm.runtimeClass.asInstanceOf[Class[F]],
-          km.runtimeClass.asInstanceOf[Class[K]],
-          vm.runtimeClass.asInstanceOf[Class[V]],
-          config)
+        case Some(config) =>
+          context.sparkContext.newAPIHadoopFile(
+            file,
+            fm.runtimeClass.asInstanceOf[Class[F]],
+            km.runtimeClass.asInstanceOf[Class[K]],
+            vm.runtimeClass.asInstanceOf[Class[V]],
+            config)
         case None => context.sparkContext.newAPIHadoopFile[K, V, F](file)
       }
       if (rdd.partitions.isEmpty) {
-        logError(log"File ${MDC(PATH, file)} has no data in it. Spark Streaming can only ingest " +
-          log"""files that have been "moved" to the directory assigned to the file stream. """ +
-          log"Refer to the streaming programming guide for more details.")
+        logError(
+          log"File ${MDC(PATH, file)} has no data in it. Spark Streaming can only ingest " +
+            log"""files that have been "moved" to the directory assigned to the file stream. """ +
+            log"Refer to the streaming programming guide for more details.")
       }
       rdd
     }
@@ -324,11 +336,10 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
   }
 
   /**
-   * A custom version of the DStreamCheckpointData that stores names of
-   * Hadoop files as checkpoint data.
+   * A custom version of the DStreamCheckpointData that stores names of Hadoop files as checkpoint
+   * data.
    */
-  private[streaming]
-  class FileInputDStreamCheckpointData extends DStreamCheckpointData(this) {
+  private[streaming] class FileInputDStreamCheckpointData extends DStreamCheckpointData(this) {
 
     private def hadoopFiles = data.asInstanceOf[mutable.HashMap[Time, Array[String]]]
 
@@ -337,17 +348,17 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
       batchTimeToSelectedFiles.synchronized { hadoopFiles ++= batchTimeToSelectedFiles }
     }
 
-    override def cleanup(time: Time): Unit = { }
+    override def cleanup(time: Time): Unit = {}
 
     override def restore(): Unit = {
-      hadoopFiles.toSeq.sortBy(_._1)(Time.ordering).foreach {
-        case (t, f) =>
-          // Restore the metadata in both files and generatedRDDs
-          logInfo(log"Restoring files for time ${MDC(LogKeys.TIME, t)} - " +
+      hadoopFiles.toSeq.sortBy(_._1)(Time.ordering).foreach { case (t, f) =>
+        // Restore the metadata in both files and generatedRDDs
+        logInfo(
+          log"Restoring files for time ${MDC(LogKeys.TIME, t)} - " +
             log"${MDC(LogKeys.FILES, f.mkString("[", ", ", "]"))}")
-          batchTimeToSelectedFiles.synchronized { batchTimeToSelectedFiles += ((t, f)) }
-          recentlySelectedFiles ++= f
-          generatedRDDs += ((t, filesToRDD(f.toImmutableArraySeq)))
+        batchTimeToSelectedFiles.synchronized { batchTimeToSelectedFiles += ((t, f)) }
+        recentlySelectedFiles ++= f
+        generatedRDDs += ((t, filesToRDD(f.toImmutableArraySeq)))
       }
     }
 
@@ -358,17 +369,17 @@ class FileInputDStream[K, V, F <: NewInputFormat[K, V]](
   }
 }
 
-private[streaming]
-object FileInputDStream {
+private[streaming] object FileInputDStream {
 
   def defaultFilter(path: Path): Boolean = !path.getName().startsWith(".")
 
   /**
-   * Calculate the number of last batches to remember, such that all the files selected in
-   * at least last minRememberDurationS duration can be remembered.
+   * Calculate the number of last batches to remember, such that all the files selected in at
+   * least last minRememberDurationS duration can be remembered.
    */
-  def calculateNumBatchesToRemember(batchDuration: Duration,
-                                    minRememberDurationS: Duration): Int = {
+  def calculateNumBatchesToRemember(
+      batchDuration: Duration,
+      minRememberDurationS: Duration): Int = {
     math.ceil(minRememberDurationS.milliseconds.toDouble / batchDuration.milliseconds).toInt
   }
 }

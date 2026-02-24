@@ -20,13 +20,10 @@ package org.apache.spark
 import org.scalatest.flatspec.AnyFlatSpec
 
 /**
- * This test is just for demonstration purpose.
- * Real test suites in Spark codebase should use SparkFunSuite.
+ * This test is just for demonstration purpose. Real test suites in Spark codebase should use
+ * SparkFunSuite.
  */
-class FlatSpecSparkTestSuite
-  extends AnyFlatSpec
-    with SparkTestSuite
-    with LocalSparkContext {
+class FlatSpecSparkTestSuite extends AnyFlatSpec with SparkTestSuite with LocalSparkContext {
 
   override def beforeAll(): Unit = {
     super.beforeAll()

@@ -35,9 +35,7 @@ import org.apache.spark.network.shuffle.{BlockFetchingListener, DownloadFileMana
 import org.apache.spark.rpc.{RpcAddress, RpcEndpointRef, RpcTimeout}
 import org.apache.spark.serializer.{JavaSerializer, SerializerManager}
 
-class NettyBlockTransferServiceSuite
-  extends SparkFunSuite
-  with Matchers {
+class NettyBlockTransferServiceSuite extends SparkFunSuite with Matchers {
 
   private var service0: NettyBlockTransferService = _
   private var service1: NettyBlockTransferService = _
@@ -97,14 +95,14 @@ class NettyBlockTransferServiceSuite
       override def send(message: Any): Unit = {}
       // This rpcEndPointRef always return false for unit test to touch ExecutorDeadException.
       override def ask[T: ClassTag](message: Any, timeout: RpcTimeout): Future[T] = {
-        Future{false.asInstanceOf[T]}
+        Future { false.asInstanceOf[T] }
       }
     }
 
     val clientFactory = mock(classOf[TransportClientFactory])
     val client = mock(classOf[TransportClient])
     // This is used to touch an IOException during fetching block.
-    when(client.sendRpc(any(), any())).thenAnswer(_ => {throw new IOException()})
+    when(client.sendRpc(any(), any())).thenAnswer(_ => { throw new IOException() })
     var createClientCount = 0
     when(clientFactory.createClient(any(), any(), any())).thenAnswer(_ => {
       createClientCount += 1
@@ -114,16 +112,21 @@ class NettyBlockTransferServiceSuite
     val listener = mock(classOf[BlockFetchingListener])
     var hitExecutorDeadException = false
     when(listener.onBlockTransferFailure(any(), any(classOf[ExecutorDeadException])))
-      .thenAnswer(_ => {hitExecutorDeadException = true})
+      .thenAnswer(_ => { hitExecutorDeadException = true })
 
     service0 = createService(port, driverEndpointRef)
-    val clientFactoryField = service0.getClass
-      .getSuperclass.getSuperclass.getDeclaredField("clientFactory")
+    val clientFactoryField =
+      service0.getClass.getSuperclass.getSuperclass.getDeclaredField("clientFactory")
     clientFactoryField.setAccessible(true)
     clientFactoryField.set(service0, clientFactory)
 
-    service0.fetchBlocks("localhost", port, "exec1",
-      Array("block1"), listener, mock(classOf[DownloadFileManager]))
+    service0.fetchBlocks(
+      "localhost",
+      port,
+      "exec1",
+      Array("block1"),
+      listener,
+      mock(classOf[DownloadFileManager]))
     assert(createClientCount === 1)
     assert(hitExecutorDeadException)
   }
@@ -145,7 +148,14 @@ class NettyBlockTransferServiceSuite
     val securityManager = new SecurityManager(conf)
     val blockDataManager = mock(classOf[BlockDataManager])
     val service = new NettyBlockTransferService(
-      conf, securityManager, serializerManager, "localhost", "localhost", port, 1, rpcEndpointRef)
+      conf,
+      securityManager,
+      serializerManager,
+      "localhost",
+      "localhost",
+      port,
+      1,
+      rpcEndpointRef)
     service.init(blockDataManager)
     service
   }

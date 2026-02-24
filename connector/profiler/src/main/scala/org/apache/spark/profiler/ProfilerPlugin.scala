@@ -79,8 +79,9 @@ class ProfilerExecutorPlugin extends ExecutorPlugin with Logging {
     if (executorProfilerEnabled) {
       executorProfilerFraction = sparkConf.get(PROFILER_EXECUTOR_FRACTION)
       if (rand.nextInt(100) * 0.01 < executorProfilerFraction) {
-        logInfo(log"Executor id ${MDC(EXECUTOR_ID, pluginCtx.executorID())} " +
-          log"selected for profiling")
+        logInfo(
+          log"Executor id ${MDC(EXECUTOR_ID, pluginCtx.executorID())} " +
+            log"selected for profiling")
         profiler = new SparkAsyncProfiler(sparkConf, pluginCtx.executorID())
         profiler.start()
       }

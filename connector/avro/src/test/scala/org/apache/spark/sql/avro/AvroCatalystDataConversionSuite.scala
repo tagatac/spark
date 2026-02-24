@@ -37,9 +37,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 import org.apache.spark.util.ArrayImplicits._
 
-class AvroCatalystDataConversionSuite extends SparkFunSuite
-  with SharedSparkSession
-  with ExpressionEvalHelper {
+class AvroCatalystDataConversionSuite
+    extends SparkFunSuite
+    with SharedSparkSession
+    with ExpressionEvalHelper {
 
   private def roundTripTest(data: Literal): Unit = {
     val avroType = SchemaConverters.toAvroType(data.dataType, data.nullable)
@@ -66,8 +67,7 @@ class AvroCatalystDataConversionSuite extends SparkFunSuite
       }
     }
 
-    checkEvaluation(AvroDataToCatalyst(binary, schema, Map("mode" -> "PERMISSIVE")),
-      expected)
+    checkEvaluation(AvroDataToCatalyst(binary, schema, Map("mode" -> "PERMISSIVE")), expected)
   }
 
   private val testingTypes = Seq(
@@ -78,9 +78,9 @@ class AvroCatalystDataConversionSuite extends SparkFunSuite
     LongType,
     FloatType,
     DoubleType,
-    DecimalType(8, 0),   // 32 bits decimal without fraction
-    DecimalType(8, 4),   // 32 bits decimal
-    DecimalType(16, 0),  // 64 bits decimal without fraction
+    DecimalType(8, 0), // 32 bits decimal without fraction
+    DecimalType(8, 4), // 32 bits decimal
+    DecimalType(16, 0), // 64 bits decimal without fraction
     DecimalType(16, 11), // 64 bits decimal
     DecimalType(38, 0),
     DecimalType(38, 38),
@@ -142,13 +142,12 @@ class AvroCatalystDataConversionSuite extends SparkFunSuite
     val seed = scala.util.Random.nextLong()
     val rand = new scala.util.Random(seed)
     val schema = StructType(
-      StructField("a",
+      StructField(
+        "a",
         ArrayType(
           RandomDataGenerator.randomNestedSchema(rand, 10, testingTypes),
           containsNull = false),
-        nullable = false
-      ) :: Nil
-    )
+        nullable = false) :: Nil)
 
     withClue(s"Schema: $schema\nseed: $seed") {
       val data = RandomDataGenerator.randomRow(rand, schema)
@@ -213,23 +212,25 @@ class AvroCatalystDataConversionSuite extends SparkFunSuite
        """.stripMargin
 
     // avro reader reads the first 4 bytes of a double as a float, the result is totally undefined.
-    checkResult(data, avroTypeJson, 5.848603E35f)
+    checkResult(data, avroTypeJson, 5.848603e35f)
   }
 
   test("Handle unsupported input of record type") {
-    val actualSchema = StructType(Seq(
-      StructField("col_0", StringType, false),
-      StructField("col_1", ShortType, false),
-      StructField("col_2", DecimalType(8, 4), false),
-      StructField("col_3", BooleanType, true),
-      StructField("col_4", DecimalType(38, 38), false)))
+    val actualSchema = StructType(
+      Seq(
+        StructField("col_0", StringType, false),
+        StructField("col_1", ShortType, false),
+        StructField("col_2", DecimalType(8, 4), false),
+        StructField("col_3", BooleanType, true),
+        StructField("col_4", DecimalType(38, 38), false)))
 
-    val expectedSchema = StructType(Seq(
-      StructField("col_0", BinaryType, false),
-      StructField("col_1", DoubleType, false),
-      StructField("col_2", DecimalType(18, 4), false),
-      StructField("col_3", StringType, true),
-      StructField("col_4", DecimalType(38, 38), false)))
+    val expectedSchema = StructType(
+      Seq(
+        StructField("col_0", BinaryType, false),
+        StructField("col_1", DoubleType, false),
+        StructField("col_2", DecimalType(18, 4), false),
+        StructField("col_3", StringType, true),
+        StructField("col_4", DecimalType(38, 38), false)))
 
     val seed = scala.util.Random.nextLong()
     withClue(s"create random record with seed $seed") {
@@ -252,20 +253,14 @@ class AvroCatalystDataConversionSuite extends SparkFunSuite
       """.stripMargin
 
     val message = intercept[SparkException] {
-      AvroDataToCatalyst(
-        CatalystDataToAvro(
-          data,
-          None),
-        jsonFormatSchema,
-        options = Map.empty).eval()
+      AvroDataToCatalyst(CatalystDataToAvro(data, None), jsonFormatSchema, options = Map.empty)
+        .eval()
     }.getMessage
     assert(message.contains("Malformed records are detected in record parsing."))
 
     checkEvaluation(
       AvroDataToCatalyst(
-        CatalystDataToAvro(
-          data,
-          Some(jsonFormatSchema)),
+        CatalystDataToAvro(data, Some(jsonFormatSchema)),
         jsonFormatSchema,
         options = Map.empty),
       data.eval())

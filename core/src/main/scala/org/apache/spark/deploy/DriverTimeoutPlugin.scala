@@ -49,9 +49,10 @@ class DriverTimeoutDriverPlugin extends DriverPlugin with Logging {
       logWarning("Disabled with the timeout value 0.")
     } else {
       val task: Runnable = () => {
-        logWarning(log"Terminate Driver JVM because it runs after " +
-          log"${MDC(TIME_UNITS, timeout)} minute" +
-          (if (timeout == 1) log"" else log"s"))
+        logWarning(
+          log"Terminate Driver JVM because it runs after " +
+            log"${MDC(TIME_UNITS, timeout)} minute" +
+            (if (timeout == 1) log"" else log"s"))
         // We cannot use 'SparkContext.stop' because SparkContext might be in abnormal situation.
         System.exit(SparkExitCode.DRIVER_TIMEOUT)
       }

@@ -32,17 +32,14 @@ import org.apache.spark.util.ManualClock
 class DriverServiceFeatureStepSuite extends SparkFunSuite {
 
   private val LONG_RESOURCE_NAME_PREFIX =
-    "a".repeat(DriverServiceFeatureStep.MAX_SERVICE_NAME_LENGTH -
-      DriverServiceFeatureStep.DRIVER_SVC_POSTFIX.length + 1)
-  private val DRIVER_LABELS = Map(
-    "label1key" -> "label1value",
-    "label2key" -> "label2value")
-  private val DRIVER_SERVICE_ANNOTATIONS = Map(
-    "annotation1key" -> "annotation1value",
-    "annotation2key" -> "annotation2value")
-  private val DRIVER_SERVICE_LABELS = Map(
-    "svclabel1key" -> "svclabel1value",
-    "svclabel2key" -> "svclabel2value")
+    "a".repeat(
+      DriverServiceFeatureStep.MAX_SERVICE_NAME_LENGTH -
+        DriverServiceFeatureStep.DRIVER_SVC_POSTFIX.length + 1)
+  private val DRIVER_LABELS = Map("label1key" -> "label1value", "label2key" -> "label2value")
+  private val DRIVER_SERVICE_ANNOTATIONS =
+    Map("annotation1key" -> "annotation1value", "annotation2key" -> "annotation2value")
+  private val DRIVER_SERVICE_LABELS =
+    Map("svclabel1key" -> "svclabel1value", "svclabel2key" -> "svclabel2value")
 
   test("Headless service has a port for the driver RPC, the block manager and driver ui.") {
     val sparkConf = new SparkConf(false)
@@ -78,11 +75,10 @@ class DriverServiceFeatureStepSuite extends SparkFunSuite {
       .set(DRIVER_PORT, 9000)
       .set(DRIVER_BLOCK_MANAGER_PORT, 8080)
       .set(KUBERNETES_NAMESPACE, "my-namespace")
-    val kconf = KubernetesTestConf.createDriverConf(
-      sparkConf = sparkConf,
-      labels = DRIVER_LABELS)
+    val kconf = KubernetesTestConf.createDriverConf(sparkConf = sparkConf, labels = DRIVER_LABELS)
     val configurationStep = new DriverServiceFeatureStep(kconf)
-    val expectedServiceName = kconf.resourceNamePrefix + DriverServiceFeatureStep.DRIVER_SVC_POSTFIX
+    val expectedServiceName =
+      kconf.resourceNamePrefix + DriverServiceFeatureStep.DRIVER_SVC_POSTFIX
     val expectedHostName = s"$expectedServiceName.my-namespace.svc"
     val additionalProps = configurationStep.getAdditionalPodSystemProperties()
     assert(additionalProps(DRIVER_HOST_ADDRESS.key) === expectedHostName)
@@ -152,10 +148,11 @@ class DriverServiceFeatureStepSuite extends SparkFunSuite {
     val e1 = intercept[IllegalArgumentException] {
       new DriverServiceFeatureStep(KubernetesTestConf.createDriverConf(sparkConf = sparkConf))
     }
-    assert(e1.getMessage ===
-      s"requirement failed: ${DriverServiceFeatureStep.DRIVER_BIND_ADDRESS_KEY} is" +
-      " not supported in Kubernetes mode, as the driver's bind address is managed" +
-      " and set to the driver pod's IP address.")
+    assert(
+      e1.getMessage ===
+        s"requirement failed: ${DriverServiceFeatureStep.DRIVER_BIND_ADDRESS_KEY} is" +
+        " not supported in Kubernetes mode, as the driver's bind address is managed" +
+        " and set to the driver pod's IP address.")
 
     sparkConf.remove(DRIVER_BIND_ADDRESS)
     sparkConf.set(DRIVER_HOST_ADDRESS, "host")
@@ -163,10 +160,11 @@ class DriverServiceFeatureStepSuite extends SparkFunSuite {
     val e2 = intercept[IllegalArgumentException] {
       new DriverServiceFeatureStep(KubernetesTestConf.createDriverConf(sparkConf = sparkConf))
     }
-    assert(e2.getMessage ===
-      s"requirement failed: ${DriverServiceFeatureStep.DRIVER_HOST_KEY} is" +
-      " not supported in Kubernetes mode, as the driver's hostname will be managed via" +
-      " a Kubernetes service.")
+    assert(
+      e2.getMessage ===
+        s"requirement failed: ${DriverServiceFeatureStep.DRIVER_HOST_KEY} is" +
+        " not supported in Kubernetes mode, as the driver's hostname will be managed via" +
+        " a Kubernetes service.")
   }
 
   test("Support ipFamilies spec with default SingleStack and IPv4") {
@@ -208,9 +206,8 @@ class DriverServiceFeatureStepSuite extends SparkFunSuite {
 
   test("Support DualStack") {
     Seq("PreferDualStack", "RequireDualStack").foreach { stack =>
-      val configAndAnswers = Seq(
-        ("IPv4,IPv6", Seq("IPv4", "IPv6")),
-        ("IPv6,IPv4", Seq("IPv6", "IPv4")))
+      val configAndAnswers =
+        Seq(("IPv4,IPv6", Seq("IPv4", "IPv6")), ("IPv6,IPv4", Seq("IPv6", "IPv4")))
       configAndAnswers.foreach { case (config, answer) =>
         val sparkConf = new SparkConf(false)
           .set(KUBERNETES_DRIVER_SERVICE_IP_FAMILY_POLICY, stack)
@@ -241,8 +238,9 @@ class DriverServiceFeatureStepSuite extends SparkFunSuite {
       appId: String,
       service: Service): Unit = {
     assert(service.getMetadata.getName === expectedServiceName)
-    assert(service.getMetadata.getLabels.containsKey(SPARK_APP_ID_LABEL) &&
-      service.getMetadata.getLabels.get(SPARK_APP_ID_LABEL).equals(appId))
+    assert(
+      service.getMetadata.getLabels.containsKey(SPARK_APP_ID_LABEL) &&
+        service.getMetadata.getLabels.get(SPARK_APP_ID_LABEL).equals(appId))
     assert(service.getSpec.getClusterIP === "None")
     DRIVER_LABELS.foreach { case (k, v) =>
       assert(service.getSpec.getSelector.get(k) === v)

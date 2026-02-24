@@ -39,36 +39,41 @@ private[ui] class RDDPage(parent: SparkUITab, store: AppStatusStore) extends Web
     val blockPage = Option(request.getParameter("block.page")).map(_.toInt).getOrElse(1)
 
     val rddId = parameterId.toInt
-    val rddStorageInfo = try {
-      store.rdd(rddId)
-    } catch {
-      case _: NoSuchElementException =>
-        // Rather than crashing, render an "RDD Not Found" page
-        return UIUtils.headerSparkPage(request, "RDD Not Found", Seq.empty[Node], parent)
-    }
+    val rddStorageInfo =
+      try {
+        store.rdd(rddId)
+      } catch {
+        case _: NoSuchElementException =>
+          // Rather than crashing, render an "RDD Not Found" page
+          return UIUtils.headerSparkPage(request, "RDD Not Found", Seq.empty[Node], parent)
+      }
 
     // Worker table
-    val workerTable = UIUtils.listingTable(workerHeader, workerRow,
-      rddStorageInfo.dataDistribution.get, id = Some("rdd-storage-by-worker-table"))
+    val workerTable = UIUtils.listingTable(
+      workerHeader,
+      workerRow,
+      rddStorageInfo.dataDistribution.get,
+      id = Some("rdd-storage-by-worker-table"))
 
-    val blockTableHTML = try {
-      val _blockTable = new BlockPagedTable(
-        request,
-        "block",
-        UIUtils.prependBaseUri(request, parent.basePath) + s"/storage/rdd/?id=${rddId}",
-        rddStorageInfo.partitions.get,
-        store.executorList(true))
-      _blockTable.table(blockPage)
-    } catch {
-      case e @ (_ : IllegalArgumentException | _ : IndexOutOfBoundsException) =>
-        <div class="alert alert-error">{e.getMessage}</div>
-    }
+    val blockTableHTML =
+      try {
+        val _blockTable = new BlockPagedTable(
+          request,
+          "block",
+          UIUtils.prependBaseUri(request, parent.basePath) + s"/storage/rdd/?id=${rddId}",
+          rddStorageInfo.partitions.get,
+          store.executorList(true))
+        _blockTable.table(blockPage)
+      } catch {
+        case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
+          <div class="alert alert-error">{e.getMessage}</div>
+      }
 
     val jsForScrollingDownToBlockTable =
       <script nonce={CspNonce.get}>
         {
-          Unparsed {
-            """
+        Unparsed {
+          """
               |$(function() {
               |  if (/.*&block.sort=.*$/.test(location.search)) {
               |    var topOffset = $("#blocks-section").offset().top;
@@ -76,8 +81,8 @@ private[ui] class RDDPage(parent: SparkUITab, store: AppStatusStore) extends Web
               |  }
               |});
             """.stripMargin
-          }
         }
+      }
       </script>
 
     val content =
@@ -126,15 +131,15 @@ private[ui] class RDDPage(parent: SparkUITab, store: AppStatusStore) extends Web
       </div>;
 
     UIUtils.headerSparkPage(
-      request, "RDD Storage Info for " + rddStorageInfo.name, content, parent)
+      request,
+      "RDD Storage Info for " + rddStorageInfo.name,
+      content,
+      parent)
   }
 
   /** Header fields for the worker table */
-  private def workerHeader = Seq(
-    "Host",
-    "On Heap Memory Usage",
-    "Off Heap Memory Usage",
-    "Disk Usage")
+  private def workerHeader =
+    Seq("Host", "On Heap Memory Usage", "Off Heap Memory Usage", "Disk Usage")
 
   /** Render an HTML row representing a worker */
   private def workerRow(worker: RDDDataDistribution): Seq[Node] = {
@@ -165,7 +170,8 @@ private[ui] class BlockDataSource(
     pageSize: Int,
     sortColumn: String,
     desc: Boolean,
-    executorIdToAddress: Map[String, String]) extends PagedDataSource[BlockTableRowData](pageSize) {
+    executorIdToAddress: Map[String, String])
+    extends PagedDataSource[BlockTableRowData](pageSize) {
 
   private val data = rddPartitions.map(blockRow).sorted(ordering(sortColumn, desc))
 
@@ -212,7 +218,8 @@ private[ui] class BlockPagedTable(
     rddTag: String,
     basePath: String,
     rddPartitions: collection.Seq[RDDPartitionInfo],
-    executorSummaries: Seq[ExecutorSummary]) extends PagedTable[BlockTableRowData] {
+    executorSummaries: Seq[ExecutorSummary])
+    extends PagedTable[BlockTableRowData] {
 
   private val (sortColumn, desc, pageSize) = getTableParameters(request, rddTag, "Block Name")
 
@@ -247,12 +254,9 @@ private[ui] class BlockPagedTable(
   }
 
   override def headers: Seq[Node] = {
-    val blockHeaders: Seq[(String, Boolean, Option[String])] = Seq(
-      "Block Name",
-      "Storage Level",
-      "Size in Memory",
-      "Size on Disk",
-      "Executors").map(x => (x, true, None))
+    val blockHeaders: Seq[(String, Boolean, Option[String])] =
+      Seq("Block Name", "Storage Level", "Size in Memory", "Size on Disk", "Executors").map(x =>
+        (x, true, None))
 
     isSortColumnValid(blockHeaders, sortColumn)
 

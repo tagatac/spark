@@ -39,8 +39,7 @@ private[mllib] object LocalKMeans extends Logging {
       points: Array[VectorWithNorm],
       weights: Array[Double],
       k: Int,
-      maxIterations: Int
-  ): Array[VectorWithNorm] = {
+      maxIterations: Int): Array[VectorWithNorm] = {
     val rand = new Random(seed)
     val dimensions = points(0).vector.size
     val centers = new Array[VectorWithNorm](k)
@@ -59,8 +58,9 @@ private[mllib] object LocalKMeans extends Logging {
         j += 1
       }
       if (j == 0) {
-        logWarning(log"kMeansPlusPlus initialization ran out of distinct points for centers." +
-          log" Using duplicate point for center k = ${MDC(POINT_OF_CENTER, i)}.")
+        logWarning(
+          log"kMeansPlusPlus initialization ran out of distinct points for centers." +
+            log" Using duplicate point for center k = ${MDC(POINT_OF_CENTER, i)}.")
         centers(i) = points(0).toDense
       } else {
         centers(i) = points(j - 1).toDense
@@ -113,8 +113,9 @@ private[mllib] object LocalKMeans extends Logging {
     }
 
     if (iteration == maxIterations) {
-      logInfo(log"Local KMeans++ reached the max number of " +
-        log"iterations: ${MDC(NUM_ITERATIONS, maxIterations)}.")
+      logInfo(
+        log"Local KMeans++ reached the max number of " +
+          log"iterations: ${MDC(NUM_ITERATIONS, maxIterations)}.")
     } else {
       logInfo(log"Local KMeans++ converged in ${MDC(NUM_ITERATIONS, iteration)} iterations.")
     }

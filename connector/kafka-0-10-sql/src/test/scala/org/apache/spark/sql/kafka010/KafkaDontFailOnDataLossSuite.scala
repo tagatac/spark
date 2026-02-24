@@ -38,11 +38,11 @@ import org.apache.spark.util.ResetSystemProperties
  * a topic and ages out records very quickly. This is a helper trait to test
  * "failonDataLoss=false" case with missing offsets.
  *
- * Note: there is a hard-code 30 seconds delay (kafka.log.LogManager.InitialTaskDelayMs) to clean up
- * records. Hence each class extending this trait needs to wait at least 30 seconds (or even longer
- * when running on a slow Jenkins machine) before records start to be removed. To make sure a test
- * does see missing offsets, you can check the earliest offset in `eventually` and make sure it's
- * not 0 rather than sleeping a hard-code duration.
+ * Note: there is a hard-code 30 seconds delay (kafka.log.LogManager.InitialTaskDelayMs) to clean
+ * up records. Hence each class extending this trait needs to wait at least 30 seconds (or even
+ * longer when running on a slow Jenkins machine) before records start to be removed. To make sure
+ * a test does see missing offsets, you can check the earliest offset in `eventually` and make
+ * sure it's not 0 rather than sleeping a hard-code duration.
  */
 trait KafkaMissingOffsetsTest extends SharedSparkSession with ResetSystemProperties {
 
@@ -92,11 +92,13 @@ class KafkaDontFailOnDataLossSuite extends StreamTest with KafkaMissingOffsetsTe
   private def newTopic(): String = s"failOnDataLoss-${topicId.getAndIncrement()}"
 
   /**
-   * @param testStreamingQuery whether to test a streaming query or a batch query.
-   * @param writeToTable the function to write the specified [[DataFrame]] to the given table.
+   * @param testStreamingQuery
+   *   whether to test a streaming query or a batch query.
+   * @param writeToTable
+   *   the function to write the specified [[DataFrame]] to the given table.
    */
-  private def verifyMissingOffsetsDontCauseDuplicatedRecords(
-      testStreamingQuery: Boolean)(writeToTable: (DataFrame, String) => Unit): Unit = {
+  private def verifyMissingOffsetsDontCauseDuplicatedRecords(testStreamingQuery: Boolean)(
+      writeToTable: (DataFrame, String) => Unit): Unit = {
     val topic = newTopic()
     testUtils.createTopic(topic, partitions = 1)
     testUtils.sendMessages(topic, (0 until 50).map(_.toString).toArray)
@@ -196,7 +198,9 @@ class KafkaDontFailOnDataLossSuite extends StreamTest with KafkaMissingOffsetsTe
   }
 }
 
-class KafkaSourceStressForDontFailOnDataLossSuite extends StreamTest with KafkaMissingOffsetsTest {
+class KafkaSourceStressForDontFailOnDataLossSuite
+    extends StreamTest
+    with KafkaMissingOffsetsTest {
 
   import testImplicits._
 
@@ -205,22 +209,23 @@ class KafkaSourceStressForDontFailOnDataLossSuite extends StreamTest with KafkaM
   private def newTopic(): String = s"failOnDataLoss-${topicId.getAndIncrement()}"
 
   protected def startStream(ds: Dataset[Int]) = {
-    ds.writeStream.foreach(new ForeachWriter[Int] {
+    ds.writeStream
+      .foreach(new ForeachWriter[Int] {
 
-      override def open(partitionId: Long, version: Long): Boolean = true
+        override def open(partitionId: Long, version: Long): Boolean = true
 
-      override def process(value: Int): Unit = {
-        // Slow down the processing speed so that messages may be aged out.
-        Thread.sleep(Random.nextInt(500))
-      }
+        override def process(value: Int): Unit = {
+          // Slow down the processing speed so that messages may be aged out.
+          Thread.sleep(Random.nextInt(500))
+        }
 
-      override def close(errorOrNull: Throwable): Unit = {}
-    }).start()
+        override def close(errorOrNull: Throwable): Unit = {}
+      })
+      .start()
   }
 
   test("stress test for failOnDataLoss=false") {
-    val reader = spark
-      .readStream
+    val reader = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("kafka.metadata.max.age.ms", "1")
@@ -230,7 +235,8 @@ class KafkaSourceStressForDontFailOnDataLossSuite extends StreamTest with KafkaM
       .option("startingOffsets", "earliest")
       .option("failOnDataLoss", "false")
       .option("fetchOffset.retryIntervalMs", "3000")
-    val kafka = reader.load()
+    val kafka = reader
+      .load()
       .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
       .as[(String, String)]
     val query = startStream(kafka.map(kv => kv._2.toInt))

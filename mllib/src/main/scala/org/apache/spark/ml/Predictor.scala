@@ -28,19 +28,25 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DataType, DoubleType, StructType}
 
 /**
- * (private[ml])  Trait for parameters for prediction (regression and classification).
+ * (private[ml]) Trait for parameters for prediction (regression and classification).
  */
-private[ml] trait PredictorParams extends Params
-  with HasLabelCol with HasFeaturesCol with HasPredictionCol {
+private[ml] trait PredictorParams
+    extends Params
+    with HasLabelCol
+    with HasFeaturesCol
+    with HasPredictionCol {
 
   /**
    * Validates and transforms the input schema with the provided param map.
    *
-   * @param schema input schema
-   * @param fitting whether this is in fitting
-   * @param featuresDataType  SQL DataType for FeaturesType.
-   *                          E.g., `VectorUDT` for vector features.
-   * @return output schema
+   * @param schema
+   *   input schema
+   * @param fitting
+   *   whether this is in fitting
+   * @param featuresDataType
+   *   SQL DataType for FeaturesType. E.g., `VectorUDT` for vector features.
+   * @return
+   *   output schema
    */
   protected def validateAndTransformSchema(
       schema: StructType,
@@ -69,18 +75,21 @@ private[ml] trait PredictorParams extends Params
  * weights, it accepts all NumericType weights, which will be automatically casted to DoubleType
  * in `fit()`.
  *
- * @tparam FeaturesType  Type of features.
- *                       E.g., `VectorUDT` for vector features.
- * @tparam Learner  Specialization of this class.  If you subclass this type, use this type
- *                  parameter to specify the concrete type.
- * @tparam M  Specialization of [[PredictionModel]].  If you subclass this type, use this type
- *            parameter to specify the concrete type for the corresponding model.
+ * @tparam FeaturesType
+ *   Type of features. E.g., `VectorUDT` for vector features.
+ * @tparam Learner
+ *   Specialization of this class. If you subclass this type, use this type parameter to specify
+ *   the concrete type.
+ * @tparam M
+ *   Specialization of [[PredictionModel]]. If you subclass this type, use this type parameter to
+ *   specify the concrete type for the corresponding model.
  */
 abstract class Predictor[
     FeaturesType,
     Learner <: Predictor[FeaturesType, Learner, M],
     M <: PredictionModel[FeaturesType, M]]
-  extends Estimator[M] with PredictorParams {
+    extends Estimator[M]
+    with PredictorParams {
 
   /** @group setParam */
   def setLabelCol(value: String): Learner = set(labelCol, value).asInstanceOf[Learner]
@@ -98,7 +107,8 @@ abstract class Predictor[
 
     // Cast LabelCol to DoubleType and keep the metadata.
     val labelMeta = dataset.schema($(labelCol)).metadata
-    val labelCasted = dataset.withColumn($(labelCol), col($(labelCol)).cast(DoubleType), labelMeta)
+    val labelCasted =
+      dataset.withColumn($(labelCol), col($(labelCol)).cast(DoubleType), labelMeta)
 
     // Cast WeightCol to DoubleType and keep the metadata.
     val casted = this match {
@@ -118,20 +128,21 @@ abstract class Predictor[
   override def copy(extra: ParamMap): Learner
 
   /**
-   * Train a model using the given dataset and parameters.
-   * Developers can implement this instead of `fit()` to avoid dealing with schema validation
-   * and copying parameters into the model.
+   * Train a model using the given dataset and parameters. Developers can implement this instead
+   * of `fit()` to avoid dealing with schema validation and copying parameters into the model.
    *
-   * @param dataset  Training dataset
-   * @return  Fitted model
+   * @param dataset
+   *   Training dataset
+   * @return
+   *   Fitted model
    */
   protected def train(dataset: Dataset[_]): M
 
   /**
    * Returns the SQL DataType corresponding to the FeaturesType type parameter.
    *
-   * This is used by `validateAndTransformSchema()`.
-   * This workaround is needed since SQL has different APIs for Scala and Java.
+   * This is used by `validateAndTransformSchema()`. This workaround is needed since SQL has
+   * different APIs for Scala and Java.
    *
    * The default value is VectorUDT, but it may be overridden if FeaturesType is not Vector.
    */
@@ -145,13 +156,15 @@ abstract class Predictor[
 /**
  * Abstraction for a model for prediction tasks (regression and classification).
  *
- * @tparam FeaturesType  Type of features.
- *                       E.g., `VectorUDT` for vector features.
- * @tparam M  Specialization of [[PredictionModel]].  If you subclass this type, use this type
- *            parameter to specify the concrete type for the corresponding model.
+ * @tparam FeaturesType
+ *   Type of features. E.g., `VectorUDT` for vector features.
+ * @tparam M
+ *   Specialization of [[PredictionModel]]. If you subclass this type, use this type parameter to
+ *   specify the concrete type for the corresponding model.
  */
 abstract class PredictionModel[FeaturesType, M <: PredictionModel[FeaturesType, M]]
-  extends Model[M] with PredictorParams {
+    extends Model[M]
+    with PredictorParams {
 
   /** @group setParam */
   def setFeaturesCol(value: String): M = set(featuresCol, value).asInstanceOf[M]
@@ -166,8 +179,8 @@ abstract class PredictionModel[FeaturesType, M <: PredictionModel[FeaturesType, 
   /**
    * Returns the SQL DataType corresponding to the FeaturesType type parameter.
    *
-   * This is used by `validateAndTransformSchema()`.
-   * This workaround is needed since SQL has different APIs for Scala and Java.
+   * This is used by `validateAndTransformSchema()`. This workaround is needed since SQL has
+   * different APIs for Scala and Java.
    *
    * The default value is VectorUDT, but it may be overridden if FeaturesType is not Vector.
    */
@@ -182,19 +195,22 @@ abstract class PredictionModel[FeaturesType, M <: PredictionModel[FeaturesType, 
   }
 
   /**
-   * Transforms dataset by reading from [[featuresCol]], calling `predict`, and storing
-   * the predictions as a new column [[predictionCol]].
+   * Transforms dataset by reading from [[featuresCol]], calling `predict`, and storing the
+   * predictions as a new column [[predictionCol]].
    *
-   * @param dataset input dataset
-   * @return transformed dataset with [[predictionCol]] of type `Double`
+   * @param dataset
+   *   input dataset
+   * @return
+   *   transformed dataset with [[predictionCol]] of type `Double`
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     transformSchema(dataset.schema, logging = true)
     if ($(predictionCol).nonEmpty) {
       transformImpl(dataset)
     } else {
-      logWarning(log"${MDC(LogKeys.UUID, uid)}: Predictor.transform() does nothing because " +
-        log"no output columns were set.")
+      logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: Predictor.transform() does nothing because " +
+          log"no output columns were set.")
       dataset.toDF()
     }
   }
@@ -204,13 +220,15 @@ abstract class PredictionModel[FeaturesType, M <: PredictionModel[FeaturesType, 
     val predictUDF = udf { features: Any =>
       predict(features.asInstanceOf[FeaturesType])
     }
-    dataset.withColumn($(predictionCol), predictUDF(col($(featuresCol))),
+    dataset.withColumn(
+      $(predictionCol),
+      predictUDF(col($(featuresCol))),
       outputSchema($(predictionCol)).metadata)
   }
 
   /**
-   * Predict label for the given features.
-   * This method is used to implement `transform()` and output [[predictionCol]].
+   * Predict label for the given features. This method is used to implement `transform()` and
+   * output [[predictionCol]].
    */
   @Since("2.4.0")
   def predict(features: FeaturesType): Double

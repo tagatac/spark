@@ -45,10 +45,8 @@ class STFunctionsSuite extends QueryTest with SharedSparkSession {
 
   test("st_geomfromwkb") {
     // Test data: Well-Known Binary (WKB) representations.
-    val df = Seq[(String, Int)](
-      (
-        "0101000000000000000000f03f0000000000000040", 4326
-      )).toDF("wkb", "srid")
+    val df =
+      Seq[(String, Int)](("0101000000000000000000f03f0000000000000040", 4326)).toDF("wkb", "srid")
     // ST_GeomFromWKB.
     checkAnswer(
       df.select(
@@ -82,10 +80,8 @@ class STFunctionsSuite extends QueryTest with SharedSparkSession {
 
   test("st_setsrid") {
     // Test data: Well-Known Binary (WKB) representations.
-    val df = Seq[(String, Int)](
-      (
-        "0101000000000000000000f03f0000000000000040", 4326
-      )).toDF("wkb", "srid")
+    val df =
+      Seq[(String, Int)](("0101000000000000000000f03f0000000000000040", 4326)).toDF("wkb", "srid")
     // ST_GeogFromWKB/ST_GeomFromWKB and ST_Srid.
     checkAnswer(
       df.select(
@@ -106,14 +102,12 @@ class STFunctionsSuite extends QueryTest with SharedSparkSession {
         st_geogfromwkb(lit(null)).as("res"),
         st_geomfromwkb(lit(null)).as("res"),
         st_srid(lit(null)).as("res"),
-        st_setsrid(lit(null), lit(null)).as("res")
-      ).foreach { func =>
+        st_setsrid(lit(null), lit(null)).as("res")).foreach { func =>
         checkError(
           exception = intercept[AnalysisException] {
             df.select(func).collect()
           },
-          condition = "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED"
-        )
+          condition = "UNSUPPORTED_FEATURE.GEOSPATIAL_DISABLED")
       }
     }
   }

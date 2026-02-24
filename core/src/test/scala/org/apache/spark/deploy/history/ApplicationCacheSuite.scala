@@ -44,9 +44,8 @@ import org.apache.spark.util.{ManualClock, Utils}
 class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matchers {
 
   /**
-   * Stub cache operations.
-   * The state is kept in a map of [[CacheKey]] to [[CacheEntry]],
-   * the `probeTime` field in the cache entry setting the timestamp of the entry
+   * Stub cache operations. The state is kept in a map of [[CacheKey]] to [[CacheEntry]], the
+   * `probeTime` field in the cache entry setting the timestamp of the entry
    */
   class StubCacheOperations extends ApplicationCacheOperations with Logging {
 
@@ -102,7 +101,8 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
     /**
      * Detach a reconstructed UI
      *
-     * @param ui Spark UI
+     * @param ui
+     *   Spark UI
      */
     override def detachSparkUI(appId: String, attemptId: Option[String], ui: SparkUI): Unit = {
       logDebug(s"detachSparkUI($appId, $attemptId, $ui)")
@@ -132,9 +132,23 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
       completed: Boolean,
       started: Long,
       ended: Long): SparkUI = {
-    val info = new ApplicationInfo(name, name, Some(1), Some(1), Some(1), Some(64),
-      Seq(new AttemptInfo(attemptId, new Date(started), new Date(ended),
-        new Date(ended), ended - started, "user", completed, org.apache.spark.SPARK_VERSION)))
+    val info = new ApplicationInfo(
+      name,
+      name,
+      Some(1),
+      Some(1),
+      Some(1),
+      Some(64),
+      Seq(
+        new AttemptInfo(
+          attemptId,
+          new Date(started),
+          new Date(ended),
+          new Date(ended),
+          ended - started,
+          "user",
+          completed,
+          org.apache.spark.SPARK_VERSION)))
     val ui = mock[SparkUI]
     when(ui.getApplicationInfoList).thenReturn(List(info).iterator)
     when(ui.getAppName).thenReturn(name)
@@ -145,8 +159,7 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
   }
 
   /**
-   * Test operations on completed UIs: they are loaded on demand, entries
-   * are removed on overload.
+   * Test operations on completed UIs: they are loaded on demand, entries are removed on overload.
    *
    * This effectively tests the original behavior of the history server's cache.
    */
@@ -211,8 +224,8 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
   test("Test that if an attempt ID is set, it must be used in lookups") {
     val operations = new StubCacheOperations()
     val clock = new ManualClock(1)
-    implicit val cache = new ApplicationCache(operations, retainedApplications = 10,
-      clock = clock)
+    implicit val cache =
+      new ApplicationCache(operations, retainedApplications = 10, clock = clock)
     val appId = "app1"
     val attemptId = Some("_01")
     operations.putAppUI(appId, attemptId, false, clock.getTimeMillis(), 0)
@@ -220,9 +233,9 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
   }
 
   /**
-   * Test that incomplete apps are not probed for updates during the time window,
-   * but that they are checked if that window has expired and they are not completed.
-   * Then, if they have changed, the old entry is replaced by a new one.
+   * Test that incomplete apps are not probed for updates during the time window, but that they
+   * are checked if that window has expired and they are not completed. Then, if they have
+   * changed, the old entry is replaced by a new one.
    */
   test("Incomplete apps refreshed") {
     val operations = new StubCacheOperations()
@@ -253,18 +266,19 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
   }
 
   /**
-   * Assert that a metric counter has a specific value; failure raises an exception
-   * including the cache's toString value
-   * @param name counter name (for exceptions)
-   * @param counter counter
-   * @param expected expected value.
-   * @param cache cache
+   * Assert that a metric counter has a specific value; failure raises an exception including the
+   * cache's toString value
+   * @param name
+   *   counter name (for exceptions)
+   * @param counter
+   *   counter
+   * @param expected
+   *   expected value.
+   * @param cache
+   *   cache
    */
-  def assertMetric(
-      name: String,
-      counter: Counter,
-      expected: Long)
-      (implicit cache: ApplicationCache): Unit = {
+  def assertMetric(name: String, counter: Counter, expected: Long)(implicit
+      cache: ApplicationCache): Unit = {
     val actual = counter.getCount
     if (actual != expected) {
       // this is here because Scalatest loses stack depth
@@ -276,14 +290,15 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
    * Assert that a key wasn't found in cache or loaded.
    *
    * Looks for the specific nested exception raised by [[ApplicationCache]]
-   * @param appId application ID
-   * @param attemptId attempt ID
-   * @param cache app cache
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   attempt ID
+   * @param cache
+   *   app cache
    */
-  def assertNotFound(
-      appId: String,
-      attemptId: Option[String])
-      (implicit cache: ApplicationCache): Unit = {
+  def assertNotFound(appId: String, attemptId: Option[String])(implicit
+      cache: ApplicationCache): Unit = {
     val ex = intercept[NoSuchElementException] {
       cache.get(appId, attemptId)
     }
@@ -294,15 +309,15 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
     val clock = new ManualClock(0)
     val size = 5
     // only two entries are retained, so we expect evictions to occur on lookups
-    implicit val cache = new ApplicationCache(operations, retainedApplications = size,
-      clock = clock)
+    implicit val cache =
+      new ApplicationCache(operations, retainedApplications = size, clock = clock)
 
     val attempt1 = Some("01")
 
     val ids = new mutable.ListBuffer[String]()
     // build a list of applications
     val count = 100
-    for (i <- 1 to count ) {
+    for (i <- 1 to count) {
       val appId = f"app-$i%04d"
       ids += appId
       clock.advance(10)
@@ -318,7 +333,7 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
 
     assertMetric("loadCount", metrics.loadCount, count)
     assertMetric("evictionCount", metrics.evictionCount, count - size)
-}
+  }
 
   test("Attempts are Evicted") {
     val operations = new StubCacheOperations()
@@ -404,9 +419,10 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
         fsHistoryProvider.getAppUI(appId, attemptId)
 
       override def attachSparkUI(
-        appId: String,
-        attemptId: Option[String],
-        ui: SparkUI, completed: Boolean): Unit = {}
+          appId: String,
+          attemptId: Option[String],
+          ui: SparkUI,
+          completed: Boolean): Unit = {}
 
       override def detachSparkUI(appId: String, attemptId: Option[String], ui: SparkUI): Unit = {
         detachStarted.countDown()
@@ -424,7 +440,11 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
 
     val index = 1
     val appId = s"app$index"
-    EventLogTestHelper.writeEventLogFile(sparkConf, new Configuration(), historyLogDir, index,
+    EventLogTestHelper.writeEventLogFile(
+      sparkConf,
+      new Configuration(),
+      historyLogDir,
+      index,
       Seq(SparkListenerApplicationStart("SPARK-43403", Some(appId), 3L, "test", None)))
     fsHistoryProvider.checkForLogs()
 
@@ -446,7 +466,8 @@ class ApplicationCacheSuite extends SparkFunSuite with MockitoSugar with Matcher
     var loadedUI: LoadedAppUI = null
     var exception: Exception = null
     try {
-      loadedUI = threadPool.submit(() => cache.get(appId).loadedUI)
+      loadedUI = threadPool
+        .submit(() => cache.get(appId).loadedUI)
         .get(5, TimeUnit.SECONDS)
     } catch {
       case e: Exception =>

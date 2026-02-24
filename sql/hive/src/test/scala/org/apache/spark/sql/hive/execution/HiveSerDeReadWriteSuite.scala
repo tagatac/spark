@@ -77,7 +77,8 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
       spark.sql("INSERT INTO TABLE hive_serde values(TIMESTAMP('2019-04-12 15:50:00'))")
       checkAnswer(
         spark.table("hive_serde"),
-        Seq(Row(Timestamp.valueOf("2019-04-11 15:50:00")),
+        Seq(
+          Row(Timestamp.valueOf("2019-04-11 15:50:00")),
           Row(Timestamp.valueOf("2019-04-12 15:50:00"))))
     }
 
@@ -109,7 +110,8 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
       hiveClient.runSqlHive("INSERT INTO TABLE hive_serde values('s')")
       checkAnswer(spark.table("hive_serde"), Row("s" + " ".repeat(9)))
       spark.sql(s"INSERT INTO TABLE hive_serde values('s3')")
-      checkAnswer(spark.table("hive_serde"),
+      checkAnswer(
+        spark.table("hive_serde"),
         Seq(Row("s" + " ".repeat(9)), Row("s3" + " ".repeat(8))))
     }
   }
@@ -138,7 +140,8 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
     // ARRAY<data_type>
     withTable("hive_serde") {
       hiveClient.runSqlHive(s"CREATE TABLE hive_serde (c1 ARRAY <STRING>) STORED AS $fileFormat")
-      hiveClient.runSqlHive("INSERT INTO TABLE hive_serde SELECT ARRAY('a','b') FROM (SELECT 1) t")
+      hiveClient.runSqlHive(
+        "INSERT INTO TABLE hive_serde SELECT ARRAY('a','b') FROM (SELECT 1) t")
       checkAnswer(spark.table("hive_serde"), Row(Array("a", "b")))
       spark.sql("INSERT INTO TABLE hive_serde SELECT ARRAY('c', 'd')")
       checkAnswer(spark.table("hive_serde"), Seq(Row(Array("a", "b")), Row(Array("c", "d"))))
@@ -155,8 +158,7 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
 
     // STRUCT<col_name : data_type [COMMENT col_comment], ...>
     withTable("hive_serde") {
-      hiveClient.runSqlHive(
-        s"CREATE TABLE hive_serde (c1 STRUCT <k: INT>) STORED AS $fileFormat")
+      hiveClient.runSqlHive(s"CREATE TABLE hive_serde (c1 STRUCT <k: INT>) STORED AS $fileFormat")
       hiveClient.runSqlHive(
         "INSERT INTO TABLE hive_serde SELECT NAMED_STRUCT('k', 1) FROM (SELECT 1) t")
       checkAnswer(spark.table("hive_serde"), Row(Row(1)))
@@ -172,11 +174,11 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
       checkNumericTypes(fileFormat, "SMALLINT", 2)
       checkNumericTypes(fileFormat, "INT", 2)
       checkNumericTypes(fileFormat, "BIGINT", 2)
-      checkNumericTypes(fileFormat, "FLOAT", 2.1F)
-      checkNumericTypes(fileFormat, "DOUBLE", 2.1D)
-      checkNumericTypes(fileFormat, "DECIMAL(9, 2)", 2.1D)
-      checkNumericTypes(fileFormat, "DECIMAL(18, 2)", 2.1D)
-      checkNumericTypes(fileFormat, "DECIMAL(38, 2)", 2.1D)
+      checkNumericTypes(fileFormat, "FLOAT", 2.1f)
+      checkNumericTypes(fileFormat, "DOUBLE", 2.1d)
+      checkNumericTypes(fileFormat, "DECIMAL(9, 2)", 2.1d)
+      checkNumericTypes(fileFormat, "DECIMAL(18, 2)", 2.1d)
+      checkNumericTypes(fileFormat, "DECIMAL(38, 2)", 2.1d)
 
       // Date/Time Types
       // SPARK-28885 String value is not allowed to be stored as date/timestamp type with
@@ -198,8 +200,7 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
 
   test("SPARK-34512: Disable validate default values when parsing Avro schemas") {
     withTable("t1") {
-      hiveClient.runSqlHive(
-        """
+      hiveClient.runSqlHive("""
           |CREATE TABLE t1
           |  ROW FORMAT SERDE
           |    'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
@@ -256,10 +257,7 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
       new DelegateSymlinkTextInputFormat.DelegateSymlinkTextInputSplit(
         new SymlinkTextInputFormat.SymlinkTextInputSplit(
           new Path("file:/tmp/symlink"),
-          new FileSplit(new Path("file:/tmp/file"), 1L, 2L, Array[String]())
-        )
-      )
-    )
+          new FileSplit(new Path("file:/tmp/file"), 1L, 2L, Array[String]()))))
   }
 
   test("SPARK-40815: Read SymlinkTextInputFormat") {
@@ -268,8 +266,12 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
         val dataPath = new File(root, "data")
         val symlinkPath = new File(root, "symlink")
 
-        spark.range(10).selectExpr("cast(id as string) as value")
-          .repartition(4).write.text(dataPath.getAbsolutePath)
+        spark
+          .range(10)
+          .selectExpr("cast(id as string) as value")
+          .repartition(4)
+          .write
+          .text(dataPath.getAbsolutePath)
 
         // Generate symlink manifest file.
         val files = dataPath.listFiles().filter(_.getName.endsWith(".txt"))
@@ -278,8 +280,7 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
         symlinkPath.mkdir()
         Files.write(
           new File(symlinkPath, "symlink.txt").toPath,
-          files.mkString("\n").getBytes(StandardCharsets.UTF_8)
-        )
+          files.mkString("\n").getBytes(StandardCharsets.UTF_8))
 
         sql(s"""
           CREATE TABLE t (id bigint)
@@ -289,16 +290,10 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
           LOCATION '${symlinkPath.getAbsolutePath}';
         """)
 
-        checkAnswer(
-          sql("SELECT id FROM t ORDER BY id ASC"),
-          (0 until 10).map(Row(_))
-        )
+        checkAnswer(sql("SELECT id FROM t ORDER BY id ASC"), (0 until 10).map(Row(_)))
 
         // Verify limit since we bypass ExecMapper.getDone().
-        checkAnswer(
-          sql("SELECT id FROM t ORDER BY id ASC LIMIT 2"),
-          (0 until 2).map(Row(_))
-        )
+        checkAnswer(sql("SELECT id FROM t ORDER BY id ASC LIMIT 2"), (0 until 2).map(Row(_)))
 
         // Verify that with the flag disabled, we use the original SymlinkTextInputFormat
         // which has the empty splits issue and therefore the result should be empty.
@@ -306,10 +301,7 @@ class HiveSerDeReadWriteSuite extends QueryTest with SQLTestUtils with TestHiveS
           HADOOP_RDD_IGNORE_EMPTY_SPLITS.key -> "true",
           USE_DELEGATE_FOR_SYMLINK_TEXT_INPUT_FORMAT.key -> "false") {
 
-          checkAnswer(
-            sql("SELECT id FROM t ORDER BY id ASC"),
-            Seq.empty[Row]
-          )
+          checkAnswer(sql("SELECT id FROM t ORDER BY id ASC"), Seq.empty[Row])
         }
       }
     }

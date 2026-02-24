@@ -35,17 +35,13 @@ import org.apache.spark.sql.streaming.util.GlobalSingletonManualClock
 import org.apache.spark.sql.test.TestSparkSession
 import org.apache.spark.util.SystemClock
 
-class KafkaRealTimeModeSuite
-  extends KafkaSourceTest
-    with Matchers {
+class KafkaRealTimeModeSuite extends KafkaSourceTest with Matchers {
 
   override protected val defaultTrigger = RealTimeTrigger.apply("3 seconds")
 
   override protected def sparkConf: SparkConf = {
     super.sparkConf
-      .set(
-        SQLConf.STATE_STORE_PROVIDER_CLASS,
-        classOf[RocksDBStateStoreProvider].getName)
+      .set(SQLConf.STATE_STORE_PROVIDER_CLASS, classOf[RocksDBStateStoreProvider].getName)
   }
 
   override protected def createSparkSession = new TestSparkSession(
@@ -53,7 +49,6 @@ class KafkaRealTimeModeSuite
       "local[8]", // Ensure enough number of cores to ensure concurrent schedule of all tasks.
       "streaming-rtm-context",
       sparkConf.set("spark.sql.testkey", "true")))
-
 
   import testImplicits._
 
@@ -79,8 +74,7 @@ class KafkaRealTimeModeSuite
     super.beforeAll()
     spark.conf.set(
       SQLConf.STREAMING_REAL_TIME_MODE_MIN_BATCH_DURATION,
-      defaultTrigger.batchDurationMs
-    )
+      defaultTrigger.batchDurationMs)
   }
 
   override def beforeEach(): Unit = {
@@ -106,7 +100,8 @@ class KafkaRealTimeModeSuite
       }
       val batchStarted = tasksRunning >= 1 && lastBatch >= batchId - 1
       val batchProcessed = lastBatch >= batchId
-      assert(batchStarted || batchProcessed,
+      assert(
+        batchStarted || batchProcessed,
         s"tasksRunning: ${tasksRunning} lastBatch: ${lastBatch}")
     }
   }
@@ -120,8 +115,7 @@ class KafkaRealTimeModeSuite
     testUtils.sendMessages(topic, Array("1", "2"), Some(0))
     testUtils.sendMessages(topic, Array("3"), Some(1))
 
-    val reader = spark
-      .readStream
+    val reader = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
@@ -211,8 +205,7 @@ class KafkaRealTimeModeSuite
         }
       },
       CheckAnswerWithTimeout(5000, 2, 3, 4, 5, 6),
-      WaitUntilCurrentBatchProcessed
-    )
+      WaitUntilCurrentBatchProcessed)
   }
 
   // A simple unit test that reads from Kakfa source, does a simple map and writes to memory
@@ -264,8 +257,7 @@ class KafkaRealTimeModeSuite
       },
       StartStream(),
       CheckAnswerWithTimeout(15000, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-      WaitUntilCurrentBatchProcessed
-    )
+      WaitUntilCurrentBatchProcessed)
   }
 
   test("Real-Time Mode fetches latestOffset again at end of the batch") {
@@ -305,8 +297,7 @@ class KafkaRealTimeModeSuite
           "minOffsetsBehindLatest" -> "1",
           "maxOffsetsBehindLatest" -> "1",
           "avgOffsetsBehindLatest" -> "1.0",
-          "estimatedTotalBytesBehindLatest" -> null
-        )
+          "estimatedTotalBytesBehindLatest" -> null)
         eventually(timeout(60.seconds)) {
           expectedMetrics.foreach { case (metric, expectedValue) =>
             assert(q.lastProgress.sources(0).metrics.get(metric) === expectedValue)
@@ -325,15 +316,13 @@ class KafkaRealTimeModeSuite
           "minOffsetsBehindLatest" -> "3",
           "maxOffsetsBehindLatest" -> "3",
           "avgOffsetsBehindLatest" -> "3.0",
-          "estimatedTotalBytesBehindLatest" -> null
-        )
+          "estimatedTotalBytesBehindLatest" -> null)
         eventually(timeout(60.seconds)) {
           expectedMetrics.foreach { case (metric, expectedValue) =>
             assert(q.lastProgress.sources(0).metrics.get(metric) === expectedValue)
           }
         }
-      }
-    )
+      })
   }
 
   // Validate the query fails with minOffsetPerTrigger option set.
@@ -356,11 +345,11 @@ class KafkaRealTimeModeSuite
         .load()
       testStream(reader, Update, sink = new ContinuousMemorySink())(
         StartStream(),
-        ExpectFailure[UnsupportedOperationException] { (t: Throwable) => {
-          assert(t.getMessage.toLowerCase().contains(opt))
-        }
-        }
-      )
+        ExpectFailure[UnsupportedOperationException] { (t: Throwable) =>
+          {
+            assert(t.getMessage.toLowerCase().contains(opt))
+          }
+        })
     }
   }
 
@@ -377,8 +366,7 @@ class KafkaRealTimeModeSuite
     testUtils.sendMessages(topic1, Array("11", "12"), Some(0))
     testUtils.sendMessages(topic1, Array("13"), Some(1))
 
-    val reader1 = spark
-      .readStream
+    val reader1 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
@@ -389,8 +377,7 @@ class KafkaRealTimeModeSuite
       .map(_.toInt)
       .map(_ + 1)
 
-    val reader2 = spark
-      .readStream
+    val reader2 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic1)
@@ -457,8 +444,7 @@ class KafkaRealTimeModeSuite
     testUtils.sendMessages(topic2, Array("21", "22"), Some(0))
     testUtils.sendMessages(topic2, Array("23"), Some(1))
 
-    val reader1 = spark
-      .readStream
+    val reader1 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
@@ -466,16 +452,14 @@ class KafkaRealTimeModeSuite
       .option("maxPartitions", "1")
       .load()
 
-    val reader2 = spark
-      .readStream
+    val reader2 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic1)
       .option("startingOffsets", "earliest")
       .load()
 
-    val reader3 = spark
-      .readStream
+    val reader3 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic2)
@@ -483,7 +467,9 @@ class KafkaRealTimeModeSuite
       .option("maxPartitions", "3")
       .load()
 
-    val unionedReader = reader1.union(reader2).union(reader3)
+    val unionedReader = reader1
+      .union(reader2)
+      .union(reader3)
       .selectExpr("CAST(value AS STRING)")
       .as[String]
       .map(_.toInt)
@@ -530,24 +516,22 @@ class KafkaRealTimeModeSuite
     testUtils.sendMessages(topic, Array("1", "2"), Some(0))
     testUtils.sendMessages(topic, Array("3"), Some(1))
 
-    val reader1 = spark
-      .readStream
+    val reader1 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
       .option("startingOffsets", "earliest")
       .load()
 
-
-    val reader2 = spark
-      .readStream
+    val reader2 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
       .option("startingOffsets", "earliest")
       .load()
 
-    val unionedReader = reader1.union(reader2)
+    val unionedReader = reader1
+      .union(reader2)
       .selectExpr("CAST(value AS STRING)")
       .as[String]
       .map(_.toInt)
@@ -596,8 +580,7 @@ class KafkaRealTimeModeSuite
     testUtils.sendMessages(topic, Array("3"), Some(1))
     memoryStreamRead.addData("11", "12", "13")
 
-    val reader1 = spark
-      .readStream
+    val reader1 = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
@@ -606,12 +589,13 @@ class KafkaRealTimeModeSuite
       .selectExpr("CAST(value AS STRING)")
       .as[String]
 
-
-    val reader2 = memoryStreamRead.toDF()
+    val reader2 = memoryStreamRead
+      .toDF()
       .selectExpr("CAST(value AS STRING)")
       .as[String]
 
-    val unionedReader = reader1.union(reader2)
+    val unionedReader = reader1
+      .union(reader2)
       .map(_.toInt)
       .map(_ + 1)
 
@@ -653,44 +637,37 @@ class KafkaRealTimeModeSuite
     val topic = newTopic()
     testUtils.createTopic(topic, partitions = 2)
 
-    val reader = spark
-      .readStream
+    val reader = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
       .option("startingOffsets", "earliest")
       .load()
 
-    val unionedReader = reader.union(reader)
+    val unionedReader = reader
+      .union(reader)
       .selectExpr("CAST(value AS STRING)")
       .as[String]
       .map(_.toInt)
       .map(_ + 1)
 
-      testStream(unionedReader, Update, sink = new ContinuousMemorySink())(
-        StartStream(),
-        ExpectFailure[SparkIllegalStateException] { ex =>
-          checkErrorMatchPVals(
-            ex.asInstanceOf[SparkIllegalStateException],
-            "STREAMING_REAL_TIME_MODE.IDENTICAL_SOURCES_IN_UNION_NOT_SUPPORTED",
-            parameters =
-              Map("sources" -> "(?s).*")
-          )
-        }
-      )
+    testStream(unionedReader, Update, sink = new ContinuousMemorySink())(
+      StartStream(),
+      ExpectFailure[SparkIllegalStateException] { ex =>
+        checkErrorMatchPVals(
+          ex.asInstanceOf[SparkIllegalStateException],
+          "STREAMING_REAL_TIME_MODE.IDENTICAL_SOURCES_IN_UNION_NOT_SUPPORTED",
+          parameters = Map("sources" -> "(?s).*"))
+      })
   }
 }
 
-class KafkaConsumerPoolRealTimeModeSuite
-  extends KafkaSourceTest
-  with Matchers {
+class KafkaConsumerPoolRealTimeModeSuite extends KafkaSourceTest with Matchers {
   override protected val defaultTrigger = RealTimeTrigger.apply("3 seconds")
 
   override protected def sparkConf: SparkConf = {
     super.sparkConf
-      .set(
-        SQLConf.STATE_STORE_PROVIDER_CLASS,
-        classOf[RocksDBStateStoreProvider].getName)
+      .set(SQLConf.STATE_STORE_PROVIDER_CLASS, classOf[RocksDBStateStoreProvider].getName)
   }
 
   import testImplicits._
@@ -699,8 +676,7 @@ class KafkaConsumerPoolRealTimeModeSuite
     super.beforeAll()
     spark.conf.set(
       SQLConf.STREAMING_REAL_TIME_MODE_MIN_BATCH_DURATION,
-      defaultTrigger.batchDurationMs
-    )
+      defaultTrigger.batchDurationMs)
   }
 
   test("SPARK-54200: Kafka consumers in consumer pool should be properly reused") {
@@ -712,8 +688,7 @@ class KafkaConsumerPoolRealTimeModeSuite
 
     val groupIdPrefix = UUID.randomUUID().toString
 
-    val reader = spark
-      .readStream
+    val reader = spark.readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("subscribe", topic)
@@ -757,20 +732,21 @@ class KafkaConsumerPoolRealTimeModeSuite
           assertActiveSizeOnConsumerPool(groupIdPrefix, 2)
         }
       },
-      StopStream
-    )
+      StopStream)
   }
 
   /**
-   * NOTE: This method leverages that we run test code, driver and executor in a same process in
-   * a normal unit test setup (say, local[<number, or *>] in spark master). With that setup, we
-   * can access singleton object directly.
+   * NOTE: This method leverages that we run test code, driver and executor in a same process in a
+   * normal unit test setup (say, local[<number, or *>] in spark master). With that setup, we can
+   * access singleton object directly.
    */
   private def assertActiveSizeOnConsumerPool(
       groupIdPrefix: String,
       maxAllowedActiveSize: Int): Unit = {
     val activeSize = KafkaDataConsumer.getActiveSizeInConsumerPool(groupIdPrefix)
-    assert(activeSize <= maxAllowedActiveSize, s"Consumer pool size is expected to be less " +
-      s"than $maxAllowedActiveSize, but $activeSize.")
+    assert(
+      activeSize <= maxAllowedActiveSize,
+      s"Consumer pool size is expected to be less " +
+        s"than $maxAllowedActiveSize, but $activeSize.")
   }
 }

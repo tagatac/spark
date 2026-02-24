@@ -31,8 +31,7 @@ import org.apache.spark.sql.types.{DataType, StructType}
 /**
  * (private[spark]) Params for classification.
  */
-private[spark] trait ClassifierParams
-  extends PredictorParams with HasRawPredictionCol {
+private[spark] trait ClassifierParams extends PredictorParams with HasRawPredictionCol {
 
   override protected def validateAndTransformSchema(
       schema: StructType,
@@ -44,33 +43,40 @@ private[spark] trait ClassifierParams
 }
 
 /**
- * Single-label binary or multiclass classification.
- * Classes are indexed {0, 1, ..., numClasses - 1}.
+ * Single-label binary or multiclass classification. Classes are indexed {0, 1, ..., numClasses -
+ * 1}.
  *
- * @tparam FeaturesType  Type of input features.  E.g., `Vector`
- * @tparam E  Concrete Estimator type
- * @tparam M  Concrete Model type
+ * @tparam FeaturesType
+ *   Type of input features. E.g., `Vector`
+ * @tparam E
+ *   Concrete Estimator type
+ * @tparam M
+ *   Concrete Model type
  */
 abstract class Classifier[
     FeaturesType,
     E <: Classifier[FeaturesType, E, M],
     M <: ClassificationModel[FeaturesType, M]]
-  extends Predictor[FeaturesType, E, M] with ClassifierParams {
+    extends Predictor[FeaturesType, E, M]
+    with ClassifierParams {
 
   /**
-   * Get the number of classes.  This looks in column metadata first, and if that is missing,
-   * then this assumes classes are indexed 0,1,...,numClasses-1 and computes numClasses
-   * by finding the maximum label value.
+   * Get the number of classes. This looks in column metadata first, and if that is missing, then
+   * this assumes classes are indexed 0,1,...,numClasses-1 and computes numClasses by finding the
+   * maximum label value.
    *
-   * Label validation (ensuring all labels are integers >= 0) needs to be handled elsewhere,
-   * such as in `extractLabeledPoints()`.
+   * Label validation (ensuring all labels are integers >= 0) needs to be handled elsewhere, such
+   * as in `extractLabeledPoints()`.
    *
-   * @param dataset       Dataset which contains a column [[labelCol]]
-   * @param maxNumClasses Maximum number of classes allowed when inferred from data.  If numClasses
-   *                      is specified in the metadata, then maxNumClasses is ignored.
-   * @return number of classes
-   * @throws IllegalArgumentException if metadata does not specify numClasses, and the
-   *                                  actual numClasses exceeds maxNumClasses
+   * @param dataset
+   *   Dataset which contains a column [[labelCol]]
+   * @param maxNumClasses
+   *   Maximum number of classes allowed when inferred from data. If numClasses is specified in
+   *   the metadata, then maxNumClasses is ignored.
+   * @return
+   *   number of classes
+   * @throws IllegalArgumentException
+   *   if metadata does not specify numClasses, and the actual numClasses exceeds maxNumClasses
    */
   protected def getNumClasses(dataset: Dataset[_], maxNumClasses: Int = 100): Int = {
     DatasetUtils.getNumClasses(dataset, $(labelCol), maxNumClasses)
@@ -83,14 +89,16 @@ abstract class Classifier[
 }
 
 /**
- * Model produced by a [[Classifier]].
- * Classes are indexed {0, 1, ..., numClasses - 1}.
+ * Model produced by a [[Classifier]]. Classes are indexed {0, 1, ..., numClasses - 1}.
  *
- * @tparam FeaturesType  Type of input features.  E.g., `Vector`
- * @tparam M  Concrete Model type
+ * @tparam FeaturesType
+ *   Type of input features. E.g., `Vector`
+ * @tparam M
+ *   Concrete Model type
  */
 abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[FeaturesType, M]]
-  extends PredictionModel[FeaturesType, M] with ClassifierParams {
+    extends PredictionModel[FeaturesType, M]
+    with ClassifierParams {
 
   /** @group setParam */
   def setRawPredictionCol(value: String): M = set(rawPredictionCol, value).asInstanceOf[M]
@@ -101,12 +109,11 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
   override def transformSchema(schema: StructType): StructType = {
     var outputSchema = super.transformSchema(schema)
     if ($(predictionCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateNumValues(schema,
-        $(predictionCol), numClasses)
+      outputSchema = SchemaUtils.updateNumValues(schema, $(predictionCol), numClasses)
     }
     if ($(rawPredictionCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateAttributeGroupSize(outputSchema,
-        $(rawPredictionCol), numClasses)
+      outputSchema =
+        SchemaUtils.updateAttributeGroupSize(outputSchema, $(rawPredictionCol), numClasses)
     }
     outputSchema
   }
@@ -114,11 +121,13 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
   /**
    * Transforms dataset by reading from [[featuresCol]], and appending new columns as specified by
    * parameters:
-   *  - predicted labels as [[predictionCol]] of type `Double`
-   *  - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`.
+   *   - predicted labels as [[predictionCol]] of type `Double`
+   *   - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`.
    *
-   * @param dataset input dataset
-   * @return transformed dataset
+   * @param dataset
+   *   input dataset
+   * @return
+   *   transformed dataset
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
@@ -131,7 +140,9 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
       val predictRawUDF = udf { features: Any =>
         predictRaw(features.asInstanceOf[FeaturesType])
       }
-      outputData = outputData.withColumn(getRawPredictionCol, predictRawUDF(col(getFeaturesCol)),
+      outputData = outputData.withColumn(
+        getRawPredictionCol,
+        predictRawUDF(col(getFeaturesCol)),
         outputSchema($(rawPredictionCol)).metadata)
       numColsOutput += 1
     }
@@ -144,14 +155,15 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
         }
         predictUDF(col(getFeaturesCol))
       }
-      outputData = outputData.withColumn(getPredictionCol, predCol,
-        outputSchema($(predictionCol)).metadata)
+      outputData =
+        outputData.withColumn(getPredictionCol, predCol, outputSchema($(predictionCol)).metadata)
       numColsOutput += 1
     }
 
     if (numColsOutput == 0) {
-      logWarning(log"${MDC(LogKeys.UUID, uid)}: ClassificationModel.transform() does nothing " +
-        log"because no output columns were set.")
+      logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: ClassificationModel.transform() does nothing " +
+          log"because no output columns were set.")
     }
     outputData.toDF()
   }
@@ -160,50 +172,52 @@ abstract class ClassificationModel[FeaturesType, M <: ClassificationModel[Featur
     throw new UnsupportedOperationException(s"transformImpl is not supported in $getClass")
 
   /**
-   * Predict label for the given features.
-   * This method is used to implement `transform()` and output [[predictionCol]].
+   * Predict label for the given features. This method is used to implement `transform()` and
+   * output [[predictionCol]].
    *
-   * This default implementation for classification predicts the index of the maximum value
-   * from `predictRaw()`.
+   * This default implementation for classification predicts the index of the maximum value from
+   * `predictRaw()`.
    */
   override def predict(features: FeaturesType): Double = {
     raw2prediction(predictRaw(features))
   }
 
   /**
-   * Raw prediction for each possible label.
-   * The meaning of a "raw" prediction may vary between algorithms, but it intuitively gives
-   * a measure of confidence in each possible label (where larger = more confident).
-   * This internal method is used to implement `transform()` and output [[rawPredictionCol]].
+   * Raw prediction for each possible label. The meaning of a "raw" prediction may vary between
+   * algorithms, but it intuitively gives a measure of confidence in each possible label (where
+   * larger = more confident). This internal method is used to implement `transform()` and output
+   * [[rawPredictionCol]].
    *
-   * @return  vector where element i is the raw prediction for label i.
-   *          This raw prediction may be any real number, where a larger value indicates greater
-   *          confidence for that label.
+   * @return
+   *   vector where element i is the raw prediction for label i. This raw prediction may be any
+   *   real number, where a larger value indicates greater confidence for that label.
    */
   @Since("3.0.0")
   def predictRaw(features: FeaturesType): Vector
 
   /**
-   * Given a vector of raw predictions, select the predicted label.
-   * This may be overridden to support thresholds which favor particular labels.
-   * @return  predicted label
+   * Given a vector of raw predictions, select the predicted label. This may be overridden to
+   * support thresholds which favor particular labels.
+   * @return
+   *   predicted label
    */
   protected def raw2prediction(rawPrediction: Vector): Double = rawPrediction.argmax
 
   /**
    * If the rawPrediction and prediction columns are set, this method returns the current model,
-   * otherwise it generates new columns for them and sets them as columns on a new copy of
-   * the current model
+   * otherwise it generates new columns for them and sets them as columns on a new copy of the
+   * current model
    */
-  private[classification] def findSummaryModel():
-  (ClassificationModel[FeaturesType, M], String, String) = {
+  private[classification] def findSummaryModel()
+      : (ClassificationModel[FeaturesType, M], String, String) = {
     val model = if ($(rawPredictionCol).isEmpty && $(predictionCol).isEmpty) {
       copy(ParamMap.empty)
         .setRawPredictionCol("rawPrediction_" + java.util.UUID.randomUUID.toString)
         .setPredictionCol("prediction_" + java.util.UUID.randomUUID.toString)
     } else if ($(rawPredictionCol).isEmpty) {
-      copy(ParamMap.empty).setRawPredictionCol("rawPrediction_" +
-        java.util.UUID.randomUUID.toString)
+      copy(ParamMap.empty).setRawPredictionCol(
+        "rawPrediction_" +
+          java.util.UUID.randomUUID.toString)
     } else if ($(predictionCol).isEmpty) {
       copy(ParamMap.empty).setPredictionCol("prediction_" + java.util.UUID.randomUUID.toString)
     } else {

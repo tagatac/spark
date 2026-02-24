@@ -39,26 +39,31 @@ import org.apache.spark.util.{ShutdownHookManager, SystemClock, Utils}
 /**
  * A web server that renders SparkUIs of completed applications.
  *
- * For the standalone mode, MasterWebUI already achieves this functionality. Thus, the
- * main use case of the HistoryServer is in other deploy modes (e.g. Yarn).
+ * For the standalone mode, MasterWebUI already achieves this functionality. Thus, the main use
+ * case of the HistoryServer is in other deploy modes (e.g. Yarn).
  *
  * The logging directory structure is as follows: Within the given base directory, each
- * application's event logs are maintained in the application's own sub-directory. This
- * is the same structure as maintained in the event log write code path in
- * EventLoggingListener.
+ * application's event logs are maintained in the application's own sub-directory. This is the
+ * same structure as maintained in the event log write code path in EventLoggingListener.
  */
 class HistoryServer(
     conf: SparkConf,
     provider: ApplicationHistoryProvider,
     securityManager: SecurityManager,
     port: Int)
-  extends WebUI(securityManager, securityManager.getSSLOptions("historyServer"),
-    port, conf, name = "HistoryServerUI",
-    // Usually, a History Server stores plenty of event logs for various applications and users
-    // Comparing to Spark LiveUI which is generally for per application usage, it needs more
-    // threads to increase concurrency to handle request from different users and clients.
-    poolSize = 1000)
-  with Logging with UIRoot with ApplicationCacheOperations {
+    extends WebUI(
+      securityManager,
+      securityManager.getSSLOptions("historyServer"),
+      port,
+      conf,
+      name = "HistoryServerUI",
+      // Usually, a History Server stores plenty of event logs for various applications and users
+      // Comparing to Spark LiveUI which is generally for per application usage, it needs more
+      // threads to increase concurrency to handle request from different users and clients.
+      poolSize = 1000)
+    with Logging
+    with UIRoot
+    with ApplicationCacheOperations {
 
   val title = conf.get(History.HISTORY_SERVER_UI_TITLE)
 
@@ -135,7 +140,9 @@ class HistoryServer(
     appCache.withSparkUI(appId, attemptId)(fn)
   }
 
-  override def checkUIViewPermissions(appId: String, attemptId: Option[String],
+  override def checkUIViewPermissions(
+      appId: String,
+      attemptId: Option[String],
       user: String): Boolean = {
     provider.checkUIViewPermissions(appId, attemptId, user)
   }
@@ -145,8 +152,8 @@ class HistoryServer(
   /**
    * Initialize the history server.
    *
-   * This starts a background thread that periodically synchronizes information displayed on
-   * this UI with the event logs in the provided base directory.
+   * This starts a background thread that periodically synchronizes information displayed on this
+   * UI with the event logs in the provided base directory.
    */
   def initialize(): Unit = {
     attachPage(new HistoryPage(this))
@@ -195,9 +202,12 @@ class HistoryServer(
 
   /**
    * Get the application UI and whether or not it is completed
-   * @param appId application ID
-   * @param attemptId attempt ID
-   * @return If found, the Spark UI and any history information to be used in the cache
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   attempt ID
+   * @return
+   *   If found, the Spark UI and any history information to be used in the cache
    */
   override def getAppUI(appId: String, attemptId: Option[String]): Option[LoadedAppUI] = {
     provider.getAppUI(appId, attemptId)
@@ -206,7 +216,8 @@ class HistoryServer(
   /**
    * Returns a list of available applications, in descending order according to their end time.
    *
-   * @return List of all known applications.
+   * @return
+   *   List of all known applications.
    */
   def getApplicationList(): Iterator[ApplicationInfo] = {
     provider.getListing()
@@ -241,7 +252,8 @@ class HistoryServer(
   }
 
   /**
-   * @return html text to display when the application list is empty
+   * @return
+   *   html text to display when the application list is empty
    */
   def emptyListingHtml(): Seq[Node] = {
     provider.getEmptyListingHtml()
@@ -250,15 +262,19 @@ class HistoryServer(
   /**
    * Returns the provider configuration to show in the listing page.
    *
-   * @return A map with the provider's configuration.
+   * @return
+   *   A map with the provider's configuration.
    */
   def getProviderConfig(): Map[String, String] = provider.getConfig()
 
   /**
    * Load an application UI and attach it to the web server.
-   * @param appId application ID
-   * @param attemptId optional attempt ID
-   * @return true if the application was found and loaded.
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   optional attempt ID
+   * @return
+   *   true if the application was found and loaded.
    */
   private def loadAppUi(appId: String, attemptId: Option[String]): Boolean = {
     try {
@@ -274,7 +290,8 @@ class HistoryServer(
 
   /**
    * String value for diagnostics.
-   * @return a multi-line description of the server state.
+   * @return
+   *   a multi-line description of the server state.
    */
   override def toString: String = {
     s"""
@@ -287,12 +304,12 @@ class HistoryServer(
 
 /**
  * The recommended way of starting and stopping a HistoryServer is through the scripts
- * start-history-server.sh and stop-history-server.sh. The path to a base log directory,
- * as well as any other relevant history server configuration, should be specified via
- * the $SPARK_HISTORY_OPTS environment variable. For example:
+ * start-history-server.sh and stop-history-server.sh. The path to a base log directory, as well
+ * as any other relevant history server configuration, should be specified via the
+ * $SPARK_HISTORY_OPTS environment variable. For example:
  *
- *   export SPARK_HISTORY_OPTS="-Dspark.history.fs.logDirectory=/tmp/spark-events"
- *   ./sbin/start-history-server.sh
+ * export SPARK_HISTORY_OPTS="-Dspark.history.fs.logDirectory=/tmp/spark-events"
+ * ./sbin/start-history-server.sh
  *
  * This launches the HistoryServer as a Spark daemon.
  */
@@ -309,7 +326,8 @@ object HistoryServer extends Logging {
     val securityManager = createSecurityManager(conf)
 
     val providerName = conf.get(History.PROVIDER)
-    val provider = Utils.classForName[ApplicationHistoryProvider](providerName)
+    val provider = Utils
+      .classForName[ApplicationHistoryProvider](providerName)
       .getConstructor(classOf[SparkConf])
       .newInstance(conf)
 
@@ -326,11 +344,12 @@ object HistoryServer extends Logging {
   }
 
   /**
-   * Create a security manager.
-   * This turns off security in the SecurityManager, so that the History Server can start
-   * in a Spark cluster where security is enabled.
-   * @param config configuration for the SecurityManager constructor
-   * @return the security manager for use in constructing the History Server.
+   * Create a security manager. This turns off security in the SecurityManager, so that the
+   * History Server can start in a Spark cluster where security is enabled.
+   * @param config
+   *   configuration for the SecurityManager constructor
+   * @return
+   *   the security manager for use in constructing the History Server.
    */
   private[history] def createSecurityManager(config: SparkConf): SecurityManager = {
     if (config.getBoolean(SecurityManager.SPARK_AUTH_CONF, false)) {
@@ -339,8 +358,9 @@ object HistoryServer extends Logging {
     }
 
     if (config.get(ACLS_ENABLE)) {
-      logInfo(log"${MDC(KEY, ACLS_ENABLE.key)} is configured, " +
-        log"clearing it and only using ${MDC(KEY2, History.HISTORY_SERVER_UI_ACLS_ENABLE.key)}")
+      logInfo(
+        log"${MDC(KEY, ACLS_ENABLE.key)} is configured, " +
+          log"clearing it and only using ${MDC(KEY2, History.HISTORY_SERVER_UI_ACLS_ENABLE.key)}")
       config.set(ACLS_ENABLE, false)
     }
 
@@ -354,9 +374,11 @@ object HistoryServer extends Logging {
     // occur from the keytab.
     if (conf.get(History.KERBEROS_ENABLED)) {
       // if you have enabled kerberos the following 2 params must be set
-      val principalName = conf.get(History.KERBEROS_PRINCIPAL)
+      val principalName = conf
+        .get(History.KERBEROS_PRINCIPAL)
         .getOrElse(throw new NoSuchElementException(History.KERBEROS_PRINCIPAL.key))
-      val keytabFilename = conf.get(History.KERBEROS_KEYTAB)
+      val keytabFilename = conf
+        .get(History.KERBEROS_KEYTAB)
         .getOrElse(throw new NoSuchElementException(History.KERBEROS_KEYTAB.key))
       SparkHadoopUtil.get.loginUserFromKeytab(principalName, keytabFilename)
     }

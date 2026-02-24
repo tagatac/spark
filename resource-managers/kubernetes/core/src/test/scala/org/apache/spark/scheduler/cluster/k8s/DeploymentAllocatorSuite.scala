@@ -41,11 +41,11 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
 
   private val driverPod = new PodBuilder()
     .withNewMetadata()
-      .withName(driverPodName)
-      .withUid("driver-pod-uid")
-      .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
-      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
-      .endMetadata()
+    .withName(driverPodName)
+    .withUid("driver-pod-uid")
+    .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
+    .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
+    .endMetadata()
     .build()
 
   private val conf = new SparkConf()
@@ -86,16 +86,15 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     when(podsNamespaced.resource(any(classOf[Pod]))).thenReturn(executorPodResource)
     when(driverPodResource.get).thenReturn(driverPod)
     when(driverPodResource.waitUntilReady(any(), any())).thenReturn(driverPod)
-    when(executorBuilder.buildFromFeatures(
-      any(classOf[KubernetesExecutorConf]),
-      meq(secMgr),
-      meq(kubernetesClient),
-      any(classOf[ResourceProfile])))
+    when(
+      executorBuilder.buildFromFeatures(
+        any(classOf[KubernetesExecutorConf]),
+        meq(secMgr),
+        meq(kubernetesClient),
+        any(classOf[ResourceProfile])))
       .thenAnswer { invocation =>
         val k8sConf = invocation.getArgument[KubernetesExecutorConf](0)
-        KubernetesExecutorSpec(
-          executorPodWithId(0, k8sConf.resourceProfileId),
-          Seq.empty)
+        KubernetesExecutorSpec(executorPodWithId(0, k8sConf.resourceProfileId), Seq.empty)
       }
 
     snapshotsStore = new DeterministicExecutorPodsSnapshotsStore
@@ -119,8 +118,7 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     val rpBuilder = new ResourceProfileBuilder()
     val secondProfile = rpBuilder.build()
 
-    allocator.setTotalExpectedExecutors(
-      Map(defaultProfile -> 3, secondProfile -> 2))
+    allocator.setTotalExpectedExecutors(Map(defaultProfile -> 3, secondProfile -> 2))
 
     val captor = ArgumentCaptor.forClass(classOf[Deployment])
     verify(deploymentsNamespaced, times(2)).resource(captor.capture())
@@ -129,10 +127,12 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     val createdDeployments = captor.getAllValues.asScala
     createdDeployments.foreach { deployment =>
       assert(deployment.getMetadata.getNamespace === "default")
-      assert(deployment.getSpec.getTemplate.getMetadata
-        .getAnnotations.get("controller.kubernetes.io/pod-deletion-cost") === "0")
-      assert(deployment.getSpec.getTemplate.getSpec.getContainers.asScala.exists(
-        _.getName == "spark-executor"))
+      assert(
+        deployment.getSpec.getTemplate.getMetadata.getAnnotations
+          .get("controller.kubernetes.io/pod-deletion-cost") === "0")
+      assert(
+        deployment.getSpec.getTemplate.getSpec.getContainers.asScala
+          .exists(_.getName == "spark-executor"))
       val selectorLabels = deployment.getSpec.getSelector.getMatchLabels.asScala
       assert(selectorLabels(SPARK_APP_ID_LABEL) === TEST_SPARK_APP_ID)
       assert(selectorLabels(SPARK_ROLE_LABEL) === SPARK_POD_EXECUTOR_ROLE)
@@ -149,14 +149,13 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
 
   test("throws when executor template contributes dynamic PVCs") {
     val pvc = persistentVolumeClaim("spark-pvc", "standard", "1Gi")
-    when(executorBuilder.buildFromFeatures(
-      any(classOf[KubernetesExecutorConf]),
-      meq(secMgr),
-      meq(kubernetesClient),
-      any(classOf[ResourceProfile])))
-      .thenReturn(KubernetesExecutorSpec(
-        executorPodWithId(0),
-        Seq(pvc)))
+    when(
+      executorBuilder.buildFromFeatures(
+        any(classOf[KubernetesExecutorConf]),
+        meq(secMgr),
+        meq(kubernetesClient),
+        any(classOf[ResourceProfile])))
+      .thenReturn(KubernetesExecutorSpec(executorPodWithId(0), Seq(pvc)))
 
     val error = intercept[SparkException] {
       allocator.setTotalExpectedExecutors(Map(defaultProfile -> 1))
@@ -166,14 +165,13 @@ class DeploymentAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
   }
 
   test("throws when executor template includes static PVC references") {
-    when(executorBuilder.buildFromFeatures(
-      any(classOf[KubernetesExecutorConf]),
-      meq(secMgr),
-      meq(kubernetesClient),
-      any(classOf[ResourceProfile])))
-      .thenReturn(KubernetesExecutorSpec(
-        executorPodWithIdAndVolume(0),
-        Seq.empty))
+    when(
+      executorBuilder.buildFromFeatures(
+        any(classOf[KubernetesExecutorConf]),
+        meq(secMgr),
+        meq(kubernetesClient),
+        any(classOf[ResourceProfile])))
+      .thenReturn(KubernetesExecutorSpec(executorPodWithIdAndVolume(0), Seq.empty))
 
     val error = intercept[SparkException] {
       allocator.setTotalExpectedExecutors(Map(defaultProfile -> 1))

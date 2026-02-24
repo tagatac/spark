@@ -59,7 +59,11 @@ class MariaDBKrbIntegrationSuite extends DockerKrbJDBCIntegrationSuite {
 
   override protected def setAuthentication(keytabFile: String, principal: String): Unit = {
     val config = new SecureConnectionProvider.JDBCConfiguration(
-      Configuration.getConfiguration, "Krb5ConnectorContext", keytabFile, principal, true)
+      Configuration.getConfiguration,
+      "Krb5ConnectorContext",
+      keytabFile,
+      principal,
+      true)
     Configuration.setConfiguration(config)
   }
 }

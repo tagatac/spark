@@ -31,15 +31,13 @@ import org.apache.spark.internal.config._
 import org.apache.spark.scheduler.HealthTracker
 
 /**
- * YarnAllocatorNodeHealthTracker is responsible for tracking the health of nodes
- * and synchronizing the node list to YARN as to which nodes are excluded.
+ * YarnAllocatorNodeHealthTracker is responsible for tracking the health of nodes and
+ * synchronizing the node list to YARN as to which nodes are excluded.
  *
  * Excluding nodes are coming from two different sources:
  *
- * <ul>
- *   <li> from the scheduler as task level excluded nodes
- *   <li> from this class (tracked here) as YARN resource allocation problems
- * </ul>
+ * <ul> <li> from the scheduler as task level excluded nodes <li> from this class (tracked here)
+ * as YARN resource allocation problems </ul>
  *
  * The reason to realize this logic here (and not in the driver) is to avoid possible delays
  * between synchronizing the excluded nodes with YARN and resource allocations.
@@ -48,7 +46,7 @@ private[spark] class YarnAllocatorNodeHealthTracker(
     sparkConf: SparkConf,
     amClient: AMRMClient[ContainerRequest],
     failureTracker: ExecutorFailureTracker)
-  extends Logging {
+    extends Logging {
 
   private val excludeOnFailureTimeoutMillis = HealthTracker.getExcludeOnFailureTimeout(sparkConf)
 
@@ -79,7 +77,7 @@ private[spark] class YarnAllocatorNodeHealthTracker(
         // as resource requests are asynchronous
         // and a late failure response could exceed MAX_EXECUTOR_FAILURES
         if (!schedulerExcludedNodeList.contains(hostname) &&
-            !allocatorExcludedNodeList.contains(hostname)) {
+          !allocatorExcludedNodeList.contains(hostname)) {
           failureTracker.registerFailureOnHost(hostname)
           updateAllocationExcludedNodes(hostname)
         }
@@ -91,8 +89,9 @@ private[spark] class YarnAllocatorNodeHealthTracker(
   private def updateAllocationExcludedNodes(hostname: String): Unit = {
     val failuresOnHost = failureTracker.numFailuresOnHost(hostname)
     if (failuresOnHost > maxFailuresPerHost) {
-      logInfo(log"excluding ${MDC(HOST, hostname)} as YARN allocation failed " +
-        log"${MDC(FAILURES, failuresOnHost)} times")
+      logInfo(
+        log"excluding ${MDC(HOST, hostname)} as YARN allocation failed " +
+          log"${MDC(FAILURES, failuresOnHost)} times")
       allocatorExcludedNodeList.put(
         hostname,
         failureTracker.clock.getTimeMillis() + excludeOnFailureTimeoutMillis)
@@ -127,12 +126,14 @@ private[spark] class YarnAllocatorNodeHealthTracker(
     val additions = (nodesToExclude -- currentExcludededYarnNodes).toList.sorted
     val removals = (currentExcludededYarnNodes -- nodesToExclude).toList.sorted
     if (additions.nonEmpty) {
-      logInfo(log"adding nodes to YARN application master's " +
-        log"excluded node list: ${MDC(NODES, additions)}")
+      logInfo(
+        log"adding nodes to YARN application master's " +
+          log"excluded node list: ${MDC(NODES, additions)}")
     }
     if (removals.nonEmpty) {
-      logInfo(log"removing nodes from YARN application master's " +
-        log"excluded node list: ${MDC(NODES, removals)}")
+      logInfo(
+        log"removing nodes from YARN application master's " +
+          log"excluded node list: ${MDC(NODES, removals)}")
     }
     if (additions.nonEmpty || removals.nonEmpty) {
       // Note YARNs api for excluding nodes is updateBlacklist.

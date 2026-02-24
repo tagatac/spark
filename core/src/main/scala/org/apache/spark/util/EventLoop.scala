@@ -128,9 +128,9 @@ private[spark] abstract class EventLoop[E](name: String) extends Logging {
   /**
    * Invoked in the event thread when polling events from the event queue.
    *
-   * Note: Should avoid calling blocking actions in `onReceive`, or the event thread will be blocked
-   * and cannot process events in time. If you want to call some blocking actions, run them in
-   * another thread.
+   * Note: Should avoid calling blocking actions in `onReceive`, or the event thread will be
+   * blocked and cannot process events in time. If you want to call some blocking actions, run
+   * them in another thread.
    */
   protected def onReceive(event: E): Unit
 

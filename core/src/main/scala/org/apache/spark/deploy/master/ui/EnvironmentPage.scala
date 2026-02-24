@@ -28,13 +28,18 @@ import org.apache.spark.internal.config.UI.MASTER_UI_VISIBLE_ENV_VAR_PREFIXES
 import org.apache.spark.ui._
 import org.apache.spark.util.Utils
 
-private[ui] class EnvironmentPage(
-    parent: MasterWebUI,
-    conf: SparkConf) extends WebUIPage("Environment") {
+private[ui] class EnvironmentPage(parent: MasterWebUI, conf: SparkConf)
+    extends WebUIPage("Environment") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
-    val details = SparkEnv.environmentDetails(conf, SparkHadoopUtil.get.newConfiguration(conf),
-      "", Seq.empty, Seq.empty, Seq.empty, Map.empty)
+    val details = SparkEnv.environmentDetails(
+      conf,
+      SparkHadoopUtil.get.newConfiguration(conf),
+      "",
+      Seq.empty,
+      Seq.empty,
+      Seq.empty,
+      Map.empty)
     val jvmInformation = details("JVM Information").sorted
     val sparkProperties = Utils.redact(conf, details("Spark Properties")).sorted
     val hadoopProperties = Utils.redact(conf, details("Hadoop Properties")).sorted
@@ -42,23 +47,55 @@ private[ui] class EnvironmentPage(
     val metricsProperties = Utils.redact(conf, details("Metrics Properties")).sorted
     val classpathEntries = details("Classpath Entries").sorted
     val prefixes = conf.get(MASTER_UI_VISIBLE_ENV_VAR_PREFIXES)
-    val environmentVariables = System.getenv().asScala
-      .filter { case (k, _) => prefixes.exists(k.startsWith(_)) }.toSeq.sorted
+    val environmentVariables = System
+      .getenv()
+      .asScala
+      .filter { case (k, _) => prefixes.exists(k.startsWith(_)) }
+      .toSeq
+      .sorted
 
-    val runtimeInformationTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      jvmInformation, fixedWidth = true, headerClasses = headerClasses)
-    val sparkPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      sparkProperties, fixedWidth = true, headerClasses = headerClasses)
-    val hadoopPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      hadoopProperties, fixedWidth = true, headerClasses = headerClasses)
-    val systemPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      systemProperties, fixedWidth = true, headerClasses = headerClasses)
-    val metricsPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      metricsProperties, fixedWidth = true, headerClasses = headerClasses)
-    val classpathEntriesTable = UIUtils.listingTable(classPathHeader, classPathRow,
-      classpathEntries, fixedWidth = true, headerClasses = headerClasses)
-    val environmentVariablesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      environmentVariables, fixedWidth = true, headerClasses = headerClasses)
+    val runtimeInformationTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      jvmInformation,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val sparkPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      sparkProperties,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val hadoopPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      hadoopProperties,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val systemPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      systemProperties,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val metricsPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      metricsProperties,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val classpathEntriesTable = UIUtils.listingTable(
+      classPathHeader,
+      classPathRow,
+      classpathEntries,
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val environmentVariablesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      environmentVariables,
+      fixedWidth = true,
+      headerClasses = headerClasses)
 
     val content =
       <div>
@@ -157,4 +194,3 @@ private[ui] class EnvironmentPage(
   private def propertyRow(kv: (String, String)) = <tr><td>{kv._1}</td><td>{kv._2}</td></tr>
   private def classPathRow(data: (String, String)) = <tr><td>{data._1}</td><td>{data._2}</td></tr>
 }
-

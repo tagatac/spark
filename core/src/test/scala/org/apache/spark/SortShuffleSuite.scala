@@ -46,7 +46,8 @@ class SortShuffleSuite extends ShuffleSuite {
     ensureFilesAreCleanedUp(shuffledRdd)
   }
 
-  test("SortShuffleManager properly cleans up files for shuffles that use the deserialized path") {
+  test(
+    "SortShuffleManager properly cleans up files for shuffles that use the deserialized path") {
     sc = new SparkContext("local", "test", conf)
     // Create a shuffled RDD and verify that it actually uses the old deserialized map output path
     val rdd = sc.parallelize(1 to 10, 1).map(x => (x, x))
@@ -65,12 +66,14 @@ class SortShuffleSuite extends ShuffleSuite {
     // Ensure that the shuffle actually created files that will need to be cleaned up
     val filesCreatedByShuffle = getAllFiles -- filesBeforeShuffle
     filesCreatedByShuffle.map(_.getName) should be(
-      Set("shuffle_0_0_0.data", s"shuffle_0_0_0.checksum.${conf.get(SHUFFLE_CHECKSUM_ALGORITHM)}",
+      Set(
+        "shuffle_0_0_0.data",
+        s"shuffle_0_0_0.checksum.${conf.get(SHUFFLE_CHECKSUM_ALGORITHM)}",
         "shuffle_0_0_0.index"))
     // Check that the cleanup actually removes the files
     sc.env.blockManager.master.removeShuffle(0, blocking = true)
     for (file <- filesCreatedByShuffle) {
-      assert (!file.exists(), s"Shuffle file $file was not cleaned up")
+      assert(!file.exists(), s"Shuffle file $file was not cleaned up")
     }
   }
 }

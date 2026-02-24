@@ -95,8 +95,7 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
 
   test("SPARK-22306: alter table schema should not erase the bucketing metadata at hive side") {
     val catalog = newBasicCatalog()
-    externalCatalog.client.runSqlHive(
-      """
+    externalCatalog.client.runSqlHive("""
         |CREATE TABLE db1.t(a string, b string)
         |CLUSTERED BY (a, b) SORTED BY (a, b) INTO 10 BUCKETS
         |STORED AS PARQUET
@@ -106,40 +105,49 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
     catalog.alterTableSchema("db1", "t", newSchema)
 
     assert(catalog.getTable("db1", "t").schema == newSchema)
-    val bucketString = externalCatalog.client.runSqlHive("DESC FORMATTED db1.t")
-      .filter(_.contains("Num Buckets")).head
+    val bucketString = externalCatalog.client
+      .runSqlHive("DESC FORMATTED db1.t")
+      .filter(_.contains("Num Buckets"))
+      .head
     assert(bucketString.contains("10"))
   }
 
   test("SPARK-30050: analyze/rename table should not erase the bucketing metadata at hive side") {
     val catalog = newBasicCatalog()
-    externalCatalog.client.runSqlHive(
-      """
+    externalCatalog.client.runSqlHive("""
         |CREATE TABLE db1.t(a string, b string)
         |CLUSTERED BY (a, b) SORTED BY (a, b) INTO 10 BUCKETS
         |STORED AS PARQUET
       """.stripMargin)
 
-    val bucketString1 = externalCatalog.client.runSqlHive("DESC FORMATTED db1.t")
-      .filter(_.contains("Num Buckets")).head
+    val bucketString1 = externalCatalog.client
+      .runSqlHive("DESC FORMATTED db1.t")
+      .filter(_.contains("Num Buckets"))
+      .head
     assert(bucketString1.contains("10"))
 
     catalog.alterTableStats("db1", "t", None)
 
-    val bucketString2 = externalCatalog.client.runSqlHive("DESC FORMATTED db1.t")
-      .filter(_.contains("Num Buckets")).head
+    val bucketString2 = externalCatalog.client
+      .runSqlHive("DESC FORMATTED db1.t")
+      .filter(_.contains("Num Buckets"))
+      .head
     assert(bucketString2.contains("10"))
 
     catalog.renameTable("db1", "t", "t2")
 
-    val bucketString3 = externalCatalog.client.runSqlHive("DESC FORMATTED db1.t2")
-      .filter(_.contains("Num Buckets")).head
+    val bucketString3 = externalCatalog.client
+      .runSqlHive("DESC FORMATTED db1.t2")
+      .filter(_.contains("Num Buckets"))
+      .head
     assert(bucketString3.contains("10"))
   }
 
   test("SPARK-23001: NullPointerException when running desc database") {
     val catalog = newBasicCatalog()
-    catalog.createDatabase(newDb("dbWithNullDesc").copy(description = null), ignoreIfExists = false)
+    catalog.createDatabase(
+      newDb("dbWithNullDesc").copy(description = null),
+      ignoreIfExists = false)
     assert(catalog.getDatabase("dbWithNullDesc").description == "")
   }
 
@@ -165,25 +173,22 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
     assertThrows[QueryExecutionException](client.runSqlHive(s"ADD JAR $jarPath"))
 
     // test change to the database which doesn't exists
-    assertThrows[QueryExecutionException](client.runSqlHive(
-      s"use db_not_exists"))
+    assertThrows[QueryExecutionException](client.runSqlHive(s"use db_not_exists"))
 
     // test create hive table failed with unsupported into type
-    assertThrows[QueryExecutionException](client.runSqlHive(
-      s"CREATE TABLE t(n into)"))
+    assertThrows[QueryExecutionException](client.runSqlHive(s"CREATE TABLE t(n into)"))
 
     // test desc table failed with wrong `FORMATED` keyword
-    assertThrows[QueryExecutionException](client.runSqlHive(
-      s"DESC FORMATED t"))
+    assertThrows[QueryExecutionException](client.runSqlHive(s"DESC FORMATED t"))
 
     // test wrong insert query
-    assertThrows[QueryExecutionException](client.runSqlHive(
-      "INSERT overwrite directory \"fs://localhost/tmp\" select 1 as a"))
+    assertThrows[QueryExecutionException](
+      client.runSqlHive("INSERT overwrite directory \"fs://localhost/tmp\" select 1 as a"))
   }
 
   test("SPARK-31061: alterTable should be able to change table provider/hive") {
     val catalog = newBasicCatalog()
-    Seq("parquet", "hive").foreach( provider => {
+    Seq("parquet", "hive").foreach(provider => {
       val tableDDL = CatalogTable(
         identifier = TableIdentifier("parq_tbl", Some("db1")),
         tableType = CatalogTableType.MANAGED,
@@ -208,12 +213,8 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
     val tableName = "collation_tbl"
     val columnName = "col1"
 
-    val collationsSchema = StructType(Seq(
-      StructField(columnName, StringType("UNICODE"))
-    ))
-    val noCollationsSchema = StructType(Seq(
-      StructField(columnName, StringType)
-    ))
+    val collationsSchema = StructType(Seq(StructField(columnName, StringType("UNICODE"))))
+    val noCollationsSchema = StructType(Seq(StructField(columnName, StringType)))
 
     val tableDDL = CatalogTable(
       identifier = TableIdentifier(tableName, Some("db1")),
@@ -231,9 +232,7 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
     assert(DataTypeUtils.sameType(readBackTable.schema, collationsSchema))
 
     // perform alter table
-    val newSchema = StructType(Seq(
-      StructField("col1", StringType("UTF8_LCASE"))
-    ))
+    val newSchema = StructType(Seq(StructField("col1", StringType("UTF8_LCASE"))))
     catalog.alterTableSchema("db1", tableName, newSchema)
 
     val alteredRawTable = externalCatalog.getRawTable("db1", tableName)
@@ -261,14 +260,16 @@ class HiveExternalCatalogSuite extends ExternalCatalogSuite {
         tableType = CatalogTableType.EXTERNAL,
         storage = storageFormat.copy(locationUri = Some(newUriForDatabase())),
         schema = new StructType()
-            .add("col1", "string"),
+          .add("col1", "string"),
         provider = Some("parquet"))
       intercept[Throwable] {
         catalog.createTable(table, ignoreIfExists = false)
       }
     }
-    assert(!logAppender.loggingEvents.map(_.getMessage.getFormattedMessage).contains(
-      "Could not persist `default`.`tbl` in a Hive compatible way. " +
-      "Persisting it into Hive metastore in Spark SQL specific format."))
+    assert(
+      !logAppender.loggingEvents
+        .map(_.getMessage.getFormattedMessage)
+        .contains("Could not persist `default`.`tbl` in a Hive compatible way. " +
+          "Persisting it into Hive metastore in Spark SQL specific format."))
   }
 }

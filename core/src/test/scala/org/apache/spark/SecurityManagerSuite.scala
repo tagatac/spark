@@ -465,16 +465,16 @@ class SecurityManagerSuite extends SparkFunSuite with ResetSystemProperties {
     ("k8s://127.0.0.1", AUTO),
     ("k8s://127.0.1.1", FILE),
     ("local-cluster[2, 1, 1024]", MANUAL),
-    ("invalid", MANUAL)
-  ).foreach { case (master, secretType) =>
+    ("invalid", MANUAL)).foreach { case (master, secretType) =>
     test(s"secret key generation: master '$master'") {
       val conf = new SparkConf()
         .set(NETWORK_AUTH_ENABLED, true)
         .set(SparkLauncher.SPARK_MASTER, master)
       val mgr = new SecurityManager(conf)
 
-      UserGroupInformation.createUserForTesting("authTest", Array()).doAs(
-        new PrivilegedExceptionAction[Unit]() {
+      UserGroupInformation
+        .createUserForTesting("authTest", Array())
+        .doAs(new PrivilegedExceptionAction[Unit]() {
           override def run(): Unit = {
             secretType match {
               case UGI =>
@@ -505,8 +505,7 @@ class SecurityManagerSuite extends SparkFunSuite with ResetSystemProperties {
                 }
             }
           }
-        }
-      )
+        })
     }
   }
 
@@ -514,4 +513,3 @@ class SecurityManagerSuite extends SparkFunSuite with ResetSystemProperties {
     Base64.getEncoder.encodeToString(Files.readAllBytes(secretFile.toPath))
   }
 }
-

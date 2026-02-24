@@ -91,7 +91,7 @@ private[spark] trait SparkStringUtils {
     if (str == null || str.length >= width) {
       str
     } else {
-      val tmp = str + s.repeat((width - str.length)/s.length)
+      val tmp = str + s.repeat((width - str.length) / s.length)
       tmp + s.substring(0, width - tmp.length)
     }
 }

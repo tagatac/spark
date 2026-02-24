@@ -28,9 +28,9 @@ import org.apache.spark.tags.ExtendedLevelDBTest
 import org.apache.spark.util.Utils
 
 /**
- * This suite gets BlockData when the ExternalShuffleService is restarted
- * with #spark.shuffle.service.db.enabled = true or false
- * Note that failures in this suite may arise when#spark.shuffle.service.db.enabled = false
+ * This suite gets BlockData when the ExternalShuffleService is restarted with
+ * #spark.shuffle.service.db.enabled = true or false Note that failures in this suite may arise
+ * when#spark.shuffle.service.db.enabled = false
  */
 abstract class ExternalShuffleServiceDbSuite extends SparkFunSuite {
   val sortBlock0 = "Hello!"
@@ -58,8 +58,11 @@ abstract class ExternalShuffleServiceDbSuite extends SparkFunSuite {
     dataContext = new TestShuffleDataContext(2, 5)
     dataContext.create()
     // Write some sort data.
-    dataContext.insertSortShuffleData(0, 0,
-      Array[Array[Byte]](sortBlock0.getBytes(StandardCharsets.UTF_8),
+    dataContext.insertSortShuffleData(
+      0,
+      0,
+      Array[Array[Byte]](
+        sortBlock0.getBytes(StandardCharsets.UTF_8),
         sortBlock1.getBytes(StandardCharsets.UTF_8)))
     registerExecutor()
   }
@@ -84,7 +87,10 @@ abstract class ExternalShuffleServiceDbSuite extends SparkFunSuite {
       externalShuffleService.start()
       blockHandler = externalShuffleService.getBlockHandler
       blockResolver = blockHandler.getBlockResolver
-      blockResolver.registerExecutor("app0", "exec0", dataContext.createExecutorInfo(SORT_MANAGER))
+      blockResolver.registerExecutor(
+        "app0",
+        "exec0",
+        dataContext.createExecutorInfo(SORT_MANAGER))
     } finally {
       blockHandler.close()
       // external Shuffle Service stop
@@ -95,8 +101,9 @@ abstract class ExternalShuffleServiceDbSuite extends SparkFunSuite {
   // The beforeAll ensures the shuffle data was already written, and then
   // the shuffle service was stopped. Here we restart the shuffle service
   // and make we can read the shuffle data
-  test("Recover shuffle data with spark.shuffle.service.db.enabled=true after " +
-    "shuffle service restart") {
+  test(
+    "Recover shuffle data with spark.shuffle.service.db.enabled=true after " +
+      "shuffle service restart") {
     try {
       sparkConf.set("spark.shuffle.service.db.enabled", "true")
       sparkConf.set(SHUFFLE_SERVICE_DB_BACKEND.key, shuffleDBBackend().name())
@@ -122,8 +129,9 @@ abstract class ExternalShuffleServiceDbSuite extends SparkFunSuite {
   // The beforeAll ensures the shuffle data was already written, and then
   // the shuffle service was stopped. Here we restart the shuffle service ,
   // but we can't read the shuffle data
-  test("Can't recover shuffle data with spark.shuffle.service.db.enabled=false after" +
-    " shuffle service restart") {
+  test(
+    "Can't recover shuffle data with spark.shuffle.service.db.enabled=false after" +
+      " shuffle service restart") {
     try {
       sparkConf.set("spark.shuffle.service.db.enabled", "false")
       externalShuffleService = new ExternalShuffleService(shuffleServiceConf, securityManager)

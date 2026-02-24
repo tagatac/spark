@@ -26,13 +26,7 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.PersistedView
 import org.apache.spark.sql.classic.SparkSession
-import org.apache.spark.sql.connector.catalog.{
-  CatalogV2Util,
-  Identifier,
-  TableCatalog,
-  TableChange,
-  TableInfo
-}
+import org.apache.spark.sql.connector.catalog.{CatalogV2Util, Identifier, TableCatalog, TableChange, TableInfo}
 import org.apache.spark.sql.connector.catalog.CatalogV2Util.v2ColumnsToStructType
 import org.apache.spark.sql.connector.expressions.{ClusterByTransform, Expressions}
 import org.apache.spark.sql.execution.command.CreateViewCommand
@@ -42,8 +36,8 @@ import org.apache.spark.sql.pipelines.util.SchemaMergingUtils
 
 /**
  * `DatasetManager` is responsible for materializing tables in the catalog based on the given
- * graph. For each table in the graph, it will create a table if none exists (or if this is a
- * full refresh), or merge the schema of an existing table to match the new flows writing to it.
+ * graph. For each table in the graph, it will create a table if none exists (or if this is a full
+ * refresh), or merge the schema of an existing table to match the new flows writing to it.
  */
 object DatasetManager extends Logging {
 
@@ -51,31 +45,32 @@ object DatasetManager extends Logging {
    * Wraps table materialization exceptions.
    *
    * The target use case of this exception is merely as a means to capture attribution -
-   * 1. Indicate that the exception is associated with table materialization.
-   * 2. Indicate which table materialization failed for.
+   *   1. Indicate that the exception is associated with table materialization.
+   *   2. Indicate which table materialization failed for.
    *
-   * @param tableName The name of the table that failed to materialize.
-   * @param cause The underlying exception that caused the materialization to fail.
+   * @param tableName
+   *   The name of the table that failed to materialize.
+   * @param cause
+   *   The underlying exception that caused the materialization to fail.
    */
-  case class TableMaterializationException(
-      tableName: String,
-      cause: Throwable
-  ) extends Exception(cause)
+  case class TableMaterializationException(tableName: String, cause: Throwable)
+      extends Exception(cause)
       with NoStackTrace
 
   /**
-   * Materializes the tables in the given graph. This method will create or update the tables
-   * in the catalog based on the given graph and context.
+   * Materializes the tables in the given graph. This method will create or update the tables in
+   * the catalog based on the given graph and context.
    *
-   * @param resolvedDataflowGraph The resolved [[DataflowGraph]] with resolved [[Flow]] sorted
-   *                              in topological order.
-   * @param context The context for the pipeline update.
-   * @return The graph with materialized tables.
+   * @param resolvedDataflowGraph
+   *   The resolved [[DataflowGraph]] with resolved [[Flow]] sorted in topological order.
+   * @param context
+   *   The context for the pipeline update.
+   * @return
+   *   The graph with materialized tables.
    */
   def materializeDatasets(
       resolvedDataflowGraph: DataflowGraph,
-      context: PipelineUpdateContext
-  ): DataflowGraph = {
+      context: PipelineUpdateContext): DataflowGraph = {
     val (_, refreshTableIdentsSet, fullRefreshTableIdentsSet) = {
       constructFullRefreshSet(resolvedDataflowGraph.tables, context)
     }
@@ -85,9 +80,9 @@ object DatasetManager extends Logging {
       graph.tables
         .filter(t => fullRefreshTableIdentsSet.contains(t.identifier))
         .map(table => TableRefreshType(table, isFullRefresh = true)) ++
-      graph.tables
-        .filter(t => refreshTableIdentsSet.contains(t.identifier))
-        .map(table => TableRefreshType(table, isFullRefresh = false))
+        graph.tables
+          .filter(t => refreshTableIdentsSet.contains(t.identifier))
+          .map(table => TableRefreshType(table, isFullRefresh = false))
     }
 
     val tablesToMaterialize = {
@@ -96,35 +91,34 @@ object DatasetManager extends Logging {
 
     // materialized [[DataflowGraph]] where each table has been materialized and each table
     // has metadata (e.g., normalized table storage path) populated
-    val materializedGraph: DataflowGraph = try {
-      DataflowGraphTransformer
-        .withDataflowGraphTransformer(resolvedDataflowGraph) { transformer =>
-          transformer.transformTables { table =>
-            if (tablesToMaterialize.keySet.contains(table.identifier)) {
-              try {
-                materializeTable(
-                  resolvedDataflowGraph = resolvedDataflowGraph,
-                  table = table,
-                  isFullRefresh = tablesToMaterialize(table.identifier).isFullRefresh,
-                  context = context
-                )
-              } catch {
-                case NonFatal(e) =>
-                  throw TableMaterializationException(
-                    table.displayName,
-                    cause = e.addOrigin(table.origin)
-                  )
+    val materializedGraph: DataflowGraph =
+      try {
+        DataflowGraphTransformer
+          .withDataflowGraphTransformer(resolvedDataflowGraph) { transformer =>
+            transformer.transformTables { table =>
+              if (tablesToMaterialize.keySet.contains(table.identifier)) {
+                try {
+                  materializeTable(
+                    resolvedDataflowGraph = resolvedDataflowGraph,
+                    table = table,
+                    isFullRefresh = tablesToMaterialize(table.identifier).isFullRefresh,
+                    context = context)
+                } catch {
+                  case NonFatal(e) =>
+                    throw TableMaterializationException(
+                      table.displayName,
+                      cause = e.addOrigin(table.origin))
+                }
+              } else {
+                table
               }
-            } else {
-              table
             }
-          }
 
-        }
-        .getDataflowGraph
-    } catch {
-      case e: SparkException if e.getCause != null => throw e.getCause
-    }
+          }
+          .getDataflowGraph
+      } catch {
+        case e: SparkException if e.getCause != null => throw e.getCause
+      }
     materializeViews(materializedGraph, context)
     materializedGraph
   }
@@ -132,8 +126,8 @@ object DatasetManager extends Logging {
   /**
    * Publish or refresh all the [[PersistedView]]s in the specified [[DataflowGraph]]
    *
-   * @param virtualizedConnectedGraphWithTables virtualizedConnectedGraph that has table information
-   *                                            from the graph.
+   * @param virtualizedConnectedGraphWithTables
+   *   virtualizedConnectedGraph that has table information from the graph.
    */
   private def materializeViews(
       virtualizedConnectedGraphWithTables: DataflowGraph,
@@ -190,11 +184,7 @@ object DatasetManager extends Logging {
             viewsToPublish -= v
           } catch {
             case NonFatal(ex) =>
-              context.flowProgressEventLogger.recordFailed(
-                flowToView,
-                ex,
-                logAsWarn = false
-              )
+              context.flowProgressEventLogger.recordFailed(flowToView, ex, logAsWarn = false)
               failedViews += v.identifier
               viewsToPublish -= v
           }
@@ -214,8 +204,7 @@ object DatasetManager extends Logging {
       plan = flow.df.logicalPlan,
       allowExisting = true,
       replace = true,
-      isAnalyzed = true
-    )
+      isAnalyzed = true)
 
     val queryContext = flow.queryContext
 
@@ -237,11 +226,16 @@ object DatasetManager extends Logging {
   /**
    * Materializes a table in the catalog. This method will create or update the table in the
    * catalog based on the given table and context.
-   * @param resolvedDataflowGraph The resolved [[DataflowGraph]] used to infer the table schema.
-   * @param table The table to be materialized.
-   * @param isFullRefresh Whether this table should be full refreshed or not.
-   * @param context The context for the pipeline update.
-   * @return The materialized table (with additional metadata set).
+   * @param resolvedDataflowGraph
+   *   The resolved [[DataflowGraph]] used to infer the table schema.
+   * @param table
+   *   The table to be materialized.
+   * @param isFullRefresh
+   *   Whether this table should be full refreshed or not.
+   * @param context
+   *   The context for the pipeline update.
+   * @return
+   *   The materialized table (with additional metadata set).
    */
   private def materializeTable(
       resolvedDataflowGraph: DataflowGraph,
@@ -260,20 +254,18 @@ object DatasetManager extends Logging {
     val identifier =
       Identifier.of(Array(table.identifier.database.get), table.identifier.identifier)
     val outputSchema = table.specifiedSchema.getOrElse(
-      resolvedDataflowGraph.inferredSchema(table.identifier).asNullable
-    )
+      resolvedDataflowGraph.inferredSchema(table.identifier).asNullable)
     val mergedProperties = resolveTableProperties(table, identifier)
     val partitioning = table.partitionCols.toSeq.flatten.map(Expressions.identity)
-    val clustering = table.clusterCols.map(cols =>
-      ClusterByTransform(cols.map(col => Expressions.column(col)))
-    ).toSeq
+    val clustering = table.clusterCols
+      .map(cols => ClusterByTransform(cols.map(col => Expressions.column(col))))
+      .toSeq
 
     // Validate that partition and cluster columns don't coexist
     if (partitioning.nonEmpty && clustering.nonEmpty) {
       throw new AnalysisException(
         errorClass = "SPECIFY_CLUSTER_BY_WITH_PARTITIONED_BY_IS_NOT_ALLOWED",
-        messageParameters = Map.empty
-      )
+        messageParameters = Map.empty)
     }
 
     val allTransforms = partitioning ++ clustering
@@ -292,9 +284,7 @@ object DatasetManager extends Logging {
           errorClass = "CANNOT_UPDATE_PARTITION_COLUMNS",
           messageParameters = Map(
             "existingPartitionColumns" -> existingTransforms.mkString(", "),
-            "requestedPartitionColumns" -> allTransforms.mkString(", ")
-          )
-        )
+            "requestedPartitionColumns" -> allTransforms.mkString(", ")))
       }
     }
 
@@ -326,43 +316,38 @@ object DatasetManager extends Logging {
           .withProperties(mergedProperties.asJava)
           .withColumns(CatalogV2Util.structTypeToV2Columns(outputSchema))
           .withPartitions(allTransforms.toArray)
-          .build()
-      )
+          .build())
     }
 
-    table.copy(
-      normalizedPath = Option(
-        catalog.loadTable(identifier).properties().get(TableCatalog.PROP_LOCATION)
-      )
-    )
+    table.copy(normalizedPath =
+      Option(catalog.loadTable(identifier).properties().get(TableCatalog.PROP_LOCATION)))
   }
 
   /**
-   * Some fields on the [[Table]] object are represented as reserved table properties by the catalog
-   * APIs. This method creates a table properties map that merges the user-provided table properties
-   * with these reserved properties.
+   * Some fields on the [[Table]] object are represented as reserved table properties by the
+   * catalog APIs. This method creates a table properties map that merges the user-provided table
+   * properties with these reserved properties.
    */
-  private def resolveTableProperties(table: Table, identifier: Identifier): Map[String, String] = {
+  private def resolveTableProperties(
+      table: Table,
+      identifier: Identifier): Map[String, String] = {
     val validatedAndCanonicalizedProps =
       PipelinesTableProperties.validateAndCanonicalize(
         table.properties,
-        warnFunction = s => logWarning(s)
-      )
+        warnFunction = s => logWarning(s))
 
     val specialProps = Seq(
       (table.comment, "comment", TableCatalog.PROP_COMMENT),
-      (table.format, "format", TableCatalog.PROP_PROVIDER)
-    ).map {
-        case (value, name, reservedPropKey) =>
-          validatedAndCanonicalizedProps.get(reservedPropKey).foreach { pc =>
-            if (value.isDefined && value.get != pc) {
-              throw new IllegalArgumentException(
-                s"For dataset $identifier, $name '${value.get}' does not match value '$pc' for " +
-                s"reserved table property '$reservedPropKey''"
-              )
-            }
+      (table.format, "format", TableCatalog.PROP_PROVIDER))
+      .map { case (value, name, reservedPropKey) =>
+        validatedAndCanonicalizedProps.get(reservedPropKey).foreach { pc =>
+          if (value.isDefined && value.get != pc) {
+            throw new IllegalArgumentException(
+              s"For dataset $identifier, $name '${value.get}' does not match value '$pc' for " +
+                s"reserved table property '$reservedPropKey''")
           }
-          reservedPropKey -> value
+        }
+        reservedPropKey -> value
       }
       .collect { case (key, Some(value)) => key -> value }
 
@@ -371,25 +356,26 @@ object DatasetManager extends Logging {
 
   /**
    * A case class that represents the type of refresh for a table.
-   * @param table The table to be refreshed.
-   * @param isFullRefresh Whether this table should be fully refreshed or not.
+   * @param table
+   *   The table to be refreshed.
+   * @param isFullRefresh
+   *   Whether this table should be fully refreshed or not.
    */
   private case class TableRefreshType(table: Table, isFullRefresh: Boolean)
 
   /**
-   * Constructs the set of tables that should be fully refreshed and the set of tables that
-   * should be refreshed.
+   * Constructs the set of tables that should be fully refreshed and the set of tables that should
+   * be refreshed.
    */
-  private def constructFullRefreshSet(
-      graphTables: Seq[Table],
-      context: PipelineUpdateContext
-  ): (Seq[Table], Seq[TableIdentifier], Seq[TableIdentifier]) = {
+  private def constructFullRefreshSet(graphTables: Seq[Table], context: PipelineUpdateContext)
+      : (Seq[Table], Seq[TableIdentifier], Seq[TableIdentifier]) = {
     val (fullRefreshTablesSet, refreshTablesSet) = {
       val specifiedFullRefreshTables = context.fullRefreshTables.filter(graphTables)
       val specifiedRefreshTables = context.refreshTables.filter(graphTables)
 
-      val (fullRefreshAllowed, fullRefreshNotAllowed) = specifiedFullRefreshTables.partition { t =>
-        PipelinesTableProperties.resetAllowed.fromMap(t.properties)
+      val (fullRefreshAllowed, fullRefreshNotAllowed) = specifiedFullRefreshTables.partition {
+        t =>
+          PipelinesTableProperties.resetAllowed.fromMap(t.properties)
       }
 
       val refreshTables = (specifiedRefreshTables ++ fullRefreshNotAllowed).filterNot { t =>
@@ -399,10 +385,9 @@ object DatasetManager extends Logging {
       if (fullRefreshNotAllowed.nonEmpty) {
         logInfo(
           log"Skipping full refresh on some tables because " +
-          log"${MDC(LogKeys.PROPERTY_NAME, PipelinesTableProperties.resetAllowed.key)} " +
-          log"was set to false. Tables: " +
-          log"${MDC(LogKeys.TABLE_NAME, fullRefreshNotAllowed.map(_.identifier))}"
-        )
+            log"${MDC(LogKeys.PROPERTY_NAME, PipelinesTableProperties.resetAllowed.key)} " +
+            log"was set to false. Tables: " +
+            log"${MDC(LogKeys.TABLE_NAME, fullRefreshNotAllowed.map(_.identifier))}")
       }
 
       (fullRefreshAllowed, refreshTables)

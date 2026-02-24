@@ -22,10 +22,8 @@ import org.apache.spark.deploy.yarn.ApplicationMaster
 import org.apache.spark.scheduler.TaskSchedulerImpl
 import org.apache.spark.util.YarnContainerInfoHelper
 
-private[spark] class YarnClusterSchedulerBackend(
-    scheduler: TaskSchedulerImpl,
-    sc: SparkContext)
-  extends YarnSchedulerBackend(scheduler, sc) {
+private[spark] class YarnClusterSchedulerBackend(scheduler: TaskSchedulerImpl, sc: SparkContext)
+    extends YarnSchedulerBackend(scheduler, sc) {
 
   override def start(): Unit = {
     val attemptId = ApplicationMaster.getAttemptId()

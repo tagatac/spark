@@ -33,13 +33,12 @@ private[sql] class HiveSessionCatalog(
     parser: ParserInterface,
     functionResourceLoader: FunctionResourceLoader,
     functionExpressionBuilder: FunctionExpressionBuilder)
-  extends SessionCatalog(
-    externalCatalogBuilder,
-    globalTempViewManagerBuilder,
-    functionRegistry,
-    tableFunctionRegistry,
-    hadoopConf,
-    parser,
-    functionResourceLoader,
-    functionExpressionBuilder) {
-}
+    extends SessionCatalog(
+      externalCatalogBuilder,
+      globalTempViewManagerBuilder,
+      functionRegistry,
+      tableFunctionRegistry,
+      hadoopConf,
+      parser,
+      functionResourceLoader,
+      functionExpressionBuilder) {}

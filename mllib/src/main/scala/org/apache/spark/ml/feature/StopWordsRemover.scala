@@ -38,14 +38,19 @@ import org.apache.spark.util.ArrayImplicits._
  * `inputCols` parameter. Note that when both the `inputCol` and `inputCols` parameters are set,
  * an Exception will be thrown.
  *
- * @note null values from input array are preserved unless adding null to stopWords
- * explicitly.
+ * @note
+ *   null values from input array are preserved unless adding null to stopWords explicitly.
  *
- * @see <a href="http://en.wikipedia.org/wiki/Stop_words">Stop words (Wikipedia)</a>
+ * @see
+ *   <a href="http://en.wikipedia.org/wiki/Stop_words">Stop words (Wikipedia)</a>
  */
 @Since("1.5.0")
 class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String)
-  extends Transformer with HasInputCol with HasOutputCol with HasInputCols with HasOutputCols
+    extends Transformer
+    with HasInputCol
+    with HasOutputCol
+    with HasInputCols
+    with HasOutputCols
     with DefaultParamsWritable {
 
   @Since("1.5.0")
@@ -68,9 +73,9 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
   def setOutputCols(value: Array[String]): this.type = set(outputCols, value)
 
   /**
-   * The words to be filtered out.
-   * Default: English stop words
-   * @see `StopWordsRemover.loadDefaultStopWords()`
+   * The words to be filtered out. Default: English stop words
+   * @see
+   *   `StopWordsRemover.loadDefaultStopWords()`
    * @group param
    */
   @Since("1.5.0")
@@ -86,12 +91,13 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
   def getStopWords: Array[String] = $(stopWords)
 
   /**
-   * Whether to do a case sensitive comparison over the stop words.
-   * Default: false
+   * Whether to do a case sensitive comparison over the stop words. Default: false
    * @group param
    */
   @Since("1.5.0")
-  val caseSensitive: BooleanParam = new BooleanParam(this, "caseSensitive",
+  val caseSensitive: BooleanParam = new BooleanParam(
+    this,
+    "caseSensitive",
     "whether to do a case-sensitive comparison over the stop words")
 
   /** @group setParam */
@@ -103,14 +109,15 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
   def getCaseSensitive: Boolean = $(caseSensitive)
 
   /**
-   * Locale of the input for case insensitive matching. Ignored when [[caseSensitive]]
-   * is true.
+   * Locale of the input for case insensitive matching. Ignored when [[caseSensitive]] is true.
    * Default: the string of default locale (`Locale.getDefault`), or `Locale.US` if default locale
    * is not in available locales in JVM.
    * @group param
    */
   @Since("2.4.0")
-  val locale: Param[String] = new Param[String](this, "locale",
+  val locale: Param[String] = new Param[String](
+    this,
+    "locale",
     "Locale of the input for case insensitive matching. Ignored when caseSensitive is true.",
     ParamValidators.inArray[String](Locale.getAvailableLocales.map(_.toString)))
 
@@ -131,8 +138,10 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
     }
   }
 
-  setDefault(stopWords -> StopWordsRemover.loadDefaultStopWords("english"),
-    caseSensitive -> false, locale -> StopWordsRemover.getDefaultOrUS.toString)
+  setDefault(
+    stopWords -> StopWordsRemover.loadDefaultStopWords("english"),
+    caseSensitive -> false,
+    locale -> StopWordsRemover.getDefaultOrUS.toString)
 
   @Since("2.0.0")
   override def transform(dataset: Dataset[_]): DataFrame = {
@@ -166,11 +175,11 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
 
   @Since("1.5.0")
   override def transformSchema(schema: StructType): StructType = {
-    ParamValidators.checkSingleVsMultiColumnParams(this, Seq(outputCol),
-      Seq(outputCols))
+    ParamValidators.checkSingleVsMultiColumnParams(this, Seq(outputCol), Seq(outputCols))
 
     if (isSet(inputCols)) {
-      require(getInputCols.length == getOutputCols.length,
+      require(
+        getInputCols.length == getOutputCols.length,
         s"StopWordsRemover $this has mismatched Params " +
           s"for multi-column transform. Params ($inputCols, $outputCols) should have " +
           "equal lengths, but they have different lengths: " +
@@ -180,14 +189,18 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
     val (inputColNames, outputColNames) = getInOutCols()
 
     val newCols = inputColNames.zip(outputColNames).map { case (inputColName, outputColName) =>
-       require(!schema.fieldNames.contains(outputColName),
+      require(
+        !schema.fieldNames.contains(outputColName),
         s"Output Column $outputColName already exists.")
       val inputType = SchemaUtils.getSchemaFieldType(schema, inputColName)
-      require(DataTypeUtils.sameType(inputType, ArrayType(StringType)), "Input type must be " +
-        s"${ArrayType(StringType).catalogString} but got ${inputType.catalogString}.")
+      require(
+        DataTypeUtils.sameType(inputType, ArrayType(StringType)),
+        "Input type must be " +
+          s"${ArrayType(StringType).catalogString} but got ${inputType.catalogString}.")
       StructField(
-        outputColName, inputType, SchemaUtils.getSchemaField(schema, inputColName).nullable
-      )
+        outputColName,
+        inputType,
+        SchemaUtils.getSchemaField(schema, inputColName).nullable)
     }
     StructType(schema.fields ++ newCols)
   }
@@ -205,23 +218,37 @@ class StopWordsRemover @Since("1.5.0") (@Since("1.5.0") override val uid: String
 @Since("1.6.0")
 object StopWordsRemover extends DefaultParamsReadable[StopWordsRemover] with Logging {
 
-  private[feature]
-  val supportedLanguages = Set("danish", "dutch", "english", "finnish", "french", "german",
-    "hungarian", "italian", "norwegian", "portuguese", "russian", "spanish", "swedish", "turkish")
+  private[feature] val supportedLanguages = Set(
+    "danish",
+    "dutch",
+    "english",
+    "finnish",
+    "french",
+    "german",
+    "hungarian",
+    "italian",
+    "norwegian",
+    "portuguese",
+    "russian",
+    "spanish",
+    "swedish",
+    "turkish")
 
   @Since("1.6.0")
   override def load(path: String): StopWordsRemover = super.load(path)
 
   /**
-   * Loads the default stop words for the given language.
-   * Supported languages: danish, dutch, english, finnish, french, german, hungarian,
-   * italian, norwegian, portuguese, russian, spanish, swedish, turkish
-   * @see <a href="http://anoncvs.postgresql.org/cvsweb.cgi/pgsql/src/backend/snowball/stopwords/">
-   * here</a>
+   * Loads the default stop words for the given language. Supported languages: danish, dutch,
+   * english, finnish, french, german, hungarian, italian, norwegian, portuguese, russian,
+   * spanish, swedish, turkish
+   * @see
+   *   <a href="http://anoncvs.postgresql.org/cvsweb.cgi/pgsql/src/backend/snowball/stopwords/">
+   *   here</a>
    */
   @Since("2.0.0")
   def loadDefaultStopWords(language: String): Array[String] = {
-    require(supportedLanguages.contains(language),
+    require(
+      supportedLanguages.contains(language),
       s"$language is not in the supported language list: ${supportedLanguages.mkString(", ")}.")
     val is = getClass.getResourceAsStream(s"/org/apache/spark/ml/feature/stopwords/$language.txt")
     scala.io.Source.fromInputStream(is)(scala.io.Codec.UTF8).getLines().toArray

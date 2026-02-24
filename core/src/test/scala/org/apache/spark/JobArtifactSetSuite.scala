@@ -86,8 +86,9 @@ class JobArtifactSetSuite extends SparkFunSuite with LocalSparkContext {
     }
   }
 
-  test("SPARK-44476: JobArtifactState is not populated with all artifacts if none are " +
-    "explicitly added to it.") {
+  test(
+    "SPARK-44476: JobArtifactState is not populated with all artifacts if none are " +
+      "explicitly added to it.") {
     withTempDir { dir =>
       val conf = new SparkConf()
         .setAppName("test")

@@ -31,16 +31,21 @@ import org.apache.spark.util.{Clock, SystemClock}
 /**
  * This is a helper class for managing Kinesis checkpointing.
  *
- * @param receiver The receiver that keeps track of which sequence numbers we can checkpoint
- * @param checkpointInterval How frequently we will checkpoint to DynamoDB
- * @param schedulerId Scheduler Id of KCL scheduler for logging purposes
- * @param clock In order to use ManualClocks for the purpose of testing
+ * @param receiver
+ *   The receiver that keeps track of which sequence numbers we can checkpoint
+ * @param checkpointInterval
+ *   How frequently we will checkpoint to DynamoDB
+ * @param schedulerId
+ *   Scheduler Id of KCL scheduler for logging purposes
+ * @param clock
+ *   In order to use ManualClocks for the purpose of testing
  */
 private[kinesis] class KinesisCheckpointer(
     receiver: KinesisReceiver[_],
     checkpointInterval: Duration,
     schedulerId: String,
-    clock: Clock = new SystemClock) extends Logging {
+    clock: Clock = new SystemClock)
+    extends Logging {
 
   // a map from shardId's to checkpointers
   private val checkpointers = new ConcurrentHashMap[String, RecordProcessorCheckpointer]()
@@ -57,8 +62,8 @@ private[kinesis] class KinesisCheckpointer(
   /**
    * Stop tracking the specified shardId.
    *
-   * If a checkpointer is provided, we will use that to make the final checkpoint. If `null`
-   * is provided, we will not make the checkpoint, e.g. in case of [[ShutdownReason.ZOMBIE]].
+   * If a checkpointer is provided, we will use that to make the final checkpoint. If `null` is
+   * provided, we will not make the checkpoint, e.g. in case of [[ShutdownReason.ZOMBIE]].
    */
   def removeCheckpointer(shardId: String, checkpointer: RecordProcessorCheckpointer): Unit = {
     synchronized {
@@ -72,9 +77,11 @@ private[kinesis] class KinesisCheckpointer(
         KinesisRecordProcessor.retryRandom(checkpointer.checkpoint(), 4, 100)
       } catch {
         case NonFatal(e) =>
-          logError(log"Exception: SchedulerId ${MDC(WORKER_URL, schedulerId)} encountered an " +
-            log"exception while checkpointing to finish reading a shard of " +
-            log"${MDC(SHARD_ID, shardId)}.", e)
+          logError(
+            log"Exception: SchedulerId ${MDC(WORKER_URL, schedulerId)} encountered an " +
+              log"exception while checkpointing to finish reading a shard of " +
+              log"${MDC(SHARD_ID, shardId)}.",
+            e)
           // Rethrow the exception to the Kinesis Worker that is managing this RecordProcessor
           throw e
       }
@@ -92,8 +99,9 @@ private[kinesis] class KinesisCheckpointer(
           if (lastSeqNum == null || latestSeqNum > lastSeqNum) {
             /* Perform the checkpoint */
             KinesisRecordProcessor.retryRandom(checkpointer.checkpoint(latestSeqNum), 4, 100)
-            logDebug(s"Checkpoint:  schedulerId $schedulerId completed checkpoint at sequence " +
-              s" number $latestSeqNum for shardId $shardId")
+            logDebug(
+              s"Checkpoint:  schedulerId $schedulerId completed checkpoint at sequence " +
+                s" number $latestSeqNum for shardId $shardId")
             lastCheckpointedSeqNums.put(shardId, latestSeqNum)
           }
         }

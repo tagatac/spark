@@ -115,4 +115,4 @@ private[spark] trait SparkStreamUtils {
   }
 }
 
-private [spark] object SparkStreamUtils extends SparkStreamUtils
+private[spark] object SparkStreamUtils extends SparkStreamUtils

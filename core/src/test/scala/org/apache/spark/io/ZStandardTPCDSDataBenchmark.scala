@@ -79,13 +79,14 @@ object ZStandardTPCDSDataBenchmark extends TPCDSDataBenchmark {
         val bytes = outputStream.toByteArray
 
         val condition = if (enablePool) "with" else "without"
-        benchmark.addCase(s"Decompression $N times from level $level $condition buffer pool") { _ =>
-          (1 until N).foreach { _ =>
-            val bais = new ByteArrayInputStream(bytes)
-            val is = new ZStdCompressionCodec(conf).compressedInputStream(bais)
-            is.readAllBytes()
-            is.close()
-          }
+        benchmark.addCase(s"Decompression $N times from level $level $condition buffer pool") {
+          _ =>
+            (1 until N).foreach { _ =>
+              val bais = new ByteArrayInputStream(bytes)
+              val is = new ZStdCompressionCodec(conf).compressedInputStream(bais)
+              is.readAllBytes()
+              is.close()
+            }
         }
       }
     }
@@ -94,8 +95,7 @@ object ZStandardTPCDSDataBenchmark extends TPCDSDataBenchmark {
 
   private def parallelCompressionBenchmark(): Unit = {
     Seq(3, 9).foreach { level =>
-      val benchmark = new Benchmark(
-        s"Parallel Compression at level $level", N, output = output)
+      val benchmark = new Benchmark(s"Parallel Compression at level $level", N, output = output)
       Seq(0, 1, 2, 4, 8, 16).foreach { workers =>
         val conf = new SparkConf(false)
           .set(IO_COMPRESSION_ZSTD_LEVEL, level)

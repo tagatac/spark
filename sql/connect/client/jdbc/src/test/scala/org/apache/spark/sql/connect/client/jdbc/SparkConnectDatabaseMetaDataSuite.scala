@@ -27,8 +27,11 @@ import org.apache.spark.sql.connect.client.jdbc.test.JdbcHelper
 import org.apache.spark.sql.connect.test.{ConnectFunSuite, RemoteSparkSession, SQLHelper}
 import org.apache.spark.util.VersionUtils
 
-class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSparkSession
-    with JdbcHelper with SQLHelper {
+class SparkConnectDatabaseMetaDataSuite
+    extends ConnectFunSuite
+    with RemoteSparkSession
+    with JdbcHelper
+    with SQLHelper {
 
   def jdbcUrl: String = s"jdbc:sc://localhost:$serverPort"
 
@@ -37,8 +40,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
   private val TEST_BASIC_IN_MEMORY_CATALOG =
     "org.apache.spark.sql.connector.catalog.BasicInMemoryTableCatalog"
 
-  private def registerCatalog(
-      name: String, className: String)(implicit spark: SparkSession): Unit = {
+  private def registerCatalog(name: String, className: String)(implicit
+      spark: SparkSession): Unit = {
     spark.conf.set(s"spark.sql.catalog.$name", className)
   }
 
@@ -149,8 +152,11 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
       assert(metadata.getMaxUserNameLength === 0)
       assert(metadata.getDefaultTransactionIsolation === Connection.TRANSACTION_NONE)
       assert(metadata.supportsTransactions === false)
-      Seq(Connection.TRANSACTION_NONE, Connection.TRANSACTION_READ_UNCOMMITTED,
-        Connection.TRANSACTION_READ_COMMITTED, Connection.TRANSACTION_REPEATABLE_READ,
+      Seq(
+        Connection.TRANSACTION_NONE,
+        Connection.TRANSACTION_READ_UNCOMMITTED,
+        Connection.TRANSACTION_READ_COMMITTED,
+        Connection.TRANSACTION_REPEATABLE_READ,
         Connection.TRANSACTION_SERIALIZABLE).foreach { level =>
         val actual = metadata.supportsTransactionIsolationLevel(level)
         val expected = level == Connection.TRANSACTION_NONE
@@ -160,7 +166,9 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
       assert(metadata.supportsDataManipulationTransactionsOnly === false)
       assert(metadata.dataDefinitionCausesTransactionCommit === false)
       assert(metadata.dataDefinitionIgnoredInTransactions === false)
-      Seq(ResultSet.TYPE_FORWARD_ONLY, ResultSet.TYPE_SCROLL_INSENSITIVE,
+      Seq(
+        ResultSet.TYPE_FORWARD_ONLY,
+        ResultSet.TYPE_SCROLL_INSENSITIVE,
         ResultSet.TYPE_SCROLL_SENSITIVE).foreach { typ =>
         var actual = metadata.supportsResultSetType(typ)
         var expected = typ == ResultSet.TYPE_FORWARD_ONLY
@@ -209,7 +217,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
     withConnection { conn =>
       val metadata = conn.getMetaData
       // scalastyle:off line.size.limit
-      assert(metadata.getSQLKeywords === "ADD,AFTER,AGGREGATE,ALWAYS,ANALYZE,ANTI,ANY_VALUE,ARCHIVE,ASC,BINDING,BUCKET,BUCKETS,BYTE,CACHE,CASCADE,CATALOG,CATALOGS,CHANGE,CLEAR,CLUSTER,CLUSTERED,CODEGEN,COLLATION,COLLECTION,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPENSATION,COMPUTE,CONCATENATE,CONTAINS,CONTINUE,COST,DATA,DATABASE,DATABASES,DATEADD,DATEDIFF,DATE_ADD,DATE_DIFF,DAYOFYEAR,DAYS,DBPROPERTIES,DEFINED,DEFINER,DELAY,DELIMITED,DESC,DFS,DIRECTORIES,DIRECTORY,DISTRIBUTE,DIV,DO,ELSEIF,ENFORCED,ESCAPED,EVOLUTION,EXCHANGE,EXCLUDE,EXIT,EXPLAIN,EXPORT,EXTEND,EXTENDED,FIELDS,FILEFORMAT,FIRST,FLOW,FOLLOWING,FORMAT,FORMATTED,FOUND,FUNCTIONS,GENERATED,GEOGRAPHY,GEOMETRY,HANDLER,HOURS,IDENTIFIED,IDENTIFIER,IF,IGNORE,ILIKE,IMMEDIATE,INCLUDE,INCREMENT,INDEX,INDEXES,INPATH,INPUT,INPUTFORMAT,INVOKER,ITEMS,ITERATE,JSON,KEY,KEYS,LAST,LAZY,LEAVE,LEVEL,LIMIT,LINES,LIST,LOAD,LOCATION,LOCK,LOCKS,LOGICAL,LONG,LOOP,MACRO,MAP,MATCHED,MATERIALIZED,MEASURE,METRICS,MICROSECOND,MICROSECONDS,MILLISECOND,MILLISECONDS,MINUS,MINUTES,MONTHS,MSCK,NAME,NAMESPACE,NAMESPACES,NANOSECOND,NANOSECONDS,NORELY,NULLS,OFFSET,OPTION,OPTIONS,OUTPUTFORMAT,OVERWRITE,PARTITIONED,PARTITIONS,PERCENT,PIVOT,PLACING,PRECEDING,PRINCIPALS,PROCEDURES,PROPERTIES,PURGE,QUARTER,QUERY,RECORDREADER,RECORDWRITER,RECOVER,RECURSION,REDUCE,REFRESH,RELY,RENAME,REPAIR,REPEAT,REPEATABLE,REPLACE,RESET,RESPECT,RESTRICT,ROLE,ROLES,SCHEMA,SCHEMAS,SECONDS,SECURITY,SEMI,SEPARATED,SERDE,SERDEPROPERTIES,SETS,SHORT,SHOW,SINGLE,SKEWED,SORT,SORTED,SOURCE,STATISTICS,STORED,STRATIFY,STREAM,STREAMING,STRING,STRUCT,SUBSTR,SYNC,SYSTEM_TIME,SYSTEM_VERSION,TABLES,TARGET,TBLPROPERTIES,TERMINATED,TIMEDIFF,TIMESTAMPADD,TIMESTAMPDIFF,TIMESTAMP_LTZ,TIMESTAMP_NTZ,TINYINT,TOUCH,TRANSACTION,TRANSACTIONS,TRANSFORM,TRUNCATE,TRY_CAST,TYPE,UNARCHIVE,UNBOUNDED,UNCACHE,UNLOCK,UNPIVOT,UNSET,UNTIL,USE,VAR,VARIABLE,VARIANT,VERSION,VIEW,VIEWS,VOID,WATERMARK,WEEK,WEEKS,WHILE,X,YEARS,ZONE")
+      assert(
+        metadata.getSQLKeywords === "ADD,AFTER,AGGREGATE,ALWAYS,ANALYZE,ANTI,ANY_VALUE,ARCHIVE,ASC,BINDING,BUCKET,BUCKETS,BYTE,CACHE,CASCADE,CATALOG,CATALOGS,CHANGE,CLEAR,CLUSTER,CLUSTERED,CODEGEN,COLLATION,COLLECTION,COLUMNS,COMMENT,COMPACT,COMPACTIONS,COMPENSATION,COMPUTE,CONCATENATE,CONTAINS,CONTINUE,COST,DATA,DATABASE,DATABASES,DATEADD,DATEDIFF,DATE_ADD,DATE_DIFF,DAYOFYEAR,DAYS,DBPROPERTIES,DEFINED,DEFINER,DELAY,DELIMITED,DESC,DFS,DIRECTORIES,DIRECTORY,DISTRIBUTE,DIV,DO,ELSEIF,ENFORCED,ESCAPED,EVOLUTION,EXCHANGE,EXCLUDE,EXIT,EXPLAIN,EXPORT,EXTEND,EXTENDED,FIELDS,FILEFORMAT,FIRST,FLOW,FOLLOWING,FORMAT,FORMATTED,FOUND,FUNCTIONS,GENERATED,GEOGRAPHY,GEOMETRY,HANDLER,HOURS,IDENTIFIED,IDENTIFIER,IF,IGNORE,ILIKE,IMMEDIATE,INCLUDE,INCREMENT,INDEX,INDEXES,INPATH,INPUT,INPUTFORMAT,INVOKER,ITEMS,ITERATE,JSON,KEY,KEYS,LAST,LAZY,LEAVE,LEVEL,LIMIT,LINES,LIST,LOAD,LOCATION,LOCK,LOCKS,LOGICAL,LONG,LOOP,MACRO,MAP,MATCHED,MATERIALIZED,MEASURE,METRICS,MICROSECOND,MICROSECONDS,MILLISECOND,MILLISECONDS,MINUS,MINUTES,MONTHS,MSCK,NAME,NAMESPACE,NAMESPACES,NANOSECOND,NANOSECONDS,NORELY,NULLS,OFFSET,OPTION,OPTIONS,OUTPUTFORMAT,OVERWRITE,PARTITIONED,PARTITIONS,PERCENT,PIVOT,PLACING,PRECEDING,PRINCIPALS,PROCEDURES,PROPERTIES,PURGE,QUARTER,QUERY,RECORDREADER,RECORDWRITER,RECOVER,RECURSION,REDUCE,REFRESH,RELY,RENAME,REPAIR,REPEAT,REPEATABLE,REPLACE,RESET,RESPECT,RESTRICT,ROLE,ROLES,SCHEMA,SCHEMAS,SECONDS,SECURITY,SEMI,SEPARATED,SERDE,SERDEPROPERTIES,SETS,SHORT,SHOW,SINGLE,SKEWED,SORT,SORTED,SOURCE,STATISTICS,STORED,STRATIFY,STREAM,STREAMING,STRING,STRUCT,SUBSTR,SYNC,SYSTEM_TIME,SYSTEM_VERSION,TABLES,TARGET,TBLPROPERTIES,TERMINATED,TIMEDIFF,TIMESTAMPADD,TIMESTAMPDIFF,TIMESTAMP_LTZ,TIMESTAMP_NTZ,TINYINT,TOUCH,TRANSACTION,TRANSACTIONS,TRANSFORM,TRUNCATE,TRY_CAST,TYPE,UNARCHIVE,UNBOUNDED,UNCACHE,UNLOCK,UNPIVOT,UNSET,UNTIL,USE,VAR,VARIABLE,VARIANT,VERSION,VIEW,VIEWS,VOID,WATERMARK,WEEK,WEEKS,WHILE,X,YEARS,ZONE")
       // scalastyle:on line.size.limit
     }
   }
@@ -241,8 +250,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
 
   test("SparkConnectDatabaseMetaData getSchemas") {
 
-    def verifyGetSchemas(
-        getSchemas: () => ResultSet)(verify: Seq[(String, String)] => Unit): Unit = {
+    def verifyGetSchemas(getSchemas: () => ResultSet)(
+        verify: Seq[(String, String)] => Unit): Unit = {
       Using.resource(getSchemas()) { rs =>
         val catalogDatabases = new Iterator[(String, String)] {
           def hasNext: Boolean = rs.next()
@@ -319,24 +328,20 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         verifyGetSchemas { () => metadata.getSchemas(null, "db%") } { catalogDatabases =>
           // results are ordered by TABLE_CATALOG, TABLE_SCHEM
           assert {
-            catalogDatabases === Seq(
-              ("spark_catalog", "db1"),
-              ("spark_catalog", "db2"))
+            catalogDatabases === Seq(("spark_catalog", "db1"), ("spark_catalog", "db2"))
           }
         }
 
         verifyGetSchemas { () => metadata.getSchemas(null, "db_") } { catalogDatabases =>
           // results are ordered by TABLE_CATALOG, TABLE_SCHEM
           assert {
-            catalogDatabases === Seq(
-              ("spark_catalog", "db1"),
-              ("spark_catalog", "db2"))
+            catalogDatabases === Seq(("spark_catalog", "db1"), ("spark_catalog", "db2"))
           }
         }
 
         // escape backtick in catalog, and _ in schema pattern
-        verifyGetSchemas {
-          () => metadata.getSchemas("test`cat", "t\\_db\\_")
+        verifyGetSchemas { () =>
+          metadata.getSchemas("test`cat", "t\\_db\\_")
         } { catalogDatabases =>
           assert(catalogDatabases === Seq(("test`cat", "t_db_")))
         }
@@ -370,16 +375,16 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
   test("SparkConnectDatabaseMetaData getTables") {
 
     case class GetTableResult(
-       TABLE_CAT: String,
-       TABLE_SCHEM: String,
-       TABLE_NAME: String,
-       TABLE_TYPE: String,
-       REMARKS: String,
-       TYPE_CAT: String,
-       TYPE_SCHEM: String,
-       TYPE_NAME: String,
-       SELF_REFERENCING_COL_NAME: String,
-       REF_GENERATION: String)
+        TABLE_CAT: String,
+        TABLE_SCHEM: String,
+        TABLE_NAME: String,
+        TABLE_TYPE: String,
+        REMARKS: String,
+        TYPE_CAT: String,
+        TYPE_SCHEM: String,
+        TYPE_NAME: String,
+        SELF_REFERENCING_COL_NAME: String,
+        REF_GENERATION: String)
 
     def verifyEmptyStringFields(result: GetTableResult): Unit = {
       assert(result.REMARKS === "")
@@ -390,8 +395,7 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
       assert(result.REF_GENERATION === "")
     }
 
-    def verifyGetTables(
-        getTables: () => ResultSet)(verify: Seq[GetTableResult] => Unit): Unit = {
+    def verifyGetTables(getTables: () => ResultSet)(verify: Seq[GetTableResult] => Unit): Unit = {
       Using.resource(getTables()) { rs =>
         val getTableResults = new Iterator[GetTableResult] {
           def hasNext: Boolean = rs.next()
@@ -429,15 +433,13 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
       spark.sql("CREATE DATABASE IF NOT EXISTS spark_catalog.db1")
       spark.sql("CREATE TABLE IF NOT EXISTS spark_catalog.db1.t1 (id INT)")
       spark.sql("CREATE TABLE IF NOT EXISTS spark_catalog.db1.t_2 (id INT)")
-      spark.sql(
-        """CREATE VIEW IF NOT EXISTS spark_catalog.db1.t1_v AS
+      spark.sql("""CREATE VIEW IF NOT EXISTS spark_catalog.db1.t1_v AS
           |SELECT id FROM spark_catalog.db1.t1
           |""".stripMargin)
 
       spark.sql("CREATE DATABASE IF NOT EXISTS spark_catalog.db_2")
       spark.sql("CREATE TABLE IF NOT EXISTS spark_catalog.db_2.t_2 (id INT)")
-      spark.sql(
-        """CREATE VIEW IF NOT EXISTS spark_catalog.db_2.t_2_v AS
+      spark.sql("""CREATE VIEW IF NOT EXISTS spark_catalog.db_2.t_2_v AS
           |SELECT id FROM spark_catalog.db_2.t_2
           |""".stripMargin)
 
@@ -452,8 +454,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         // list tables in all catalogs and schemas
         val getTablesInAllCatalogsAndSchemas = List(null, "%").flatMap { database =>
           List(null, "%").flatMap { table =>
-            List(null, Array("TABLE", "VIEW")).map { tableTypes =>
-              () => metadata.getTables(null, database, table, tableTypes)
+            List(null, Array("TABLE", "VIEW")).map { tableTypes => () =>
+              metadata.getTables(null, database, table, tableTypes)
             }
           }
         }
@@ -481,12 +483,13 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         val se = intercept[SQLException] {
           metadata.getTables("spark_catalog", "foo", "bar", Array("TABLE", "MATERIALIZED VIEW"))
         }
-        assert(se.getMessage ===
-          "The requested table types contains unsupported items: MATERIALIZED VIEW. " +
+        assert(
+          se.getMessage ===
+            "The requested table types contains unsupported items: MATERIALIZED VIEW. " +
             "Available table types are: TABLE, VIEW.")
 
-        verifyGetTables {
-          () => metadata.getTables("spark_catalog", "db1", "%", Array("TABLE"))
+        verifyGetTables { () =>
+          metadata.getTables("spark_catalog", "db1", "%", Array("TABLE"))
         } { getTableResults =>
           // results are ordered by TABLE_TYPE, TABLE_CAT, TABLE_SCHEM and TABLE_NAME
           assert {
@@ -499,8 +502,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
           getTableResults.foreach(verifyEmptyStringFields)
         }
 
-        verifyGetTables {
-          () => metadata.getTables("spark_catalog", "db1", "%", Array("VIEW"))
+        verifyGetTables { () =>
+          metadata.getTables("spark_catalog", "db1", "%", Array("VIEW"))
         } { getTableResults =>
           // results are ordered by TABLE_TYPE, TABLE_CAT, TABLE_SCHEM and TABLE_NAME
           assert {
@@ -517,8 +520,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         assert(conn.getCatalog === "spark_catalog")
         assert(conn.getSchema === "db1")
 
-        verifyGetTables {
-          () => metadata.getTables("", "", "%", null)
+        verifyGetTables { () =>
+          metadata.getTables("", "", "%", null)
         } { getTableResults =>
           assert {
             getTableResults.map { result =>
@@ -532,8 +535,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         }
 
         // list tables with schema pattern and table mame pattern
-        verifyGetTables {
-          () => metadata.getTables(null, "db%", "t_", null)
+        verifyGetTables { () =>
+          metadata.getTables(null, "db%", "t_", null)
         } { getTableResults =>
           assert {
             getTableResults.map { result =>
@@ -546,8 +549,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         }
 
         // escape _ in schema pattern and table mame pattern
-        verifyGetTables {
-          () => metadata.getTables(null, "db\\_", "t\\_", null)
+        verifyGetTables { () =>
+          metadata.getTables(null, "db\\_", "t\\_", null)
         } { getTableResults =>
           assert {
             getTableResults.map { result =>
@@ -565,44 +568,44 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
 
   test("SparkConnectDatabaseMetaData getColumns") {
 
-     case class GetColumnResult(
-       TABLE_CAT: String,
-       TABLE_SCHEM: String,
-       TABLE_NAME: String,
-       COLUMN_NAME: String,
-       DATA_TYPE: Int,
-       TYPE_NAME: String,
-       COLUMN_SIZE: Int,
-       BUFFER_LENGTH: Int,
-       DECIMAL_DIGITS: Int,
-       NUM_PREC_RADIX: Int,
-       NULLABLE: Int,
-       REMARKS: String,
-       COLUMN_DEF: String,
-       SQL_DATA_TYPE: Int,
-       SQL_DATETIME_SUB: Int,
-       CHAR_OCTET_LENGTH: Int,
-       ORDINAL_POSITION: Int,
-       IS_NULLABLE: String,
-       SCOPE_CATALOG: String,
-       SCOPE_SCHEMA: String,
-       SCOPE_TABLE: String,
-       SOURCE_DATA_TYPE: Short,
-       IS_AUTOINCREMENT: String,
-       IS_GENERATEDCOLUMN: String)
+    case class GetColumnResult(
+        TABLE_CAT: String,
+        TABLE_SCHEM: String,
+        TABLE_NAME: String,
+        COLUMN_NAME: String,
+        DATA_TYPE: Int,
+        TYPE_NAME: String,
+        COLUMN_SIZE: Int,
+        BUFFER_LENGTH: Int,
+        DECIMAL_DIGITS: Int,
+        NUM_PREC_RADIX: Int,
+        NULLABLE: Int,
+        REMARKS: String,
+        COLUMN_DEF: String,
+        SQL_DATA_TYPE: Int,
+        SQL_DATETIME_SUB: Int,
+        CHAR_OCTET_LENGTH: Int,
+        ORDINAL_POSITION: Int,
+        IS_NULLABLE: String,
+        SCOPE_CATALOG: String,
+        SCOPE_SCHEMA: String,
+        SCOPE_TABLE: String,
+        SOURCE_DATA_TYPE: Short,
+        IS_AUTOINCREMENT: String,
+        IS_GENERATEDCOLUMN: String)
 
     def verifyEmptyFields(result: GetColumnResult): Unit = {
-        assert(result.BUFFER_LENGTH === 0)
-        assert(result.SQL_DATA_TYPE === 0)
-        assert(result.SQL_DATETIME_SUB === 0)
-        assert(result.SCOPE_CATALOG === "")
-        assert(result.SCOPE_SCHEMA === "")
-        assert(result.SCOPE_TABLE === "")
-        assert(result.SOURCE_DATA_TYPE === 0.toShort)
+      assert(result.BUFFER_LENGTH === 0)
+      assert(result.SQL_DATA_TYPE === 0)
+      assert(result.SQL_DATETIME_SUB === 0)
+      assert(result.SCOPE_CATALOG === "")
+      assert(result.SCOPE_SCHEMA === "")
+      assert(result.SCOPE_TABLE === "")
+      assert(result.SOURCE_DATA_TYPE === 0.toShort)
     }
 
-    def verifyGetColumns(
-        getColumns: () => ResultSet)(verify: Seq[GetColumnResult] => Unit): Unit = {
+    def verifyGetColumns(getColumns: () => ResultSet)(
+        verify: Seq[GetColumnResult] => Unit): Unit = {
       Using.resource(getColumns()) { rs =>
         val getTableResults = new Iterator[GetColumnResult] {
           def hasNext: Boolean = rs.next()
@@ -644,14 +647,12 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
       spark.sql("CREATE TABLE IF NOT EXISTS testcat.t_db1.t_t1 (id INT)")
 
       spark.sql("CREATE DATABASE IF NOT EXISTS spark_catalog.db1")
-      spark.sql(
-        """CREATE TABLE IF NOT EXISTS spark_catalog.db1.t1 (
+      spark.sql("""CREATE TABLE IF NOT EXISTS spark_catalog.db1.t1 (
           |  id INT NOT NULL,
           |  i_ INT,
           |  location STRING COMMENT 'city name' DEFAULT 'unknown')
           |""".stripMargin)
-      spark.sql(
-        """CREATE TABLE IF NOT EXISTS spark_catalog.db1.t2 (
+      spark.sql("""CREATE TABLE IF NOT EXISTS spark_catalog.db1.t2 (
           |  col_null VOID,
           |  col_boolean BOOLEAN,
           |  col_byte BYTE,
@@ -668,8 +669,7 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
           |  col_binary BINARY,
           |  col_time TIME)""".stripMargin)
 
-      spark.sql(
-        """CREATE VIEW IF NOT EXISTS spark_catalog.db1.t1_v AS
+      spark.sql("""CREATE VIEW IF NOT EXISTS spark_catalog.db1.t1_v AS
           |SELECT id FROM spark_catalog.db1.t1
           |""".stripMargin)
 
@@ -687,8 +687,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         // list columns of all tables in all catalogs and schemas
         val getColumnsInAllTables = List(null, "%").flatMap { database =>
           List(null, "%").flatMap { table =>
-            List(null, "%").map { column =>
-              () => metadata.getColumns(null, database, table, column)
+            List(null, "%").map { column => () =>
+              metadata.getColumns(null, database, table, column)
             }
           }
         }
@@ -750,21 +750,21 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         assert(conn.getSchema === "db1")
 
         verifyGetColumns(() => metadata.getColumns("", "", "%", "id")) { getColumnResults =>
-            // results are ordered by TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION
-            assert {
-              getColumnResults.map { r =>
-                (r.TABLE_CAT, r.TABLE_SCHEM, r.TABLE_NAME, r.ORDINAL_POSITION, r.COLUMN_NAME)
-              } === Seq(
-                ("spark_catalog", "db1", "t1", 1, "id"),
-                ("spark_catalog", "db1", "t1_v", 1, "id"))
-            }
+          // results are ordered by TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION
+          assert {
+            getColumnResults.map { r =>
+              (r.TABLE_CAT, r.TABLE_SCHEM, r.TABLE_NAME, r.ORDINAL_POSITION, r.COLUMN_NAME)
+            } === Seq(
+              ("spark_catalog", "db1", "t1", 1, "id"),
+              ("spark_catalog", "db1", "t1_v", 1, "id"))
+          }
 
           getColumnResults.foreach(verifyEmptyFields)
         }
 
         // list columns of tables with schema pattern, table mame pattern, and column name pattern
-        verifyGetColumns {
-          () => metadata.getColumns(null, "%db_", "%t_", "%d%")
+        verifyGetColumns { () =>
+          metadata.getColumns(null, "%db_", "%t_", "%d%")
         } { getColumnResults =>
           // results are ordered by TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION
           assert {
@@ -783,8 +783,8 @@ class SparkConnectDatabaseMetaDataSuite extends ConnectFunSuite with RemoteSpark
         }
 
         // escape _ in schema pattern and table mame pattern
-        verifyGetColumns {
-          () => metadata.getColumns(null, "db\\_", "t\\_", "i\\_")
+        verifyGetColumns { () =>
+          metadata.getColumns(null, "db\\_", "t\\_", "i\\_")
         } { getColumnResults =>
           // results are ordered by TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION
           assert {

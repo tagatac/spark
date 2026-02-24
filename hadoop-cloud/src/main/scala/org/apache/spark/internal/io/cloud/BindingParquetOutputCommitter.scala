@@ -27,17 +27,17 @@ import org.apache.parquet.hadoop.ParquetOutputCommitter
 import org.apache.spark.internal.Logging
 
 /**
- * This Parquet Committer subclass dynamically binds to the factory-configured
- * output committer, and is intended to allow callers to use any 'PathOutputCommitter',
- * even if not a subclass of 'ParquetOutputCommitter'.
+ * This Parquet Committer subclass dynamically binds to the factory-configured output committer,
+ * and is intended to allow callers to use any 'PathOutputCommitter', even if not a subclass of
+ * 'ParquetOutputCommitter'.
  *
- * The Parquet `parquet.enable.summary-metadata` option will only be supported
- * if the instantiated committer itself supports it.
+ * The Parquet `parquet.enable.summary-metadata` option will only be supported if the instantiated
+ * committer itself supports it.
  */
-class BindingParquetOutputCommitter(
-    path: Path,
-    context: TaskAttemptContext)
-  extends ParquetOutputCommitter(path, context) with Logging with StreamCapabilities {
+class BindingParquetOutputCommitter(path: Path, context: TaskAttemptContext)
+    extends ParquetOutputCommitter(path, context)
+    with Logging
+    with StreamCapabilities {
 
   logTrace(s"${this.getClass.getName} binding to configured PathOutputCommitter and dest $path")
 
@@ -45,7 +45,8 @@ class BindingParquetOutputCommitter(
 
   /**
    * This is the committer ultimately bound to.
-   * @return the committer instantiated by the factory.
+   * @return
+   *   the committer instantiated by the factory.
    */
   private[cloud] def boundCommitter(): PathOutputCommitter = {
     committer.getCommitter
@@ -92,12 +93,13 @@ class BindingParquetOutputCommitter(
   }
 
   /**
-   * Abort the job; log and ignore any IO exception thrown.
-   * This is invariably invoked in an exception handler; raising
-   * an exception here will lose the root cause of the failure.
+   * Abort the job; log and ignore any IO exception thrown. This is invariably invoked in an
+   * exception handler; raising an exception here will lose the root cause of the failure.
    *
-   * @param jobContext job context
-   * @param state final state of the job
+   * @param jobContext
+   *   job context
+   * @param state
+   *   final state of the job
    */
   override def abortJob(jobContext: JobContext, state: JobStatus.State): Unit = {
     try {

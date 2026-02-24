@@ -24,14 +24,13 @@ import org.apache.spark.ml.util.{DefaultReadWriteTest, MLTest}
 import org.apache.spark.sql.execution.streaming.runtime.MemoryStream
 import org.apache.spark.sql.streaming.StreamTest
 
-class VectorSizeHintSuite
-  extends MLTest with DefaultReadWriteTest {
+class VectorSizeHintSuite extends MLTest with DefaultReadWriteTest {
 
   import testImplicits._
 
   test("Test Param Validators") {
-    intercept[IllegalArgumentException] (new VectorSizeHint().setHandleInvalid("invalidValue"))
-    intercept[IllegalArgumentException] (new VectorSizeHint().setSize(-3))
+    intercept[IllegalArgumentException](new VectorSizeHint().setHandleInvalid("invalidValue"))
+    intercept[IllegalArgumentException](new VectorSizeHint().setSize(-3))
   }
 
   test("Required params must be set before transform.") {
@@ -43,7 +42,7 @@ class VectorSizeHintSuite
       noSizeTransformer,
       "Failed to find a default value for size",
       "vector")
-    intercept[NoSuchElementException] (noSizeTransformer.transformSchema(data.schema))
+    intercept[NoSuchElementException](noSizeTransformer.transformSchema(data.schema))
 
     val noInputColTransformer = new VectorSizeHint().setSize(2)
     testTransformerByInterceptingException[(Vector, Int)](
@@ -51,7 +50,7 @@ class VectorSizeHintSuite
       noInputColTransformer,
       "Failed to find a default value for inputCol",
       "vector")
-    intercept[NoSuchElementException] (noInputColTransformer.transformSchema(data.schema))
+    intercept[NoSuchElementException](noInputColTransformer.transformSchema(data.schema))
   }
 
   test("Adding size to column of vectors.") {
@@ -72,13 +71,14 @@ class VectorSizeHintSuite
         .setSize(size)
         .setHandleInvalid(handleInvalid)
       testTransformerByGlobalCheckFunc[Tuple1[Vector]](dataFrame, transformer, vectorColName) {
-        rows => {
-          assert(
-            AttributeGroup.fromStructField(rows.head.schema(vectorColName)).size == size,
-            "Transformer did not add expected size data.")
-          val numRows = rows.length
-          assert(numRows === data.length, s"Expecting ${data.length} rows, got $numRows.")
-        }
+        rows =>
+          {
+            assert(
+              AttributeGroup.fromStructField(rows.head.schema(vectorColName)).size == size,
+              "Transformer did not add expected size data.")
+            val numRows = rows.length
+            assert(numRows === data.length, s"Expecting ${data.length} rows, got $numRows.")
+          }
       }
     }
   }
@@ -105,11 +105,11 @@ class VectorSizeHintSuite
         dataFrameWithMetadata,
         transformer,
         vectorColName) { rows =>
-          val newGroup = AttributeGroup.fromStructField(rows.head.schema(vectorColName))
-          assert(newGroup.size === size, "Column has incorrect size metadata.")
-          assert(
-            newGroup.attributes.get === group.attributes.get,
-            "VectorSizeHint did not preserve attributes.")
+        val newGroup = AttributeGroup.fromStructField(rows.head.schema(vectorColName))
+        assert(newGroup.size === size, "Column has incorrect size metadata.")
+        assert(
+          newGroup.attributes.get === group.attributes.get,
+          "VectorSizeHint did not preserve attributes.")
       }
     }
   }
@@ -179,7 +179,6 @@ class VectorSizeHintSuite
     }
   }
 
-
   test("read/write") {
     val sizeHint = new VectorSizeHint()
       .setInputCol("myInputCol")
@@ -213,9 +212,8 @@ class VectorSizeHintStreamingSuite extends StreamTest {
 
     val expected = Vectors.dense(0, 1, 2, 3, 0, 0, 6)
 
-    testStream (output) (
+    testStream(output)(
       AddData(stream, (a, b), (a, b)),
-      CheckAnswer(Tuple1(expected), Tuple1(expected))
-    )
+      CheckAnswer(Tuple1(expected), Tuple1(expected)))
   }
 }

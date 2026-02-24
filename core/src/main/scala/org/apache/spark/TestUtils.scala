@@ -51,19 +51,18 @@ import org.apache.spark.scheduler._
 import org.apache.spark.util.{SparkTestUtils, Utils}
 
 /**
- * Utilities for tests. Included in main codebase since it's used by multiple
- * projects.
+ * Utilities for tests. Included in main codebase since it's used by multiple projects.
  *
- * TODO: See if we can move this to the test codebase by specifying
- * test dependencies between projects.
+ * TODO: See if we can move this to the test codebase by specifying test dependencies between
+ * projects.
  */
 private[spark] object TestUtils extends SparkTestUtils {
 
   /**
    * Create a jar that defines classes with the given names.
    *
-   * Note: if this is used during class loader tests, class names should be unique
-   * in order to avoid interference between tests.
+   * Note: if this is used during class loader tests, class names should be unique in order to
+   * avoid interference between tests.
    */
   def createJarWithClasses(
       classNames: Seq[String],
@@ -82,8 +81,8 @@ private[spark] object TestUtils extends SparkTestUtils {
   }
 
   /**
-   * Create a jar file containing multiple files. The `files` map contains a mapping of
-   * file names in the jar file to their contents.
+   * Create a jar file containing multiple files. The `files` map contains a mapping of file names
+   * in the jar file to their contents.
    */
   def createJarWithFiles(files: Map[String, String], dir: File = null): URL = {
     val tempDir = Option(dir).getOrElse(Utils.createTempDir())
@@ -149,8 +148,8 @@ private[spark] object TestUtils extends SparkTestUtils {
   }
 
   /**
-   * Run some code involving jobs submitted to the given context and assert that the jobs
-   * did not spill.
+   * Run some code involving jobs submitted to the given context and assert that the jobs did not
+   * spill.
    */
   def assertNotSpilled(sc: SparkContext, identifier: String)(body: => Unit): Unit = {
     val listener = new SpillListener
@@ -161,11 +160,11 @@ private[spark] object TestUtils extends SparkTestUtils {
   }
 
   /**
-   * Asserts that exception message contains the message. Please note this checks all
-   * exceptions in the tree. If a type parameter `E` is supplied, this will additionally confirm
-   * that the exception is a subtype of the exception provided in the type parameter.
+   * Asserts that exception message contains the message. Please note this checks all exceptions
+   * in the tree. If a type parameter `E` is supplied, this will additionally confirm that the
+   * exception is a subtype of the exception provided in the type parameter.
    */
-  def assertExceptionMsg[E <: Throwable : ClassTag](
+  def assertExceptionMsg[E <: Throwable: ClassTag](
       exception: Throwable,
       msg: String,
       ignoreCase: Boolean = false): Unit = {
@@ -180,9 +179,10 @@ private[spark] object TestUtils extends SparkTestUtils {
     def contain(e: Throwable, msg: String): Boolean = {
       if (ignoreCase) {
         e.getMessage.toLowerCase(Locale.ROOT).contains(msg.toLowerCase(Locale.ROOT))
-      } else {
-        e.getMessage.contains(msg)
-      } && typeCheck(e)
+      } else
+        {
+          e.getMessage.contains(msg)
+        } && typeCheck(e)
     }
 
     var e = exception
@@ -191,7 +191,8 @@ private[spark] object TestUtils extends SparkTestUtils {
       e = e.getCause
       contains = contain(e, msg)
     }
-    assert(contains,
+    assert(
+      contains,
       s"Exception tree doesn't contain the expected exception ${typeMsg}with message: $msg\n" +
         Utils.exceptionString(e))
   }
@@ -224,11 +225,13 @@ private[spark] object TestUtils extends SparkTestUtils {
   def getAbsolutePathFromExecutable(executable: String): Option[String] = {
     val command = if (Utils.isWindows) s"$executable.exe" else executable
     if (command.split(File.separator, 2).length == 1 &&
-        Files.isRegularFile(Paths.get(command)) &&
-        Files.isExecutable(Paths.get(command))) {
+      Files.isRegularFile(Paths.get(command)) &&
+      Files.isExecutable(Paths.get(command))) {
       Some(Paths.get(command).toAbsolutePath.toString)
     } else {
-      sys.env("PATH").split(Pattern.quote(File.pathSeparator))
+      sys
+        .env("PATH")
+        .split(Pattern.quote(File.pathSeparator))
         .map(path => Paths.get(s"${Utils.strip(path, "\"")}${File.separator}$command"))
         .find(p => Files.isRegularFile(p) && Files.isExecutable(p))
         .map(_.toString)
@@ -259,14 +262,13 @@ private[spark] object TestUtils extends SparkTestUtils {
     }
   }
 
-
   /**
    * Returns the response message from an HTTP(S) URL.
    */
   def httpResponseMessage(
-    url: URL,
-    method: String = "GET",
-    headers: Seq[(String, String)] = Nil): String = {
+      url: URL,
+      method: String = "GET",
+      headers: Seq[(String, String)] = Nil): String = {
     withHttpConnection(url, method, headers = headers) { connection =>
       Source.fromInputStream(connection.getInputStream, "utf-8").getLines().mkString("\n")
     }
@@ -275,8 +277,7 @@ private[spark] object TestUtils extends SparkTestUtils {
   def withHttpConnection[T](
       url: URL,
       method: String = "GET",
-      headers: Seq[(String, String)] = Nil)
-      (fn: HttpURLConnection => T): T = {
+      headers: Seq[(String, String)] = Nil)(fn: HttpURLConnection => T): T = {
     val connection = url.openConnection().asInstanceOf[HttpURLConnection]
     connection.setRequestMethod(method)
     headers.foreach { case (k, v) => connection.setRequestProperty(k, v) }
@@ -288,10 +289,12 @@ private[spark] object TestUtils extends SparkTestUtils {
         val trustManager = new X509TrustManager {
           override def getAcceptedIssuers: Array[X509Certificate] = null
 
-          override def checkClientTrusted(x509Certificates: Array[X509Certificate],
+          override def checkClientTrusted(
+              x509Certificates: Array[X509Certificate],
               s: String): Unit = {}
 
-          override def checkServerTrusted(x509Certificates: Array[X509Certificate],
+          override def checkServerTrusted(
+              x509Certificates: Array[X509Certificate],
               s: String): Unit = {}
         }
         val verifier = new HostnameVerifier() {
@@ -316,7 +319,7 @@ private[spark] object TestUtils extends SparkTestUtils {
    * this method will wait until all events posted to the listener bus are processed, and then
    * remove the listener from the bus.
    */
-  def withListener[L <: SparkListener](sc: SparkContext, listener: L) (body: L => Unit): Unit = {
+  def withListener[L <: SparkListener](sc: SparkContext, listener: L)(body: L => Unit): Unit = {
     sc.addSparkListener(listener)
     try {
       body(listener)
@@ -346,11 +349,13 @@ private[spark] object TestUtils extends SparkTestUtils {
   }
 
   /**
-   * Wait until at least `numExecutors` executors are up, or throw `TimeoutException` if the waiting
-   * time elapsed before `numExecutors` executors up. Exposed for testing.
+   * Wait until at least `numExecutors` executors are up, or throw `TimeoutException` if the
+   * waiting time elapsed before `numExecutors` executors up. Exposed for testing.
    *
-   * @param numExecutors the number of executors to wait at least
-   * @param timeout time to wait in milliseconds
+   * @param numExecutors
+   *   the number of executors to wait at least
+   * @param timeout
+   *   time to wait in milliseconds
    */
   private[spark] def waitUntilExecutorsUp(
       sc: SparkContext,
@@ -374,10 +379,13 @@ private[spark] object TestUtils extends SparkTestUtils {
    */
   def configTestLog4j2(level: String): Unit = {
     val builder = ConfigurationBuilderFactory.newConfigurationBuilder()
-    val appenderBuilder = builder.newAppender("console", "CONSOLE")
+    val appenderBuilder = builder
+      .newAppender("console", "CONSOLE")
       .addAttribute("target", ConsoleAppender.Target.SYSTEM_ERR)
-    appenderBuilder.add(builder.newLayout("PatternLayout")
-      .addAttribute("pattern", "%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n%ex"))
+    appenderBuilder.add(
+      builder
+        .newLayout("PatternLayout")
+        .addAttribute("pattern", "%d{yy/MM/dd HH:mm:ss} %p %c{1}: %m%n%ex"))
     builder.add(appenderBuilder)
     builder.add(builder.newRootLogger(level).add(builder.newAppenderRef("console")))
     val configuration = builder.build()
@@ -420,12 +428,10 @@ private[spark] object TestUtils extends SparkTestUtils {
     val file = File.createTempFile(prefix, ".sh", dir)
     val script = s"cat <<EOF\n$output\nEOF\n"
     Files.writeString(file.toPath, script)
-    Files.setPosixFilePermissions(file.toPath,
-      EnumSet.of(OWNER_READ, OWNER_EXECUTE, OWNER_WRITE))
+    Files.setPosixFilePermissions(file.toPath, EnumSet.of(OWNER_READ, OWNER_EXECUTE, OWNER_WRITE))
     file.getPath
   }
 }
-
 
 /**
  * A `SparkListener` that detects whether spills have occurred in Spark jobs.
@@ -440,7 +446,8 @@ private class SpillListener extends SparkListener {
 
   override def onTaskEnd(taskEnd: SparkListenerTaskEnd): Unit = synchronized {
     stageIdToTaskMetrics.getOrElseUpdate(
-      taskEnd.stageId, new ArrayBuffer[TaskMetrics]) += taskEnd.taskMetrics
+      taskEnd.stageId,
+      new ArrayBuffer[TaskMetrics]) += taskEnd.taskMetrics
   }
 
   override def onStageCompleted(stageComplete: SparkListenerStageCompleted): Unit = synchronized {

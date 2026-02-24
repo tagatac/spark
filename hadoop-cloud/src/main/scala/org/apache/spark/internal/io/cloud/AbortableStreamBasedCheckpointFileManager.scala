@@ -29,11 +29,13 @@ import org.apache.spark.sql.execution.streaming.checkpointing.AbstractFileContex
 import org.apache.spark.sql.execution.streaming.checkpointing.CheckpointFileManager.CancellableFSDataOutputStream
 
 class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configuration)
-  extends AbstractFileContextBasedCheckpointFileManager(path, hadoopConf) with Logging {
+    extends AbstractFileContextBasedCheckpointFileManager(path, hadoopConf)
+    with Logging {
 
   if (!fc.hasPathCapability(path, CommonPathCapabilities.ABORTABLE_STREAM)) {
-    throw new UnsupportedFileSystemException("AbortableStreamBasedCheckpointFileManager requires" +
-      s" an fs (path: $path) with abortable stream support")
+    throw new UnsupportedFileSystemException(
+      "AbortableStreamBasedCheckpointFileManager requires" +
+        s" an fs (path: $path) with abortable stream support")
   }
 
   logInfo(log"Writing atomically to ${MDC(LogKeys.PATH, path)} based on abortable stream")
@@ -42,7 +44,8 @@ class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configur
       fsDataOutputStream: FSDataOutputStream,
       fc: FileContext,
       path: Path,
-      overwriteIfPossible: Boolean) extends CancellableFSDataOutputStream(fsDataOutputStream) {
+      overwriteIfPossible: Boolean)
+      extends CancellableFSDataOutputStream(fsDataOutputStream) {
 
     @volatile private var terminated = false
 
@@ -52,9 +55,11 @@ class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configur
         fsDataOutputStream.abort()
         fsDataOutputStream.close()
       } catch {
-          case NonFatal(e) =>
-            logWarning(log"Error cancelling write to ${MDC(LogKeys.PATH, path)} " +
-              log"(stream: ${MDC(LogKeys.FS_DATA_OUTPUT_STREAM, fsDataOutputStream)})", e)
+        case NonFatal(e) =>
+          logWarning(
+            log"Error cancelling write to ${MDC(LogKeys.PATH, path)} " +
+              log"(stream: ${MDC(LogKeys.FS_DATA_OUTPUT_STREAM, fsDataOutputStream)})",
+            e)
       } finally {
         terminated = true
       }
@@ -67,13 +72,15 @@ class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configur
           fsDataOutputStream.abort()
           throw new FileAlreadyExistsException(
             s"Failed to close atomic stream $path (stream: " +
-            s"$fsDataOutputStream) as destination already exists")
+              s"$fsDataOutputStream) as destination already exists")
         }
         fsDataOutputStream.close()
       } catch {
-          case NonFatal(e) =>
-            logWarning(log"Error closing ${MDC(LogKeys.PATH, path)} " +
-              log"(stream: ${MDC(LogKeys.FS_DATA_OUTPUT_STREAM, fsDataOutputStream)})", e)
+        case NonFatal(e) =>
+          logWarning(
+            log"Error closing ${MDC(LogKeys.PATH, path)} " +
+              log"(stream: ${MDC(LogKeys.FS_DATA_OUTPUT_STREAM, fsDataOutputStream)})",
+            e)
       } finally {
         terminated = true
       }
@@ -85,7 +92,8 @@ class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configur
   }
 
   override def createAtomic(
-      path: Path, overwriteIfPossible: Boolean): CancellableFSDataOutputStream = {
+      path: Path,
+      overwriteIfPossible: Boolean): CancellableFSDataOutputStream = {
     import CreateFlag._
     val createFlag = if (overwriteIfPossible) {
       EnumSet.of(CREATE, OVERWRITE)
@@ -93,6 +101,9 @@ class AbortableStreamBasedCheckpointFileManager(path: Path, hadoopConf: Configur
       EnumSet.of(CREATE)
     }
     new AbortableStreamBasedFSDataOutputStream(
-      fc.create(path, createFlag), fc, path, overwriteIfPossible)
+      fc.create(path, createFlag),
+      fc,
+      path,
+      overwriteIfPossible)
   }
 }

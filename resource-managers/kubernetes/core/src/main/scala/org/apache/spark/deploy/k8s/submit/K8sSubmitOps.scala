@@ -32,12 +32,12 @@ import org.apache.spark.deploy.k8s.KubernetesUtils.formatPodState
 import org.apache.spark.util.{CommandLineLoggingUtils, Utils}
 
 private sealed trait K8sSubmitOp extends CommandLineLoggingUtils {
-  def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit
-  def executeOnGlob(pods: List[Pod], ns: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit
-  def getPod(namespace: Option[String], name: String)
-      (implicit client: KubernetesClient): PodResource = {
+  def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)(implicit
+      client: KubernetesClient): Unit
+  def executeOnGlob(pods: List[Pod], ns: Option[String], sparkConf: SparkConf)(implicit
+      client: KubernetesClient): Unit
+  def getPod(namespace: Option[String], name: String)(implicit
+      client: KubernetesClient): PodResource = {
     namespace match {
       case Some(ns) => client.pods.inNamespace(ns).withName(name)
       case None => client.pods.withName(name)
@@ -45,9 +45,9 @@ private sealed trait K8sSubmitOp extends CommandLineLoggingUtils {
   }
 }
 
-private class KillApplication extends K8sSubmitOp  {
-  override def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit = {
+private class KillApplication extends K8sSubmitOp {
+  override def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)(
+      implicit client: KubernetesClient): Unit = {
     val podToDelete = getPod(namespace, pName)
 
     if (Option(podToDelete).isDefined) {
@@ -60,8 +60,8 @@ private class KillApplication extends K8sSubmitOp  {
     }
   }
 
-  override def executeOnGlob(pods: List[Pod], namespace: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit = {
+  override def executeOnGlob(pods: List[Pod], namespace: Option[String], sparkConf: SparkConf)(
+      implicit client: KubernetesClient): Unit = {
     if (pods.nonEmpty) {
       pods.foreach { pod => printMessage(s"Deleting driver pod: ${pod.getMetadata.getName}.") }
       getGracePeriod(sparkConf) match {
@@ -77,23 +77,25 @@ private class KillApplication extends K8sSubmitOp  {
 }
 
 private class ListStatus extends K8sSubmitOp {
-  override def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit = {
+  override def executeOnPod(pName: String, namespace: Option[String], sparkConf: SparkConf)(
+      implicit client: KubernetesClient): Unit = {
     val pod = getPod(namespace, pName).get()
     if (Option(pod).isDefined) {
-      printMessage("Application status (driver): " +
-        Option(pod).map(formatPodState).getOrElse("unknown."))
+      printMessage(
+        "Application status (driver): " +
+          Option(pod).map(formatPodState).getOrElse("unknown."))
     } else {
       printMessage("Application not found.")
     }
   }
 
-  override def executeOnGlob(pods: List[Pod], ns: Option[String], sparkConf: SparkConf)
-      (implicit client: KubernetesClient): Unit = {
+  override def executeOnGlob(pods: List[Pod], ns: Option[String], sparkConf: SparkConf)(implicit
+      client: KubernetesClient): Unit = {
     if (pods.nonEmpty) {
       for (pod <- pods) {
-        printMessage("Application status (driver): " +
-          Option(pod).map(formatPodState).getOrElse("unknown."))
+        printMessage(
+          "Application status (driver): " +
+            Option(pod).map(formatPodState).getOrElse("unknown."))
       }
     } else {
       printMessage("No applications found.")
@@ -101,8 +103,9 @@ private class ListStatus extends K8sSubmitOp {
   }
 }
 
-private[spark] class K8SSparkSubmitOperation extends SparkSubmitOperation
-  with CommandLineLoggingUtils {
+private[spark] class K8SSparkSubmitOperation
+    extends SparkSubmitOperation
+    with CommandLineLoggingUtils {
 
   private def isGlob(name: String): Boolean = {
     name.last == '*'
@@ -111,27 +114,25 @@ private[spark] class K8SSparkSubmitOperation extends SparkSubmitOperation
   def execute(submissionId: String, sparkConf: SparkConf, op: K8sSubmitOp): Unit = {
     val master = KubernetesUtils.parseMasterUrl(sparkConf.get("spark.master"))
     submissionId.split(":", 2) match {
-      case Array(part1, part2@_*) =>
+      case Array(part1, part2 @ _*) =>
         val namespace = if (part2.isEmpty) None else Some(part1)
         val pName = if (part2.isEmpty) part1 else part2.headOption.get
-        Utils.tryWithResource(SparkKubernetesClientFactory.createKubernetesClient(
-          master,
-          namespace,
-          KUBERNETES_AUTH_SUBMISSION_CONF_PREFIX,
-          SparkKubernetesClientFactory.ClientType.Submission,
-          sparkConf,
-          None)
-        ) { kubernetesClient =>
+        Utils.tryWithResource(
+          SparkKubernetesClientFactory.createKubernetesClient(
+            master,
+            namespace,
+            KUBERNETES_AUTH_SUBMISSION_CONF_PREFIX,
+            SparkKubernetesClientFactory.ClientType.Submission,
+            sparkConf,
+            None)) { kubernetesClient =>
           implicit val client: KubernetesClient = kubernetesClient
           if (isGlob(pName)) {
             val ops = namespace match {
               case Some(ns) =>
-                kubernetesClient
-                  .pods
+                kubernetesClient.pods
                   .inNamespace(ns)
               case None =>
-                kubernetesClient
-                  .pods
+                kubernetesClient.pods
             }
             val pods = ops
               .withLabel(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
@@ -140,7 +141,8 @@ private[spark] class K8SSparkSubmitOperation extends SparkSubmitOperation
               .asScala
               .filter { pod =>
                 pod.getMetadata.getName.startsWith(pName.stripSuffix("*"))
-              }.toList
+              }
+              .toList
             op.executeOnGlob(pods, namespace, sparkConf)
           } else {
             op.executeOnPod(pName, namespace, sparkConf)
@@ -152,15 +154,17 @@ private[spark] class K8SSparkSubmitOperation extends SparkSubmitOperation
   }
 
   override def kill(submissionId: String, conf: SparkConf): Unit = {
-    printMessage(s"Submitting a request to kill submission " +
-      s"${submissionId} in ${conf.get("spark.master")}. " +
-      s"Grace period in secs: ${getGracePeriod(conf).getOrElse("not set.")}")
+    printMessage(
+      s"Submitting a request to kill submission " +
+        s"${submissionId} in ${conf.get("spark.master")}. " +
+        s"Grace period in secs: ${getGracePeriod(conf).getOrElse("not set.")}")
     execute(submissionId, conf, new KillApplication)
   }
 
   override def printSubmissionStatus(submissionId: String, conf: SparkConf): Unit = {
-    printMessage(s"Submitting a request for the status of submission" +
-      s" ${submissionId} in ${conf.get("spark.master")}.")
+    printMessage(
+      s"Submitting a request for the status of submission" +
+        s" ${submissionId} in ${conf.get("spark.master")}.")
     execute(submissionId, conf, new ListStatus)
   }
 

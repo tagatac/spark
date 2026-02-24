@@ -37,15 +37,20 @@ import org.apache.spark.sql.util.CaseInsensitiveStringMap
 /**
  * A [[ContinuousStream]] for data from kafka.
  *
- * @param offsetReader  a reader used to get kafka offsets. Note that the actual data will be
- *                      read by per-task consumers generated later.
- * @param kafkaParams   String params for per-task Kafka consumers.
- * @param options Params which are not Kafka consumer params.
- * @param metadataPath Path to a directory this reader can use for writing metadata.
- * @param initialOffsets The Kafka offsets to start reading data at.
- * @param failOnDataLoss Flag indicating whether reading should fail in data loss
- *                       scenarios, where some offsets after the specified initial ones can't be
- *                       properly read.
+ * @param offsetReader
+ *   a reader used to get kafka offsets. Note that the actual data will be read by per-task
+ *   consumers generated later.
+ * @param kafkaParams
+ *   String params for per-task Kafka consumers.
+ * @param options
+ *   Params which are not Kafka consumer params.
+ * @param metadataPath
+ *   Path to a directory this reader can use for writing metadata.
+ * @param initialOffsets
+ *   The Kafka offsets to start reading data at.
+ * @param failOnDataLoss
+ *   Flag indicating whether reading should fail in data loss scenarios, where some offsets after
+ *   the specified initial ones can't be properly read.
  */
 class KafkaContinuousStream(
     private[kafka010] val offsetReader: KafkaOffsetReader,
@@ -54,7 +59,8 @@ class KafkaContinuousStream(
     metadataPath: String,
     initialOffsets: KafkaOffsetRangeLimit,
     failOnDataLoss: Boolean)
-  extends ContinuousStream with Logging {
+    extends ContinuousStream
+    with Logging {
 
   private[kafka010] val pollTimeoutMs =
     options.getLong(KafkaSourceProvider.CONSUMER_POLL_TIMEOUT, 512)
@@ -64,7 +70,6 @@ class KafkaContinuousStream(
   // offsets, we need to reconfigure.
   // Exposed outside this object only for unit tests.
   @volatile private[sql] var knownPartitions: Set[TopicPartition] = _
-
 
   override def initialOffset(): Offset = {
     val offsets = initialOffsets match {
@@ -95,25 +100,28 @@ class KafkaContinuousStream(
     if (deletedPartitions.nonEmpty) {
       val (message, config) =
         if (offsetReader.driverKafkaParams.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
-          (s"$deletedPartitions are gone. ${CUSTOM_GROUP_ID_ERROR_MESSAGE}",
+          (
+            s"$deletedPartitions are gone. ${CUSTOM_GROUP_ID_ERROR_MESSAGE}",
             Some(ConsumerConfig.GROUP_ID_CONFIG))
         } else {
           (s"$deletedPartitions are gone. Some data may have been missed.", None)
         }
 
-      reportDataLoss(
-        message,
-        () => KafkaExceptions.partitionsDeleted(deletedPartitions, config))
+      reportDataLoss(message, () => KafkaExceptions.partitionsDeleted(deletedPartitions, config))
     }
 
     val startOffsets = newPartitionOffsets ++
       oldStartPartitionOffsets.filter { case (k, _) => !deletedPartitions.contains(k) }
     knownPartitions = startOffsets.keySet
 
-    startOffsets.toSeq.map {
-      case (topicPartition, start) =>
-        KafkaContinuousInputPartition(
-          topicPartition, start, kafkaParams, pollTimeoutMs, failOnDataLoss, includeHeaders)
+    startOffsets.toSeq.map { case (topicPartition, start) =>
+      KafkaContinuousInputPartition(
+        topicPartition,
+        start,
+        kafkaParams,
+        pollTimeoutMs,
+        failOnDataLoss,
+        includeHeaders)
     }.toArray
   }
 
@@ -129,9 +137,11 @@ class KafkaContinuousStream(
   override def commit(end: Offset): Unit = {}
 
   override def mergeOffsets(offsets: Array[PartitionOffset]): Offset = {
-    val mergedMap = offsets.map {
-      case KafkaSourcePartitionOffset(p, o) => Map(p -> o)
-    }.reduce(_ ++ _)
+    val mergedMap = offsets
+      .map { case KafkaSourcePartitionOffset(p, o) =>
+        Map(p -> o)
+      }
+      .reduce(_ ++ _)
     KafkaSourceOffset(mergedMap)
   }
 
@@ -142,14 +152,15 @@ class KafkaContinuousStream(
   override def toString(): String = s"KafkaSource[$offsetReader]"
 
   /**
-   * If `failOnDataLoss` is true, this method will throw the exception.
-   * Otherwise, just log a warning.
+   * If `failOnDataLoss` is true, this method will throw the exception. Otherwise, just log a
+   * warning.
    */
   private def reportDataLoss(message: String, getException: () => Throwable): Unit = {
     if (failOnDataLoss) {
       throw getException()
     } else {
-      logWarning(log"${MDC(ERROR, message)}. ${MDC(TIP, INSTRUCTION_FOR_FAIL_ON_DATA_LOSS_FALSE)}")
+      logWarning(
+        log"${MDC(ERROR, message)}. ${MDC(TIP, INSTRUCTION_FOR_FAIL_ON_DATA_LOSS_FALSE)}")
     }
   }
 }
@@ -158,40 +169,54 @@ class KafkaContinuousStream(
  * An input partition for continuous Kafka processing. This will be serialized and transformed
  * into a full reader on executors.
  *
- * @param topicPartition The (topic, partition) pair this task is responsible for.
- * @param startOffset The offset to start reading from within the partition.
- * @param kafkaParams Kafka consumer params to use.
- * @param pollTimeoutMs The timeout for Kafka consumer polling.
- * @param failOnDataLoss Flag indicating whether data reader should fail if some offsets
- *                       are skipped.
- * @param includeHeaders Flag indicating whether to include Kafka records' headers.
+ * @param topicPartition
+ *   The (topic, partition) pair this task is responsible for.
+ * @param startOffset
+ *   The offset to start reading from within the partition.
+ * @param kafkaParams
+ *   Kafka consumer params to use.
+ * @param pollTimeoutMs
+ *   The timeout for Kafka consumer polling.
+ * @param failOnDataLoss
+ *   Flag indicating whether data reader should fail if some offsets are skipped.
+ * @param includeHeaders
+ *   Flag indicating whether to include Kafka records' headers.
  */
 case class KafkaContinuousInputPartition(
-  topicPartition: TopicPartition,
-  startOffset: Long,
-  kafkaParams: ju.Map[String, Object],
-  pollTimeoutMs: Long,
-  failOnDataLoss: Boolean,
-  includeHeaders: Boolean) extends InputPartition
+    topicPartition: TopicPartition,
+    startOffset: Long,
+    kafkaParams: ju.Map[String, Object],
+    pollTimeoutMs: Long,
+    failOnDataLoss: Boolean,
+    includeHeaders: Boolean)
+    extends InputPartition
 
 object KafkaContinuousReaderFactory extends ContinuousPartitionReaderFactory {
   override def createReader(partition: InputPartition): ContinuousPartitionReader[InternalRow] = {
     val p = partition.asInstanceOf[KafkaContinuousInputPartition]
     new KafkaContinuousPartitionReader(
-      p.topicPartition, p.startOffset, p.kafkaParams, p.pollTimeoutMs,
-      p.failOnDataLoss, p.includeHeaders)
+      p.topicPartition,
+      p.startOffset,
+      p.kafkaParams,
+      p.pollTimeoutMs,
+      p.failOnDataLoss,
+      p.includeHeaders)
   }
 }
 
 /**
  * A per-task data reader for continuous Kafka processing.
  *
- * @param topicPartition The (topic, partition) pair this data reader is responsible for.
- * @param startOffset The offset to start reading from within the partition.
- * @param kafkaParams Kafka consumer params to use.
- * @param pollTimeoutMs The timeout for Kafka consumer polling.
- * @param failOnDataLoss Flag indicating whether data reader should fail if some offsets
- *                       are skipped.
+ * @param topicPartition
+ *   The (topic, partition) pair this data reader is responsible for.
+ * @param startOffset
+ *   The offset to start reading from within the partition.
+ * @param kafkaParams
+ *   Kafka consumer params to use.
+ * @param pollTimeoutMs
+ *   The timeout for Kafka consumer polling.
+ * @param failOnDataLoss
+ *   Flag indicating whether data reader should fail if some offsets are skipped.
  */
 class KafkaContinuousPartitionReader(
     topicPartition: TopicPartition,
@@ -199,7 +224,8 @@ class KafkaContinuousPartitionReader(
     kafkaParams: ju.Map[String, Object],
     pollTimeoutMs: Long,
     failOnDataLoss: Boolean,
-    includeHeaders: Boolean) extends ContinuousPartitionReader[InternalRow] {
+    includeHeaders: Boolean)
+    extends ContinuousPartitionReader[InternalRow] {
   private val consumer = KafkaDataConsumer.acquire(topicPartition, kafkaParams)
   private val unsafeRowProjector = new KafkaRecordToRowConverter()
     .toUnsafeRowProjector(includeHeaders)
@@ -226,7 +252,8 @@ class KafkaContinuousPartitionReader(
 
         // This is a failOnDataLoss exception. Retry if nextKafkaOffset is within the data range,
         // or if it's the endpoint of the data range (i.e. the "true" next offset).
-        case e: KafkaIllegalStateException if e.getCause.isInstanceOf[OffsetOutOfRangeException] =>
+        case e: KafkaIllegalStateException
+            if e.getCause.isInstanceOf[OffsetOutOfRangeException] =>
           val range = consumer.getAvailableOffsetRange()
           if (range.latest >= nextKafkaOffset && range.earliest <= nextKafkaOffset) {
             // retry

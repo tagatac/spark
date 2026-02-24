@@ -27,7 +27,6 @@ import org.mockito.Mockito.{mock, when}
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.internal.config.DRIVER_LOG_LOCAL_DIR
 
-
 class DriverLogPageSuite extends SparkFunSuite {
 
   test("DriverLogTab requires driver log location") {

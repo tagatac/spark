@@ -439,7 +439,8 @@ class UnifiedMemoryManagerSuite extends MemoryManagerSuite with PrivateMethodTes
     class MockMemoryConsumer(
         var memoryUsed: Long,
         instanceId: String,
-        mode: MemoryMode = MemoryMode.ON_HEAP) extends UnmanagedMemoryConsumer {
+        mode: MemoryMode = MemoryMode.ON_HEAP)
+        extends UnmanagedMemoryConsumer {
       override def unmanagedMemoryConsumerId: UnmanagedMemoryConsumerId =
         UnmanagedMemoryConsumerId("Test", instanceId)
       override def memoryMode: MemoryMode = mode
@@ -607,7 +608,8 @@ class UnifiedMemoryManagerSuite extends MemoryManagerSuite with PrivateMethodTes
 
       // Test that on-heap is NOT affected by off-heap unmanaged memory
       val onHeapAcquired = mm.acquireExecutionMemory(600L, taskAttemptId, MemoryMode.ON_HEAP)
-      assert(onHeapAcquired == 600L,
+      assert(
+        onHeapAcquired == 600L,
         "On-heap memory should not be reduced by off-heap unmanaged usage")
       mm.releaseExecutionMemory(onHeapAcquired, taskAttemptId, MemoryMode.ON_HEAP)
 
@@ -619,7 +621,8 @@ class UnifiedMemoryManagerSuite extends MemoryManagerSuite with PrivateMethodTes
       val onHeap = mm.acquireExecutionMemory(400L, taskAttemptId, MemoryMode.ON_HEAP)
       val offHeap = mm.acquireExecutionMemory(1000L, taskAttemptId, MemoryMode.OFF_HEAP)
 
-      assert(onHeap == 400L && offHeap <= 1300L,
+      assert(
+        onHeap == 400L && offHeap <= 1300L,
         "Off-heap memory pool should respect unmanaged memory usage, on-heap should not")
 
     } finally {

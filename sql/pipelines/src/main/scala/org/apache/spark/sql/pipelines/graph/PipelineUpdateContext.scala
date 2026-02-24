@@ -39,8 +39,8 @@ trait PipelineUpdateContext {
   def storageRoot: String
 
   /**
-   * Filter for which flows should be refreshed when performing this update. Should be a superset of
-   * fullRefreshFlows.
+   * Filter for which flows should be refreshed when performing this update. Should be a superset
+   * of fullRefreshFlows.
    */
   final def refreshFlows: FlowFilter = {
     val flowFilterForTables = (refreshTables, fullRefreshTables) match {

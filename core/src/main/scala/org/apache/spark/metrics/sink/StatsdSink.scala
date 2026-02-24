@@ -41,8 +41,9 @@ private[spark] object StatsdSink {
   val STATSD_DEFAULT_PREFIX = ""
 }
 
-private[spark] class StatsdSink(
-    val property: Properties, val registry: MetricRegistry) extends Sink with Logging {
+private[spark] class StatsdSink(val property: Properties, val registry: MetricRegistry)
+    extends Sink
+    with Logging {
   import StatsdSink._
 
   val host = property.getProperty(STATSD_KEY_HOST, STATSD_DEFAULT_HOST)
@@ -56,11 +57,12 @@ private[spark] class StatsdSink(
   val prefix = property.getProperty(STATSD_KEY_PREFIX, STATSD_DEFAULT_PREFIX)
 
   val filter = Option(property.getProperty(STATSD_KEY_REGEX)) match {
-    case Some(pattern) => new MetricFilter() {
-      override def matches(name: String, metric: Metric): Boolean = {
-        pattern.r.findFirstMatchIn(name).isDefined
+    case Some(pattern) =>
+      new MetricFilter() {
+        override def matches(name: String, metric: Metric): Boolean = {
+          pattern.r.findFirstMatchIn(name).isDefined
+        }
       }
-    }
     case None => MetricFilter.ALL
   }
 
@@ -80,4 +82,3 @@ private[spark] class StatsdSink(
 
   override def report(): Unit = reporter.report()
 }
-

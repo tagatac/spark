@@ -57,7 +57,8 @@ private[hive] object SparkSQLEnv extends Logging {
       val shouldUseInMemoryCatalog =
         sparkConf.getOption(CATALOG_IMPLEMENTATION.key).contains("in-memory")
 
-      val builder = SparkSession.builder()
+      val builder = SparkSession
+        .builder()
         .config(sparkConf)
         .config(BUILTIN_HIVE_VERSION.key, builtinHiveVersion)
 
@@ -73,8 +74,9 @@ private[hive] object SparkSQLEnv extends Logging {
       sparkSession.sessionState
 
       if (!shouldUseInMemoryCatalog) {
-        val metadataHive = sparkSession
-          .sharedState.externalCatalog.unwrapped.asInstanceOf[HiveExternalCatalog].client
+        val metadataHive = sparkSession.sharedState.externalCatalog.unwrapped
+          .asInstanceOf[HiveExternalCatalog]
+          .client
         metadataHive.setOut(out)
         metadataHive.setInfo(err)
         metadataHive.setError(err)

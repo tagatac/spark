@@ -23,16 +23,15 @@ import org.apache.spark.internal.config.Tests.IS_TESTING
 import org.apache.spark.util.Utils
 
 /**
- * A base class for generate benchmark results to a file.
- * For JDK 21+, JDK major version number is added to the file names to distinguish the results.
+ * A base class for generate benchmark results to a file. For JDK 21+, JDK major version number is
+ * added to the file names to distinguish the results.
  */
 abstract class BenchmarkBase {
   var output: Option[OutputStream] = None
 
   /**
-   * Main process of the whole benchmark.
-   * Implementations of this method are supposed to use the wrapper method `runBenchmark`
-   * for each benchmark scenario.
+   * Main process of the whole benchmark. Implementations of this method are supposed to use the
+   * wrapper method `runBenchmark` for each benchmark scenario.
    */
   def runBenchmarkSuite(mainArgs: Array[String]): Unit
 

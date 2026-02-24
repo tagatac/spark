@@ -42,22 +42,22 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
     <div class="legend-area">
       <svg>
         {
-          val legendPairs = List(("scheduler-delay-proportion", "Scheduler Delay"),
-            ("deserialization-time-proportion", "Task Deserialization Time"),
-            ("shuffle-read-time-proportion", "Shuffle Read Time"),
-            ("executor-runtime-proportion", "Executor Computing Time"),
-            ("shuffle-write-time-proportion", "Shuffle Write Time"),
-            ("serialization-time-proportion", "Result Serialization Time"),
-            ("getting-result-time-proportion", "Getting Result Time"))
+      val legendPairs = List(
+        ("scheduler-delay-proportion", "Scheduler Delay"),
+        ("deserialization-time-proportion", "Task Deserialization Time"),
+        ("shuffle-read-time-proportion", "Shuffle Read Time"),
+        ("executor-runtime-proportion", "Executor Computing Time"),
+        ("shuffle-write-time-proportion", "Shuffle Write Time"),
+        ("serialization-time-proportion", "Result Serialization Time"),
+        ("getting-result-time-proportion", "Getting Result Time"))
 
-          legendPairs.zipWithIndex.map {
-            case ((classAttr, name), index) =>
-              <rect x={s"${5 + (index / 3) * 210}px"} y={s"${10 + (index % 3) * 15}px"}
+      legendPairs.zipWithIndex.map { case ((classAttr, name), index) =>
+        <rect x={s"${5 + (index / 3) * 210}px"} y={s"${10 + (index % 3) * 15}px"}
                 width="10px" height="10px" class={classAttr}></rect>
                 <text x={s"${25 + (index / 3) * 210}px"}
                   y={s"${20 + (index % 3) * 15}px"}>{name}</text>
-          }
-        }
+      }
+    }
       </svg>
     </div>
   }
@@ -94,12 +94,14 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
     val eventTimelineParameterTaskPage = request.getParameter("task.eventTimelinePageNumber")
     val eventTimelineParameterTaskPageSize = request.getParameter("task.eventTimelinePageSize")
     var eventTimelineTaskPage = Option(eventTimelineParameterTaskPage).map(_.toInt).getOrElse(1)
-    var eventTimelineTaskPageSize = Option(
-      eventTimelineParameterTaskPageSize).map(_.toInt).getOrElse(100)
+    var eventTimelineTaskPageSize =
+      Option(eventTimelineParameterTaskPageSize).map(_.toInt).getOrElse(100)
 
-    val taskSortColumn = Option(parameterTaskSortColumn).map { sortColumn =>
-      UIUtils.decodeURLParameter(sortColumn)
-    }.getOrElse("Index")
+    val taskSortColumn = Option(parameterTaskSortColumn)
+      .map { sortColumn =>
+        UIUtils.decodeURLParameter(sortColumn)
+      }
+      .getOrElse("Index")
     val taskSortDesc = Option(parameterTaskSortDesc).map(_.toBoolean).getOrElse(false)
     val taskPageSize = Option(parameterTaskPageSize).map(_.toInt).getOrElse(100)
     val stageId = parameterId.toInt
@@ -161,34 +163,47 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
             <strong>Locality Level Summary: </strong>
             {getLocalitySummaryString(localitySummary)}
           </li>
-          {if (hasInput(stageData)) {
-            <li>
+          {
+        if (hasInput(stageData)) {
+          <li>
               <strong>Input Size / Records: </strong>
               {s"${Utils.bytesToString(stageData.inputBytes)} / ${stageData.inputRecords}"}
             </li>
-          }}
-          {if (hasOutput(stageData)) {
-            <li>
+        }
+      }
+          {
+        if (hasOutput(stageData)) {
+          <li>
               <strong>Output Size / Records: </strong>
               {s"${Utils.bytesToString(stageData.outputBytes)} / ${stageData.outputRecords}"}
             </li>
-          }}
-          {if (hasShuffleRead(stageData)) {
-            <li>
+        }
+      }
+          {
+        if (hasShuffleRead(stageData)) {
+          <li>
               <strong>Shuffle Read Size / Records: </strong>
-              {s"${Utils.bytesToString(stageData.shuffleReadBytes)} / " +
-               s"${stageData.shuffleReadRecords}"}
+              {
+            s"${Utils.bytesToString(stageData.shuffleReadBytes)} / " +
+              s"${stageData.shuffleReadRecords}"
+          }
             </li>
-          }}
-          {if (hasShuffleWrite(stageData)) {
-            <li>
+        }
+      }
+          {
+        if (hasShuffleWrite(stageData)) {
+          <li>
               <strong>Shuffle Write Size / Records: </strong>
-               {s"${Utils.bytesToString(stageData.shuffleWriteBytes)} / " +
-               s"${stageData.shuffleWriteRecords}"}
+               {
+            s"${Utils.bytesToString(stageData.shuffleWriteBytes)} / " +
+              s"${stageData.shuffleWriteRecords}"
+          }
             </li>
-          }}
-          {if (hasBytesSpilled(stageData)) {
-            <li>
+        }
+      }
+          {
+        if (hasBytesSpilled(stageData)) {
+          <li>
               <strong>Spill (Memory): </strong>
               {Utils.bytesToString(stageData.memoryBytesSpilled)}
             </li>
@@ -196,17 +211,22 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
               <strong>Spill (Disk): </strong>
               {Utils.bytesToString(stageData.diskBytesSpilled)}
             </li>
-          }}
-          {if (!stageJobIds.isEmpty) {
-            <li>
+        }
+      }
+          {
+        if (!stageJobIds.isEmpty) {
+          <li>
               <strong>Associated Job Ids: </strong>
-              {stageJobIds.sorted.map { jobId =>
-                val jobURL = "%s/jobs/job/?id=%s"
-                  .format(UIUtils.prependBaseUri(request, parent.basePath), jobId)
-                <a href={jobURL}>{jobId.toString}</a><span>&nbsp;</span>
-              }}
+              {
+            stageJobIds.sorted.map { jobId =>
+              val jobURL = "%s/jobs/job/?id=%s"
+                .format(UIUtils.prependBaseUri(request, parent.basePath), jobId)
+              <a href={jobURL}>{jobId.toString}</a><span>&nbsp;</span>
+            }
+          }
             </li>
-          }}
+        }
+      }
         </ul>
       </div>
 
@@ -223,27 +243,44 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
          |""".stripMargin
     val content =
       summary ++
-      dagViz ++ <div id="showAdditionalMetrics"></div> ++
-      makeTimeline(
-        // Only show the tasks in the table
-        () => {
-          val from = (eventTimelineTaskPage - 1) * eventTimelineTaskPageSize
-          val dataSize = store.taskCount(stageData.stageId, stageData.attemptId).toInt
-          val to = dataSize.min(eventTimelineTaskPage * eventTimelineTaskPageSize)
-          val sliceData = store.taskList(stageData.stageId, stageData.attemptId, from, to - from,
-            indexName(taskSortColumn), !taskSortDesc)
-          sliceData
-        }, currentTime,
-        eventTimelineTaskPage, eventTimelineTaskPageSize, eventTimelineTotalPages, stageId,
-        stageAttemptId, totalTasks) ++
+        dagViz ++ <div id="showAdditionalMetrics"></div> ++
+        makeTimeline(
+          // Only show the tasks in the table
+          () => {
+            val from = (eventTimelineTaskPage - 1) * eventTimelineTaskPageSize
+            val dataSize = store.taskCount(stageData.stageId, stageData.attemptId).toInt
+            val to = dataSize.min(eventTimelineTaskPage * eventTimelineTaskPageSize)
+            val sliceData = store.taskList(
+              stageData.stageId,
+              stageData.attemptId,
+              from,
+              to - from,
+              indexName(taskSortColumn),
+              !taskSortDesc)
+            sliceData
+          },
+          currentTime,
+          eventTimelineTaskPage,
+          eventTimelineTaskPageSize,
+          eventTimelineTotalPages,
+          stageId,
+          stageAttemptId,
+          totalTasks) ++
         <div id="parent-container">
-          <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script>
+          <script type="module" src={
+          UIUtils.prependBaseUri(request, "/static/utils.js")
+        }></script>
           <script type="module"
                   src={UIUtils.prependBaseUri(request, "/static/stagepage.js")}></script>
           <script type="module" nonce={CspNonce.get}>{Unparsed(js)}</script>
         </div>
-        UIUtils.headerSparkPage(request, stageHeader, content, parent, showVisualization = true,
-          useDataTables = true)
+    UIUtils.headerSparkPage(
+      request,
+      stageHeader,
+      content,
+      parent,
+      showVisualization = true,
+      useDataTables = true)
 
   }
 
@@ -266,73 +303,85 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
     var maxFinishTime = Long.MinValue
 
     val executorsArrayStr =
-      tasks.sortBy(-_.launchTime.getTime()).take(MAX_TIMELINE_TASKS).map { taskInfo =>
-        val executorId = taskInfo.executorId
-        val host = taskInfo.host
-        executorsSet += ((executorId, host))
+      tasks
+        .sortBy(-_.launchTime.getTime())
+        .take(MAX_TIMELINE_TASKS)
+        .map { taskInfo =>
+          val executorId = taskInfo.executorId
+          val host = taskInfo.host
+          executorsSet += ((executorId, host))
 
-        val launchTime = taskInfo.launchTime.getTime()
-        val finishTime = taskInfo.duration.map(taskInfo.launchTime.getTime() + _)
-          .getOrElse(currentTime)
-        val totalExecutionTime = finishTime - launchTime
-        minLaunchTime = launchTime.min(minLaunchTime)
-        maxFinishTime = finishTime.max(maxFinishTime)
+          val launchTime = taskInfo.launchTime.getTime()
+          val finishTime = taskInfo.duration
+            .map(taskInfo.launchTime.getTime() + _)
+            .getOrElse(currentTime)
+          val totalExecutionTime = finishTime - launchTime
+          minLaunchTime = launchTime.min(minLaunchTime)
+          maxFinishTime = finishTime.max(maxFinishTime)
 
-        def toProportion(time: Long) = time.toDouble / totalExecutionTime * 100
+          def toProportion(time: Long) = time.toDouble / totalExecutionTime * 100
 
-        val metricsOpt = taskInfo.taskMetrics
-        val shuffleReadTime =
-          metricsOpt.map(_.shuffleReadMetrics.fetchWaitTime).getOrElse(0L)
-        val shuffleReadTimeProportion = toProportion(shuffleReadTime)
-        val shuffleWriteTime =
-          (metricsOpt.map(_.shuffleWriteMetrics.writeTime).getOrElse(0L) / 1e6).toLong
-        val shuffleWriteTimeProportion = toProportion(shuffleWriteTime)
+          val metricsOpt = taskInfo.taskMetrics
+          val shuffleReadTime =
+            metricsOpt.map(_.shuffleReadMetrics.fetchWaitTime).getOrElse(0L)
+          val shuffleReadTimeProportion = toProportion(shuffleReadTime)
+          val shuffleWriteTime =
+            (metricsOpt.map(_.shuffleWriteMetrics.writeTime).getOrElse(0L) / 1e6).toLong
+          val shuffleWriteTimeProportion = toProportion(shuffleWriteTime)
 
-        val serializationTime = metricsOpt.map(_.resultSerializationTime).getOrElse(0L)
-        val serializationTimeProportion = toProportion(serializationTime)
-        val deserializationTime = metricsOpt.map(_.executorDeserializeTime).getOrElse(0L)
-        val deserializationTimeProportion = toProportion(deserializationTime)
-        val gettingResultTime = AppStatusUtils.gettingResultTime(taskInfo)
-        val gettingResultTimeProportion = toProportion(gettingResultTime)
-        val schedulerDelay = AppStatusUtils.schedulerDelay(taskInfo)
-        val schedulerDelayProportion = toProportion(schedulerDelay)
+          val serializationTime = metricsOpt.map(_.resultSerializationTime).getOrElse(0L)
+          val serializationTimeProportion = toProportion(serializationTime)
+          val deserializationTime = metricsOpt.map(_.executorDeserializeTime).getOrElse(0L)
+          val deserializationTimeProportion = toProportion(deserializationTime)
+          val gettingResultTime = AppStatusUtils.gettingResultTime(taskInfo)
+          val gettingResultTimeProportion = toProportion(gettingResultTime)
+          val schedulerDelay = AppStatusUtils.schedulerDelay(taskInfo)
+          val schedulerDelayProportion = toProportion(schedulerDelay)
 
-        val executorOverhead = serializationTime + deserializationTime
-        val executorRunTime = if (taskInfo.duration.isDefined) {
-          math.max(totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay, 0)
-        } else {
-          metricsOpt.map(_.executorRunTime).getOrElse(
-            math.max(totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay, 0))
-        }
-        val executorComputingTime = executorRunTime - shuffleReadTime - shuffleWriteTime
-        val executorComputingTimeProportion =
-          math.max(100 - schedulerDelayProportion - shuffleReadTimeProportion -
-            shuffleWriteTimeProportion - serializationTimeProportion -
-            deserializationTimeProportion - gettingResultTimeProportion, 0)
-
-        val schedulerDelayProportionPos = 0
-        val deserializationTimeProportionPos =
-          schedulerDelayProportionPos + schedulerDelayProportion
-        val shuffleReadTimeProportionPos =
-          deserializationTimeProportionPos + deserializationTimeProportion
-        val executorRuntimeProportionPos =
-          shuffleReadTimeProportionPos + shuffleReadTimeProportion
-        val shuffleWriteTimeProportionPos =
-          executorRuntimeProportionPos + executorComputingTimeProportion
-        val serializationTimeProportionPos =
-          shuffleWriteTimeProportionPos + shuffleWriteTimeProportion
-        val gettingResultTimeProportionPos =
-          serializationTimeProportionPos + serializationTimeProportion
-
-        val index = taskInfo.index
-        val attempt = taskInfo.attempt
-
-        val svgTag =
-          if (totalExecutionTime == 0) {
-            // SPARK-8705: Avoid invalid attribute error in JavaScript if execution time is 0
-            """<svg class="task-assignment-timeline-duration-bar"></svg>"""
+          val executorOverhead = serializationTime + deserializationTime
+          val executorRunTime = if (taskInfo.duration.isDefined) {
+            math.max(
+              totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay,
+              0)
           } else {
-           s"""<svg class="task-assignment-timeline-duration-bar">
+            metricsOpt
+              .map(_.executorRunTime)
+              .getOrElse(
+                math.max(
+                  totalExecutionTime - executorOverhead - gettingResultTime - schedulerDelay,
+                  0))
+          }
+          val executorComputingTime = executorRunTime - shuffleReadTime - shuffleWriteTime
+          val executorComputingTimeProportion =
+            math.max(
+              100 - schedulerDelayProportion - shuffleReadTimeProportion -
+                shuffleWriteTimeProportion - serializationTimeProportion -
+                deserializationTimeProportion - gettingResultTimeProportion,
+              0)
+
+          val schedulerDelayProportionPos = 0
+          val deserializationTimeProportionPos =
+            schedulerDelayProportionPos + schedulerDelayProportion
+          val shuffleReadTimeProportionPos =
+            deserializationTimeProportionPos + deserializationTimeProportion
+          val executorRuntimeProportionPos =
+            shuffleReadTimeProportionPos + shuffleReadTimeProportion
+          val shuffleWriteTimeProportionPos =
+            executorRuntimeProportionPos + executorComputingTimeProportion
+          val serializationTimeProportionPos =
+            shuffleWriteTimeProportionPos + shuffleWriteTimeProportion
+          val gettingResultTimeProportionPos =
+            serializationTimeProportionPos + serializationTimeProportion
+
+          val index = taskInfo.index
+          val attempt = taskInfo.attempt
+
+          val svgTag =
+            if (totalExecutionTime == 0) {
+              // SPARK-8705: Avoid invalid attribute error in JavaScript if execution time is 0
+              """<svg class="task-assignment-timeline-duration-bar"></svg>"""
+            } else {
+              s"""<svg class="task-assignment-timeline-duration-bar">
                  |<rect class="scheduler-delay-proportion"
                    |x="$schedulerDelayProportionPos%" y="0px" height="26px"
                    |width="$schedulerDelayProportion%"></rect>
@@ -354,9 +403,9 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
                  |<rect class="getting-result-time-proportion"
                    |x="$gettingResultTimeProportionPos%" y="0px" height="26px"
                    |width="$gettingResultTimeProportion%"></rect></svg>""".stripMargin
-          }
-        val timelineObject =
-          s"""
+            }
+          val timelineObject =
+            s"""
              |{
                |'className': 'task task-assignment-timeline-object',
                |'group': '$executorId',
@@ -366,13 +415,11 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
                  |data-title="${"Task " + index + " (attempt " + attempt + ")"}<br>
                  |Status: ${taskInfo.status}<br>
                  |Launch Time: ${UIUtils.formatDate(new Date(launchTime))}
-                 |${
-                     if (taskInfo.duration.isEmpty) {
-                       s"""<br>Finish Time: ${UIUtils.formatDate(new Date(finishTime))}"""
-                     } else {
-                        ""
-                      }
-                   }
+                 |${if (taskInfo.duration.isEmpty) {
+                s"""<br>Finish Time: ${UIUtils.formatDate(new Date(finishTime))}"""
+              } else {
+                ""
+              }}
                  |<br>Scheduler Delay: $schedulerDelay ms
                  |<br>Task Deserialization Time: ${UIUtils.formatDuration(deserializationTime)}
                  |<br>Shuffle Read Time: ${UIUtils.formatDuration(shuffleReadTime)}
@@ -385,24 +432,26 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
                |'end': new Date($finishTime)
              |}
            |""".stripMargin.replaceAll("""[\r\n]+""", " ")
-        timelineObject
-      }.mkString("[", ",", "]")
+          timelineObject
+        }
+        .mkString("[", ",", "]")
 
-    val groupArrayStr = executorsSet.map {
-      case (executorId, host) =>
+    val groupArrayStr = executorsSet
+      .map { case (executorId, host) =>
         s"""
             {
               'id': '$executorId',
               'content': '$executorId / $host',
             }
           """
-    }.mkString("[", ",", "]")
+      }
+      .mkString("[", ",", "]")
 
     <span class="expand-task-assignment-timeline">
       <span class="expand-task-assignment-timeline-arrow arrow-closed"></span>
       <a>Event Timeline</a>
     </span> ++
-    <div id="task-assignment-timeline" class="collapsed">
+      <div id="task-assignment-timeline" class="collapsed">
       {
         if (MAX_TIMELINE_TASKS < tasks.size) {
           <strong>
@@ -447,10 +496,13 @@ private[ui] class StagePage(parent: StagesTab, store: AppStatusStore) extends We
       </div>
       {TIMELINE_LEGEND}
     </div> ++
-    <script type="text/javascript" nonce={CspNonce.get}>
-      {Unparsed("drawTaskAssignmentTimeline(" +
-      s"$groupArrayStr, $executorsArrayStr, $minLaunchTime, $maxFinishTime, " +
-        s"${UIUtils.getTimeZoneOffset()})")}
+      <script type="text/javascript" nonce={CspNonce.get}>
+      {
+        Unparsed(
+          "drawTaskAssignmentTimeline(" +
+            s"$groupArrayStr, $executorsArrayStr, $minLaunchTime, $maxFinishTime, " +
+            s"${UIUtils.getTimeZoneOffset()})")
+      }
     </script>
   }
 

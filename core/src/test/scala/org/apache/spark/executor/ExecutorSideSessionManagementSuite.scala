@@ -29,8 +29,8 @@ import org.apache.spark.{SparkConf, SparkEnv, SparkFunSuite}
 import org.apache.spark.util.{MutableURLClassLoader, Utils}
 
 /**
- * Unit tests for IsolatedSessionState lifecycle management.
- * These tests verify the fix for race conditions in session acquire/release/eviction.
+ * Unit tests for IsolatedSessionState lifecycle management. These tests verify the fix for race
+ * conditions in session acquire/release/eviction.
  */
 class ExecutorSideSessionManagementSuite
     extends SparkFunSuite
@@ -70,10 +70,8 @@ class ExecutorSideSessionManagementSuite
    * Creates a test IsolatedSessionState with a mock classloader and unique UUID.
    */
   private def createTestSession(uuid: String): IsolatedSessionState = {
-    val classLoader = new MutableURLClassLoader(
-      Array.empty,
-      Thread.currentThread().getContextClassLoader
-    )
+    val classLoader =
+      new MutableURLClassLoader(Array.empty, Thread.currentThread().getContextClassLoader)
     val session = new IsolatedSessionState(
       sessionUUID = uuid,
       urlClassLoader = classLoader,
@@ -81,8 +79,7 @@ class ExecutorSideSessionManagementSuite
       currentFiles = new HashMap[String, Long](),
       currentJars = new HashMap[String, Long](),
       currentArchives = new HashMap[String, Long](),
-      replClassDirUri = None
-    )
+      replClassDirUri = None)
     // Register in authoritative sessions map as would happen in production
     IsolatedSessionState.sessions.put(uuid, session)
     session

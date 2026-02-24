@@ -31,29 +31,28 @@ import org.apache.spark.tags.DockerTest
 /**
  * The following are the steps to test this:
  *
- * 1. Choose to use a prebuilt image or build Oracle database in a container
- *    - The documentation on how to build Oracle RDBMS in a container is at
- *      https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md
- *    - Official Oracle container images can be found at https://container-registry.oracle.com
- *    - Trustable and streamlined Oracle Database Free images can be found on Docker Hub at
- *      https://hub.docker.com/r/gvenzl/oracle-free
- *      see also https://github.com/gvenzl/oci-oracle-free
- * 2. Run: export ORACLE_DOCKER_IMAGE_NAME=image_you_want_to_use_for_testing
- *    - Example: export ORACLE_DOCKER_IMAGE_NAME=gvenzl/oracle-free:latest
- * 3. Run: export ENABLE_DOCKER_INTEGRATION_TESTS=1
- * 4. Start docker: sudo service docker start
- *    - Optionally, docker pull $ORACLE_DOCKER_IMAGE_NAME
- * 5. Run Spark integration tests for Oracle with: ./build/sbt -Pdocker-integration-tests
- *    "testOnly org.apache.spark.sql.jdbc.v2.OracleIntegrationSuite"
+ *   1. Choose to use a prebuilt image or build Oracle database in a container
+ *      - The documentation on how to build Oracle RDBMS in a container is at
+ *        https://github.com/oracle/docker-images/blob/master/OracleDatabase/SingleInstance/README.md
+ *      - Official Oracle container images can be found at https://container-registry.oracle.com
+ *      - Trustable and streamlined Oracle Database Free images can be found on Docker Hub at
+ *        https://hub.docker.com/r/gvenzl/oracle-free see also
+ *        https://github.com/gvenzl/oci-oracle-free
+ *   2. Run: export ORACLE_DOCKER_IMAGE_NAME=image_you_want_to_use_for_testing
+ *      - Example: export ORACLE_DOCKER_IMAGE_NAME=gvenzl/oracle-free:latest
+ *   3. Run: export ENABLE_DOCKER_INTEGRATION_TESTS=1
+ *   4. Start docker: sudo service docker start
+ *      - Optionally, docker pull $ORACLE_DOCKER_IMAGE_NAME
+ *   5. Run Spark integration tests for Oracle with: ./build/sbt -Pdocker-integration-tests
+ *      "testOnly org.apache.spark.sql.jdbc.v2.OracleIntegrationSuite"
  *
- * A sequence of commands to build the Oracle Database Free container image:
- *  $ git clone https://github.com/oracle/docker-images.git
- *  $ cd docker-images/OracleDatabase/SingleInstance/dockerfiles0
- *  $ ./buildContainerImage.sh -v 23.4.0 -f
- *  $ export ORACLE_DOCKER_IMAGE_NAME=oracle/database:23.4.0-free
+ * A sequence of commands to build the Oracle Database Free container image: $ git clone
+ * https://github.com/oracle/docker-images.git $ cd
+ * docker-images/OracleDatabase/SingleInstance/dockerfiles0 $ ./buildContainerImage.sh -v 23.4.0
+ * -f $ export ORACLE_DOCKER_IMAGE_NAME=oracle/database:23.4.0-free
  *
- * This procedure has been validated with Oracle Database Free version 23.4.0,
- * and with Oracle Express Edition versions 18.4.0 and 21.4.0
+ * This procedure has been validated with Oracle Database Free version 23.4.0, and with Oracle
+ * Express Edition versions 18.4.0 and 21.4.0
  */
 @DockerTest
 class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest {
@@ -105,7 +104,6 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
       .putString("jdbcClientType", jdbcClientType)
       .build()
 
-
   override def sparkConf: SparkConf = super.sparkConf
     .set("spark.sql.catalog.oracle", classOf[JDBCTableCatalog].getName)
     .set("spark.sql.catalog.oracle.url", db.getJdbcUrl(dockerIp, externalPort))
@@ -114,32 +112,40 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
     .set("spark.sql.catalog.oracle.pushDownOffset", "true")
 
   override def tablePreparation(connection: Connection): Unit = {
-    connection.prepareStatement(
-      "CREATE TABLE employee (dept NUMBER(32), name VARCHAR2(32), salary NUMBER(20, 2)," +
-        " bonus BINARY_DOUBLE)").executeUpdate()
-    connection.prepareStatement(
-      """CREATE TABLE pattern_testing_table (
+    connection
+      .prepareStatement(
+        "CREATE TABLE employee (dept NUMBER(32), name VARCHAR2(32), salary NUMBER(20, 2)," +
+          " bonus BINARY_DOUBLE)")
+      .executeUpdate()
+    connection
+      .prepareStatement("""CREATE TABLE pattern_testing_table (
         |pattern_testing_col VARCHAR(50)
         |)
-      """.stripMargin
-    ).executeUpdate()
-    connection.prepareStatement(
-        "CREATE TABLE datetime (name VARCHAR(32), date1 DATE, time1 TIMESTAMP)")
+      """.stripMargin)
+      .executeUpdate()
+    connection
+      .prepareStatement("CREATE TABLE datetime (name VARCHAR(32), date1 DATE, time1 TIMESTAMP)")
       .executeUpdate()
   }
 
   override def dataPreparation(connection: Connection): Unit = {
     super.dataPreparation(connection)
-    connection.prepareStatement(
-      "INSERT INTO datetime VALUES ('amy', TO_DATE('2022-05-19', 'YYYY-MM-DD')," +
-        " TO_TIMESTAMP('2022-05-19 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))").executeUpdate()
-    connection.prepareStatement(
-      "INSERT INTO datetime VALUES ('alex', TO_DATE('2022-05-18', 'YYYY-MM-DD')," +
-        " TO_TIMESTAMP('2022-05-18 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))").executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES ('amy', TO_DATE('2022-05-19', 'YYYY-MM-DD')," +
+          " TO_TIMESTAMP('2022-05-19 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))")
+      .executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES ('alex', TO_DATE('2022-05-18', 'YYYY-MM-DD')," +
+          " TO_TIMESTAMP('2022-05-18 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))")
+      .executeUpdate()
     // '2022-01-01' is Saturday and is in ISO year 2021.
-    connection.prepareStatement(
-      "INSERT INTO datetime VALUES ('tom', TO_DATE('2022-01-01', 'YYYY-MM-DD')," +
-        " TO_TIMESTAMP('2022-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))").executeUpdate()
+    connection
+      .prepareStatement(
+        "INSERT INTO datetime VALUES ('tom', TO_DATE('2022-01-01', 'YYYY-MM-DD')," +
+          " TO_TIMESTAMP('2022-01-01 00:00:00', 'YYYY-MM-DD HH24:MI:SS'))")
+      .executeUpdate()
   }
 
   override def testUpdateColumnType(tbl: String): Unit = {
@@ -174,8 +180,7 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
         "newName" -> "`ID`",
         "originName" -> "`ID`",
         "table" -> s"`$catalogName`.`alt_table`"),
-      context = ExpectedContext(fragment = sql1, start = 0, stop = 56)
-    )
+      context = ExpectedContext(fragment = sql1, start = 0, stop = 56))
   }
 
   override def caseConvert(tableName: String): String = tableName.toUpperCase(Locale.ROOT)
@@ -189,8 +194,7 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
           sql(s"INSERT INTO $tableName SELECT rpad('hi', 256, 'spark')")
         },
         condition = "EXCEED_LIMIT_LENGTH",
-        parameters = Map("limit" -> "255")
-      )
+        parameters = Map("limit" -> "255"))
     }
   }
 
@@ -204,8 +208,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
   }
 
   override def testDatetime(tbl: String): Unit = {
-    val df1 = sql(s"SELECT name FROM $tbl WHERE " +
-      "dayofyear(date1) > 100 AND dayofmonth(date1) > 10 ")
+    val df1 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "dayofyear(date1) > 100 AND dayofmonth(date1) > 10 ")
     checkFilterPushed(df1, false)
     val rows1 = df1.collect()
     assert(rows1.length === 2)
@@ -234,8 +239,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
     assert(rows4(1).getString(0) === "alex")
     assert(rows4(2).getString(0) === "tom")
 
-    val df5 = sql(s"SELECT name FROM $tbl WHERE " +
-      "extract(WEEK from date1) > 10 AND extract(YEAR from date1) = 2022")
+    val df5 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "extract(WEEK from date1) > 10 AND extract(YEAR from date1) = 2022")
     checkFilterPushed(df5, false)
     val rows5 = df5.collect()
     assert(rows5.length === 3)
@@ -243,8 +249,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
     assert(rows5(1).getString(0) === "alex")
     assert(rows5(2).getString(0) === "tom")
 
-    val df6 = sql(s"SELECT name FROM $tbl WHERE date_add(date1, 1) = date'2022-05-20' " +
-      "AND datediff(date1, '2022-05-10') > 0")
+    val df6 = sql(
+      s"SELECT name FROM $tbl WHERE date_add(date1, 1) = date'2022-05-20' " +
+        "AND datediff(date1, '2022-05-10') > 0")
     checkFilterPushed(df6, false)
     val rows6 = df6.collect()
     assert(rows6.length === 1)
@@ -258,7 +265,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("weekofyear") {
       val woy = sql(s"SELECT weekofyear(date1) FROM $tbl WHERE name = 'tom'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE weekofyear(date1) = $woy")
       checkFilterPushed(df, false)
       val rows = df.collect()
@@ -268,7 +277,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("dayofweek") {
       val dow = sql(s"SELECT dayofweek(date1) FROM $tbl WHERE name = 'alex'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE dayofweek(date1) = $dow")
       checkFilterPushed(df, false)
       val rows = df.collect()
@@ -278,7 +289,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("yearofweek") {
       val yow = sql(s"SELECT extract(YEAROFWEEK from date1) FROM $tbl WHERE name = 'tom'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE extract(YEAROFWEEK from date1) = $yow")
       checkFilterPushed(df, false)
       val rows = df.collect()
@@ -288,7 +301,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("dayofyear") {
       val doy = sql(s"SELECT dayofyear(date1) FROM $tbl WHERE name = 'amy'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE dayofyear(date1) = $doy")
       checkFilterPushed(df, false)
       val rows = df.collect()
@@ -298,7 +313,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("dayofmonth") {
       val dom = sql(s"SELECT dayofmonth(date1) FROM $tbl WHERE name = 'amy'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE dayofmonth(date1) = $dom")
       checkFilterPushed(df)
       val rows = df.collect()
@@ -308,7 +325,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
     withClue("year") {
       val year = sql(s"SELECT year(date1) FROM $tbl WHERE name = 'amy'")
-        .collect().head.getInt(0)
+        .collect()
+        .head
+        .getInt(0)
       val df = sql(s"SELECT name FROM $tbl WHERE year(date1) = $year")
       checkFilterPushed(df)
       val rows = df.collect()
@@ -327,8 +346,9 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
       assert(rows(1).getString(0) === "alex")
     }
 
-    val df9 = sql(s"SELECT name FROM $tbl WHERE " +
-      "dayofyear(date1) > 100 order by dayofyear(date1) limit 1")
+    val df9 = sql(
+      s"SELECT name FROM $tbl WHERE " +
+        "dayofyear(date1) > 100 order by dayofyear(date1) limit 1")
     checkFilterPushed(df9, false)
     val rows9 = df9.collect()
     assert(rows9.length === 1)

@@ -181,9 +181,9 @@ private[sql] object ProtobufUtils extends Logging {
   /**
    * Loads the given protobuf class and returns Protobuf descriptor for it.
    *
-   * Given a Java class, we can only access the descriptor for the proto file it is defined
-   * in. Extensions in other files will not be picked up. As such, we choose to disable
-   * extension support when we fall back to the Java class.
+   * Given a Java class, we can only access the descriptor for the proto file it is defined in.
+   * Extensions in other files will not be picked up. As such, we choose to disable extension
+   * support when we fall back to the Java class.
    */
   def buildDescriptorFromJavaClass(protobufClassName: String): DescriptorWithExtensions = {
 
@@ -193,45 +193,50 @@ private[sql] object ProtobufUtils extends Logging {
     val missingShadingErrorMessage = "The jar with Protobuf classes needs to be shaded " +
       s"(com.google.protobuf.* --> ${shadedMessageClass.getPackage.getName}.*)"
 
-    val protobufClass = try {
-      Utils.classForName(protobufClassName)
-    } catch {
-      case e: ClassNotFoundException =>
-        val explanation =
-          if (protobufClassName.contains(".")) "Ensure the class include in the jar"
-          else "Ensure the class name includes package prefix"
-        throw QueryCompilationErrors.protobufClassLoadError(protobufClassName, explanation, e)
+    val protobufClass =
+      try {
+        Utils.classForName(protobufClassName)
+      } catch {
+        case e: ClassNotFoundException =>
+          val explanation =
+            if (protobufClassName.contains(".")) "Ensure the class include in the jar"
+            else "Ensure the class name includes package prefix"
+          throw QueryCompilationErrors.protobufClassLoadError(protobufClassName, explanation, e)
 
-      case e: NoClassDefFoundError if e.getMessage.matches("com/google/proto.*Generated.*") =>
-        // This indicates the Java classes are not shaded.
-        throw QueryCompilationErrors.protobufClassLoadError(
-          protobufClassName, missingShadingErrorMessage, e)
-    }
+        case e: NoClassDefFoundError if e.getMessage.matches("com/google/proto.*Generated.*") =>
+          // This indicates the Java classes are not shaded.
+          throw QueryCompilationErrors.protobufClassLoadError(
+            protobufClassName,
+            missingShadingErrorMessage,
+            e)
+      }
 
     if (!shadedMessageClass.isAssignableFrom(protobufClass)) {
       // Check if this extends 2.x Message class included in spark, that does not work.
       val unshadedMessageClass = Utils.classForName(
         // Generate "com.google.protobuf.Message". Using join() is a trick to escape from
         // jar shader. Otherwise, it will be replaced with 'org.sparkproject...'.
-        String.join(".", "com", "google", "protobuf", "Message")
-      )
+        String.join(".", "com", "google", "protobuf", "Message"))
       val explanation =
         if (unshadedMessageClass.isAssignableFrom(protobufClass)) {
           s"$protobufClassName does not extend shaded Protobuf Message class " +
-          s"${shadedMessageClass.getName}. $missingShadingErrorMessage"
+            s"${shadedMessageClass.getName}. $missingShadingErrorMessage"
         } else s"$protobufClassName is not a Protobuf Message type"
       throw QueryCompilationErrors.protobufClassLoadError(protobufClassName, explanation)
     }
 
     // Extract the descriptor from Protobuf message.
-    val getDescriptorMethod = try {
-      protobufClass
-        .getDeclaredMethod("getDescriptor")
-    } catch {
-      case e: NoSuchMethodError => // This is usually not expected.
-        throw QueryCompilationErrors.protobufClassLoadError(
-          protobufClassName, "Could not find getDescriptor() method", e)
-    }
+    val getDescriptorMethod =
+      try {
+        protobufClass
+          .getDeclaredMethod("getDescriptor")
+      } catch {
+        case e: NoSuchMethodError => // This is usually not expected.
+          throw QueryCompilationErrors.protobufClassLoadError(
+            protobufClassName,
+            "Could not find getDescriptor() method",
+            e)
+      }
 
     val descriptor = getDescriptorMethod.invoke(null).asInstanceOf[Descriptor]
 
@@ -275,9 +280,12 @@ private[sql] object ProtobufUtils extends Logging {
     // Mutated across invocations of buildFileDescriptor.
     val builtDescriptors = mutable.Map[String, Descriptors.FileDescriptor]()
     val fileDescriptorList: List[Descriptors.FileDescriptor] =
-      fileDescriptorSet.getFileList.asScala.map { fileDescriptorProto =>
-        buildFileDescriptor(fileDescriptorProto, fileDescriptorProtoIndex, builtDescriptors)
-      }.distinctBy(_.getFullName).toList
+      fileDescriptorSet.getFileList.asScala
+        .map { fileDescriptorProto =>
+          buildFileDescriptor(fileDescriptorProto, fileDescriptorProtoIndex, builtDescriptors)
+        }
+        .distinctBy(_.getFullName)
+        .toList
     fileDescriptorList
   }
 
@@ -320,10 +328,14 @@ private[sql] object ProtobufUtils extends Logging {
    * Returns a map from descriptor proto name as found inside the descriptors to protos.
    */
   private def createDescriptorProtoMap(
-    fileDescriptorSet: FileDescriptorSet): Map[String, FileDescriptorProto] = {
-    fileDescriptorSet.getFileList().asScala.map { descriptorProto =>
-      descriptorProto.getName() -> descriptorProto
-    }.toMap[String, FileDescriptorProto]
+      fileDescriptorSet: FileDescriptorSet): Map[String, FileDescriptorProto] = {
+    fileDescriptorSet
+      .getFileList()
+      .asScala
+      .map { descriptorProto =>
+        descriptorProto.getName() -> descriptorProto
+      }
+      .toMap[String, FileDescriptorProto]
   }
 
   /**
@@ -354,10 +366,11 @@ private[sql] object ProtobufUtils extends Logging {
   }
 
   /**
-   * Builds an ExtensionRegistry and an index from full name to field descriptor for all extensions
-   * found in the list of provided file descriptors.
+   * Builds an ExtensionRegistry and an index from full name to field descriptor for all
+   * extensions found in the list of provided file descriptors.
    *
-   * This method will traverse the AST to ensure extensions in nested scopes are registered as well.
+   * This method will traverse the AST to ensure extensions in nested scopes are registered as
+   * well.
    *
    * @param fileDescriptors
    *   List of all file descriptors to process

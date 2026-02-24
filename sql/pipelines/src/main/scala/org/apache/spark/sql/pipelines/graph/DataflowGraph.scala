@@ -26,33 +26,29 @@ import org.apache.spark.sql.pipelines.util.SchemaMergingUtils
 import org.apache.spark.sql.types.StructType
 
 /**
- * DataflowGraph represents the core graph structure for Spark declarative pipelines.
- * It manages the relationships between logical flows, tables, sinks, and views, providing
- * operations for graph traversal, validation, and transformation.
+ * DataflowGraph represents the core graph structure for Spark declarative pipelines. It manages
+ * the relationships between logical flows, tables, sinks, and views, providing operations for
+ * graph traversal, validation, and transformation.
  */
-case class DataflowGraph(
-    flows: Seq[Flow],
-    tables: Seq[Table],
-    sinks: Seq[Sink],
-    views: Seq[View])
-  extends GraphOperations
-  with GraphValidations {
+case class DataflowGraph(flows: Seq[Flow], tables: Seq[Table], sinks: Seq[Sink], views: Seq[View])
+    extends GraphOperations
+    with GraphValidations {
 
   /** Map of [[Output]]s by their identifiers */
-  lazy val output: Map[TableIdentifier, Output] = mapUnique(sinks ++ tables, "output")(_.identifier)
+  lazy val output: Map[TableIdentifier, Output] =
+    mapUnique(sinks ++ tables, "output")(_.identifier)
 
   /**
-   * [[Flow]]s in this graph that need to get planned and potentially executed when
-   * executing the graph. Flows that write to logical views are excluded.
+   * [[Flow]]s in this graph that need to get planned and potentially executed when executing the
+   * graph. Flows that write to logical views are excluded.
    */
   lazy val materializedFlows: Seq[ResolvedFlow] = {
-    resolvedFlows.filter(
-      f => output.contains(f.destinationIdentifier)
-    )
+    resolvedFlows.filter(f => output.contains(f.destinationIdentifier))
   }
 
   /** The identifiers of [[materializedFlows]]. */
-  val materializedFlowIdentifiers: Set[TableIdentifier] = materializedFlows.map(_.identifier).toSet
+  val materializedFlowIdentifiers: Set[TableIdentifier] =
+    materializedFlows.map(_.identifier).toSet
 
   /** Map of [[Table]]s by their identifiers */
   lazy val table: Map[TableIdentifier, Table] =
@@ -68,17 +64,14 @@ case class DataflowGraph(
     val flowsByIdentifier = flows.groupBy(_.identifier)
     flowsByIdentifier
       .find(_._2.size > 1)
-      .foreach {
-        case (flowIdentifier, flows) =>
-          // We don't expect this to ever actually be hit, graph registration should validate for
-          // unique flow names.
-          throw new AnalysisException(
-            errorClass = "PIPELINE_DUPLICATE_IDENTIFIERS.FLOW",
-            messageParameters = Map(
-              "flowName" -> flowIdentifier.unquotedString,
-              "datasetNames" -> flows.map(_.destinationIdentifier).mkString(",")
-            )
-          )
+      .foreach { case (flowIdentifier, flows) =>
+        // We don't expect this to ever actually be hit, graph registration should validate for
+        // unique flow names.
+        throw new AnalysisException(
+          errorClass = "PIPELINE_DUPLICATE_IDENTIFIERS.FLOW",
+          messageParameters = Map(
+            "flowName" -> flowIdentifier.unquotedString,
+            "datasetNames" -> flows.map(_.destinationIdentifier).mkString(",")))
       }
     // Flows with non-default names shouldn't conflict with table names
     flows
@@ -90,9 +83,7 @@ case class DataflowGraph(
           Map(
             "flowName" -> f.identifier.toString(),
             "target" -> f.destinationIdentifier.toString(),
-            "tableName" -> f.identifier.toString()
-          )
-        )
+            "tableName" -> f.identifier.toString()))
       }
     flowsByIdentifier.view.mapValues(_.head).toMap
   }
@@ -101,8 +92,8 @@ case class DataflowGraph(
   lazy val view: Map[TableIdentifier, View] = mapUnique(views, "view")(_.identifier)
 
   /** The [[PersistedView]]s of the graph */
-  lazy val persistedViews: Seq[PersistedView] = views.collect {
-    case v: PersistedView => v
+  lazy val persistedViews: Seq[PersistedView] = views.collect { case v: PersistedView =>
+    v
   }
 
   /** All the [[Input]]s in the current DataflowGraph. */
@@ -138,38 +129,38 @@ case class DataflowGraph(
   }
 
   /**
-   * Used to reanalyze the flow's DF for a given table or sink. This is done by finding all upstream
-   * flows (until a table is reached) for the specified source and reanalyzing all upstream
-   * flows.
+   * Used to reanalyze the flow's DF for a given table or sink. This is done by finding all
+   * upstream flows (until a table is reached) for the specified source and reanalyzing all
+   * upstream flows.
    *
-   * @param srcFlow The flow that writes into the table that we will start from when finding
-   *                upstream flows
-   * @return The reanalyzed flow
+   * @param srcFlow
+   *   The flow that writes into the table that we will start from when finding upstream flows
+   * @return
+   *   The reanalyzed flow
    */
   protected[graph] def reanalyzeFlow(srcFlow: Flow): ResolvedFlow = {
     val upstreamDatasetIdentifiers = dfsInternal(
       flowNodes(srcFlow.identifier).output,
       downstream = false,
-      stopAtMaterializationPoints = true
-    )
+      stopAtMaterializationPoints = true)
     val upstreamFlows =
       resolvedFlows
         .filter(f => upstreamDatasetIdentifiers.contains(f.destinationIdentifier))
         .map(_.flow)
-    val upstreamViews = upstreamDatasetIdentifiers.flatMap(identifier => view.get(identifier)).toSeq
+    val upstreamViews =
+      upstreamDatasetIdentifiers.flatMap(identifier => view.get(identifier)).toSeq
 
     val subgraph = new DataflowGraph(
       flows = upstreamFlows,
       views = upstreamViews,
       tables = table.get(srcFlow.destinationIdentifier).toSeq,
-      sinks = sink.get(srcFlow.destinationIdentifier).toSeq
-    )
+      sinks = sink.get(srcFlow.destinationIdentifier).toSeq)
     subgraph.resolve().resolvedFlow(srcFlow.identifier)
   }
 
   /**
-   * A map of the inferred schema of each table, computed by merging the analyzed schemas
-   * of all flows writing to that table.
+   * A map of the inferred schema of each table, computed by merging the analyzed schemas of all
+   * flows writing to that table.
    */
   lazy val inferredSchema: Map[TableIdentifier, StructType] = {
     flowsTo.view.mapValues { flows =>
@@ -210,16 +201,15 @@ case class DataflowGraph(
 
   /**
    * Enforce every dataset has at least one input flow. For example its possible to define
-   * streaming tables without a query; such tables should still have at least one flow
-   * writing to it.
+   * streaming tables without a query; such tables should still have at least one flow writing to
+   * it.
    */
   private def validateEveryDatasetHasFlow(): Unit = {
     (tables.map(_.identifier) ++ views.map(_.identifier)).foreach { identifier =>
       if (!flows.exists(_.destinationIdentifier == identifier)) {
         throw new AnalysisException(
           "PIPELINE_DATASET_WITHOUT_FLOW",
-          Map("identifier" -> identifier.quotedString)
-        )
+          Map("identifier" -> identifier.quotedString))
       }
     }
   }
@@ -241,12 +231,10 @@ case class DataflowGraph(
 object DataflowGraph {
   protected[graph] def mapUnique[K, A](input: Seq[A], tpe: String)(f: A => K): Map[K, A] = {
     val grouped = input.groupBy(f)
-    grouped.filter(_._2.length > 1).foreach {
-      case (name, _) =>
-        throw new AnalysisException(
-          errorClass = "DUPLICATE_GRAPH_ELEMENT",
-          messageParameters = Map("graphElementType" -> tpe, "graphElementName" -> name.toString)
-        )
+    grouped.filter(_._2.length > 1).foreach { case (name, _) =>
+      throw new AnalysisException(
+        errorClass = "DUPLICATE_GRAPH_ELEMENT",
+        messageParameters = Map("graphElementType" -> tpe, "graphElementName" -> name.toString))
     }
     grouped.view.mapValues(_.head).toMap
   }

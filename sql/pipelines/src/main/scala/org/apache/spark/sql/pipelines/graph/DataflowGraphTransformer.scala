@@ -17,13 +17,7 @@
 
 package org.apache.spark.sql.pipelines.graph
 
-import java.util.concurrent.{
-  ConcurrentHashMap,
-  ConcurrentLinkedDeque,
-  ConcurrentLinkedQueue,
-  ExecutionException,
-  Future
-}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedDeque, ConcurrentLinkedQueue, ExecutionException, Future}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.jdk.CollectionConverters._
@@ -34,15 +28,14 @@ import org.apache.spark.util.ThreadUtils
 
 /**
  * Resolves the [[DataflowGraph]] by processing each node in the graph. This class exposes visitor
- * functionality to resolve/analyze graph nodes.
- * We only expose simple visitor abilities to transform different entities of the
- * graph.
- * For advanced transformations we also expose a mechanism to walk the graph over entity by entity.
+ * functionality to resolve/analyze graph nodes. We only expose simple visitor abilities to
+ * transform different entities of the graph. For advanced transformations we also expose a
+ * mechanism to walk the graph over entity by entity.
  *
  * Assumptions:
- * 1. Each output will have at-least 1 flow to it.
- * 2. Each flow may or may not have a destination table. If a flow does not have a destination
- *    table, the destination is a view.
+ *   1. Each output will have at-least 1 flow to it.
+ *   2. Each flow may or may not have a destination table. If a flow does not have a destination
+ *      table, the destination is a view.
  *
  * The way graph is structured is that flows, tables and sinks all are graph elements or nodes.
  * While we expose transformation functions for each of these entities, we also expose a way to
@@ -50,7 +43,8 @@ import org.apache.spark.util.ThreadUtils
  *
  * Constructor is private as all usages should be via
  * DataflowGraphTransformer.withDataflowGraphTransformer.
- * @param graph: Any Dataflow Graph
+ * @param graph:
+ *   Any Dataflow Graph
  */
 class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
   import DataflowGraphTransformer._
@@ -80,10 +74,7 @@ class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
   private var fixedPoolExecutorInitialized = false
   lazy private val fixedPoolExecutor = {
     fixedPoolExecutorInitialized = true
-    ThreadUtils.newDaemonFixedThreadPool(
-      parallelism,
-      prefix = "data-flow-graph-transformer-"
-    )
+    ThreadUtils.newDaemonFixedThreadPool(parallelism, prefix = "data-flow-graph-transformer-")
   }
   private val selfExecutor = ThreadUtils.sameThreadExecutorService()
 
@@ -110,13 +101,13 @@ class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
   }
 
   /**
-   * Example graph: [Flow1, Flow 2] -> ST -> Flow3 -> MV
-   * Order of processing: Flow1, Flow2, ST, Flow3, MV.
-   * @param transformer function that transforms any graph entity.
-   * transformer(
-   *    nodeToTransform: GraphElement, upstreamNodes: Seq[GraphElement]
-   * ) => transformedNodes: Seq[GraphElement]
-   * @return this
+   * Example graph: [Flow1, Flow 2] -> ST -> Flow3 -> MV Order of processing: Flow1, Flow2, ST,
+   * Flow3, MV.
+   * @param transformer
+   *   function that transforms any graph entity. transformer( nodeToTransform: GraphElement,
+   *   upstreamNodes: Seq[GraphElement] ) => transformedNodes: Seq[GraphElement]
+   * @return
+   *   this
    */
   def transformDownNodes(
       transformer: (GraphElement, Seq[GraphElement]) => Seq[GraphElement],
@@ -158,135 +149,119 @@ class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
         }
       }
       flowOpt.foreach { flow =>
-        futures.append(
-          executor.submit(
-            () =>
-              try {
-                try {
-                  // Note: Flow don't need their inputs passed, so for now we send empty Seq.
-                  val result = transformer(flow, Seq.empty)
-                  require(
-                    result.forall(_.isInstanceOf[ResolvedFlow]),
-                    "transformer must return a Seq[Flow]"
-                  )
+        futures.append(executor.submit(() =>
+          try {
+            try {
+              // Note: Flow don't need their inputs passed, so for now we send empty Seq.
+              val result = transformer(flow, Seq.empty)
+              require(
+                result.forall(_.isInstanceOf[ResolvedFlow]),
+                "transformer must return a Seq[Flow]")
 
-                  val transformedFlows = result.map(_.asInstanceOf[ResolvedFlow])
-                  resolvedFlowsMap.put(flow.identifier, transformedFlows)
-                  resolvedFlows.addAll(transformedFlows.asJava)
-                } catch {
-                  case e: TransformNodeRetryableException =>
-                    val datasetIdentifier = e.datasetIdentifier
-                    failedDependentFlows.compute(
-                      datasetIdentifier,
-                      (_, flows) => {
-                        // Don't add the input flow back but the failed flow object
-                        // back which has relevant failure information.
-                        val failedFlow = e.failedNode
-                        if (flows == null) {
-                          Seq(failedFlow)
-                        } else {
-                          flows :+ failedFlow
-                        }
-                      }
-                    )
-                    // Between the time the flow started and finished resolving, perhaps the
-                    // dependent dataset was resolved
-                    resolvedFlowDestinationsMap.computeIfPresent(
-                      datasetIdentifier,
-                      (_, resolved) => {
-                        if (resolved) {
-                          // Check if the dataset that the flow is dependent on has been resolved
-                          // and if so, remove all dependent flows from the failedDependentFlows and
-                          // add them to the toBeResolvedFlows queue for retry.
-                          failedDependentFlows.computeIfPresent(
-                            datasetIdentifier,
-                            (_, toRetryFlows) => {
-                              toRetryFlows.foreach(toBeResolvedFlows.addFirst(_))
-                              null
-                            }
-                          )
-                        }
-                        resolved
-                      }
-                    )
-                  case other: Throwable => throw other
-                }
-                // If all flows to this particular destination are resolved, move to the destination
-                // node transformer
-                if (flowsTo(flow.destinationIdentifier).forall({ flowToDestination =>
-                    resolvedFlowsMap.containsKey(flowToDestination.identifier)
-                  })) {
-                  // If multiple flows completed in parallel, ensure we resolve the destination only
-                  // once by electing a leader via computeIfAbsent
-                  var isCurrentThreadLeader = false
-                  resolvedFlowDestinationsMap.computeIfAbsent(flow.destinationIdentifier, _ => {
-                    isCurrentThreadLeader = true
-                    // Set initial value as false as flow destination is not resolved yet.
-                    false
-                  })
-                  if (isCurrentThreadLeader) {
-                    if (tableMap.contains(flow.destinationIdentifier)) {
-                      val transformed =
-                        transformer(
-                          tableMap(flow.destinationIdentifier),
-                          flowsTo(flow.destinationIdentifier)
-                        )
-                      resolvedTables.addAll(
-                        transformed.collect { case t: Table => t }.asJava
-                      )
-                      resolvedFlows.addAll(
-                        transformed.collect { case f: ResolvedFlow => f }.asJava
-                      )
-                    } else if (viewMap.contains(flow.destinationIdentifier)) {
-                      resolvedViews.addAll {
-                        val transformed =
-                          transformer(
-                            viewMap(flow.destinationIdentifier),
-                            flowsTo(flow.destinationIdentifier)
-                          )
-                        transformed.map(_.asInstanceOf[View]).asJava
-                      }
-                    } else if (sinkMap.contains(flow.destinationIdentifier)) {
-                      resolvedSinks.addAll {
-                        val transformed =
-                          transformer(
-                            sinkMap(flow.destinationIdentifier), flowsTo(flow.destinationIdentifier)
-                          )
-                        require(
-                          transformed.forall(_.isInstanceOf[Sink]),
-                          "transformer must return a Seq[Sink]"
-                        )
-                        transformed.map(_.asInstanceOf[Sink]).asJava
-                      }
+              val transformedFlows = result.map(_.asInstanceOf[ResolvedFlow])
+              resolvedFlowsMap.put(flow.identifier, transformedFlows)
+              resolvedFlows.addAll(transformedFlows.asJava)
+            } catch {
+              case e: TransformNodeRetryableException =>
+                val datasetIdentifier = e.datasetIdentifier
+                failedDependentFlows.compute(
+                  datasetIdentifier,
+                  (_, flows) => {
+                    // Don't add the input flow back but the failed flow object
+                    // back which has relevant failure information.
+                    val failedFlow = e.failedNode
+                    if (flows == null) {
+                      Seq(failedFlow)
                     } else {
-                      throw new IllegalArgumentException(
-                        s"Unsupported destination ${flow.destinationIdentifier.unquotedString}" +
-                        s" in flow: ${flow.displayName} at transformDownNodes"
-                      )
+                      flows :+ failedFlow
                     }
-                    // Set flow destination as resolved now.
-                    resolvedFlowDestinationsMap.computeIfPresent(
-                      flow.destinationIdentifier,
-                      (_, _) => {
-                        // If there are any other node failures dependent on this destination, retry
-                        // them
-                        failedDependentFlows.computeIfPresent(
-                          flow.destinationIdentifier,
-                          (_, toRetryFlows) => {
-                            toRetryFlows.foreach(toBeResolvedFlows.addFirst(_))
-                            null
-                          }
-                        )
-                        true
-                      }
-                    )
+                  })
+                // Between the time the flow started and finished resolving, perhaps the
+                // dependent dataset was resolved
+                resolvedFlowDestinationsMap.computeIfPresent(
+                  datasetIdentifier,
+                  (_, resolved) => {
+                    if (resolved) {
+                      // Check if the dataset that the flow is dependent on has been resolved
+                      // and if so, remove all dependent flows from the failedDependentFlows and
+                      // add them to the toBeResolvedFlows queue for retry.
+                      failedDependentFlows.computeIfPresent(
+                        datasetIdentifier,
+                        (_, toRetryFlows) => {
+                          toRetryFlows.foreach(toBeResolvedFlows.addFirst(_))
+                          null
+                        })
+                    }
+                    resolved
+                  })
+              case other: Throwable => throw other
+            }
+            // If all flows to this particular destination are resolved, move to the destination
+            // node transformer
+            if (flowsTo(flow.destinationIdentifier).forall({ flowToDestination =>
+                resolvedFlowsMap.containsKey(flowToDestination.identifier)
+              })) {
+              // If multiple flows completed in parallel, ensure we resolve the destination only
+              // once by electing a leader via computeIfAbsent
+              var isCurrentThreadLeader = false
+              resolvedFlowDestinationsMap.computeIfAbsent(
+                flow.destinationIdentifier,
+                _ => {
+                  isCurrentThreadLeader = true
+                  // Set initial value as false as flow destination is not resolved yet.
+                  false
+                })
+              if (isCurrentThreadLeader) {
+                if (tableMap.contains(flow.destinationIdentifier)) {
+                  val transformed =
+                    transformer(
+                      tableMap(flow.destinationIdentifier),
+                      flowsTo(flow.destinationIdentifier))
+                  resolvedTables.addAll(transformed.collect { case t: Table => t }.asJava)
+                  resolvedFlows.addAll(transformed.collect { case f: ResolvedFlow => f }.asJava)
+                } else if (viewMap.contains(flow.destinationIdentifier)) {
+                  resolvedViews.addAll {
+                    val transformed =
+                      transformer(
+                        viewMap(flow.destinationIdentifier),
+                        flowsTo(flow.destinationIdentifier))
+                    transformed.map(_.asInstanceOf[View]).asJava
                   }
+                } else if (sinkMap.contains(flow.destinationIdentifier)) {
+                  resolvedSinks.addAll {
+                    val transformed =
+                      transformer(
+                        sinkMap(flow.destinationIdentifier),
+                        flowsTo(flow.destinationIdentifier))
+                    require(
+                      transformed.forall(_.isInstanceOf[Sink]),
+                      "transformer must return a Seq[Sink]")
+                    transformed.map(_.asInstanceOf[Sink]).asJava
+                  }
+                } else {
+                  throw new IllegalArgumentException(
+                    s"Unsupported destination ${flow.destinationIdentifier.unquotedString}" +
+                      s" in flow: ${flow.displayName} at transformDownNodes")
                 }
-              } catch {
-                case ex: TransformNodeFailedException => failedFlowsQueue.add(ex.failedNode)
+                // Set flow destination as resolved now.
+                resolvedFlowDestinationsMap.computeIfPresent(
+                  flow.destinationIdentifier,
+                  (_, _) => {
+                    // If there are any other node failures dependent on this destination, retry
+                    // them
+                    failedDependentFlows.computeIfPresent(
+                      flow.destinationIdentifier,
+                      (_, toRetryFlows) => {
+                        toRetryFlows.foreach(toBeResolvedFlows.addFirst(_))
+                        null
+                      })
+                    true
+                  })
               }
-          )
-        )
+            }
+          } catch {
+            case ex: TransformNodeFailedException => failedFlowsQueue.add(ex.failedNode)
+          }))
       }
     }
 
@@ -317,10 +292,10 @@ class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
     failedFlows =
       // All transformed flows that write to a destination that is failed to analyze.
       resolvedFlowsWithFailedDest ++
-      // All failed flows thrown by TransformNodeFailedException
-      failedFlowsQueue.asScala.toSeq ++
-      // All flows that have not been transformed and resolved yet
-      failedDependentFlows.values().asScala.flatten.toSeq
+        // All failed flows thrown by TransformNodeFailedException
+        failedFlowsQueue.asScala.toSeq ++
+        // All flows that have not been transformed and resolved yet
+        failedDependentFlows.values().asScala.flatten.toSeq
 
     // Mutate the resolved entities
     flows = resolvedFlowsWithResolvedDest
@@ -343,8 +318,7 @@ class DataflowGraphTransformer(graph: DataflowGraph) extends AutoCloseable {
       // in the combined sequence too.
       flows = flows ++ failedFlows,
       tables = tables ++ failedTables,
-      sinks = sinks ++ failedSinks
-    )
+      sinks = sinks ++ failedSinks)
   }
 
   override def close(): Unit = {
@@ -360,8 +334,8 @@ object DataflowGraphTransformer {
    * Exception thrown when transforming a node in the graph fails because at least one of its
    * dependencies weren't yet transformed.
    *
-   * @param datasetIdentifier The identifier for an untransformed dependency table identifier in the
-   *                          dataflow graph.
+   * @param datasetIdentifier
+   *   The identifier for an untransformed dependency table identifier in the dataflow graph.
    */
   case class TransformNodeRetryableException(
       datasetIdentifier: TableIdentifier,
@@ -372,19 +346,21 @@ object DataflowGraphTransformer {
   /**
    * Exception thrown when transforming a node in the graph fails with a non-retryable error.
    *
-   * @param failedNode The failed node that could not be transformed.
+   * @param failedNode
+   *   The failed node that could not be transformed.
    */
   case class TransformNodeFailedException(failedNode: ResolutionFailedFlow)
       extends Exception
       with NoStackTrace
 
   /**
-   * Autocloseable wrapper around DataflowGraphTransformer to ensure that the transformer is closed
-   * without clients needing to remember to close it. It takes in the same arguments as
+   * Autocloseable wrapper around DataflowGraphTransformer to ensure that the transformer is
+   * closed without clients needing to remember to close it. It takes in the same arguments as
    * [[DataflowGraphTransformer]] constructor. It exposes the DataflowGraphTransformer instance
    * within the callable scope.
    */
-  def withDataflowGraphTransformer[T](graph: DataflowGraph)(f: DataflowGraphTransformer => T): T = {
+  def withDataflowGraphTransformer[T](
+      graph: DataflowGraph)(f: DataflowGraphTransformer => T): T = {
     val dataflowGraphTransformer = new DataflowGraphTransformer(graph)
     try {
       f(dataflowGraphTransformer)

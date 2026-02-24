@@ -35,10 +35,7 @@ import org.apache.spark.util.io.ChunkedByteBuffer
 
 case class OffHeapValue(override val estimatedSize: Long) extends KnownSizeEstimation
 
-class MemoryStoreSuite
-  extends SparkFunSuite
-  with PrivateMethodTester
-  with ResetSystemProperties {
+class MemoryStoreSuite extends SparkFunSuite with PrivateMethodTester with ResetSystemProperties {
 
   val conf: SparkConf = new SparkConf(false)
     .set(STORAGE_UNROLL_MEMORY_THRESHOLD, 512L)
@@ -157,9 +154,10 @@ class MemoryStoreSuite
         blockId: BlockId,
         iter: Iterator[T],
         classTag: ClassTag[T]): Either[PartiallyUnrolledIterator[T], Long] = {
-      assert(blockInfoManager.lockNewBlockForWriting(
-        blockId,
-        new BlockInfo(StorageLevel.MEMORY_ONLY, classTag, tellMaster = false)))
+      assert(
+        blockInfoManager.lockNewBlockForWriting(
+          blockId,
+          new BlockInfo(StorageLevel.MEMORY_ONLY, classTag, tellMaster = false)))
       val res = memoryStore.putIteratorAsValues(blockId, iter, MemoryMode.ON_HEAP, classTag)
       blockInfoManager.unlock(blockId)
       res
@@ -215,9 +213,10 @@ class MemoryStoreSuite
         blockId: BlockId,
         iter: Iterator[T],
         classTag: ClassTag[T]): Either[PartiallyUnrolledIterator[T], Long] = {
-      assert(blockInfoManager.lockNewBlockForWriting(
-        blockId,
-        new BlockInfo(storageLevel, classTag, tellMaster = false)))
+      assert(
+        blockInfoManager.lockNewBlockForWriting(
+          blockId,
+          new BlockInfo(storageLevel, classTag, tellMaster = false)))
       val res = memoryStore.putIteratorAsValues(blockId, iter, storageLevel.memoryMode, classTag)
       blockInfoManager.unlock(blockId)
       res
@@ -268,14 +267,18 @@ class MemoryStoreSuite
   }
 
   test("safely unroll blocks through putIteratorAsValues") {
-    testPutIteratorAsValues(() => new Array[Byte](100), () => new Array[Byte](1000),
+    testPutIteratorAsValues(
+      () => new Array[Byte](100),
+      () => new Array[Byte](1000),
       StorageLevel.MEMORY_ONLY)
   }
 
   test("safely unroll blocks through putIteratorAsValues off-heap") {
     // Size the values so the sequence of block drops matches the one in the on-heap test. The
     // values are different since the sizes here are exact, vs. being estimated for on-heap.
-    testPutIteratorAsValues(() => OffHeapValue(110), () => OffHeapValue(1500),
+    testPutIteratorAsValues(
+      () => OffHeapValue(110),
+      () => OffHeapValue(1500),
       StorageLevel(false, true, useOffHeap = true, deserialized = true, 1))
   }
 
@@ -291,9 +294,10 @@ class MemoryStoreSuite
         blockId: BlockId,
         iter: Iterator[T],
         classTag: ClassTag[T]): Either[PartiallySerializedBlock[T], Long] = {
-      assert(blockInfoManager.lockNewBlockForWriting(
-        blockId,
-        new BlockInfo(StorageLevel.MEMORY_ONLY_SER, classTag, tellMaster = false)))
+      assert(
+        blockInfoManager.lockNewBlockForWriting(
+          blockId,
+          new BlockInfo(StorageLevel.MEMORY_ONLY_SER, classTag, tellMaster = false)))
       val res = memoryStore.putIteratorAsBytes(blockId, iter, classTag, MemoryMode.ON_HEAP)
       blockInfoManager.unlock(blockId)
       res
@@ -349,17 +353,20 @@ class MemoryStoreSuite
     def bigIterator: Iterator[Any] = bigList.iterator.asInstanceOf[Iterator[Any]]
 
     // Unroll huge block with not enough space. This should fail.
-    assert(blockInfoManager.lockNewBlockForWriting(
-      "b1",
-      new BlockInfo(StorageLevel.MEMORY_ONLY_SER, ClassTag.Any, tellMaster = false)))
+    assert(
+      blockInfoManager.lockNewBlockForWriting(
+        "b1",
+        new BlockInfo(StorageLevel.MEMORY_ONLY_SER, ClassTag.Any, tellMaster = false)))
     val res = memoryStore.putIteratorAsBytes("b1", bigIterator, ClassTag.Any, MemoryMode.ON_HEAP)
     blockInfoManager.unlock("b1")
     assert(res.isLeft)
     assert(memoryStore.currentUnrollMemoryForThisTask > 0)
-    val valuesReturnedFromFailedPut = res.swap.getOrElse(fail())
-      .valuesIterator.toSeq // force materialization
+    val valuesReturnedFromFailedPut =
+      res.swap.getOrElse(fail()).valuesIterator.toSeq // force materialization
     assertSameContents(
-      bigList, valuesReturnedFromFailedPut, "PartiallySerializedBlock.valuesIterator()")
+      bigList,
+      valuesReturnedFromFailedPut,
+      "PartiallySerializedBlock.valuesIterator()")
     // The unroll memory was freed once the iterator was fully traversed.
     assert(memoryStore.currentUnrollMemoryForThisTask === 0)
   }
@@ -370,9 +377,10 @@ class MemoryStoreSuite
     def bigIterator: Iterator[Any] = bigList.iterator.asInstanceOf[Iterator[Any]]
 
     // Unroll huge block with not enough space. This should fail.
-    assert(blockInfoManager.lockNewBlockForWriting(
-      "b1",
-      new BlockInfo(StorageLevel.MEMORY_ONLY_SER, ClassTag.Any, tellMaster = false)))
+    assert(
+      blockInfoManager.lockNewBlockForWriting(
+        "b1",
+        new BlockInfo(StorageLevel.MEMORY_ONLY_SER, ClassTag.Any, tellMaster = false)))
     val res = memoryStore.putIteratorAsBytes("b1", bigIterator, ClassTag.Any, MemoryMode.ON_HEAP)
     blockInfoManager.unlock("b1")
     assert(res.isLeft)
@@ -381,10 +389,13 @@ class MemoryStoreSuite
     res.swap.getOrElse(fail()).finishWritingToStream(bos)
     // The unroll memory was freed once the block was fully written.
     assert(memoryStore.currentUnrollMemoryForThisTask === 0)
-    val deserializedValues = serializerManager.dataDeserializeStream[Any](
-      "b1", new ByteBufferInputStream(bos.toByteBuffer))(ClassTag.Any).toSeq
+    val deserializedValues = serializerManager
+      .dataDeserializeStream[Any]("b1", new ByteBufferInputStream(bos.toByteBuffer))(ClassTag.Any)
+      .toSeq
     assertSameContents(
-      bigList, deserializedValues, "PartiallySerializedBlock.finishWritingToStream()")
+      bigList,
+      deserializedValues,
+      "PartiallySerializedBlock.finishWritingToStream()")
   }
 
   test("multiple unrolls by the same thread") {
@@ -396,7 +407,7 @@ class MemoryStoreSuite
     def putIteratorAsValues(
         blockId: BlockId,
         iter: Iterator[Any]): Either[PartiallyUnrolledIterator[Any], Long] = {
-       memoryStore.putIteratorAsValues(blockId, iter, MemoryMode.ON_HEAP, ClassTag.Any)
+      memoryStore.putIteratorAsValues(blockId, iter, MemoryMode.ON_HEAP, ClassTag.Any)
     }
 
     // All unroll memory used is released because putIterator did not return an iterator
@@ -432,20 +443,29 @@ class MemoryStoreSuite
     val (memoryStore, blockInfoManager) = makeMemoryStore(12000)
     val blockId = BlockId("rdd_3_10")
     blockInfoManager.lockNewBlockForWriting(
-      blockId, new BlockInfo(StorageLevel.MEMORY_ONLY, ClassTag.Any, tellMaster = false))
-    memoryStore.putBytes(blockId, 13000, MemoryMode.ON_HEAP, () => {
-      fail("A big ByteBuffer that cannot be put into MemoryStore should not be created")
-    })
+      blockId,
+      new BlockInfo(StorageLevel.MEMORY_ONLY, ClassTag.Any, tellMaster = false))
+    memoryStore.putBytes(
+      blockId,
+      13000,
+      MemoryMode.ON_HEAP,
+      () => {
+        fail("A big ByteBuffer that cannot be put into MemoryStore should not be created")
+      })
   }
 
   test("put a small ByteBuffer to MemoryStore") {
     val (memoryStore, _) = makeMemoryStore(12000)
     val blockId = BlockId("rdd_3_10")
     var bytes: ChunkedByteBuffer = null
-    memoryStore.putBytes(blockId, 10000, MemoryMode.ON_HEAP, () => {
-      bytes = new ChunkedByteBuffer(ByteBuffer.allocate(10000))
-      bytes
-    })
+    memoryStore.putBytes(
+      blockId,
+      10000,
+      MemoryMode.ON_HEAP,
+      () => {
+        bytes = new ChunkedByteBuffer(ByteBuffer.allocate(10000))
+        bytes
+      })
     assert(memoryStore.getSize(blockId) === 10000)
   }
 
@@ -484,8 +504,12 @@ class MemoryStoreSuite
           }
         }
       }
-      memoryStore = new MemoryStore(conf, blockInfoManager, serializerManager, memManager,
-          blockEvictionHandler) {
+      memoryStore = new MemoryStore(
+        conf,
+        blockInfoManager,
+        serializerManager,
+        memManager,
+        blockEvictionHandler) {
         override def afterDropAction(blockId: BlockId): Unit = {
           if (readLockAfterDrop) {
             // pretend that we get a read lock on the block (now on disk) in another thread
@@ -504,14 +528,17 @@ class MemoryStoreSuite
         val blockInfo = new BlockInfo(StorageLevel.MEMORY_ONLY, ct, tellMaster = false)
         val initialWriteLock = blockInfoManager.lockNewBlockForWriting(blockId, blockInfo)
         assert(initialWriteLock)
-        val success = memoryStore.putBytes(blockId, bytesPerSmallBlock, MemoryMode.ON_HEAP, () => {
-          new ChunkedByteBuffer(ByteBuffer.allocate(bytesPerSmallBlock))
-        })
+        val success = memoryStore.putBytes(
+          blockId,
+          bytesPerSmallBlock,
+          MemoryMode.ON_HEAP,
+          () => {
+            new ChunkedByteBuffer(ByteBuffer.allocate(bytesPerSmallBlock))
+          })
         assert(success)
         blockInfoManager.unlock(blockId, None)
       }
       assert(blockInfoManager.size === numInitialBlocks)
-
 
       // Add one big block, which will require evicting everything in the memorystore.  However our
       // mock BlockEvictionHandler will throw an exception -- make sure all locks are cleared.
@@ -521,18 +548,26 @@ class MemoryStoreSuite
       assert(initialWriteLock)
       if (numValidBlocks < numInitialBlocks) {
         val exc = intercept[RuntimeException] {
-          memoryStore.putBytes(largeBlockId, memStoreSize, MemoryMode.ON_HEAP, () => {
-            new ChunkedByteBuffer(ByteBuffer.allocate(memStoreSize))
-          })
+          memoryStore.putBytes(
+            largeBlockId,
+            memStoreSize,
+            MemoryMode.ON_HEAP,
+            () => {
+              new ChunkedByteBuffer(ByteBuffer.allocate(memStoreSize))
+            })
         }
         assert(exc.getMessage().startsWith("Mock error dropping block"), exc)
         // BlockManager.doPut takes care of releasing the lock for the newly written block -- not
         // testing that here, so do it manually
         blockInfoManager.removeBlock(largeBlockId)
       } else {
-        memoryStore.putBytes(largeBlockId, memStoreSize, MemoryMode.ON_HEAP, () => {
-          new ChunkedByteBuffer(ByteBuffer.allocate(memStoreSize))
-        })
+        memoryStore.putBytes(
+          largeBlockId,
+          memStoreSize,
+          MemoryMode.ON_HEAP,
+          () => {
+            new ChunkedByteBuffer(ByteBuffer.allocate(memStoreSize))
+          })
         // BlockManager.doPut takes care of releasing the lock for the newly written block -- not
         // testing that here, so do it manually
         blockInfoManager.unlock(largeBlockId)
@@ -556,8 +591,9 @@ class MemoryStoreSuite
           false
         }
       }
-      assert(blocksStillInMemory.size ===
-        (numInitialBlocks - numValidBlocks + largeBlockInMemory))
+      assert(
+        blocksStillInMemory.size ===
+          (numInitialBlocks - numValidBlocks + largeBlockInMemory))
     }
 
     Seq(0, 3, numInitialBlocks).foreach { failAfterDropping =>
@@ -631,8 +667,9 @@ private case class DummyAllocator() {
   }
 }
 
-private case class NativeObject(alloc: DummyAllocator, size: Int) extends KnownSizeEstimation
-  with AutoCloseable {
+private case class NativeObject(alloc: DummyAllocator, size: Int)
+    extends KnownSizeEstimation
+    with AutoCloseable {
   alloc.alloc(size)
   var allocated_size: Int = size
   override def estimatedSize: Long = allocated_size

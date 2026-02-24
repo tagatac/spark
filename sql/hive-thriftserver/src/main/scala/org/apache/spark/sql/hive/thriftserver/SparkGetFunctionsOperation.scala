@@ -33,11 +33,16 @@ import org.apache.spark.sql.SparkSession
 /**
  * Spark's own GetFunctionsOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
- * @param catalogName catalog name. null if not applicable
- * @param schemaName database name, null or a concrete database name
- * @param functionName function name pattern
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
+ * @param catalogName
+ *   catalog name. null if not applicable
+ * @param schemaName
+ *   database name, null or a concrete database name
+ * @param functionName
+ *   function name pattern
  */
 private[hive] class SparkGetFunctionsOperation(
     val session: SparkSession,
@@ -45,9 +50,9 @@ private[hive] class SparkGetFunctionsOperation(
     catalogName: String,
     schemaName: String,
     functionName: String)
-  extends GetFunctionsOperation(parentSession, catalogName, schemaName, functionName)
-  with SparkOperation
-  with Logging {
+    extends GetFunctionsOperation(parentSession, catalogName, schemaName, functionName)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     // Do not change cmdStr. It's used for Hive auditing and authorization.
@@ -78,17 +83,17 @@ private[hive] class SparkGetFunctionsOperation(
 
     try {
       matchingDbs.foreach { db =>
-        catalog.listFunctions(db, functionPattern).foreach {
-          case (funcIdentifier, _) =>
-            val info = catalog.lookupFunctionInfo(funcIdentifier)
-            val rowData = Array[AnyRef](
-              DEFAULT_HIVE_CATALOG, // FUNCTION_CAT
-              db, // FUNCTION_SCHEM
-              funcIdentifier.funcName, // FUNCTION_NAME
-              s"Usage: ${info.getUsage}\nExtended Usage:${info.getExtended}", // REMARKS
-              DatabaseMetaData.functionResultUnknown.asInstanceOf[AnyRef], // FUNCTION_TYPE
-              info.getClassName) // SPECIFIC_NAME
-            rowSet.addRow(rowData);
+        catalog.listFunctions(db, functionPattern).foreach { case (funcIdentifier, _) =>
+          val info = catalog.lookupFunctionInfo(funcIdentifier)
+          val rowData = Array[AnyRef](
+            DEFAULT_HIVE_CATALOG, // FUNCTION_CAT
+            db, // FUNCTION_SCHEM
+            funcIdentifier.funcName, // FUNCTION_NAME
+            s"Usage: ${info.getUsage}\nExtended Usage:${info.getExtended}", // REMARKS
+            DatabaseMetaData.functionResultUnknown.asInstanceOf[AnyRef], // FUNCTION_TYPE
+            info.getClassName
+          ) // SPECIFIC_NAME
+          rowSet.addRow(rowData);
         }
       }
       setState(OperationState.FINISHED)

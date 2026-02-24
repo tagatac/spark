@@ -34,7 +34,6 @@ import org.apache.spark.deploy.k8s.Constants.{SPARK_APP_ID_LABEL, SPARK_POD_DRIV
 import org.apache.spark.deploy.k8s.Fabric8Aliases.{PODS, PODS_WITH_NAMESPACE}
 import org.apache.spark.scheduler.cluster.k8s.ExecutorLifecycleTestUtils.TEST_SPARK_APP_ID
 
-
 class K8sSubmitOpSuite extends SparkFunSuite with BeforeAndAfter {
   private val driverPodName1 = "driver1"
   private val driverPodName2 = "driver2"
@@ -62,8 +61,8 @@ class K8sSubmitOpSuite extends SparkFunSuite with BeforeAndAfter {
   private var deletable: PropagationPolicyConfigurable[_ <: Deletable] = _
 
   @Mock
-  private var deletableList:
-    NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable[HasMetadata] = _
+  private var deletableList
+      : NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable[HasMetadata] = _
 
   @Mock
   private var err: PrintStream = _
@@ -136,19 +135,19 @@ class K8sSubmitOpSuite extends SparkFunSuite with BeforeAndAfter {
   private def buildDriverPod(podName: String, id: String): Pod = {
     new PodBuilder()
       .withNewMetadata()
-        .withName(podName)
-        .withNamespace(namespace)
-        .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
-        .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
-        .withUid(s"driver-pod-$id")
+      .withName(podName)
+      .withNamespace(namespace)
+      .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
+      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
+      .withUid(s"driver-pod-$id")
       .endMetadata()
       .withNewSpec()
-        .withServiceAccountName(s"test$id")
-        .withVolumes()
-        .withNodeName(s"testNode$id")
+      .withServiceAccountName(s"test$id")
+      .withVolumes()
+      .withNodeName(s"testNode$id")
       .endSpec()
       .withNewStatus()
-        .withPhase("Running")
+      .withPhase("Running")
       .endStatus()
       .build()
   }

@@ -60,8 +60,8 @@ class YarnSparkHadoopUtilSuite extends SparkFunSuite with Matchers with ResetSys
       val out = Utils.toString(proc.getInputStream()).trim()
       val err = Utils.toString(proc.getErrorStream())
       val exitCode = proc.waitFor()
-      exitCode should be (0)
-      out should be (args.mkString(" "))
+      exitCode should be(0)
+      out should be(args.mkString(" "))
     } finally {
       scriptFile.delete()
     }
@@ -72,9 +72,8 @@ class YarnSparkHadoopUtilSuite extends SparkFunSuite with Matchers with ResetSys
     val sparkConf = new SparkConf()
       .set("spark.hadoop." + key, "someHostName")
     val yarnConf = new YarnConfiguration(SparkHadoopUtil.get.newConfiguration(sparkConf))
-    yarnConf.get(key) should be ("someHostName")
+    yarnConf.get(key) should be("someHostName")
   }
-
 
   test("test getApplicationAclsForYarn acls on") {
 
@@ -149,13 +148,13 @@ class YarnSparkHadoopUtilSuite extends SparkFunSuite with Matchers with ResetSys
       "{{FOO}}" -> "BAR",
       "{{FOO}}$FOO" -> "BARBAR",
       "%FOO%" -> "%FOO%",
-      """\$FOO\\\$FOO\${FOO}\\$FOO\\\\""" -> """$FOO\$FOO${FOO}\BAR\\"""
-    ).foreach { case (input, expected) =>
-      withClue(s"input string `$input`: ") {
-        val replaced = YarnSparkHadoopUtil
-          .replaceEnvVars(input, Map("F_O_O" -> "Bar", "FOO" -> "BAR"), isWindows = false)
-        assert(replaced === expected)
-      }
+      """\$FOO\\\$FOO\${FOO}\\$FOO\\\\""" -> """$FOO\$FOO${FOO}\BAR\\""").foreach {
+      case (input, expected) =>
+        withClue(s"input string `$input`: ") {
+          val replaced = YarnSparkHadoopUtil
+            .replaceEnvVars(input, Map("F_O_O" -> "Bar", "FOO" -> "BAR"), isWindows = false)
+          assert(replaced === expected)
+        }
     }
   }
 
@@ -168,8 +167,7 @@ class YarnSparkHadoopUtilSuite extends SparkFunSuite with Matchers with ResetSys
       "$FOO" -> "$FOO",
       "${FOO}" -> "${FOO}",
       "%%FOO%%%FOO%%%%%%FOO%" -> "%FOO%BAR%%BAR",
-      "%FOO%^^^%FOO^%^FOO^^^^%FOO%" -> "BAR^%FOO%^FOO^^BAR"
-    ).foreach { case (input, expected) =>
+      "%FOO%^^^%FOO^%^FOO^^^^%FOO%" -> "BAR^%FOO%^FOO^^BAR").foreach { case (input, expected) =>
       withClue(s"input string `$input`: ") {
         val replaced = YarnSparkHadoopUtil
           .replaceEnvVars(input, Map("F_O_O" -> "Bar", "FOO" -> "BAR"), isWindows = true)

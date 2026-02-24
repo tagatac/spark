@@ -32,32 +32,36 @@ object DataValidators extends Logging {
   /**
    * Function to check if labels used for classification are either zero or one.
    *
-   * @return True if labels are all zero or one, false otherwise.
+   * @return
+   *   True if labels are all zero or one, false otherwise.
    */
   @Since("1.0.0")
   val binaryLabelValidator: RDD[LabeledPoint] => Boolean = { data =>
     val numInvalid = data.filter(x => x.label != 1.0 && x.label != 0.0).count()
     if (numInvalid != 0) {
-      logError(log"Classification labels should be 0 or 1. " +
-        log"Found ${MDC(COUNT, numInvalid)} invalid labels")
+      logError(
+        log"Classification labels should be 0 or 1. " +
+          log"Found ${MDC(COUNT, numInvalid)} invalid labels")
     }
     numInvalid == 0
   }
 
   /**
-   * Function to check if labels used for k class multi-label classification are
-   * in the range of {0, 1, ..., k - 1}.
+   * Function to check if labels used for k class multi-label classification are in the range of
+   * {0, 1, ..., k - 1}.
    *
-   * @return True if labels are all in the range of {0, 1, ..., k-1}, false otherwise.
+   * @return
+   *   True if labels are all in the range of {0, 1, ..., k-1}, false otherwise.
    */
   @Since("1.3.0")
   def multiLabelValidator(k: Int): RDD[LabeledPoint] => Boolean = { data =>
-    val numInvalid = data.filter(x =>
-      x.label - x.label.toInt != 0.0 || x.label < 0 || x.label > k - 1).count()
+    val numInvalid =
+      data.filter(x => x.label - x.label.toInt != 0.0 || x.label < 0 || x.label > k - 1).count()
     if (numInvalid != 0) {
-      logError(log"Classification labels should be in " +
-        log"${MDC(RANGE, s"[0 to ${k - 1}]")}. " +
-        log"Found ${MDC(COUNT, numInvalid)} invalid labels")
+      logError(
+        log"Classification labels should be in " +
+          log"${MDC(RANGE, s"[0 to ${k - 1}]")}. " +
+          log"Found ${MDC(COUNT, numInvalid)} invalid labels")
     }
     numInvalid == 0
   }

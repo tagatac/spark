@@ -24,8 +24,11 @@ import scala.util.Using
 import org.apache.spark.sql.connect.client.jdbc.test.JdbcHelper
 import org.apache.spark.sql.connect.test.{ConnectFunSuite, RemoteSparkSession, SQLHelper}
 
-class SparkConnectStatementSuite extends ConnectFunSuite with RemoteSparkSession
-  with JdbcHelper with SQLHelper {
+class SparkConnectStatementSuite
+    extends ConnectFunSuite
+    with RemoteSparkSession
+    with JdbcHelper
+    with SQLHelper {
 
   override def jdbcUrl: String = s"jdbc:sc://localhost:$serverPort"
 
@@ -79,8 +82,7 @@ class SparkConnectStatementSuite extends ConnectFunSuite with RemoteSparkSession
   }
 
   test("max rows from SparkConnectStatement") {
-    def verifyMaxRows(
-        expectedRows: Int, query: String)(stmt: Statement): Unit = {
+    def verifyMaxRows(expectedRows: Int, query: String)(stmt: Statement): Unit = {
       Using(stmt.executeQuery(query)) { rs =>
         (0 until expectedRows).foreach { _ =>
           assert(rs.next())

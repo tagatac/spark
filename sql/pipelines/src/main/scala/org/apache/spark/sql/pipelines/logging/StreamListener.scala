@@ -24,12 +24,11 @@ import org.apache.spark.sql.pipelines.graph.{DataflowGraph, GraphIdentifierManag
 import org.apache.spark.sql.streaming.{StreamingQuery, StreamingQueryListener}
 
 /**
- * A streaming listener that converts streaming events into pipeline events for the relevant flows.
+ * A streaming listener that converts streaming events into pipeline events for the relevant
+ * flows.
  */
-class StreamListener(
-    env: PipelineUpdateContext,
-    graphForExecution: DataflowGraph
-) extends StreamingQueryListener
+class StreamListener(env: PipelineUpdateContext, graphForExecution: DataflowGraph)
+    extends StreamingQueryListener
     with Logging {
 
   private val queries = new java.util.concurrent.ConcurrentHashMap[UUID, StreamingQuery]()

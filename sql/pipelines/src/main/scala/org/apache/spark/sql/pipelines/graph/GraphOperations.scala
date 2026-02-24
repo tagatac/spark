@@ -22,9 +22,12 @@ import scala.collection.mutable
 import org.apache.spark.sql.catalyst.TableIdentifier
 
 /**
- * @param identifier The identifier of the flow.
- * @param inputs The identifiers of nodes used as inputs to this flow.
- * @param output The identifier of the output that this flow writes to.
+ * @param identifier
+ *   The identifier of the flow.
+ * @param inputs
+ *   The identifiers of nodes used as inputs to this flow.
+ * @param output
+ *   The identifier of the output that this flow writes to.
  */
 case class FlowNode(
     identifier: TableIdentifier,
@@ -46,8 +49,7 @@ trait GraphOperations {
         FlowNode(
           identifier = identifier,
           inputs = resolvedFlow(f.identifier).inputs,
-          output = f.destinationIdentifier
-        )
+          output = f.destinationIdentifier)
       identifier -> n
     }.toMap
   }
@@ -66,11 +68,14 @@ trait GraphOperations {
 
   /**
    * Performs a DFS starting from `startNode` and returns the set of nodes (datasets) reached.
-   * @param startDestination The identifier of the node to start from.
-   * @param downstream if true, traverse output edges (search downstream)
-   *                        if false, traverse input edges (search upstream).
-   * @param stopAtMaterializationPoints If true, stop when we reach a materialization point (table).
-   *                                    If false, keep going until the end.
+   * @param startDestination
+   *   The identifier of the node to start from.
+   * @param downstream
+   *   if true, traverse output edges (search downstream) if false, traverse input edges (search
+   *   upstream).
+   * @param stopAtMaterializationPoints
+   *   If true, stop when we reach a materialization point (table). If false, keep going until the
+   *   end.
    */
   protected def dfsInternal(
       startDestination: TableIdentifier,
@@ -78,8 +83,7 @@ trait GraphOperations {
       stopAtMaterializationPoints: Boolean = false): Set[TableIdentifier] = {
     assert(
       destinationSet.contains(startDestination),
-      s"$startDestination is not a valid start node"
-    )
+      s"$startDestination is not a valid start node")
     val visited = new mutable.HashSet[TableIdentifier]
 
     // Same semantics as a stack. Need to be able to push/pop items.
@@ -93,7 +97,7 @@ trait GraphOperations {
       if (!visited.contains(currNode)
         // When we stop at materialization points, skip non-start nodes that are materialized.
         && !(stopAtMaterializationPoints && table.contains(currNode)
-        && currNode != startDestination)) {
+          && currNode != startDestination)) {
         visited.add(currNode)
         val neighbors = if (downstream) {
           flowNodes.values.filter(_.inputs.contains(currNode)).map(_.output)
@@ -110,13 +114,14 @@ trait GraphOperations {
    * An implementation of DFS that takes in a sequence of start nodes and returns the
    * "reachability set" of nodes from the start nodes.
    *
-   * @param downstream Walks the graph via the input edges if true, otherwise via the output
-   *                   edges.
-   * @return A map from visited nodes to its origin[s] in `datasetIdentifiers`, e.g.
-   *         Let graph = a -> b  c -> d (partitioned graph)
+   * @param downstream
+   *   Walks the graph via the input edges if true, otherwise via the output edges.
+   * @return
+   *   A map from visited nodes to its origin[s] in `datasetIdentifiers`, e.g. Let graph = a -> b
+   *   c -> d (partitioned graph)
    *
-   *         reachabilitySet(Seq("a", "c"), downstream = true)
-   *         -> ["a" -> ["a"], "b" -> ["a"], "c" -> ["c"], "d" -> ["c"]]
+   * reachabilitySet(Seq("a", "c"), downstream = true) -> ["a" -> ["a"], "b" -> ["a"], "c" ->
+   * ["c"], "d" -> ["c"]]
    */
   private def reachabilitySet(
       datasetIdentifiers: Seq[TableIdentifier],
@@ -128,9 +133,8 @@ trait GraphOperations {
     val finalMap = mutable.HashMap
       .empty[TableIdentifier, Set[TableIdentifier]]
       .withDefaultValue(Set.empty[TableIdentifier])
-    deps.foreach {
-      case (start, reachableNodes) =>
-        reachableNodes.foreach(n => finalMap.put(n, finalMap(n) + start))
+    deps.foreach { case (start, reachableNodes) =>
+      reachableNodes.foreach(n => finalMap.put(n, finalMap(n) + start))
     }
     finalMap.toMap
   }
@@ -167,8 +171,8 @@ trait GraphOperations {
   /**
    * Traverses the graph upstream starting from the specified `datasetIdentifiers` to return the
    * reachable nodes. The return map's keyset consists of all datasets reachable from
-   * `datasetIdentifiers`. For each entry in the response map, the value of that element refers
-   * to which of `datasetIdentifiers` was able to reach the key. If multiple of `datasetIdentifiers`
+   * `datasetIdentifiers`. For each entry in the response map, the value of that element refers to
+   * which of `datasetIdentifiers` was able to reach the key. If multiple of `datasetIdentifiers`
    * could reach that key, one is picked arbitrarily.
    */
   def upstreamDatasets(

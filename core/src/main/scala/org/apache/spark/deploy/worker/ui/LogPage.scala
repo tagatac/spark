@@ -42,7 +42,8 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
     val self = Option(request.getParameter("self"))
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(defaultBytes)
 
     val logDir = (appId, executorId, driverId, self) match {
@@ -68,7 +69,8 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
     val self = Option(request.getParameter("self"))
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(defaultBytes)
 
     val (logDir, params, pageName) = (appId, executorId, driverId, self) match {
@@ -111,7 +113,7 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
 
     val content =
       <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script> ++
-      <div>
+        <div>
         {linkToMaster}
         {range}
         <div class="log-content" style="height:80vh; overflow:auto; padding:5px;">
@@ -131,8 +133,7 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
       logDirectory: String,
       logType: String,
       offsetOption: Option[Long],
-      byteLength: Int
-    ): (String, Long, Long, Long) = {
+      byteLength: Int): (String, Long, Long, Long) = {
 
     if (!supportedLogTypes.contains(logType)) {
       return ("Error: Log type must be one of " + supportedLogTypes.mkString(", "), 0, 0, 0)
@@ -148,8 +149,11 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
     try {
       // Find a log file name
       val fileName = if (logType.equals("out")) {
-        normalizedLogDir.listFiles.map(_.getName).filter(_.endsWith(".out"))
-          .headOption.getOrElse(logType)
+        normalizedLogDir.listFiles
+          .map(_.getName)
+          .filter(_.endsWith(".out"))
+          .headOption
+          .getOrElse(logType)
       } else {
         logType
       }
@@ -175,8 +179,10 @@ private[ui] class LogPage(parent: WorkerWebUI) extends WebUIPage("logPage") with
       (logText, startIndex, endIndex, totalLength)
     } catch {
       case e: Exception =>
-        logError(log"Error getting ${MDC(LOG_TYPE, logType)} logs from " +
-          log"directory ${MDC(PATH, logDirectory)}", e)
+        logError(
+          log"Error getting ${MDC(LOG_TYPE, logType)} logs from " +
+            log"directory ${MDC(PATH, logDirectory)}",
+          e)
         ("Error getting logs due to exception: " + e.getMessage, 0, 0, 0)
     }
   }

@@ -44,7 +44,8 @@ abstract class YarnShuffleIntegrationSuite extends BaseYarnClusterSuite {
   override def newYarnConfig(): YarnConfiguration = {
     val yarnConfig = new YarnConfiguration()
     yarnConfig.set(YarnConfiguration.NM_AUX_SERVICES, "spark_shuffle")
-    yarnConfig.set(YarnConfiguration.NM_AUX_SERVICE_FMT.format("spark_shuffle"),
+    yarnConfig.set(
+      YarnConfiguration.NM_AUX_SERVICE_FMT.format("spark_shuffle"),
       classOf[YarnShuffleService].getCanonicalName)
     yarnConfig.set(SHUFFLE_SERVICE_PORT.key, "0")
     yarnConfig.set(SHUFFLE_SERVICE_DB_BACKEND.key, dbBackend.name())
@@ -61,8 +62,7 @@ abstract class YarnShuffleIntegrationSuite extends BaseYarnClusterSuite {
       SHUFFLE_SERVICE_ENABLED.key -> "true",
       SHUFFLE_SERVICE_PORT.key -> shuffleServicePort.toString,
       MAX_EXECUTOR_FAILURES.key -> "1",
-      SHUFFLE_SERVICE_DB_BACKEND.key -> dbBackend.name()
-    )
+      SHUFFLE_SERVICE_DB_BACKEND.key -> dbBackend.name())
   }
 
   test("external shuffle service") {
@@ -77,8 +77,7 @@ abstract class YarnShuffleIntegrationSuite extends BaseYarnClusterSuite {
       false,
       mainClassName(YarnExternalShuffleDriver.getClass),
       appArgs = Seq(result.getAbsolutePath, registeredExecFile.getAbsolutePath),
-      extraConf = extraSparkConf()
-    )
+      extraConf = extraSparkConf())
     checkResult(finalState, result)
 
     assert(YarnTestAccessor.getRegisteredExecutorFile(shuffleService).exists())
@@ -87,14 +86,12 @@ abstract class YarnShuffleIntegrationSuite extends BaseYarnClusterSuite {
 
 @ExtendedLevelDBTest
 @ExtendedYarnTest
-class YarnShuffleIntegrationWithLevelDBBackendSuite
-  extends YarnShuffleIntegrationSuite {
+class YarnShuffleIntegrationWithLevelDBBackendSuite extends YarnShuffleIntegrationSuite {
   override protected def dbBackend: DBBackend = DBBackend.LEVELDB
 }
 
 @ExtendedYarnTest
-class YarnShuffleIntegrationWithRocksDBBackendSuite
-  extends YarnShuffleIntegrationSuite {
+class YarnShuffleIntegrationWithRocksDBBackendSuite extends YarnShuffleIntegrationSuite {
   override protected def dbBackend: DBBackend = DBBackend.ROCKSDB
 }
 
@@ -112,8 +109,7 @@ abstract class YarnShuffleAuthSuite extends YarnShuffleIntegrationSuite {
   override protected def extraSparkConf(): Map[String, String] = {
     super.extraSparkConf() ++ Map(
       NETWORK_AUTH_ENABLED.key -> "true",
-      NETWORK_CRYPTO_ENABLED.key -> "true"
-    )
+      NETWORK_CRYPTO_ENABLED.key -> "true")
   }
 }
 
@@ -135,8 +131,7 @@ private object YarnExternalShuffleDriver extends Logging with Matchers {
   def main(args: Array[String]): Unit = {
     if (args.length > 2) {
       // scalastyle:off println
-      System.err.println(
-        s"""
+      System.err.println(s"""
         |Invalid command line: ${args.mkString(" ")}
         |
         |Usage: ExternalShuffleDriver [result file] [registered exec file]
@@ -145,8 +140,9 @@ private object YarnExternalShuffleDriver extends Logging with Matchers {
       System.exit(1)
     }
 
-    val sc = new SparkContext(new SparkConf()
-      .setAppName("External Shuffle Test"))
+    val sc = new SparkContext(
+      new SparkConf()
+        .setAppName("External Shuffle Test"))
     val conf = sc.getConf
     val status = new File(args(0))
     val registeredExecFile = if (args.length == 2) {
@@ -160,20 +156,27 @@ private object YarnExternalShuffleDriver extends Logging with Matchers {
       new File(file.getAbsolutePath + "_dup")
     }.orNull
     try {
-      val data = sc.parallelize(0 until 100, 10).map { x => (x % 10) -> x }.reduceByKey{ _ + _ }.
-        collect().toSet
+      val data = sc
+        .parallelize(0 until 100, 10)
+        .map { x => (x % 10) -> x }
+        .reduceByKey { _ + _ }
+        .collect()
+        .toSet
       sc.listenerBus.waitUntilEmpty(WAIT_TIMEOUT_MILLIS)
-      data should be ((0 until 10).map{x => x -> (x * 10 + 450)}.toSet)
+      data should be((0 until 10).map { x => x -> (x * 10 + 450) }.toSet)
       result = "success"
       // only one process can open a leveldb file at a time, so we copy the files
       if (registeredExecFile != null && execStateCopy != null) {
         val dbBackendName = conf.get(SHUFFLE_SERVICE_DB_BACKEND.key)
         val dbBackend = DBBackend.byName(dbBackendName)
-        logWarning(s"Use ${dbBackend.name()} as the implementation of " +
-          s"${SHUFFLE_SERVICE_DB_BACKEND.key}")
+        logWarning(
+          s"Use ${dbBackend.name()} as the implementation of " +
+            s"${SHUFFLE_SERVICE_DB_BACKEND.key}")
         Utils.copyDirectory(registeredExecFile, execStateCopy)
-        assert(!ShuffleTestAccessor
-          .reloadRegisteredExecutors(dbBackend, execStateCopy).isEmpty)
+        assert(
+          !ShuffleTestAccessor
+            .reloadRegisteredExecutors(dbBackend, execStateCopy)
+            .isEmpty)
       }
     } finally {
       sc.stop()

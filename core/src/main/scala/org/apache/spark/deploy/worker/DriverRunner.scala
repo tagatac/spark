@@ -55,7 +55,7 @@ private[deploy] class DriverRunner(
     val workerWebUiUrl: String,
     val securityManager: SecurityManager,
     val resources: Map[String, ResourceInformation] = Map.empty)
-  extends Logging {
+    extends Logging {
 
   @volatile private var process: Option[Process] = None
   @volatile private var killed = false
@@ -131,7 +131,8 @@ private[deploy] class DriverRunner(
       process.foreach { p =>
         val exitCode = Utils.terminateProcess(p, driverTerminateTimeoutMs)
         if (exitCode.isEmpty) {
-          logWarning(log"Failed to terminate driver process: ${MDC(PROCESS, p)} " +
+          logWarning(
+            log"Failed to terminate driver process: ${MDC(PROCESS, p)} " +
               log". This process will likely be orphaned.")
         }
       }
@@ -139,8 +140,8 @@ private[deploy] class DriverRunner(
   }
 
   /**
-   * Creates the working directory for this driver.
-   * Will throw an exception if there are errors preparing the directory.
+   * Creates the working directory for this driver. Will throw an exception if there are errors
+   * preparing the directory.
    */
   private def createWorkingDirectory(): File = {
     val driverDir = new File(workDir, driverId)
@@ -151,15 +152,16 @@ private[deploy] class DriverRunner(
   }
 
   /**
-   * Download the user jar into the supplied directory and return its local path.
-   * Will throw an exception if there are errors downloading the jar.
+   * Download the user jar into the supplied directory and return its local path. Will throw an
+   * exception if there are errors downloading the jar.
    */
   private def downloadUserJar(driverDir: File): String = {
     val jarFileName = new URI(driverDesc.jarUrl).getPath.split("/").last
     val localJarFile = new File(driverDir, jarFileName)
     if (!localJarFile.exists()) { // May already exist if running multiple workers on one node
-      logInfo(log"Copying user jar ${MDC(JAR_URL, driverDesc.jarUrl)}" +
-        log" to ${MDC(FILE_NAME, localJarFile)}")
+      logInfo(
+        log"Copying user jar ${MDC(JAR_URL, driverDesc.jarUrl)}" +
+          log" to ${MDC(FILE_NAME, localJarFile)}")
       Utils.fetchFile(
         driverDesc.jarUrl,
         driverDir,
@@ -187,18 +189,25 @@ private[deploy] class DriverRunner(
     }
 
     // config resource file for driver, which would be used to load resources when driver starts up
-    val javaOpts = driverDesc.command.javaOpts ++ resourceFileOpt.map(f =>
-      Seq(s"-D${DRIVER_RESOURCES_FILE.key}=${f.getAbsolutePath}")).getOrElse(Seq.empty)
+    val javaOpts = driverDesc.command.javaOpts ++ resourceFileOpt
+      .map(f => Seq(s"-D${DRIVER_RESOURCES_FILE.key}=${f.getAbsolutePath}"))
+      .getOrElse(Seq.empty)
     // TODO: If we add ability to submit multiple jars they should also be added here
-    val builder = CommandUtils.buildProcessBuilder(driverDesc.command.copy(javaOpts = javaOpts),
-      securityManager, driverDesc.mem, sparkHome.getAbsolutePath, substituteVariables)
+    val builder = CommandUtils.buildProcessBuilder(
+      driverDesc.command.copy(javaOpts = javaOpts),
+      securityManager,
+      driverDesc.mem,
+      sparkHome.getAbsolutePath,
+      substituteVariables)
 
     // add WebUI driver log url to environment
     val reverseProxy = conf.get(UI_REVERSE_PROXY)
     val workerUrlRef = UIUtils.makeHref(reverseProxy, driverId, workerWebUiUrl)
-    builder.environment.put("SPARK_DRIVER_LOG_URL_STDOUT",
+    builder.environment.put(
+      "SPARK_DRIVER_LOG_URL_STDOUT",
       s"$workerUrlRef/logPage/?driverId=$driverId&logType=stdout")
-    builder.environment.put("SPARK_DRIVER_LOG_URL_STDERR",
+    builder.environment.put(
+      "SPARK_DRIVER_LOG_URL_STDERR",
       s"$workerUrlRef/logPage/?driverId=$driverId&logType=stderr")
 
     runDriver(builder, driverDir, driverDesc.supervise)
@@ -212,17 +221,24 @@ private[deploy] class DriverRunner(
       CommandUtils.redirectStream(process.getInputStream, stdout)
 
       val stderr = new File(baseDir, "stderr")
-      val redactedCommand = Utils.redactCommandLineArgs(conf, builder.command.asScala.toSeq)
+      val redactedCommand = Utils
+        .redactCommandLineArgs(conf, builder.command.asScala.toSeq)
         .mkString("\"", "\" \"", "\"")
       val header = "Launch Command: %s\n%s\n\n".format(redactedCommand, "=".repeat(40))
-      Files.writeString(stderr.toPath, header, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+      Files.writeString(
+        stderr.toPath,
+        header,
+        StandardOpenOption.CREATE,
+        StandardOpenOption.APPEND)
       CommandUtils.redirectStream(process.getErrorStream, stderr)
     }
     runCommandWithRetry(ProcessBuilderLike(builder), initialize, supervise)
   }
 
   private[worker] def runCommandWithRetry(
-      command: ProcessBuilderLike, initialize: Process => Unit, supervise: Boolean): Int = {
+      command: ProcessBuilderLike,
+      initialize: Process => Unit,
+      supervise: Boolean): Int = {
     var exitCode = -1
     // Time to wait between submission retries.
     var waitSeconds = 1
@@ -230,7 +246,8 @@ private[deploy] class DriverRunner(
     val successfulRunDuration = 5
     var keepTrying = !killed
 
-    val redactedCommand = Utils.redactCommandLineArgs(conf, command.command)
+    val redactedCommand = Utils
+      .redactCommandLineArgs(conf, command.command)
       .mkString("\"", "\" \"", "\"")
     while (keepTrying) {
       logInfo(log"Launch Command: ${MDC(COMMAND, redactedCommand)}")
@@ -250,8 +267,9 @@ private[deploy] class DriverRunner(
         if (clock.getTimeMillis() - processStart > successfulRunDuration * 1000L) {
           waitSeconds = 1
         }
-        logInfo(log"Command exited with status ${MDC(EXIT_CODE, exitCode)}," +
-          log" re-launching after ${MDC(TIME_UNITS, waitSeconds)} s.")
+        logInfo(
+          log"Command exited with status ${MDC(EXIT_CODE, exitCode)}," +
+            log" re-launching after ${MDC(TIME_UNITS, waitSeconds)} s.")
         sleeper.sleep(waitSeconds)
         waitSeconds = waitSeconds * 2 // exponential back-off
       }

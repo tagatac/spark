@@ -41,15 +41,18 @@ trait KafkaContinuousTest extends KafkaSourceTest {
   // In addition to setting the partitions in Kafka, we have to wait until the query has
   // reconfigured to the new count so the test framework can hook in properly.
   override protected def setTopicPartitions(
-      topic: String, newCount: Int, query: StreamExecution) = {
+      topic: String,
+      newCount: Int,
+      query: StreamExecution) = {
     testUtils.addPartitions(topic, newCount)
     eventually(timeout(streamingTimeout)) {
       assert(
-        query.lastExecution.executedPlan.collectFirst {
-          case scan: ContinuousScanExec
-              if scan.stream.isInstanceOf[KafkaContinuousStream] =>
-            scan.stream.asInstanceOf[KafkaContinuousStream]
-        }.exists(_.knownPartitions.size == newCount),
+        query.lastExecution.executedPlan
+          .collectFirst {
+            case scan: ContinuousScanExec if scan.stream.isInstanceOf[KafkaContinuousStream] =>
+              scan.stream.asInstanceOf[KafkaContinuousStream]
+          }
+          .exists(_.knownPartitions.size == newCount),
         s"query never reconfigured to $newCount partitions")
     }
   }
@@ -82,7 +85,6 @@ trait KafkaContinuousTest extends KafkaSourceTest {
     super.afterEach()
   }
 
-
   test("ensure continuous stream is being used") {
     val query = spark.readStream
       .format("rate")
@@ -92,7 +94,6 @@ trait KafkaContinuousTest extends KafkaSourceTest {
 
     testStream(query)(
       makeSureGetOffsetCalled,
-      Execute(q => assert(q.isInstanceOf[ContinuousExecution]))
-    )
+      Execute(q => assert(q.isInstanceOf[ContinuousExecution])))
   }
 }

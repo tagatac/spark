@@ -79,9 +79,11 @@ private[spark] object UI {
       "reach your proxy.")
     .version("2.1.0")
     .stringConf
-    .checkValue ({ s =>
-      val words = s.split("/")
-      !words.contains("proxy") && !words.contains("history") },
+    .checkValue(
+      { s =>
+        val words = s.split("/")
+        !words.contains("proxy") && !words.contains("history")
+      },
       "Cannot use the keyword 'proxy' or 'history' in reverse proxy URL. Spark UI relies on both " +
         "keywords for getting REST API endpoints from URIs.")
     .createOptional
@@ -221,22 +223,24 @@ private[spark] object UI {
     .createOptional
 
   val CUSTOM_EXECUTOR_LOG_URL = ConfigBuilder("spark.ui.custom.executor.log.url")
-    .doc("Specifies custom spark executor log url for supporting external log service instead of " +
-      "using cluster managers' application log urls in the Spark UI. Spark will support " +
-      "some path variables via patterns which can vary on cluster manager. Please check the " +
-      "documentation for your cluster manager to see which patterns are supported, if any. " +
-      "This configuration replaces original log urls in event log, which will be also effective " +
-      "when accessing the application on history server. The new log urls must be permanent, " +
-      "otherwise you might have dead link for executor log urls.")
+    .doc(
+      "Specifies custom spark executor log url for supporting external log service instead of " +
+        "using cluster managers' application log urls in the Spark UI. Spark will support " +
+        "some path variables via patterns which can vary on cluster manager. Please check the " +
+        "documentation for your cluster manager to see which patterns are supported, if any. " +
+        "This configuration replaces original log urls in event log, which will be also effective " +
+        "when accessing the application on history server. The new log urls must be permanent, " +
+        "otherwise you might have dead link for executor log urls.")
     .version("3.0.0")
     .stringConf
     .createOptional
 
   val MASTER_UI_DECOMMISSION_ALLOW_MODE = ConfigBuilder("spark.master.ui.decommission.allow.mode")
-    .doc("Specifies the behavior of the Master Web UI's /workers/kill endpoint. Possible choices" +
-      " are: `LOCAL` means allow this endpoint from IP's that are local to the machine running" +
-      " the Master, `DENY` means to completely disable this endpoint, `ALLOW` means to allow" +
-      " calling this endpoint from any IP.")
+    .doc(
+      "Specifies the behavior of the Master Web UI's /workers/kill endpoint. Possible choices" +
+        " are: `LOCAL` means allow this endpoint from IP's that are local to the machine running" +
+        " the Master, `DENY` means to completely disable this endpoint, `ALLOW` means to allow" +
+        " calling this endpoint from any IP.")
     .internal()
     .version("3.1.0")
     .stringConf

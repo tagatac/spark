@@ -28,8 +28,8 @@ private[spark] class SparkFileAlreadyExistsException(
     errorClass: String,
     messageParameters: Map[String, String],
     sqlState: Option[String] = None)
-  extends FileAlreadyExistsException(
-    SparkThrowableHelper.getMessage(errorClass, messageParameters))
+    extends FileAlreadyExistsException(
+      SparkThrowableHelper.getMessage(errorClass, messageParameters))
     with SparkThrowable {
 
   override def getMessageParameters: java.util.Map[String, String] = messageParameters.asJava

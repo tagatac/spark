@@ -114,8 +114,9 @@ object RowSetUtils {
         TColumn.i64Val(new TI64Column(values, nulls))
 
       case FloatType =>
-        val values = getOrSetAsNull[java.lang.Float](rows, ordinal, nulls, 0.toFloat)
-          .asScala.map(n => java.lang.Double.valueOf(n.toString)).asJava
+        val values = getOrSetAsNull[java.lang.Float](rows, ordinal, nulls, 0.toFloat).asScala
+          .map(n => java.lang.Double.valueOf(n.toString))
+          .asJava
         TColumn.doubleVal(new TDoubleColumn(values, nulls))
 
       case DoubleType =>
@@ -127,8 +128,7 @@ object RowSetUtils {
         TColumn.stringVal(new TStringColumn(values, nulls))
 
       case BinaryType =>
-        val values = getOrSetAsNull[Array[Byte]](rows, ordinal, nulls, Array.empty[Byte])
-          .asScala
+        val values = getOrSetAsNull[Array[Byte]](rows, ordinal, nulls, Array.empty[Byte]).asScala
           .map(ByteBuffer.wrap)
           .asJava
         TColumn.binaryVal(new TBinaryColumn(values, nulls))
@@ -242,7 +242,10 @@ object RowSetUtils {
         val tStrValue = new TStringValue
         if (!row.isNullAt(ordinal)) {
           val value = toHiveString(
-            (row.get(ordinal), dataType), nested = false, timeFormatters, binaryFormatter)
+            (row.get(ordinal), dataType),
+            nested = false,
+            timeFormatters,
+            binaryFormatter)
           tStrValue.setValue(value)
         }
         TColumnValue.stringVal(tStrValue)

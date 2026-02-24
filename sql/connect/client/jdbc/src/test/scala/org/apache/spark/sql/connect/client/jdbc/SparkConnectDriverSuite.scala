@@ -23,8 +23,7 @@ import java.util.Properties
 import org.apache.spark.sql.connect.client.jdbc.test.JdbcHelper
 import org.apache.spark.sql.connect.test.{ConnectFunSuite, RemoteSparkSession}
 
-class SparkConnectDriverSuite extends ConnectFunSuite with RemoteSparkSession
-    with JdbcHelper {
+class SparkConnectDriverSuite extends ConnectFunSuite with RemoteSparkSession with JdbcHelper {
 
   def jdbcUrl: String = s"jdbc:sc://localhost:$serverPort"
 

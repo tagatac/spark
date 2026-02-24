@@ -39,22 +39,25 @@ private object ResourceRequestHelper extends Logging {
   private[yarn] def getYarnResourcesAndAmounts(
       sparkConf: SparkConf,
       componentName: String): Map[String, String] = {
-    sparkConf.getAllWithPrefix(s"$componentName").map { case (key, value) =>
-      val splitIndex = key.lastIndexOf('.')
-      if (splitIndex == -1) {
-        val errorMessage = s"Missing suffix for ${componentName}${key}, you must specify" +
-          s" a suffix - $AMOUNT is currently the only supported suffix."
-        throw new IllegalArgumentException(errorMessage)
+    sparkConf
+      .getAllWithPrefix(s"$componentName")
+      .map { case (key, value) =>
+        val splitIndex = key.lastIndexOf('.')
+        if (splitIndex == -1) {
+          val errorMessage = s"Missing suffix for ${componentName}${key}, you must specify" +
+            s" a suffix - $AMOUNT is currently the only supported suffix."
+          throw new IllegalArgumentException(errorMessage)
+        }
+        val resourceName = key.substring(0, splitIndex)
+        val resourceSuffix = key.substring(splitIndex + 1)
+        if (!AMOUNT.equals(resourceSuffix)) {
+          val errorMessage = s"Unsupported suffix: $resourceSuffix in: ${componentName}${key}, " +
+            s"only .$AMOUNT is supported."
+          throw new IllegalArgumentException(errorMessage)
+        }
+        (resourceName, value)
       }
-      val resourceName = key.substring(0, splitIndex)
-      val resourceSuffix = key.substring(splitIndex + 1)
-      if (!AMOUNT.equals(resourceSuffix)) {
-        val errorMessage = s"Unsupported suffix: $resourceSuffix in: ${componentName}${key}, " +
-          s"only .$AMOUNT is supported."
-        throw new IllegalArgumentException(errorMessage)
-      }
-      (resourceName, value)
-    }.toMap
+      .toMap
   }
 
   private[yarn] def getResourceNameMapping(sparkConf: SparkConf): Map[String, String] = {
@@ -62,28 +65,27 @@ private object ResourceRequestHelper extends Logging {
   }
 
   /**
-   * Convert Spark resources into YARN resources.
-   * The only resources we know how to map from spark configs to yarn configs are
-   * gpus and fpgas, everything else the user has to specify them in both the
-   * spark.yarn.*.resource and the spark.*.resource configs.
+   * Convert Spark resources into YARN resources. The only resources we know how to map from spark
+   * configs to yarn configs are gpus and fpgas, everything else the user has to specify them in
+   * both the spark.yarn.*.resource and the spark.*.resource configs.
    */
   private[yarn] def getYarnResourcesFromSparkResources(
       confPrefix: String,
-      sparkConf: SparkConf
-  ): Map[String, String] = {
-    getResourceNameMapping(sparkConf).map {
-      case (rName, yarnName) =>
+      sparkConf: SparkConf): Map[String, String] = {
+    getResourceNameMapping(sparkConf)
+      .map { case (rName, yarnName) =>
         (yarnName -> sparkConf.get(new ResourceID(confPrefix, rName).amountConf, "0"))
-    }.filter { case (_, count) => count.toLong > 0 }
+      }
+      .filter { case (_, count) => count.toLong > 0 }
   }
 
   /**
-   * Validates sparkConf and throws a SparkException if any of standard resources (memory or cores)
-   * is defined with the property spark.yarn.x.resource.y
-   * Need to reject all combinations of AM / Driver / Executor and memory / CPU cores resources, as
-   * Spark has its own names for them (memory, cores),
-   * but YARN have its names too: (memory, memory-mb, mb) and (cores, vcores, cpu-vcores).
-   * We need to disable every possible way YARN could receive the resource definitions above.
+   * Validates sparkConf and throws a SparkException if any of standard resources (memory or
+   * cores) is defined with the property spark.yarn.x.resource.y Need to reject all combinations
+   * of AM / Driver / Executor and memory / CPU cores resources, as Spark has its own names for
+   * them (memory, cores), but YARN have its names too: (memory, memory-mb, mb) and (cores,
+   * vcores, cpu-vcores). We need to disable every possible way YARN could receive the resource
+   * definitions above.
    */
   def validateResources(sparkConf: SparkConf): Unit = {
     val resourceDefinitions = Seq[(String, String)](
@@ -105,13 +107,17 @@ private object ResourceRequestHelper extends Logging {
       (AM_CORES.key, YARN_AM_RESOURCE_TYPES_PREFIX + "cpu-vcores"),
       (DRIVER_CORES.key, YARN_DRIVER_RESOURCE_TYPES_PREFIX + "cpu-vcores"),
       (EXECUTOR_CORES.key, YARN_EXECUTOR_RESOURCE_TYPES_PREFIX + "cpu-vcores"),
-      (new ResourceID(SPARK_EXECUTOR_PREFIX, "fpga").amountConf,
+      (
+        new ResourceID(SPARK_EXECUTOR_PREFIX, "fpga").amountConf,
         s"${YARN_EXECUTOR_RESOURCE_TYPES_PREFIX}${sparkConf.get(YARN_FPGA_DEVICE)}"),
-      (new ResourceID(SPARK_DRIVER_PREFIX, "fpga").amountConf,
+      (
+        new ResourceID(SPARK_DRIVER_PREFIX, "fpga").amountConf,
         s"${YARN_DRIVER_RESOURCE_TYPES_PREFIX}${sparkConf.get(YARN_FPGA_DEVICE)}"),
-      (new ResourceID(SPARK_EXECUTOR_PREFIX, "gpu").amountConf,
+      (
+        new ResourceID(SPARK_EXECUTOR_PREFIX, "gpu").amountConf,
         s"${YARN_EXECUTOR_RESOURCE_TYPES_PREFIX}${sparkConf.get(YARN_GPU_DEVICE)}"),
-      (new ResourceID(SPARK_DRIVER_PREFIX, "gpu").amountConf,
+      (
+        new ResourceID(SPARK_DRIVER_PREFIX, "gpu").amountConf,
         s"${YARN_DRIVER_RESOURCE_TYPES_PREFIX}${sparkConf.get(YARN_GPU_DEVICE)}"))
 
     val errorMessage = new mutable.StringBuilder()
@@ -119,7 +125,8 @@ private object ResourceRequestHelper extends Logging {
     resourceDefinitions.foreach { case (sparkName, resourceRequest) =>
       val resourceRequestAmount = s"${resourceRequest}.${AMOUNT}"
       if (sparkConf.contains(resourceRequestAmount)) {
-        errorMessage.append(s"Error: Do not use $resourceRequestAmount, " +
+        errorMessage.append(
+          s"Error: Do not use $resourceRequestAmount, " +
             s"please use $sparkName instead!\n")
       }
     }
@@ -131,12 +138,12 @@ private object ResourceRequestHelper extends Logging {
 
   /**
    * Sets resource amount with the corresponding unit to the passed resource object.
-   * @param resources resource values to set
-   * @param resource resource object to update
+   * @param resources
+   *   resource values to set
+   * @param resource
+   *   resource object to update
    */
-  def setResourceRequests(
-      resources: Map[String, String],
-      resource: Resource): Unit = {
+  def setResourceRequests(resources: Map[String, String], resource: Resource): Unit = {
     require(resource != null, "Resource parameter should not be null!")
 
     logDebug(s"Custom resources requested: $resources")
@@ -160,16 +167,18 @@ private object ResourceRequestHelper extends Logging {
         resource.setResourceInformation(name, resourceInformation)
       } catch {
         case _: MatchError =>
-          throw new IllegalArgumentException(s"Resource request for '$name' ('$rawAmount') " +
+          throw new IllegalArgumentException(
+            s"Resource request for '$name' ('$rawAmount') " +
               s"does not match pattern $AMOUNT_AND_UNIT_REGEX.")
         case CausedBy(e: IllegalArgumentException) =>
           throw new IllegalArgumentException(s"Invalid request for $name: ${e.getMessage}")
         case e: ResourceNotFoundException =>
           // warn a couple times and then stop so we don't spam the logs
           if (numResourceErrors < 2) {
-            logWarning(log"YARN doesn't know about resource ${MDC(RESOURCE_NAME, name)}, " +
-              log"your resource discovery has to handle properly discovering and isolating " +
-              log"the resource! Error: ${MDC(ERROR, e.getMessage)}")
+            logWarning(
+              log"YARN doesn't know about resource ${MDC(RESOURCE_NAME, name)}, " +
+                log"your resource discovery has to handle properly discovering and isolating " +
+                log"the resource! Error: ${MDC(ERROR, e.getMessage)}")
             numResourceErrors += 1
           }
       }

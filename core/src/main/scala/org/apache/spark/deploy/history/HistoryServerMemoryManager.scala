@@ -31,8 +31,7 @@ import org.apache.spark.util.Utils
 /**
  * A class used to keep track of in-memory store usage by the SHS.
  */
-private class HistoryServerMemoryManager(
-    conf: SparkConf) extends Logging {
+private class HistoryServerMemoryManager(conf: SparkConf) extends Logging {
 
   private val maxUsage = conf.get(MAX_IN_MEMORY_STORE_USAGE)
   // Visible for testing.
@@ -52,15 +51,17 @@ private class HistoryServerMemoryManager(
       codec: Option[String]): Unit = {
     val memoryUsage = approximateMemoryUsage(eventLogSize, codec)
     if (memoryUsage + currentUsage.get > maxUsage) {
-      throw new RuntimeException("Not enough memory to create hybrid store " +
-        s"for app $appId / $attemptId.")
+      throw new RuntimeException(
+        "Not enough memory to create hybrid store " +
+          s"for app $appId / $attemptId.")
     }
     active.synchronized {
       active(appId -> attemptId) = memoryUsage
     }
     currentUsage.addAndGet(memoryUsage)
-    logInfo(log"Leasing ${MDC(NUM_BYTES, Utils.bytesToString(memoryUsage))} memory usage for " +
-      log"app ${MDC(APP_ID, appId)} / ${MDC(APP_ATTEMPT_ID, attemptId)}")
+    logInfo(
+      log"Leasing ${MDC(NUM_BYTES, Utils.bytesToString(memoryUsage))} memory usage for " +
+        log"app ${MDC(APP_ID, appId)} / ${MDC(APP_ATTEMPT_ID, attemptId)}")
   }
 
   def release(appId: String, attemptId: Option[String]): Unit = {
@@ -69,8 +70,9 @@ private class HistoryServerMemoryManager(
     memoryUsage match {
       case Some(m) =>
         currentUsage.addAndGet(-m)
-        logInfo(log"Released ${MDC(NUM_BYTES, Utils.bytesToString(m))} memory usage for " +
-          log"app ${MDC(APP_ID, appId)} / ${MDC(APP_ATTEMPT_ID, attemptId)}")
+        logInfo(
+          log"Released ${MDC(NUM_BYTES, Utils.bytesToString(m))} memory usage for " +
+            log"app ${MDC(APP_ID, appId)} / ${MDC(APP_ATTEMPT_ID, attemptId)}")
       case None =>
     }
   }

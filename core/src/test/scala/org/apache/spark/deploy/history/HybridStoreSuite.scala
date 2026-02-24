@@ -186,7 +186,7 @@ abstract class HybridStoreSuite extends SparkFunSuite with BeforeAndAfter with T
         results.put(true)
       } catch {
         case _: InterruptedException =>
-          // no-op
+        // no-op
       }
     }
 
@@ -195,7 +195,7 @@ abstract class HybridStoreSuite extends SparkFunSuite with BeforeAndAfter with T
         results.put(false)
       } catch {
         case _: InterruptedException =>
-          // no-op
+        // no-op
       }
     }
 

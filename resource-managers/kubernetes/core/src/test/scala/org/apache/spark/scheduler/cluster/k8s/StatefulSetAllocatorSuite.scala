@@ -42,23 +42,21 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
 
   private val driverPod = new PodBuilder()
     .withNewMetadata()
-      .withName(driverPodName)
-      .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
-      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
-      .withUid("driver-pod-uid")
-      .endMetadata()
+    .withName(driverPodName)
+    .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
+    .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_DRIVER_ROLE)
+    .withUid("driver-pod-uid")
+    .endMetadata()
     .build()
 
   private val conf = new SparkConf()
     .set(KUBERNETES_DRIVER_POD_NAME, driverPodName)
     .set(DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT.key, "10s")
 
-
   private val defaultProfile: ResourceProfile = ResourceProfile.getOrCreateDefaultProfile(conf)
   private val secondProfile: ResourceProfile = ResourceProfile.getOrCreateDefaultProfile(conf)
 
   private val secMgr = new SecurityManager(conf)
-
 
   @Mock
   private var kubernetesClient: KubernetesClient = _
@@ -102,9 +100,8 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
   private def executorPodAnswer(): Answer[KubernetesExecutorSpec] =
     (invocation: InvocationOnMock) => {
       val k8sConf: KubernetesExecutorConf = invocation.getArgument(0)
-      KubernetesExecutorSpec(executorPodWithId(0,
-        k8sConf.resourceProfileId.toInt), Seq.empty)
-  }
+      KubernetesExecutorSpec(executorPodWithId(0, k8sConf.resourceProfileId.toInt), Seq.empty)
+    }
 
   before {
     MockitoAnnotations.openMocks(this).close()
@@ -119,11 +116,20 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     when(podsWithNamespace.resource(any())).thenReturn(podResource)
     when(driverPodOperations.get).thenReturn(driverPod)
     when(driverPodOperations.waitUntilReady(any(), any())).thenReturn(driverPod)
-    when(executorBuilder.buildFromFeatures(any(classOf[KubernetesExecutorConf]), meq(secMgr),
-      meq(kubernetesClient), any(classOf[ResourceProfile]))).thenAnswer(executorPodAnswer())
+    when(
+      executorBuilder.buildFromFeatures(
+        any(classOf[KubernetesExecutorConf]),
+        meq(secMgr),
+        meq(kubernetesClient),
+        any(classOf[ResourceProfile]))).thenAnswer(executorPodAnswer())
     snapshotsStore = new DeterministicExecutorPodsSnapshotsStore()
     podsAllocatorUnderTest = new StatefulSetPodsAllocator(
-      conf, secMgr, executorBuilder, kubernetesClient, snapshotsStore, null)
+      conf,
+      secMgr,
+      executorBuilder,
+      kubernetesClient,
+      snapshotsStore,
+      null)
     when(schedulerBackend.getExecutorIds()).thenReturn(Seq.empty)
     podsAllocatorUnderTest.start(TEST_SPARK_APP_ID, schedulerBackend)
   }
@@ -136,8 +142,7 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     rprof.require(taskReq).require(execReq)
     val immrprof = new ResourceProfile(rprof.executorResources, rprof.taskResources)
     podsAllocatorUnderTest.setTotalExpectedExecutors(
-      Map(defaultProfile -> (10),
-          immrprof -> (420)))
+      Map(defaultProfile -> (10), immrprof -> (420)))
     val captor = ArgumentCaptor.forClass(classOf[StatefulSet])
     verify(statefulSetNamespaced, times(2)).resource(any())
     verify(editableSet, times(2)).create()
@@ -146,8 +151,7 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
   }
 
   test("Validate statefulSet scale up") {
-    podsAllocatorUnderTest.setTotalExpectedExecutors(
-      Map(defaultProfile -> (10)))
+    podsAllocatorUnderTest.setTotalExpectedExecutors(Map(defaultProfile -> (10)))
     val captor = ArgumentCaptor.forClass(classOf[StatefulSet])
     verify(statefulSetNamespaced, times(1)).resource(captor.capture())
     verify(editableSet, times(1)).create()
@@ -159,8 +163,7 @@ class StatefulSetAllocatorSuite extends SparkFunSuite with BeforeAndAfter {
     assert(spec.getReplicas() === 10)
     assert(spec.getPodManagementPolicy() === "Parallel")
     verify(podResource, never()).create()
-    podsAllocatorUnderTest.setTotalExpectedExecutors(
-      Map(defaultProfile -> (20)))
+    podsAllocatorUnderTest.setTotalExpectedExecutors(Map(defaultProfile -> (20)))
     verify(editableSet, times(1)).scale(any(), any())
   }
 }

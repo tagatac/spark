@@ -45,26 +45,28 @@ import org.apache.spark.util.ThreadUtils
  * Params for [[CrossValidator]] and [[CrossValidatorModel]].
  */
 private[ml] trait CrossValidatorParams extends ValidatorParams {
+
   /**
-   * Param for number of folds for cross validation.  Must be &gt;= 2.
-   * Default: 3
+   * Param for number of folds for cross validation. Must be &gt;= 2. Default: 3
    *
    * @group param
    */
-  val numFolds: IntParam = new IntParam(this, "numFolds",
-    "number of folds for cross validation (>= 2)", ParamValidators.gtEq(2))
+  val numFolds: IntParam = new IntParam(
+    this,
+    "numFolds",
+    "number of folds for cross validation (>= 2)",
+    ParamValidators.gtEq(2))
 
   /** @group getParam */
   def getNumFolds: Int = $(numFolds)
 
   /**
    * Param for the column name of user specified fold number. Once this is specified,
-   * `CrossValidator` won't do random k-fold split. Note that this column should be
-   * integer type with range [0, numFolds) and Spark will throw exception on out-of-range
-   * fold numbers.
+   * `CrossValidator` won't do random k-fold split. Note that this column should be integer type
+   * with range [0, numFolds) and Spark will throw exception on out-of-range fold numbers.
    */
-  val foldCol: Param[String] = new Param[String](this, "foldCol",
-    "the column name of user specified fold number")
+  val foldCol: Param[String] =
+    new Param[String](this, "foldCol", "the column name of user specified fold number")
 
   def getFoldCol: String = $(foldCol)
 
@@ -73,16 +75,19 @@ private[ml] trait CrossValidatorParams extends ValidatorParams {
 
 /**
  * K-fold cross validation performs model selection by splitting the dataset into a set of
- * non-overlapping randomly partitioned folds which are used as separate training and test datasets
- * e.g., with k=3 folds, K-fold cross validation will generate 3 (training, test) dataset pairs,
- * each of which uses 2/3 of the data for training and 1/3 for testing. Each fold is used as the
- * test set exactly once.
+ * non-overlapping randomly partitioned folds which are used as separate training and test
+ * datasets e.g., with k=3 folds, K-fold cross validation will generate 3 (training, test) dataset
+ * pairs, each of which uses 2/3 of the data for training and 1/3 for testing. Each fold is used
+ * as the test set exactly once.
  */
 @Since("1.2.0")
 class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
-  extends Estimator[CrossValidatorModel]
-  with CrossValidatorParams with HasParallelism with HasCollectSubModels
-  with MLWritable with Logging {
+    extends Estimator[CrossValidatorModel]
+    with CrossValidatorParams
+    with HasParallelism
+    with HasCollectSubModels
+    with MLWritable
+    with Logging {
 
   @Since("1.2.0")
   def this() = this(Identifiable.randomUID("cv"))
@@ -112,8 +117,8 @@ class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
   def setFoldCol(value: String): this.type = set(foldCol, value)
 
   /**
-   * Set the maximum level of parallelism to evaluate models in parallel.
-   * Default is 1 for serial evaluation
+   * Set the maximum level of parallelism to evaluate models in parallel. Default is 1 for serial
+   * evaluation
    *
    * @group expertSetParam
    */
@@ -121,14 +126,14 @@ class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
   def setParallelism(value: Int): this.type = set(parallelism, value)
 
   /**
-   * Whether to collect submodels when fitting. If set, we can get submodels from
-   * the returned model.
+   * Whether to collect submodels when fitting. If set, we can get submodels from the returned
+   * model.
    *
    * Note: If set this param, when you save the returned model, you can set an option
-   * "persistSubModels" to be "true" before saving, in order to save these submodels.
-   * You can check documents of
-   * {@link org.apache.spark.ml.tuning.CrossValidatorModel.CrossValidatorModelWriter}
-   * for more information.
+   * "persistSubModels" to be "true" before saving, in order to save these submodels. You can
+   * check documents of
+   * {@link org.apache.spark.ml.tuning.CrossValidatorModel.CrossValidatorModelWriter} for more
+   * information.
    *
    * @group expertSetParam
    */
@@ -165,51 +170,58 @@ class CrossValidator @Since("1.2.0") (@Since("1.4.0") override val uid: String)
       val filteredSchema = StructType(schema.filter(_.name != $(foldCol)).toArray)
       (MLUtils.kFold(dataset.toDF(), $(numFolds), $(foldCol)), filteredSchema)
     }
-    val metrics = splits.zipWithIndex.map { case ((training, validation), splitIndex) =>
-      val trainingDataset = sparkSession.createDataFrame(training, schemaWithoutFold).cache()
-      val validationDataset = sparkSession.createDataFrame(validation, schemaWithoutFold).cache()
-      instr.logDebug(s"Train split $splitIndex with multiple sets of parameters.")
+    val metrics = splits.zipWithIndex
+      .map { case ((training, validation), splitIndex) =>
+        val trainingDataset = sparkSession.createDataFrame(training, schemaWithoutFold).cache()
+        val validationDataset =
+          sparkSession.createDataFrame(validation, schemaWithoutFold).cache()
+        instr.logDebug(s"Train split $splitIndex with multiple sets of parameters.")
 
-      // Fit models in a Future for training in parallel
-      val foldMetricFutures = epm.zipWithIndex.map { case (paramMap, paramIndex) =>
-        Future[Double] {
-          val model = est.fit(trainingDataset, paramMap).asInstanceOf[Model[_]]
-          if (collectSubModelsParam) {
-            subModels.get(splitIndex)(paramIndex) = model
-          }
-          // TODO: duplicate evaluator to take extra params from input
-          val metric = eval.evaluate(model.transform(validationDataset, paramMap))
-          instr.logDebug(s"Got metric $metric for model trained with $paramMap.")
-          metric
-        } (executionContext)
+        // Fit models in a Future for training in parallel
+        val foldMetricFutures = epm.zipWithIndex.map { case (paramMap, paramIndex) =>
+          Future[Double] {
+            val model = est.fit(trainingDataset, paramMap).asInstanceOf[Model[_]]
+            if (collectSubModelsParam) {
+              subModels.get(splitIndex)(paramIndex) = model
+            }
+            // TODO: duplicate evaluator to take extra params from input
+            val metric = eval.evaluate(model.transform(validationDataset, paramMap))
+            instr.logDebug(s"Got metric $metric for model trained with $paramMap.")
+            metric
+          }(executionContext)
+        }
+
+        // Wait for metrics to be calculated
+        val foldMetrics = foldMetricFutures.map(ThreadUtils.awaitResult(_, Duration.Inf))
+
+        // Unpersist training & validation set once all metrics have been produced
+        trainingDataset.unpersist()
+        validationDataset.unpersist()
+        foldMetrics
       }
+      .transpose
+      .map(_.sum / $(numFolds)) // Calculate average metric over all splits
 
-      // Wait for metrics to be calculated
-      val foldMetrics = foldMetricFutures.map(ThreadUtils.awaitResult(_, Duration.Inf))
-
-      // Unpersist training & validation set once all metrics have been produced
-      trainingDataset.unpersist()
-      validationDataset.unpersist()
-      foldMetrics
-    }.transpose.map(_.sum / $(numFolds)) // Calculate average metric over all splits
-
-    instr.logInfo(log"Average cross-validation metrics: ${MDC(
-      CROSS_VALIDATION_METRICS, metrics.mkString("[", ", ", "]"))}")
+    instr.logInfo(
+      log"Average cross-validation metrics: ${MDC(CROSS_VALIDATION_METRICS, metrics.mkString("[", ", ", "]"))}")
     val (bestMetric, bestIndex) =
       if (eval.isLargerBetter) metrics.zipWithIndex.maxBy(_._1)
       else metrics.zipWithIndex.minBy(_._1)
     instr.logInfo(log"Best set of parameters:\n${MDC(ESTIMATOR_PARAM_MAP, epm(bestIndex))}")
     instr.logInfo(log"Best cross-validation metric: ${MDC(CROSS_VALIDATION_METRIC, bestMetric)}.")
     val bestModel = est.fit(dataset, epm(bestIndex)).asInstanceOf[Model[_]]
-    copyValues(new CrossValidatorModel(uid, bestModel, metrics)
-      .setSubModels(subModels).setParent(this))
+    copyValues(
+      new CrossValidatorModel(uid, bestModel, metrics)
+        .setSubModels(subModels)
+        .setParent(this))
   }
 
   @Since("1.4.0")
   override def transformSchema(schema: StructType): StructType = {
     if ($(foldCol) != "") {
       val foldColDt = schema.apply($(foldCol)).dataType
-      require(foldColDt.isInstanceOf[IntegerType],
+      require(
+        foldColDt.isInstanceOf[IntegerType],
         s"The specified `foldCol` column ${$(foldCol)} must be integer type, but got $foldColDt.")
     }
     transformSchemaImpl(schema)
@@ -272,20 +284,24 @@ object CrossValidator extends MLReadable[CrossValidator] {
 }
 
 /**
- * CrossValidatorModel contains the model with the highest average cross-validation
- * metric across folds and uses this model to transform input data. CrossValidatorModel
- * also tracks the metrics for each param map evaluated.
+ * CrossValidatorModel contains the model with the highest average cross-validation metric across
+ * folds and uses this model to transform input data. CrossValidatorModel also tracks the metrics
+ * for each param map evaluated.
  *
- * @param bestModel The best model selected from k-fold cross validation.
- * @param avgMetrics Average cross-validation metrics for each paramMap in
- *                   `CrossValidator.estimatorParamMaps`, in the corresponding order.
+ * @param bestModel
+ *   The best model selected from k-fold cross validation.
+ * @param avgMetrics
+ *   Average cross-validation metrics for each paramMap in `CrossValidator.estimatorParamMaps`, in
+ *   the corresponding order.
  */
 @Since("1.2.0")
 class CrossValidatorModel private[ml] (
     @Since("1.4.0") override val uid: String,
     @Since("1.2.0") val bestModel: Model[_],
     @Since("1.5.0") val avgMetrics: Array[Double])
-  extends Model[CrossValidatorModel] with CrossValidatorParams with MLWritable {
+    extends Model[CrossValidatorModel]
+    with CrossValidatorParams
+    with MLWritable {
 
   /** A Python-friendly auxiliary constructor. */
   private[ml] def this(uid: String, bestModel: Model[_], avgMetrics: JList[Double]) = {
@@ -294,15 +310,14 @@ class CrossValidatorModel private[ml] (
 
   private var _subModels: Option[Array[Array[Model[_]]]] = None
 
-  private[tuning] def setSubModels(subModels: Option[Array[Array[Model[_]]]])
-    : CrossValidatorModel = {
+  private[tuning] def setSubModels(
+      subModels: Option[Array[Array[Model[_]]]]): CrossValidatorModel = {
     _subModels = subModels
     this
   }
 
   // A Python-friendly auxiliary method
-  private[tuning] def setSubModels(subModels: JList[JList[Model[_]]])
-    : CrossValidatorModel = {
+  private[tuning] def setSubModels(subModels: JList[JList[Model[_]]]): CrossValidatorModel = {
     _subModels = if (subModels != null) {
       Some(subModels.asScala.toArray.map(_.asScala.toArray))
     } else {
@@ -312,16 +327,19 @@ class CrossValidatorModel private[ml] (
   }
 
   /**
-   * @return submodels represented in two dimension array. The index of outer array is the
-   *         fold index, and the index of inner array corresponds to the ordering of
-   *         estimatorParamMaps
-   * @throws IllegalArgumentException if subModels are not available. To retrieve subModels,
-   *         make sure to set collectSubModels to true before fitting.
+   * @return
+   *   submodels represented in two dimension array. The index of outer array is the fold index,
+   *   and the index of inner array corresponds to the ordering of estimatorParamMaps
+   * @throws IllegalArgumentException
+   *   if subModels are not available. To retrieve subModels, make sure to set collectSubModels to
+   *   true before fitting.
    */
   @Since("2.3.0")
   def subModels: Array[Array[Model[_]]] = {
-    require(_subModels.isDefined, "subModels not available, To retrieve subModels, make sure " +
-      "to set collectSubModels to true before fitting.")
+    require(
+      _subModels.isDefined,
+      "subModels not available, To retrieve subModels, make sure " +
+        "to set collectSubModels to true before fitting.")
     _subModels.get
   }
 
@@ -344,8 +362,7 @@ class CrossValidatorModel private[ml] (
     val copied = new CrossValidatorModel(
       uid,
       bestModel.copy(extra).asInstanceOf[Model[_]],
-      avgMetrics.clone()
-    ).setSubModels(CrossValidatorModel.copySubModels(_subModels))
+      avgMetrics.clone()).setSubModels(CrossValidatorModel.copySubModels(_subModels))
     copyValues(copied, extra).setParent(parent)
   }
 
@@ -363,8 +380,8 @@ class CrossValidatorModel private[ml] (
 @Since("1.6.0")
 object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
 
-  private[CrossValidatorModel] def copySubModels(subModels: Option[Array[Array[Model[_]]]])
-    : Option[Array[Array[Model[_]]]] = {
+  private[CrossValidatorModel] def copySubModels(
+      subModels: Option[Array[Array[Model[_]]]]): Option[Array[Array[Model[_]]]] = {
     subModels.map(_.map(_.map(_.copy(ParamMap.empty).asInstanceOf[Model[_]])))
   }
 
@@ -376,33 +393,34 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
 
   /**
    * Writer for CrossValidatorModel.
-   * @param instance CrossValidatorModel instance used to construct the writer
+   * @param instance
+   *   CrossValidatorModel instance used to construct the writer
    *
-   * CrossValidatorModelWriter supports an option "persistSubModels", with possible values
-   * "true" or "false". If you set the collectSubModels Param before fitting, then you can
-   * set "persistSubModels" to "true" in order to persist the subModels. By default,
-   * "persistSubModels" will be "true" when subModels are available and "false" otherwise.
-   * If subModels are not available, then setting "persistSubModels" to "true" will cause
-   * an exception.
+   * CrossValidatorModelWriter supports an option "persistSubModels", with possible values "true"
+   * or "false". If you set the collectSubModels Param before fitting, then you can set
+   * "persistSubModels" to "true" in order to persist the subModels. By default,
+   * "persistSubModels" will be "true" when subModels are available and "false" otherwise. If
+   * subModels are not available, then setting "persistSubModels" to "true" will cause an
+   * exception.
    */
   @Since("2.3.0")
-  final class CrossValidatorModelWriter private[tuning] (
-      instance: CrossValidatorModel) extends MLWriter {
+  final class CrossValidatorModelWriter private[tuning] (instance: CrossValidatorModel)
+      extends MLWriter {
 
     ValidatorParams.validateParams(instance)
 
     override protected def saveImpl(path: String): Unit = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "CrossValidatorModel does not support saving to local filesystem path."
-        )
+          "CrossValidatorModel does not support saving to local filesystem path.")
       }
-      val persistSubModelsParam = optionMap.getOrElse("persistsubmodels",
-        if (instance.hasSubModels) "true" else "false")
+      val persistSubModelsParam =
+        optionMap.getOrElse("persistsubmodels", if (instance.hasSubModels) "true" else "false")
 
-      require(Array("true", "false").contains(persistSubModelsParam.toLowerCase(Locale.ROOT)),
+      require(
+        Array("true", "false").contains(persistSubModelsParam.toLowerCase(Locale.ROOT)),
         s"persistSubModels option value ${persistSubModelsParam} is invalid, the possible " +
-        "values are \"true\" or \"false\"")
+          "values are \"true\" or \"false\"")
       val persistSubModels = persistSubModelsParam.toBoolean
 
       import org.json4s.JsonDSL._
@@ -412,16 +430,22 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
       val bestModelPath = new Path(path, "bestModel").toString
       instance.bestModel.asInstanceOf[MLWritable].write.session(sparkSession).save(bestModelPath)
       if (persistSubModels) {
-        require(instance.hasSubModels, "When persisting tuning models, you can only set " +
-          "persistSubModels to true if the tuning was done with collectSubModels set to true. " +
-          "To save the sub-models, try rerunning fitting with collectSubModels set to true.")
+        require(
+          instance.hasSubModels,
+          "When persisting tuning models, you can only set " +
+            "persistSubModels to true if the tuning was done with collectSubModels set to true. " +
+            "To save the sub-models, try rerunning fitting with collectSubModels set to true.")
         val subModelsPath = new Path(path, "subModels")
         for (splitIndex <- 0 until instance.getNumFolds) {
           val splitPath = new Path(subModelsPath, s"fold${splitIndex.toString}")
           for (paramIndex <- instance.getEstimatorParamMaps.indices) {
             val modelPath = new Path(splitPath, paramIndex.toString).toString
-            instance.subModels(splitIndex)(paramIndex).asInstanceOf[MLWritable]
-              .write.session(sparkSession).save(modelPath)
+            instance
+              .subModels(splitIndex)(paramIndex)
+              .asInstanceOf[MLWritable]
+              .write
+              .session(sparkSession)
+              .save(modelPath)
           }
         }
       }
@@ -436,8 +460,7 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
     override def load(path: String): CrossValidatorModel = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "CrossValidatorModel does not support loading from local filesystem path."
-        )
+          "CrossValidatorModel does not support loading from local filesystem path.")
       }
       implicit val format = DefaultFormats
 
@@ -445,15 +468,15 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
         ValidatorParams.loadImpl(path, sparkSession, className)
       val numFolds = (metadata.params \ "numFolds").extract[Int]
       val bestModelPath = new Path(path, "bestModel").toString
-      val bestModel = DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sparkSession)
+      val bestModel =
+        DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sparkSession)
       val avgMetrics = (metadata.metadata \ "avgMetrics").extract[Seq[Double]].toArray
       val persistSubModels = (metadata.metadata \ "persistSubModels")
         .extractOrElse[Boolean](false)
 
       val subModels: Option[Array[Array[Model[_]]]] = if (persistSubModels) {
         val subModelsPath = new Path(path, "subModels")
-        val _subModels = Array.fill(numFolds)(
-          Array.ofDim[Model[_]](estimatorParamMaps.length))
+        val _subModels = Array.fill(numFolds)(Array.ofDim[Model[_]](estimatorParamMaps.length))
         for (splitIndex <- 0 until numFolds) {
           val splitPath = new Path(subModelsPath, s"fold${splitIndex.toString}")
           for (paramIndex <- estimatorParamMaps.indices) {
@@ -467,7 +490,8 @@ object CrossValidatorModel extends MLReadable[CrossValidatorModel] {
 
       val model = new CrossValidatorModel(metadata.uid, bestModel, avgMetrics)
         .setSubModels(subModels)
-      model.set(model.estimator, estimator)
+      model
+        .set(model.estimator, estimator)
         .set(model.evaluator, evaluator)
         .set(model.estimatorParamMaps, estimatorParamMaps)
       metadata.getAndSetParams(model, skipParams = Option(List("estimatorParamMaps")))

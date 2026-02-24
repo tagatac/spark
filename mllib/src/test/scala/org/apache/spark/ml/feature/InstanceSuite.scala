@@ -62,11 +62,10 @@ class InstanceSuite extends SparkFunSuite {
     val block = InstanceBlock.fromInstances(instances)
     assert(block.size === 2)
     assert(block.numFeatures === 2)
-    block.instanceIterator.zipWithIndex.foreach {
-      case (instance, i) =>
-        assert(instance.label === instances(i).label)
-        assert(instance.weight === instances(i).weight)
-        assert(instance.features.toArray === instances(i).features.toArray)
+    block.instanceIterator.zipWithIndex.foreach { case (instance, i) =>
+      assert(instance.label === instances(i).label)
+      assert(instance.weight === instances(i).weight)
+      assert(instance.features.toArray === instances(i).features.toArray)
     }
     Seq(0, 1).foreach { i =>
       val nzIter = block.getNonZeroIter(i)
@@ -81,16 +80,16 @@ class InstanceSuite extends SparkFunSuite {
     val instances = Seq(instance1, instance2)
 
     val blocks = InstanceBlock
-      .blokifyWithMaxMemUsage(Iterator.apply(instance1, instance2), 128).toArray
+      .blokifyWithMaxMemUsage(Iterator.apply(instance1, instance2), 128)
+      .toArray
     require(blocks.length == 1)
     val block = blocks.head
     assert(block.size === 2)
     assert(block.numFeatures === 2)
-    block.instanceIterator.zipWithIndex.foreach {
-      case (instance, i) =>
-        assert(instance.label === instances(i).label)
-        assert(instance.weight === instances(i).weight)
-        assert(instance.features.toArray === instances(i).features.toArray)
+    block.instanceIterator.zipWithIndex.foreach { case (instance, i) =>
+      assert(instance.label === instances(i).label)
+      assert(instance.weight === instances(i).weight)
+      assert(instance.features.toArray === instances(i).features.toArray)
     }
     Seq(0, 1).foreach { i =>
       val nzIter = block.getNonZeroIter(i)
@@ -109,8 +108,8 @@ class InstanceSuite extends SparkFunSuite {
     }
 
     // nnz = 10
-    val sparseInstance = Instance(-2.0, 3.0,
-      Vectors.sparse(1000, Array.range(0, 1000, 100), createArray(10, 0.1)))
+    val sparseInstance =
+      Instance(-2.0, 3.0, Vectors.sparse(1000, Array.range(0, 1000, 100), createArray(10, 0.1)))
 
     // normally, memory usage of a block does not exceed maxMemUsage too much
     val maxMemUsage = 1 << 18
@@ -120,7 +119,8 @@ class InstanceSuite extends SparkFunSuite {
       Iterator.fill(10)(sparseInstance) ++
       Iterator.fill(100)(denseInstance) ++
       Iterator.fill(100)(sparseInstance)
-    InstanceBlock.blokifyWithMaxMemUsage(mixedIter, maxMemUsage)
+    InstanceBlock
+      .blokifyWithMaxMemUsage(mixedIter, maxMemUsage)
       .foreach { block =>
         val doubleBytes = java.lang.Double.BYTES
         val arrayHeader = 12L

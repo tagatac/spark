@@ -27,34 +27,34 @@ import org.apache.spark.annotation.{DeveloperApi, Private}
 import org.apache.spark.util.NextIterator
 
 /**
- * :: DeveloperApi ::
- * A serializer. Because some serialization libraries are not thread safe, this class is used to
- * create [[org.apache.spark.serializer.SerializerInstance]] objects that do the actual
- * serialization and are guaranteed to only be called from one thread at a time.
+ * :: DeveloperApi :: A serializer. Because some serialization libraries are not thread safe, this
+ * class is used to create [[org.apache.spark.serializer.SerializerInstance]] objects that do the
+ * actual serialization and are guaranteed to only be called from one thread at a time.
  *
  * Implementations of this trait should implement:
  *
- * 1. a zero-arg constructor or a constructor that accepts a [[org.apache.spark.SparkConf]]
- * as parameter. If both constructors are defined, the latter takes precedence.
+ *   1. a zero-arg constructor or a constructor that accepts a [[org.apache.spark.SparkConf]] as
+ *      parameter. If both constructors are defined, the latter takes precedence.
+ *   2. Java serialization interface.
  *
- * 2. Java serialization interface.
- *
- * @note Serializers are not required to be wire-compatible across different versions of Spark.
- * They are intended to be used to serialize/de-serialize data within a single Spark application.
+ * @note
+ *   Serializers are not required to be wire-compatible across different versions of Spark. They
+ *   are intended to be used to serialize/de-serialize data within a single Spark application.
  */
 @DeveloperApi
 abstract class Serializer {
 
   /**
-   * Default ClassLoader to use in deserialization. Implementations of [[Serializer]] should
-   * make sure it is using this when set.
+   * Default ClassLoader to use in deserialization. Implementations of [[Serializer]] should make
+   * sure it is using this when set.
    */
   @volatile protected var defaultClassLoader: Option[ClassLoader] = None
 
   /**
    * Sets a class loader for the serializer to use in deserialization.
    *
-   * @return this Serializer object
+   * @return
+   *   this Serializer object
    */
   def setDefaultClassLoader(classLoader: ClassLoader): Serializer = {
     defaultClassLoader = Some(classLoader)
@@ -65,12 +65,11 @@ abstract class Serializer {
   def newInstance(): SerializerInstance
 
   /**
-   * :: Private ::
-   * Returns true if this serializer supports relocation of its serialized objects and false
-   * otherwise. This should return true if and only if reordering the bytes of serialized objects
-   * in serialization stream output is equivalent to having re-ordered those elements prior to
-   * serializing them. More specifically, the following should hold if a serializer supports
-   * relocation:
+   * :: Private :: Returns true if this serializer supports relocation of its serialized objects
+   * and false otherwise. This should return true if and only if reordering the bytes of
+   * serialized objects in serialization stream output is equivalent to having re-ordered those
+   * elements prior to serializing them. More specifically, the following should hold if a
+   * serializer supports relocation:
    *
    * {{{
    * serOut.open()
@@ -98,10 +97,8 @@ abstract class Serializer {
   private[spark] def supportsRelocationOfSerializedObjects: Boolean = false
 }
 
-
 /**
- * :: DeveloperApi ::
- * An instance of a serializer, for use by one thread at a time.
+ * :: DeveloperApi :: An instance of a serializer, for use by one thread at a time.
  *
  * It is legal to create multiple serialization / deserialization streams from the same
  * SerializerInstance as long as those streams are all used within the same thread.
@@ -121,15 +118,17 @@ abstract class SerializerInstance {
 }
 
 /**
- * :: DeveloperApi ::
- * A stream for writing serialized objects.
+ * :: DeveloperApi :: A stream for writing serialized objects.
  */
 @DeveloperApi
 abstract class SerializationStream extends Closeable {
+
   /** The most general-purpose method to write an object. */
   def writeObject[T: ClassTag](t: T): SerializationStream
+
   /** Writes the object representing the key of a key-value pair. */
   def writeKey[T: ClassTag](key: T): SerializationStream = writeObject(key)
+
   /** Writes the object representing the value of a key-value pair. */
   def writeValue[T: ClassTag](value: T): SerializationStream = writeObject(value)
   def flush(): Unit
@@ -143,17 +142,18 @@ abstract class SerializationStream extends Closeable {
   }
 }
 
-
 /**
- * :: DeveloperApi ::
- * A stream for reading serialized objects.
+ * :: DeveloperApi :: A stream for reading serialized objects.
  */
 @DeveloperApi
 abstract class DeserializationStream extends Closeable {
+
   /** The most general-purpose method to read an object. */
   def readObject[T: ClassTag](): T
+
   /** Reads the object representing the key of a key-value pair. */
   def readKey[T: ClassTag](): T = readObject[T]()
+
   /** Reads the object representing the value of a key-value pair. */
   def readValue[T: ClassTag](): T = readObject[T]()
   override def close(): Unit

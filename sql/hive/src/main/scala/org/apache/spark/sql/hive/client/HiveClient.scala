@@ -26,7 +26,6 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.connector.catalog.CatalogManager
 import org.apache.spark.sql.types.StructType
 
-
 private[hive] trait RawHiveTable {
   def rawTable: Object
   def toCatalogTable: CatalogTable
@@ -36,9 +35,9 @@ private[hive] trait RawHiveTable {
 }
 
 /**
- * An externally visible interface to the Hive client.  This interface is shared across both the
- * internal and external classloaders for a given version of Hive and thus must expose only
- * shared classes.
+ * An externally visible interface to the Hive client. This interface is shared across both the
+ * internal and external classloaders for a given version of Hive and thus must expose only shared
+ * classes.
  */
 private[hive] trait HiveClient {
 
@@ -50,12 +49,13 @@ private[hive] trait HiveClient {
 
   /**
    * Return the associated Hive SessionState of this [[HiveClientImpl]]
-   * @return `Any` not SessionState to avoid linkage error
+   * @return
+   *   `Any` not SessionState to avoid linkage error
    */
   def getState: Any
 
   /**
-   * Runs a HiveQL command using Hive, returning the results as a list of strings.  Each row will
+   * Runs a HiveQL command using Hive, returning the results as a list of strings. Each row will
    * result in one string. This should be used only in testing environment.
    */
   def runSqlHive(sql: String): Seq[String]
@@ -71,13 +71,10 @@ private[hive] trait HiveClient {
   def listTables(dbName: String, pattern: String): Seq[String]
 
   /**
-   * Returns the names of tables with specific tableType in the given database that matches
-   * the given pattern.
+   * Returns the names of tables with specific tableType in the given database that matches the
+   * given pattern.
    */
-  def listTablesByType(
-      dbName: String,
-      pattern: String,
-      tableType: CatalogTableType): Seq[String]
+  def listTablesByType(dbName: String, pattern: String, tableType: CatalogTableType): Seq[String]
 
   /** Sets the name of current database. */
   def setCurrentDatabase(databaseName: String): Unit
@@ -95,8 +92,8 @@ private[hive] trait HiveClient {
   def tableExists(dbName: String, tableName: String): Boolean
 
   /**
-   * Returns the specified table, or throws [[NoSuchNamespaceException]] if the database
-   * does not exist, or [[NoSuchTableException]] if the table does not exist.
+   * Returns the specified table, or throws [[NoSuchNamespaceException]] if the database does not
+   * exist, or [[NoSuchTableException]] if the table does not exist.
    */
   final def getTable(dbName: String, tableName: String): CatalogTable = {
     getTableOption(dbName, tableName).getOrElse {
@@ -111,8 +108,8 @@ private[hive] trait HiveClient {
   def getTableOption(dbName: String, tableName: String): Option[CatalogTable]
 
   /**
-   * Returns the specified catalog and Hive table, or throws [[NoSuchNamespaceException]] if
-   * the database does not exist, or [[NoSuchTableException]] if the table does not exist.
+   * Returns the specified catalog and Hive table, or throws [[NoSuchNamespaceException]] if the
+   * database does not exist, or [[NoSuchTableException]] if the table does not exist.
    */
   final def getRawHiveTable(dbName: String, tableName: String): RawHiveTable = {
     getRawHiveTableOption(dbName, tableName).getOrElse {
@@ -123,7 +120,9 @@ private[hive] trait HiveClient {
     }
   }
 
-  /** Returns the metadata for the specified catalog and Hive table or None if it doesn't exist. */
+  /**
+   * Returns the metadata for the specified catalog and Hive table or None if it doesn't exist.
+   */
   def getRawHiveTableOption(dbName: String, tableName: String): Option[RawHiveTable]
 
   /** Returns metadata of existing permanent tables/views for given names. */
@@ -133,7 +132,11 @@ private[hive] trait HiveClient {
   def createTable(table: CatalogTable, ignoreIfExists: Boolean): Unit
 
   /** Drop the specified table. */
-  def dropTable(dbName: String, tableName: String, ignoreIfNotExists: Boolean, purge: Boolean): Unit
+  def dropTable(
+      dbName: String,
+      tableName: String,
+      ignoreIfNotExists: Boolean,
+      purge: Boolean): Unit
 
   /** Alter a table whose name matches the one specified in `table`, assuming it exists. */
   final def alterTable(table: CatalogTable): Unit = {
@@ -141,8 +144,8 @@ private[hive] trait HiveClient {
   }
 
   /**
-   * Updates the given table with new metadata, optionally renaming the table or
-   * moving across different database.
+   * Updates the given table with new metadata, optionally renaming the table or moving across
+   * different database.
    */
   def alterTable(dbName: String, tableName: String, table: CatalogTable): Unit
 
@@ -156,8 +159,11 @@ private[hive] trait HiveClient {
    * TODO(cloud-fan): it's a little hacky to introduce the schema table properties here in
    * `HiveClient`, but we don't have a cleaner solution now.
    */
-  def alterTableDataSchema(dbName: String, tableName: String, newDataSchema: StructType,
-    schemaProps: Map[String, String]): Unit
+  def alterTableDataSchema(
+      dbName: String,
+      tableName: String,
+      newDataSchema: StructType,
+      schemaProps: Map[String, String]): Unit
 
   /** Creates a new database with the given name. */
   def createDatabase(database: CatalogDatabase, ignoreIfExists: Boolean): Unit
@@ -165,9 +171,12 @@ private[hive] trait HiveClient {
   /**
    * Drop the specified database, if it exists.
    *
-   * @param name database to drop
-   * @param ignoreIfNotExists if true, do not throw error if the database does not exist
-   * @param cascade whether to remove all associated objects such as tables and functions
+   * @param name
+   *   database to drop
+   * @param ignoreIfNotExists
+   *   if true, do not throw error if the database does not exist
+   * @param cascade
+   *   whether to remove all associated objects such as tables and functions
    */
   def dropDatabase(name: String, ignoreIfNotExists: Boolean, cascade: Boolean): Unit
 
@@ -208,10 +217,7 @@ private[hive] trait HiveClient {
    * Alter one or more table partitions whose specs match the ones specified in `newParts`,
    * assuming the partitions exist.
    */
-  def alterPartitions(
-      db: String,
-      table: String,
-      newParts: Seq[CatalogTablePartition]): Unit
+  def alterPartitions(db: String, table: String, newParts: Seq[CatalogTablePartition]): Unit
 
   /** Returns the specified partition, or throws `NoSuchPartitionException`. */
   final def getPartition(
@@ -224,8 +230,8 @@ private[hive] trait HiveClient {
   }
 
   /**
-   * Returns the partition names for the given table that match the supplied partition spec.
-   * If no partition spec is specified, all partitions are returned.
+   * Returns the partition names for the given table that match the supplied partition spec. If no
+   * partition spec is specified, all partitions are returned.
    *
    * The returned sequence is sorted as strings.
    */
@@ -247,8 +253,8 @@ private[hive] trait HiveClient {
       spec: TablePartitionSpec): Option[CatalogTablePartition]
 
   /**
-   * Returns the partitions for the given table that match the supplied partition spec.
-   * If no partition spec is specified, all partitions are returned.
+   * Returns the partitions for the given table that match the supplied partition spec. If no
+   * partition spec is specified, all partitions are returned.
    */
   def getPartitions(
       db: String,

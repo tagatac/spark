@@ -29,21 +29,20 @@ import org.apache.spark.streaming.scheduler.RateController
 import org.apache.spark.util.Utils
 
 /**
- * This is the abstract base class for all input streams. This class provides methods
- * start() and stop() which are called by Spark Streaming system to start and stop
- * receiving data, respectively.
- * Input streams that can generate RDDs from new data by running a service/thread only on
- * the driver node (that is, without running a receiver on worker nodes), can be
- * implemented by directly inheriting this InputDStream. For example,
- * FileInputDStream, a subclass of InputDStream, monitors an HDFS directory from the driver for
- * new files and generates RDDs with the new files. For implementing input streams
- * that requires running a receiver on the worker nodes, use
- * [[org.apache.spark.streaming.dstream.ReceiverInputDStream]] as the parent class.
+ * This is the abstract base class for all input streams. This class provides methods start() and
+ * stop() which are called by Spark Streaming system to start and stop receiving data,
+ * respectively. Input streams that can generate RDDs from new data by running a service/thread
+ * only on the driver node (that is, without running a receiver on worker nodes), can be
+ * implemented by directly inheriting this InputDStream. For example, FileInputDStream, a subclass
+ * of InputDStream, monitors an HDFS directory from the driver for new files and generates RDDs
+ * with the new files. For implementing input streams that requires running a receiver on the
+ * worker nodes, use [[org.apache.spark.streaming.dstream.ReceiverInputDStream]] as the parent
+ * class.
  *
- * @param _ssc Streaming context that will execute this input stream
+ * @param _ssc
+ *   Streaming context that will execute this input stream
  */
-abstract class InputDStream[T: ClassTag](_ssc: StreamingContext)
-  extends DStream[T](_ssc) {
+abstract class InputDStream[T: ClassTag](_ssc: StreamingContext) extends DStream[T](_ssc) {
 
   private[streaming] var lastValidTime: Time = null
 
@@ -57,7 +56,8 @@ abstract class InputDStream[T: ClassTag](_ssc: StreamingContext)
 
   /** A human-readable name of this InputDStream */
   private[streaming] def name: String = {
-    val newName = Utils.getFormattedClassName(this)
+    val newName = Utils
+      .getFormattedClassName(this)
       .replaceAll("InputDStream", "Stream")
       .split("(?=[A-Z])")
       .filter(_.nonEmpty)
@@ -70,8 +70,8 @@ abstract class InputDStream[T: ClassTag](_ssc: StreamingContext)
   /**
    * The base scope associated with the operation that created this DStream.
    *
-   * For InputDStreams, we use the name of this DStream as the scope name.
-   * If an outer scope is given, we assume that it includes an alternative name for this stream.
+   * For InputDStreams, we use the name of this DStream as the scope name. If an outer scope is
+   * given, we assume that it includes an alternative name for this stream.
    */
   protected[streaming] override val baseScope: Option[String] = {
     val scopeName = Option(ssc.sc.getLocalProperty(SparkContext.RDD_SCOPE_KEY))
@@ -81,10 +81,9 @@ abstract class InputDStream[T: ClassTag](_ssc: StreamingContext)
   }
 
   /**
-   * Checks whether the 'time' is valid wrt slideDuration for generating RDD.
-   * Additionally it also ensures valid times are in strictly increasing order.
-   * This ensures that InputDStream.compute() is called strictly on increasing
-   * times.
+   * Checks whether the 'time' is valid wrt slideDuration for generating RDD. Additionally it also
+   * ensures valid times are in strictly increasing order. This ensures that
+   * InputDStream.compute() is called strictly on increasing times.
    */
   override private[streaming] def isTimeValid(time: Time): Boolean = {
     if (!super.isTimeValid(time)) {
@@ -92,8 +91,9 @@ abstract class InputDStream[T: ClassTag](_ssc: StreamingContext)
     } else {
       // Time is valid, but check it is more than lastValidTime
       if (lastValidTime != null && time < lastValidTime) {
-        logWarning(log"isTimeValid called with ${MDC(TIME, time)} whereas the last valid time " +
-          log"is ${MDC(LAST_VALID_TIME, lastValidTime)}")
+        logWarning(
+          log"isTimeValid called with ${MDC(TIME, time)} whereas the last valid time " +
+            log"is ${MDC(LAST_VALID_TIME, lastValidTime)}")
       }
       lastValidTime = time
       true

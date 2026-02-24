@@ -33,7 +33,8 @@ import org.apache.spark.launcher.SparkLauncher
  * executors can also find the app code.
  */
 private[spark] class DriverCommandFeatureStep(conf: KubernetesDriverConf)
-  extends KubernetesFeatureConfigStep with Logging {
+    extends KubernetesFeatureConfigStep
+    with Logging {
 
   override def configurePod(pod: SparkPod): SparkPod = {
     conf.mainAppResource match {
@@ -79,10 +80,12 @@ private[spark] class DriverCommandFeatureStep(conf: KubernetesDriverConf)
     val pythonEnvs = {
       KubernetesUtils.buildEnvVars(
         Seq(
-          ENV_PYSPARK_PYTHON -> conf.get(PYSPARK_PYTHON)
+          ENV_PYSPARK_PYTHON -> conf
+            .get(PYSPARK_PYTHON)
             .orElse(environmentVariables.get(ENV_PYSPARK_PYTHON))
             .orNull,
-          ENV_PYSPARK_DRIVER_PYTHON -> conf.get(PYSPARK_DRIVER_PYTHON)
+          ENV_PYSPARK_DRIVER_PYTHON -> conf
+            .get(PYSPARK_DRIVER_PYTHON)
             .orElse(conf.get(PYSPARK_PYTHON))
             .orElse(environmentVariables.get(ENV_PYSPARK_DRIVER_PYTHON))
             .orElse(environmentVariables.get(ENV_PYSPARK_PYTHON))

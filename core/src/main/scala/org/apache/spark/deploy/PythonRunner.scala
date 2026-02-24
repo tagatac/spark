@@ -35,8 +35,8 @@ import org.apache.spark.internal.config._
 import org.apache.spark.util.{RedirectThread, Utils}
 
 /**
- * A main class used to launch Python applications. It executes python as a
- * subprocess and then has it connect back to the JVM to access system properties, etc.
+ * A main class used to launch Python applications. It executes python as a subprocess and then
+ * has it connect back to the JVM to access system properties, etc.
  */
 object PythonRunner {
   def main(args: Array[String]): Unit = {
@@ -44,7 +44,8 @@ object PythonRunner {
     val pyFiles = args(1)
     val otherArgs = args.slice(2, args.length)
     val sparkConf = new SparkConf()
-    val pythonExec = sparkConf.get(PYSPARK_DRIVER_PYTHON)
+    val pythonExec = sparkConf
+      .get(PYSPARK_DRIVER_PYTHON)
       .orElse(sparkConf.get(PYSPARK_PYTHON))
       .orElse(sys.env.get("PYSPARK_DRIVER_PYTHON"))
       .orElse(sys.env.get("PYSPARK_PYTHON"))
@@ -110,7 +111,7 @@ object PythonRunner {
     sys.env.get("PYTHONHASHSEED").foreach(env.put("PYTHONHASHSEED", _))
     // if OMP_NUM_THREADS is not explicitly set, override it with the number of cores
     if (sparkConf.getOption("spark.yarn.appMasterEnv.OMP_NUM_THREADS").isEmpty &&
-        sparkConf.getOption("spark.kubernetes.driverEnv.OMP_NUM_THREADS").isEmpty) {
+      sparkConf.getOption("spark.kubernetes.driverEnv.OMP_NUM_THREADS").isEmpty) {
       // SPARK-28843: limit the OpenMP thread pool to the number of cores assigned to the driver
       // this avoids high memory consumption with pandas/numpy because of a large OpenMP thread pool
       // see https://github.com/numpy/numpy/issues/10455
@@ -135,13 +136,14 @@ object PythonRunner {
    * Format the python file path so that it can be added to the PYTHONPATH correctly.
    *
    * Python does not understand URI schemes in paths. Before adding python files to the
-   * PYTHONPATH, we need to extract the path from the URI. This is safe to do because we
-   * currently only support local python files.
+   * PYTHONPATH, we need to extract the path from the URI. This is safe to do because we currently
+   * only support local python files.
    */
   def formatPath(path: String, testWindows: Boolean = false): String = {
     if (Utils.nonLocalPaths(path, testWindows).nonEmpty) {
-      throw new IllegalArgumentException("Launching Python applications through " +
-        s"spark-submit is currently only supported for local files: $path")
+      throw new IllegalArgumentException(
+        "Launching Python applications through " +
+          s"spark-submit is currently only supported for local files: $path")
     }
     // get path when scheme is file.
     val uri = Try(new URI(path)).getOrElse(new File(path).toURI)
@@ -165,20 +167,21 @@ object PythonRunner {
   }
 
   /**
-   * Format each python file path in the comma-delimited list of paths, so it can be
-   * added to the PYTHONPATH correctly.
+   * Format each python file path in the comma-delimited list of paths, so it can be added to the
+   * PYTHONPATH correctly.
    */
   def formatPaths(paths: String, testWindows: Boolean = false): Array[String] = {
-    Option(paths).getOrElse("")
+    Option(paths)
+      .getOrElse("")
       .split(",")
       .filter(_.nonEmpty)
       .map { p => formatPath(p, testWindows) }
   }
 
   /**
-   * Resolves the ".py" files. ".py" file should not be added as is because PYTHONPATH does
-   * not expect a file. This method creates a temporary directory and puts the ".py" files
-   * if exist in the given paths.
+   * Resolves the ".py" files. ".py" file should not be added as is because PYTHONPATH does not
+   * expect a file. This method creates a temporary directory and puts the ".py" files if exist in
+   * the given paths.
    */
   private def resolvePyFiles(pyFiles: Array[String]): Array[String] = {
     lazy val dest = Utils.createTempDir(namePrefix = "localPyFiles")

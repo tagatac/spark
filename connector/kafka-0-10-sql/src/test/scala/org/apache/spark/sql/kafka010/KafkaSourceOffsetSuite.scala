@@ -27,9 +27,7 @@ import org.apache.spark.util.Utils
 
 class KafkaSourceOffsetSuite extends OffsetSuite with SharedSparkSession {
 
-  compare(
-    one = KafkaSourceOffset(("t", 0, 1L)),
-    two = KafkaSourceOffset(("t", 0, 2L)))
+  compare(one = KafkaSourceOffset(("t", 0, 1L)), two = KafkaSourceOffset(("t", 0, 2L)))
 
   compare(
     one = KafkaSourceOffset(("t", 0, 1L), ("t", 1, 0L)),
@@ -43,19 +41,19 @@ class KafkaSourceOffsetSuite extends OffsetSuite with SharedSparkSession {
     one = KafkaSourceOffset(("t", 0, 1L)),
     two = KafkaSourceOffset(("t", 0, 2L), ("t", 1, 1L)))
 
-
   val kso1 = KafkaSourceOffset(("t", 0, 1L))
   val kso2 = KafkaSourceOffset(("t", 0, 2L), ("t", 1, 3L))
   val kso3 = KafkaSourceOffset(("t", 0, 2L), ("t", 1, 3L), ("t", 1, 4L))
 
-  compare(KafkaSourceOffset(SerializedOffset(kso1.json)),
+  compare(
+    KafkaSourceOffset(SerializedOffset(kso1.json)),
     KafkaSourceOffset(SerializedOffset(kso2.json)))
 
   test("basic serialization - deserialization") {
-    assert(KafkaSourceOffset.getPartitionOffsets(kso1) ==
-      KafkaSourceOffset.getPartitionOffsets(SerializedOffset(kso1.json)))
+    assert(
+      KafkaSourceOffset.getPartitionOffsets(kso1) ==
+        KafkaSourceOffset.getPartitionOffsets(SerializedOffset(kso1.json)))
   }
-
 
   test("OffsetSeqLog serialization - deserialization") {
     withTempDir { temp =>
@@ -65,11 +63,11 @@ class KafkaSourceOffsetSuite extends OffsetSuite with SharedSparkSession {
       val batch0 = OffsetSeq.fill(kso1)
       val batch1 = OffsetSeq.fill(kso2, kso3)
 
-      val batch0Serialized = OffsetSeq.fill(batch0.offsets.flatMap(_.map(o =>
-        SerializedOffset(o.json))): _*)
+      val batch0Serialized =
+        OffsetSeq.fill(batch0.offsets.flatMap(_.map(o => SerializedOffset(o.json))): _*)
 
-      val batch1Serialized = OffsetSeq.fill(batch1.offsets.flatMap(_.map(o =>
-        SerializedOffset(o.json))): _*)
+      val batch1Serialized =
+        OffsetSeq.fill(batch1.offsets.flatMap(_.map(o => SerializedOffset(o.json))): _*)
 
       assert(metadataLog.add(0, batch0))
       assert(metadataLog.getLatest() === Some(0 -> batch0Serialized))
@@ -79,23 +77,26 @@ class KafkaSourceOffsetSuite extends OffsetSuite with SharedSparkSession {
       assert(metadataLog.get(0) === Some(batch0Serialized))
       assert(metadataLog.get(1) === Some(batch1Serialized))
       assert(metadataLog.getLatest() === Some(1 -> batch1Serialized))
-      assert(metadataLog.get(None, Some(1)) ===
-        Array(0 -> batch0Serialized, 1 -> batch1Serialized))
+      assert(
+        metadataLog.get(None, Some(1)) ===
+          Array(0 -> batch0Serialized, 1 -> batch1Serialized))
 
       // Adding the same batch does nothing
       metadataLog.add(1, OffsetSeq.fill(LongOffset(3)))
       assert(metadataLog.get(0) === Some(batch0Serialized))
       assert(metadataLog.get(1) === Some(batch1Serialized))
       assert(metadataLog.getLatest() === Some(1 -> batch1Serialized))
-      assert(metadataLog.get(None, Some(1)) ===
-        Array(0 -> batch0Serialized, 1 -> batch1Serialized))
+      assert(
+        metadataLog.get(None, Some(1)) ===
+          Array(0 -> batch0Serialized, 1 -> batch1Serialized))
     }
   }
 
   test("read Spark 2.1.0 offset format") {
     val offset = readFromResource("kafka-source-offset-version-2.1.0.txt")
-    assert(KafkaSourceOffset(offset) ===
-      KafkaSourceOffset(("topic1", 0, 456L), ("topic1", 1, 789L), ("topic2", 0, 0L)))
+    assert(
+      KafkaSourceOffset(offset) ===
+        KafkaSourceOffset(("topic1", 0, 456L), ("topic1", 1, 789L), ("topic2", 0, 0L)))
   }
 
   private def readFromResource(file: String): SerializedOffset = {

@@ -69,12 +69,10 @@ private[spark] class SparkAsyncProfiler(conf: SparkConf, executorId: String) ext
     Utils.createTempDir(Utils.getLocalDir(conf), "asyncProfiler").toPath
 
   val profiler: Option[AsyncProfiler] = {
-    Option(
-      if (AsyncProfilerLoader.isSupported) {
-        AsyncProfilerLoader.setExtractionDirectory(extractionDir)
-        AsyncProfilerLoader.load()
-      } else null
-    )
+    Option(if (AsyncProfilerLoader.isSupported) {
+      AsyncProfilerLoader.setExtractionDirectory(extractionDir)
+      AsyncProfilerLoader.load()
+    } else null)
   }
 
   def start(): Unit = {
@@ -116,8 +114,8 @@ private[spark] class SparkAsyncProfiler(conf: SparkConf, executorId: String) ext
   private def startWriting(): Unit = {
     profilerDfsDirOpt.foreach { _ =>
       try {
-        inputStream = new BufferedInputStream(
-          new FileInputStream(s"$profilerLocalDir/$profileFile"))
+        inputStream =
+          new BufferedInputStream(new FileInputStream(s"$profilerLocalDir/$profileFile"))
         threadpool = ThreadUtils.newDaemonSingleThreadScheduledExecutor("profilerOutputThread")
         threadpool.scheduleWithFixedDelay(
           new Runnable() {
@@ -188,10 +186,13 @@ private[spark] class SparkAsyncProfiler(conf: SparkConf, executorId: String) ext
         remaining -= read
       }
     } catch {
-      case e: IOException => logError("Exception occurred while writing some profiler output: ", e)
+      case e: IOException =>
+        logError("Exception occurred while writing some profiler output: ", e)
       case e @ (_: IllegalArgumentException | _: IllegalStateException) =>
-        logError("Some profiler output not written. " +
-          "Exception occurred in profiler native code: ", e)
+        logError(
+          "Some profiler output not written. " +
+            "Exception occurred in profiler native code: ",
+          e)
       case e: Exception => logError("Some profiler output not written. Unexpected exception: ", e)
     }
   }
@@ -209,8 +210,10 @@ private[spark] class SparkAsyncProfiler(conf: SparkConf, executorId: String) ext
       } catch {
         case _: InterruptedException => Thread.currentThread().interrupt()
         case e: IOException =>
-          logWarning("Some profiling output not written. " +
-            "Exception occurred while completing profiler output: ", e)
+          logWarning(
+            "Some profiling output not written. " +
+              "Exception occurred while completing profiler output: ",
+            e)
       }
       writing = false
     }

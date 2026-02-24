@@ -28,16 +28,15 @@ import org.apache.spark.sql.SQLQueryTestHelper
 import org.apache.spark.sql.jdbc.DockerJDBCIntegrationSuite
 
 /**
- * This suite builds off of that to allow us to run other DBMS against the SQL test golden files (on
- * which SQLQueryTestSuite generates and tests against) to perform cross-checking for correctness.
- * Note that this is not currently run on all SQL input files by default because there is
- * incompatibility between SQL dialects for Spark and the other DBMS.
+ * This suite builds off of that to allow us to run other DBMS against the SQL test golden files
+ * (on which SQLQueryTestSuite generates and tests against) to perform cross-checking for
+ * correctness. Note that this is not currently run on all SQL input files by default because
+ * there is incompatibility between SQL dialects for Spark and the other DBMS.
  *
- * This suite adds a new comment argument, --ONLY_IF. This comment is used to indicate the DBMS for
- * which is eligible for the SQL file. These strings are defined in the companion object. For
+ * This suite adds a new comment argument, --ONLY_IF. This comment is used to indicate the DBMS
+ * for which is eligible for the SQL file. These strings are defined in the companion object. For
  * example, if you have a SQL file named `describe.sql`, and you want to indicate that Postgres is
- * incompatible, add the following comment into the input file:
- * --ONLY_IF spark
+ * incompatible, add the following comment into the input file: --ONLY_IF spark
  */
 trait CrossDbmsQueryTestSuite extends DockerJDBCIntegrationSuite with SQLQueryTestHelper {
 
@@ -54,12 +53,14 @@ trait CrossDbmsQueryTestSuite extends DockerJDBCIntegrationSuite with SQLQueryTe
   protected val goldenFilePath = new File(baseResourcePath, "results").getAbsolutePath
 
   protected def listTestCases: Seq[TestCase] = {
-    listFilesRecursively(new File(customInputFilePath)).flatMap { file =>
-      val resultFile = file.getAbsolutePath.replace(inputFilePath, goldenFilePath) + ".out"
-      val absPath = file.getAbsolutePath
-      val testCaseName = absPath.stripPrefix(customInputFilePath).stripPrefix(File.separator)
-      RegularTestCase(testCaseName, absPath, resultFile) :: Nil
-    }.sortBy(_.name)
+    listFilesRecursively(new File(customInputFilePath))
+      .flatMap { file =>
+        val resultFile = file.getAbsolutePath.replace(inputFilePath, goldenFilePath) + ".out"
+        val absPath = file.getAbsolutePath
+        val testCaseName = absPath.stripPrefix(customInputFilePath).stripPrefix(File.separator)
+        RegularTestCase(testCaseName, absPath, resultFile) :: Nil
+      }
+      .sortBy(_.name)
   }
 
   def createScalaTestCase(testCase: TestCase): Unit = {
@@ -81,19 +82,22 @@ trait CrossDbmsQueryTestSuite extends DockerJDBCIntegrationSuite with SQLQueryTe
     val (comments, code) = splitCommentsAndCodes(input)
     val queries = getQueries(code, comments, listTestCases)
 
-    val dbmsConfig = comments.filter(_.startsWith(CrossDbmsQueryTestSuite.ONLY_IF_ARG))
+    val dbmsConfig = comments
+      .filter(_.startsWith(CrossDbmsQueryTestSuite.ONLY_IF_ARG))
       .map(_.substring(CrossDbmsQueryTestSuite.ONLY_IF_ARG.length))
     // If `--ONLY_IF` is found, check if the DBMS being used is allowed.
     if (dbmsConfig.nonEmpty && !dbmsConfig.contains(DATABASE_NAME)) {
-      log.info(s"This test case (${testCase.name}) is ignored because it indicates that it is " +
-        s"not eligible with $DATABASE_NAME.")
+      log.info(
+        s"This test case (${testCase.name}) is ignored because it indicates that it is " +
+          s"not eligible with $DATABASE_NAME.")
     } else {
       runQueriesAndCheckAgainstGoldenFile(queries, testCase)
     }
   }
 
   protected def runQueriesAndCheckAgainstGoldenFile(
-      queries: Seq[String], testCase: TestCase): Unit = {
+      queries: Seq[String],
+      testCase: TestCase): Unit = {
     // The local Spark session is needed because we use Spark analyzed plan to check if the query
     // result is already semantically sorted, below.
     val localSparkSession = spark.newSession()
@@ -151,7 +155,8 @@ trait CrossDbmsQueryTestSuite extends DockerJDBCIntegrationSuite with SQLQueryTe
           ExecutionOutput(
             segments(curSegment + 1).trim, // SQL
             None, // Schema
-            normalizeTestResults(segments(curSegment + 3))) // Output
+            normalizeTestResults(segments(curSegment + 3))
+          ) // Output
         // Assume that the golden file always has all 3 segments.
         curSegment += 3
         result
@@ -167,8 +172,10 @@ trait CrossDbmsQueryTestSuite extends DockerJDBCIntegrationSuite with SQLQueryTe
       assertResult(expected.sql, s"SQL query did not match for query #$i\n${expected.sql}") {
         output.sql
       }
-      assertResult(expected.output, s"Result did not match" +
-        s" for query #$i\n${expected.sql}") {
+      assertResult(
+        expected.output,
+        s"Result did not match" +
+          s" for query #$i\n${expected.sql}") {
         output.output
       }
     }

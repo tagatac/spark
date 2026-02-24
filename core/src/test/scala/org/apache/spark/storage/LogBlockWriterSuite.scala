@@ -52,14 +52,15 @@ class LogBlockWriterSuite extends SparkFunSuite {
       spy(new SerializerManager(new JavaSerializer(sparkConf), sparkConf, None))
     doAnswer(_ => serializerManager).when(blockManager).serializerManager
     doThrow(new RuntimeException("Initialization failed"))
-      .when(serializerManager).blockSerializationStream(any, any)(any)
+      .when(serializerManager)
+      .blockSerializationStream(any, any)(any)
 
     intercept[RuntimeException] {
-      new LogBlockWriter(
-        blockManager, LogBlockType.TEST, sparkConf)
+      new LogBlockWriter(blockManager, LogBlockType.TEST, sparkConf)
     }
     verify(serializerManager, times(1)).blockSerializationStream(any, any)(any)
-    val leafFiles = Files.walk(tempDir.toPath)
+    val leafFiles = Files
+      .walk(tempDir.toPath)
       .filter(Files.isRegularFile(_))
       .toArray
     assert(leafFiles.isEmpty, "Temporary file should be deleted.")
@@ -103,7 +104,8 @@ class LogBlockWriterSuite extends SparkFunSuite {
 
     Seq(true, false).foreach { success =>
       val logBlockWriter = spy(makeLogBlockWriter())
-      doAnswer(_ => success).when(logBlockWriter)
+      doAnswer(_ => success)
+        .when(logBlockWriter)
         .saveToBlockManager(any[LogBlockId], anyLong)
 
       logBlockWriter.writeLog(log)
@@ -131,7 +133,6 @@ class LogBlockWriterSuite extends SparkFunSuite {
     val serializerManager = new SerializerManager(new JavaSerializer(sparkConf), sparkConf, None)
     val blockManager = mock(classOf[BlockManager])
     doAnswer(_ => serializerManager).when(blockManager).serializerManager
-    new LogBlockWriter(
-      blockManager, LogBlockType.TEST, sparkConf)
+    new LogBlockWriter(blockManager, LogBlockType.TEST, sparkConf)
   }
 }

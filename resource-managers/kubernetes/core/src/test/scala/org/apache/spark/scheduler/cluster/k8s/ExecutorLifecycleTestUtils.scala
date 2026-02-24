@@ -32,113 +32,115 @@ object ExecutorLifecycleTestUtils {
   val TEST_SPARK_EXECUTOR_CONTAINER_NAME = "spark-executor"
 
   def failedExecutorWithoutDeletion(
-      executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
+      executorId: Long,
+      rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("failed")
-        .withStartTime(Instant.now.toString)
-        .addNewContainerStatus()
-          .withName(TEST_SPARK_EXECUTOR_CONTAINER_NAME)
-          .withImage("k8s-spark")
-          .withNewState()
-            .withNewTerminated()
-              .withMessage("Failed")
-              .withExitCode(1)
-              .endTerminated()
-            .endState()
-          .endContainerStatus()
-        .addNewContainerStatus()
-          .withName("spark-executor-sidecar")
-          .withImage("k8s-spark-sidecar")
-          .withNewState()
-            .withNewTerminated()
-              .withMessage("Failed")
-              .withExitCode(2)
-              .endTerminated()
-            .endState()
-          .endContainerStatus()
-        .withMessage("Executor failed.")
-        .withReason("Executor failed because of a thrown error.")
-        .endStatus()
+      .withPhase("failed")
+      .withStartTime(Instant.now.toString)
+      .addNewContainerStatus()
+      .withName(TEST_SPARK_EXECUTOR_CONTAINER_NAME)
+      .withImage("k8s-spark")
+      .withNewState()
+      .withNewTerminated()
+      .withMessage("Failed")
+      .withExitCode(1)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .addNewContainerStatus()
+      .withName("spark-executor-sidecar")
+      .withImage("k8s-spark-sidecar")
+      .withNewState()
+      .withNewTerminated()
+      .withMessage("Failed")
+      .withExitCode(2)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .withMessage("Executor failed.")
+      .withReason("Executor failed because of a thrown error.")
+      .endStatus()
       .build()
   }
 
   def failedExecutorWithSidecarStatusListedFirst(
-      executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
+      executorId: Long,
+      rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("failed")
-        .withStartTime(Instant.now.toString)
-        .addNewContainerStatus() // sidecar status listed before executor's container status
-          .withName("spark-executor-sidecar")
-          .withImage("k8s-spark-sidecar")
-          .withNewState()
-            .withNewTerminated()
-              .withMessage("Failed")
-              .withExitCode(2)
-              .endTerminated()
-            .endState()
-          .endContainerStatus()
-        .addNewContainerStatus()
-          .withName(TEST_SPARK_EXECUTOR_CONTAINER_NAME)
-          .withImage("k8s-spark")
-          .withNewState()
-            .withNewTerminated()
-              .withMessage("Failed")
-              .withExitCode(1)
-              .endTerminated()
-            .endState()
-          .endContainerStatus()
-        .withMessage("Executor failed.")
-        .withReason("Executor failed because of a thrown error.")
-        .endStatus()
+      .withPhase("failed")
+      .withStartTime(Instant.now.toString)
+      .addNewContainerStatus() // sidecar status listed before executor's container status
+      .withName("spark-executor-sidecar")
+      .withImage("k8s-spark-sidecar")
+      .withNewState()
+      .withNewTerminated()
+      .withMessage("Failed")
+      .withExitCode(2)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .addNewContainerStatus()
+      .withName(TEST_SPARK_EXECUTOR_CONTAINER_NAME)
+      .withImage("k8s-spark")
+      .withNewState()
+      .withNewTerminated()
+      .withMessage("Failed")
+      .withExitCode(1)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .withMessage("Executor failed.")
+      .withReason("Executor failed because of a thrown error.")
+      .endStatus()
       .build()
   }
 
   def pendingExecutor(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewMetadata()
-        .withCreationTimestamp(Instant.now.toString)
-        .endMetadata()
+      .withCreationTimestamp(Instant.now.toString)
+      .endMetadata()
       .editOrNewStatus()
-        .withPhase("pending")
-        .endStatus()
+      .withPhase("pending")
+      .endStatus()
       .build()
   }
 
   def runningExecutor(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("running")
-        .withStartTime(Instant.now.toString)
-        .endStatus()
+      .withPhase("running")
+      .withStartTime(Instant.now.toString)
+      .endStatus()
       .build()
   }
 
   /**
-   * [SPARK-30821]
-   * This creates a pod with one container in running state and one container in failed
-   * state (terminated with non-zero exit code). This pod is used for unit-testing the
+   * [SPARK-30821] This creates a pod with one container in running state and one container in
+   * failed state (terminated with non-zero exit code). This pod is used for unit-testing the
    * spark.kubernetes.executor.checkAllContainers Spark Conf.
    */
   def runningExecutorWithFailedContainer(
-      executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
+      executorId: Long,
+      rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("running")
-        .addNewContainerStatus()
-          .withNewState()
-            .withNewTerminated()
-              .withExitCode(1)
-            .endTerminated()
-          .endState()
-        .endContainerStatus()
-        .addNewContainerStatus()
-          .withNewState()
-            .withNewRunning()
-            .endRunning()
-          .endState()
-        .endContainerStatus()
+      .withPhase("running")
+      .addNewContainerStatus()
+      .withNewState()
+      .withNewTerminated()
+      .withExitCode(1)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .addNewContainerStatus()
+      .withNewState()
+      .withNewRunning()
+      .endRunning()
+      .endState()
+      .endContainerStatus()
       .endStatus()
       .build()
   }
@@ -146,27 +148,26 @@ object ExecutorLifecycleTestUtils {
   /**
    * This creates a pod with a finished executor and running sidecar
    */
-  def finishedExecutorWithRunningSidecar(
-      executorId: Long, exitCode: Int): Pod = {
+  def finishedExecutorWithRunningSidecar(executorId: Long, exitCode: Int): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, DEFAULT_RESOURCE_PROFILE_ID))
       .editOrNewStatus()
-        .withPhase("running")
-        .addNewContainerStatus()
-          .withName(DEFAULT_EXECUTOR_CONTAINER_NAME)
-          .withNewState()
-            .withNewTerminated()
-              .withMessage("message")
-              .withExitCode(exitCode)
-            .endTerminated()
-          .endState()
-        .endContainerStatus()
-        .addNewContainerStatus()
-          .withName("SIDECARFRIEND")
-          .withNewState()
-            .withNewRunning()
-            .endRunning()
-          .endState()
-        .endContainerStatus()
+      .withPhase("running")
+      .addNewContainerStatus()
+      .withName(DEFAULT_EXECUTOR_CONTAINER_NAME)
+      .withNewState()
+      .withNewTerminated()
+      .withMessage("message")
+      .withExitCode(exitCode)
+      .endTerminated()
+      .endState()
+      .endContainerStatus()
+      .addNewContainerStatus()
+      .withName("SIDECARFRIEND")
+      .withNewState()
+      .withNewRunning()
+      .endRunning()
+      .endState()
+      .endContainerStatus()
       .endStatus()
       .build()
   }
@@ -174,24 +175,24 @@ object ExecutorLifecycleTestUtils {
   def succeededExecutor(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("succeeded")
-        .endStatus()
+      .withPhase("succeeded")
+      .endStatus()
       .build()
   }
 
   def deletedExecutor(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewMetadata()
-        .withDeletionTimestamp("523012521")
-        .endMetadata()
+      .withDeletionTimestamp("523012521")
+      .endMetadata()
       .build()
   }
 
   def unknownExecutor(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): Pod = {
     new PodBuilder(podWithAttachedContainerForId(executorId, rpId))
       .editOrNewStatus()
-        .withPhase("unknown")
-        .endStatus()
+      .withPhase("unknown")
+      .endStatus()
       .build()
   }
 
@@ -201,8 +202,8 @@ object ExecutorLifecycleTestUtils {
     val sparkPod = executorPodWithId(executorId, rpId)
     val podWithAttachedContainer = new PodBuilder(sparkPod.pod)
       .editOrNewSpec()
-        .addToContainers(sparkPod.container)
-        .endSpec()
+      .addToContainers(sparkPod.container)
+      .endSpec()
       .build()
     podWithAttachedContainer
   }
@@ -222,14 +223,14 @@ object ExecutorLifecycleTestUtils {
   def executorPodWithId(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): SparkPod = {
     val pod = new PodBuilder()
       .withNewMetadata()
-        .withName(s"spark-executor-$executorId")
-        .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
-        .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-        .addToLabels(SPARK_EXECUTOR_ID_LABEL, executorId.toString)
-        .addToLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, rpId.toString)
+      .withName(s"spark-executor-$executorId")
+      .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
+      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+      .addToLabels(SPARK_EXECUTOR_ID_LABEL, executorId.toString)
+      .addToLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, rpId.toString)
       .endMetadata()
       .editOrNewSpec()
-        .withRestartPolicy("Never")
+      .withRestartPolicy("Never")
       .endSpec()
       .build()
     val container = new ContainerBuilder()
@@ -239,31 +240,36 @@ object ExecutorLifecycleTestUtils {
     SparkPod(pod, container)
   }
 
-  def executorPodWithIdAndVolume(executorId: Long, rpId: Int = DEFAULT_RESOURCE_PROFILE_ID)
-      : SparkPod = {
+  def executorPodWithIdAndVolume(
+      executorId: Long,
+      rpId: Int = DEFAULT_RESOURCE_PROFILE_ID): SparkPod = {
     val sparkPod = executorPodWithId(executorId, rpId)
-    sparkPod.pod.getSpec.getVolumes.add(new VolumeBuilder()
-      .withName("spark-volume")
-      .withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSource("pvc-0", false))
-      .build())
+    sparkPod.pod.getSpec.getVolumes.add(
+      new VolumeBuilder()
+        .withName("spark-volume")
+        .withPersistentVolumeClaim(new PersistentVolumeClaimVolumeSource("pvc-0", false))
+        .build())
     sparkPod
   }
 
-  def persistentVolumeClaim(claimName: String, storageClass: String, size: String)
-      : PersistentVolumeClaim = {
+  def persistentVolumeClaim(
+      claimName: String,
+      storageClass: String,
+      size: String): PersistentVolumeClaim = {
     new PersistentVolumeClaimBuilder()
       .withKind("PersistentVolumeClaim")
       .withApiVersion("v1")
       .withNewMetadata()
-        .withName(claimName)
-        .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
-        .endMetadata()
+      .withName(claimName)
+      .addToLabels(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)
+      .endMetadata()
       .withNewSpec()
-        .withStorageClassName(storageClass)
-        .withAccessModes("ReadWriteOnce")
-        .withResources(new VolumeResourceRequirementsBuilder()
-          .withRequests(Map("storage" -> new Quantity(size)).asJava).build())
-        .endSpec()
+      .withStorageClassName(storageClass)
+      .withAccessModes("ReadWriteOnce")
+      .withResources(new VolumeResourceRequirementsBuilder()
+        .withRequests(Map("storage" -> new Quantity(size)).asJava)
+        .build())
+      .endSpec()
       .build()
   }
 }

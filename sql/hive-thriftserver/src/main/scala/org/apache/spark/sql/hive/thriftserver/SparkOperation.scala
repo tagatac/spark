@@ -112,16 +112,19 @@ private[hive] trait SparkOperation extends Operation with Logging {
       throw new IllegalArgumentException(s"Unknown table type is found: $t")
   }
 
-  protected def onError(): PartialFunction[Throwable, Unit] = {
-    case e: Throwable =>
-      logError(log"Error operating ${MDC(HIVE_OPERATION_TYPE, getType)} with " +
-        log"${MDC(STATEMENT_ID, statementId)}", e)
-      super.setState(OperationState.ERROR)
-      HiveThriftServer2.eventManager.onStatementError(
-        statementId, e.getMessage, Utils.exceptionString(e))
-      e match {
-        case _: HiveSQLException => throw e
-        case _ => throw HiveThriftServerErrors.hiveOperatingError(getType, e)
-      }
+  protected def onError(): PartialFunction[Throwable, Unit] = { case e: Throwable =>
+    logError(
+      log"Error operating ${MDC(HIVE_OPERATION_TYPE, getType)} with " +
+        log"${MDC(STATEMENT_ID, statementId)}",
+      e)
+    super.setState(OperationState.ERROR)
+    HiveThriftServer2.eventManager.onStatementError(
+      statementId,
+      e.getMessage,
+      Utils.exceptionString(e))
+    e match {
+      case _: HiveSQLException => throw e
+      case _ => throw HiveThriftServerErrors.hiveOperatingError(getType, e)
+    }
   }
 }

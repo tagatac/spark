@@ -27,27 +27,33 @@ import org.apache.spark.sql.test.SQLTestUtils
 import org.apache.spark.tags.SlowHiveTest
 
 abstract class DynamicPartitionPruningHiveScanSuiteBase
-    extends DynamicPartitionPruningSuiteBase with TestHiveSingleton with SQLTestUtils {
+    extends DynamicPartitionPruningSuiteBase
+    with TestHiveSingleton
+    with SQLTestUtils {
 
   override val tableFormat: String = "hive"
 
   override protected def collectDynamicPruningExpressions(plan: SparkPlan): Seq[Expression] = {
     flatMap(plan) {
-      case s: FileSourceScanExec => s.partitionFilters.collect {
-        case d: DynamicPruningExpression => d.child
-      }
-      case h: HiveTableScanExec => h.partitionPruningPred.collect {
-        case d: DynamicPruningExpression => d.child
-      }
+      case s: FileSourceScanExec =>
+        s.partitionFilters.collect { case d: DynamicPruningExpression =>
+          d.child
+        }
+      case h: HiveTableScanExec =>
+        h.partitionPruningPred.collect { case d: DynamicPruningExpression =>
+          d.child
+        }
       case _ => Nil
     }
   }
 }
 
 @SlowHiveTest
-class DynamicPartitionPruningHiveScanSuiteAEOff extends DynamicPartitionPruningHiveScanSuiteBase
-  with DisableAdaptiveExecutionSuite
+class DynamicPartitionPruningHiveScanSuiteAEOff
+    extends DynamicPartitionPruningHiveScanSuiteBase
+    with DisableAdaptiveExecutionSuite
 
 @SlowHiveTest
-class DynamicPartitionPruningHiveScanSuiteAEOn extends DynamicPartitionPruningHiveScanSuiteBase
-  with EnableAdaptiveExecutionSuite
+class DynamicPartitionPruningHiveScanSuiteAEOn
+    extends DynamicPartitionPruningHiveScanSuiteBase
+    with EnableAdaptiveExecutionSuite

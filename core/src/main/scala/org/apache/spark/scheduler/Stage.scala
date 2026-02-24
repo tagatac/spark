@@ -25,9 +25,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.CallSite
 
 /**
- * A stage is a set of parallel tasks all computing the same function that need to run as part
- * of a Spark job, where all the tasks have the same shuffle dependencies. Each DAG of tasks run
- * by the scheduler is split up into stages at the boundaries where shuffle occurs, and then the
+ * A stage is a set of parallel tasks all computing the same function that need to run as part of
+ * a Spark job, where all the tasks have the same shuffle dependencies. Each DAG of tasks run by
+ * the scheduler is split up into stages at the boundaries where shuffle occurs, and then the
  * DAGScheduler runs these stages in topological order.
  *
  * Each Stage can either be a shuffle map stage, in which case its tasks' results are input for
@@ -35,23 +35,29 @@ import org.apache.spark.util.CallSite
  * (e.g. count(), save(), etc) by running a function on an RDD. For shuffle map stages, we also
  * track the nodes that each output partition is on.
  *
- * Each Stage also has a firstJobId, identifying the job that first submitted the stage.  When FIFO
+ * Each Stage also has a firstJobId, identifying the job that first submitted the stage. When FIFO
  * scheduling is used, this allows Stages from earlier jobs to be computed first or recovered
  * faster on failure.
  *
  * Finally, a single stage can be re-executed in multiple attempts due to fault recovery. In that
- * case, the Stage object will track multiple StageInfo objects to pass to listeners or the web UI.
- * The latest one will be accessible through latestInfo.
+ * case, the Stage object will track multiple StageInfo objects to pass to listeners or the web
+ * UI. The latest one will be accessible through latestInfo.
  *
- * @param id Unique stage ID
- * @param rdd RDD that this stage runs on: for a shuffle map stage, it's the RDD we run map tasks
- *   on, while for a result stage, it's the target RDD that we ran an action on
- * @param numTasks Total number of tasks in stage; result stages in particular may not need to
- *   compute all partitions, e.g. for first(), lookup(), and take().
- * @param parents List of stages that this stage depends on (through shuffle dependencies).
- * @param firstJobId ID of the first job this stage was part of, for FIFO scheduling.
- * @param callSite Location in the user program associated with this stage: either where the target
- *   RDD was created, for a shuffle map stage, or where the action for a result stage was called.
+ * @param id
+ *   Unique stage ID
+ * @param rdd
+ *   RDD that this stage runs on: for a shuffle map stage, it's the RDD we run map tasks on, while
+ *   for a result stage, it's the target RDD that we ran an action on
+ * @param numTasks
+ *   Total number of tasks in stage; result stages in particular may not need to compute all
+ *   partitions, e.g. for first(), lookup(), and take().
+ * @param parents
+ *   List of stages that this stage depends on (through shuffle dependencies).
+ * @param firstJobId
+ *   ID of the first job this stage was part of, for FIFO scheduling.
+ * @param callSite
+ *   Location in the user program associated with this stage: either where the target RDD was
+ *   created, for a shuffle map stage, or where the action for a result stage was called.
  */
 private[scheduler] abstract class Stage(
     val id: Int,
@@ -61,7 +67,7 @@ private[scheduler] abstract class Stage(
     val firstJobId: Int,
     val callSite: CallSite,
     val resourceProfileId: Int)
-  extends Logging {
+    extends Logging {
 
   val numPartitions = rdd.partitions.length
 
@@ -87,8 +93,8 @@ private[scheduler] abstract class Stage(
   /**
    * The max attempt id we should ignore results for this stage, indicating there are ancestor
    * stages having been detected with checksum mismatches. This stage is probably also
-   * indeterminate, so we need to avoid completing the stage and the job with incorrect result
-   * by ignoring the task output from previous attempts which might consume inconsistent data
+   * indeterminate, so we need to avoid completing the stage and the job with incorrect result by
+   * ignoring the task output from previous attempts which might consume inconsistent data
    */
   private[scheduler] var maxAttemptIdToIgnore: Option[Int] = None
 
@@ -106,13 +112,13 @@ private[scheduler] abstract class Stage(
 
   /**
    * Set of stage attempt IDs that have failed. We keep track of these failures in order to avoid
-   * endless retries if a stage keeps failing.
-   * We keep track of each attempt ID that has failed to avoid recording duplicate failures if
-   * multiple tasks from the same stage attempt fail (SPARK-5945).
+   * endless retries if a stage keeps failing. We keep track of each attempt ID that has failed to
+   * avoid recording duplicate failures if multiple tasks from the same stage attempt fail
+   * (SPARK-5945).
    */
   val failedAttemptIds = new HashSet[Int]
 
-  private[scheduler] def clearFailures() : Unit = {
+  private[scheduler] def clearFailures(): Unit = {
     failedAttemptIds.clear()
   }
 
@@ -131,7 +137,11 @@ private[scheduler] abstract class Stage(
     val metrics = new TaskMetrics
     metrics.register(rdd.sparkContext)
     _latestInfo = StageInfo.fromStage(
-      this, nextAttemptId, Some(numPartitionsToCompute), metrics, taskLocalityPreferences,
+      this,
+      nextAttemptId,
+      Some(numPartitionsToCompute),
+      metrics,
+      taskLocalityPreferences,
       resourceProfileId = resourceProfileId)
     nextAttemptId += 1
   }

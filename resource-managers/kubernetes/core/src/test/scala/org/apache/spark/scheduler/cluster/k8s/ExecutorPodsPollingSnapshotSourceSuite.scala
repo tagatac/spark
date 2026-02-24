@@ -81,11 +81,10 @@ class ExecutorPodsPollingSnapshotSourceSuite extends SparkFunSuite with BeforeAn
     val exec1 = runningExecutor(1)
     val exec2 = runningExecutor(2)
     when(activeExecutorPods.list())
-      .thenReturn(new PodListBuilder()
-        .addToItems(
-          exec1,
-          exec2)
-        .build())
+      .thenReturn(
+        new PodListBuilder()
+          .addToItems(exec1, exec2)
+          .build())
     pollingExecutor.tick(pollingInterval, TimeUnit.MILLISECONDS)
     verify(eventQueue).replaceSnapshot(Seq(exec1, exec2))
   }

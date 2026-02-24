@@ -37,8 +37,7 @@ import org.apache.spark.internal.LogKeys.{COUNT, TOTAL}
 import org.apache.spark.internal.config.SCHEDULER_MIN_REGISTERED_RESOURCES_RATIO
 import org.apache.spark.resource.ResourceProfile
 import org.apache.spark.rpc.{RpcAddress, RpcCallContext}
-import org.apache.spark.scheduler.{ExecutorDecommission, ExecutorDecommissionInfo, ExecutorKilled, ExecutorLossReason,
-  TaskSchedulerImpl}
+import org.apache.spark.scheduler.{ExecutorDecommission, ExecutorDecommissionInfo, ExecutorKilled, ExecutorLossReason, TaskSchedulerImpl}
 import org.apache.spark.scheduler.cluster.{CoarseGrainedSchedulerBackend, SchedulerBackendUtils}
 import org.apache.spark.scheduler.cluster.CoarseGrainedClusterMessages.RegisterExecutor
 import org.apache.spark.util.{ThreadUtils, Utils}
@@ -91,11 +90,11 @@ private[spark] class KubernetesClusterSchedulerBackend(
   }
 
   /**
-   * Get an application ID associated with the job.
-   * This returns the string value of spark.app.id if set, otherwise
-   * the locally-generated ID.
+   * Get an application ID associated with the job. This returns the string value of spark.app.id
+   * if set, otherwise the locally-generated ID.
    *
-   * @return The application ID
+   * @return
+   *   The application ID
    */
   override def applicationId(): String = {
     conf.getOption("spark.app.id").getOrElse(KubernetesConf.getKubernetesAppId())
@@ -209,11 +208,13 @@ private[spark] class KubernetesClusterSchedulerBackend(
             .withLabelIn(SPARK_EXECUTOR_ID_LABEL, execIds: _*)
             .resources()
             .forEach { podResource =>
-              podResource.patch(PATCH_CONTEXT, new PodBuilder()
-                .withNewMetadata()
-                .addToAnnotations(POD_DELETION_COST, cost.toString)
-                .endMetadata()
-                .build())
+              podResource.patch(
+                PATCH_CONTEXT,
+                new PodBuilder()
+                  .withNewMetadata()
+                  .addToAnnotations(POD_DELETION_COST, cost.toString)
+                  .endMetadata()
+                  .build())
             }
         }
       }
@@ -227,18 +228,21 @@ private[spark] class KubernetesClusterSchedulerBackend(
       val value = conf.get(KUBERNETES_EXECUTOR_DECOMMISSION_LABEL_VALUE).getOrElse("")
       val labelTask = new Runnable() {
         override def run(): Unit = Utils.tryLogNonFatalError {
-          kubernetesClient.pods()
+          kubernetesClient
+            .pods()
             .inNamespace(namespace)
             .withLabel(SPARK_APP_ID_LABEL, applicationId())
             .withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
             .withLabelIn(SPARK_EXECUTOR_ID_LABEL, execIds: _*)
             .resources()
             .forEach { podResource =>
-              podResource.patch(PATCH_CONTEXT, new PodBuilder()
-                .withNewMetadata()
-                .addToLabels(label, value)
-                .endMetadata()
-                .build())
+              podResource.patch(
+                PATCH_CONTEXT,
+                new PodBuilder()
+                  .withNewMetadata()
+                  .addToLabels(label, value)
+                  .endMetadata()
+                  .build())
             }
         }
       }
@@ -258,7 +262,9 @@ private[spark] class KubernetesClusterSchedulerBackend(
         annotateExecutorDeletionCost(executorsAndDecomInfo.map(_._1).toImmutableArraySeq)
       }
     }
-    super.decommissionExecutors(executorsAndDecomInfo, adjustTargetNumExecutors,
+    super.decommissionExecutors(
+      executorsAndDecomInfo,
+      adjustTargetNumExecutors,
       triggeredByExecutor)
   }
 
@@ -296,7 +302,9 @@ private[spark] class KubernetesClusterSchedulerBackend(
         }
       }
     }
-    executorService.schedule(killTask, conf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD),
+    executorService.schedule(
+      killTask,
+      conf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD),
       TimeUnit.MILLISECONDS)
 
     // Return an immediate success, since we can't confirm or deny that executors have been
@@ -344,14 +352,17 @@ private[spark] class KubernetesClusterSchedulerBackend(
         val labelTask = new Runnable() {
           override def run(): Unit = Utils.tryLogNonFatalError {
             // Label the pod with it's exec ID
-            kubernetesClient.pods()
+            kubernetesClient
+              .pods()
               .inNamespace(namespace)
               .withName(x.podName)
-              .patch(PATCH_CONTEXT, new PodBuilder()
-                .withNewMetadata()
-                .addToLabels(SPARK_EXECUTOR_ID_LABEL, newId)
-                .endMetadata()
-                .build())
+              .patch(
+                PATCH_CONTEXT,
+                new PodBuilder()
+                  .withNewMetadata()
+                  .addToLabels(SPARK_EXECUTOR_ID_LABEL, newId)
+                  .endMetadata()
+                  .build())
           }
         }
         executorService.execute(labelTask)
@@ -362,8 +373,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
 
     override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] =
       generateExecID(context).orElse(
-        ignoreRegisterExecutorAtStoppedContext.orElse(
-          super.receiveAndReply(context)))
+        ignoreRegisterExecutorAtStoppedContext.orElse(super.receiveAndReply(context)))
 
     override def onDisconnected(rpcAddress: RpcAddress): Unit = {
       val execId = addressToExecutorId.get(rpcAddress)
@@ -386,7 +396,7 @@ private[spark] class KubernetesClusterSchedulerBackend(
           newExecId match {
             case Some(id) =>
               execIDRequester -= rpcAddress
-              // Expected, executors re-establish a connection with an ID
+            // Expected, executors re-establish a connection with an ID
             case _ =>
               logDebug(s"No executor found for ${rpcAddress}")
           }

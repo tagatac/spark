@@ -33,10 +33,9 @@ import org.apache.spark.util.logging.RollingFileAppender
  *
  * This is similar with Spark worker's LogPage class.
  */
-private[ui] class DriverLogPage(
-    parent: DriverLogTab,
-    conf: SparkConf)
-  extends WebUIPage("") with Logging {
+private[ui] class DriverLogPage(parent: DriverLogTab, conf: SparkConf)
+    extends WebUIPage("")
+    with Logging {
   require(conf.get(DRIVER_LOG_LOCAL_DIR).nonEmpty, s"Please specify ${DRIVER_LOG_LOCAL_DIR.key}.")
 
   private val supportedLogTypes = Set(DRIVER_LOG_FILE, "stderr", "stdout")
@@ -46,7 +45,8 @@ private[ui] class DriverLogPage(
   def render(request: HttpServletRequest): Seq[Node] = {
     val logType = Option(request.getParameter("logType")).getOrElse(DRIVER_LOG_FILE)
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(defaultBytes)
     val (logText, startByte, endByte, logLength) = getLog(logDir, logType, offset, byteLength)
     val curLogLength = endByte - startByte
@@ -76,7 +76,7 @@ private[ui] class DriverLogPage(
 
     val content =
       <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script> ++
-      <div>
+        <div>
         Logs at {logDir}
         {range}
         <div class="log-content" style="height:80vh; overflow:auto; padding:5px;">
@@ -94,7 +94,8 @@ private[ui] class DriverLogPage(
   def renderLog(request: HttpServletRequest): String = {
     val logType = Option(request.getParameter("logType")).getOrElse(DRIVER_LOG_FILE)
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(defaultBytes)
 
     val (logText, startByte, endByte, logLength) = getLog(logDir, logType, offset, byteLength)
@@ -107,8 +108,7 @@ private[ui] class DriverLogPage(
       logDirectory: String,
       logType: String,
       offsetOption: Option[Long],
-      byteLength: Int
-    ): (String, Long, Long, Long) = {
+      byteLength: Int): (String, Long, Long, Long) = {
 
     if (!supportedLogTypes.contains(logType)) {
       return ("Error: Log type must be one of " + supportedLogTypes.mkString(", "), 0, 0, 0)
@@ -137,8 +137,10 @@ private[ui] class DriverLogPage(
       (logText, startIndex, endIndex, totalLength)
     } catch {
       case e: Exception =>
-        logError(log"Error getting ${MDC(LOG_TYPE, logType)} logs from directory " +
-          log"${MDC(PATH, logDirectory)}", e)
+        logError(
+          log"Error getting ${MDC(LOG_TYPE, logType)} logs from directory " +
+            log"${MDC(PATH, logDirectory)}",
+          e)
         ("Error getting logs due to exception: " + e.getMessage, 0, 0, 0)
     }
   }

@@ -40,11 +40,11 @@ import org.apache.spark.util.Utils
 /**
  * A server that responds to requests submitted by the [[RestSubmissionClient]].
  *
- * This server responds with different HTTP codes depending on the situation:
- *   200 OK - Request was processed successfully
- *   400 BAD REQUEST - Request was malformed, not successfully validated, or of unexpected type
- *   468 UNKNOWN PROTOCOL VERSION - Request specified a protocol this server does not understand
- *   500 INTERNAL SERVER ERROR - Server throws an exception internally while processing the request
+ * This server responds with different HTTP codes depending on the situation: 200 OK - Request was
+ * processed successfully 400 BAD REQUEST - Request was malformed, not successfully validated, or
+ * of unexpected type 468 UNKNOWN PROTOCOL VERSION - Request specified a protocol this server does
+ * not understand 500 INTERNAL SERVER ERROR - Server throws an exception internally while
+ * processing the request
  *
  * The server always includes a JSON representation of the relevant [[SubmitRestProtocolResponse]]
  * in the HTTP body. If an error occurs, however, the server will include an [[ErrorResponse]]
@@ -55,7 +55,8 @@ import org.apache.spark.util.Utils
 private[spark] abstract class RestSubmissionServer(
     val host: String,
     val requestedPort: Int,
-    val masterConf: SparkConf) extends Logging {
+    val masterConf: SparkConf)
+    extends Logging {
 
   protected val submitRequestServlet: SubmitRequestServlet
   protected val killRequestServlet: KillRequestServlet
@@ -83,14 +84,15 @@ private[spark] abstract class RestSubmissionServer(
   def start(): Int = {
     val (server, boundPort) = Utils.startServiceOnPort[Server](requestedPort, doStart, masterConf)
     _server = Some(server)
-    logInfo(log"Started REST server for submitting applications on ${MDC(HOST, host)}" +
-      log" with port ${MDC(PORT, boundPort)}")
+    logInfo(
+      log"Started REST server for submitting applications on ${MDC(HOST, host)}" +
+        log" with port ${MDC(PORT, boundPort)}")
     boundPort
   }
 
   /**
-   * Map the servlets to their corresponding contexts and attach them to a server.
-   * Return a 2-tuple of the started server and the bound port.
+   * Map the servlets to their corresponding contexts and attach them to a server. Return a
+   * 2-tuple of the started server and the bound port.
    */
   private def doStart(startPort: Int): (Server, Int) = {
     val threadPool = new QueuedThreadPool(masterConf.get(MASTER_REST_SERVER_MAX_THREADS))
@@ -167,8 +169,8 @@ private[rest] object RestSubmissionServer {
 private[rest] abstract class RestServlet extends HttpServlet with Logging {
 
   /**
-   * Serialize the given response message to JSON and send it through the response servlet.
-   * This validates the response before sending it to ensure it is properly constructed.
+   * Serialize the given response message to JSON and send it through the response servlet. This
+   * validates the response before sending it to ensure it is properly constructed.
    */
   protected def sendResponse(
       responseMessage: SubmitRestProtocolResponse,
@@ -182,9 +184,9 @@ private[rest] abstract class RestServlet extends HttpServlet with Logging {
   /**
    * Return any fields in the client request message that the server does not know about.
    *
-   * The mechanism for this is to reconstruct the JSON on the server side and compare the
-   * diff between this JSON and the one generated on the client side. Any fields that are
-   * only in the client JSON are treated as unexpected.
+   * The mechanism for this is to reconstruct the JSON on the server side and compare the diff
+   * between this JSON and the one generated on the client side. Any fields that are only in the
+   * client JSON are treated as unexpected.
    */
   protected def findUnknownFields(
       requestJson: String,
@@ -213,9 +215,9 @@ private[rest] abstract class RestServlet extends HttpServlet with Logging {
   }
 
   /**
-   * Parse a submission ID from the relative path, assuming it is the first part of the path.
-   * For instance, we expect the path to take the form /[submission ID]/maybe/something/else.
-   * The returned submission ID cannot be empty. If the path is unexpected, return None.
+   * Parse a submission ID from the relative path, assuming it is the first part of the path. For
+   * instance, we expect the path to take the form /[submission ID]/maybe/something/else. The
+   * returned submission ID cannot be empty. If the path is unexpected, return None.
    */
   protected def parseSubmissionId(path: String): Option[String] = {
     if (path == null || path.isEmpty) {
@@ -228,8 +230,8 @@ private[rest] abstract class RestServlet extends HttpServlet with Logging {
   /**
    * Validate the response to ensure that it is correctly constructed.
    *
-   * If it is, simply return the message as is. Otherwise, return an error response instead
-   * to propagate the exception back to the client and set the appropriate error code.
+   * If it is, simply return the message as is. Otherwise, return an error response instead to
+   * propagate the exception back to the client and set the appropriate error code.
    */
   private def validateResponse(
       responseMessage: SubmitRestProtocolResponse,
@@ -251,8 +253,8 @@ private[rest] abstract class RestServlet extends HttpServlet with Logging {
 private[rest] abstract class KillRequestServlet extends RestServlet {
 
   /**
-   * If a submission ID is specified in the URL, have the Master kill the corresponding
-   * driver and return an appropriate response to the client. Otherwise, return error.
+   * If a submission ID is specified in the URL, have the Master kill the corresponding driver and
+   * return an appropriate response to the client. Otherwise, return error.
    */
   protected override def doPost(
       request: HttpServletRequest,
@@ -274,8 +276,8 @@ private[rest] abstract class KillRequestServlet extends RestServlet {
 private[rest] abstract class KillAllRequestServlet extends RestServlet {
 
   /**
-   * Have the Master kill all drivers and return an appropriate response to the client.
-   * Otherwise, return error.
+   * Have the Master kill all drivers and return an appropriate response to the client. Otherwise,
+   * return error.
    */
   protected override def doPost(
       request: HttpServletRequest,
@@ -336,8 +338,8 @@ private[rest] abstract class ReadyzRequestServlet extends RestServlet {
 private[rest] abstract class StatusRequestServlet extends RestServlet {
 
   /**
-   * If a submission ID is specified in the URL, request the status of the corresponding
-   * driver from the Master and include it in the response. Otherwise, return error.
+   * If a submission ID is specified in the URL, request the status of the corresponding driver
+   * from the Master and include it in the response. Otherwise, return error.
    */
   protected override def doGet(
       request: HttpServletRequest,
@@ -361,9 +363,9 @@ private[rest] abstract class SubmitRequestServlet extends RestServlet {
   /**
    * Submit an application to the Master with parameters specified in the request.
    *
-   * The request is assumed to be a [[SubmitRestProtocolRequest]] in the form of JSON.
-   * If the request is successfully processed, return an appropriate response to the
-   * client indicating so. Otherwise, return error instead.
+   * The request is assumed to be a [[SubmitRestProtocolRequest]] in the form of JSON. If the
+   * request is successfully processed, return an appropriate response to the client indicating
+   * so. Otherwise, return error instead.
    */
   protected override def doPost(
       requestServlet: HttpServletRequest,

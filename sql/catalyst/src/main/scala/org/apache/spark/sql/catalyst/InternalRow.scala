@@ -38,8 +38,8 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
   def setNullAt(i: Int): Unit
 
   /**
-   * Updates the value at column `i`. Note that after updating, the given value will be kept in this
-   * row, and the caller side should guarantee that this value won't be changed afterwards.
+   * Updates the value at column `i`. Note that after updating, the given value will be kept in
+   * this row, and the caller side should guarantee that this value won't be changed afterwards.
    */
   def update(i: Int, value: Any): Unit
 
@@ -55,8 +55,8 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
   /**
    * Update the decimal column at `i`.
    *
-   * Note: In order to support update decimal with precision > 18 in UnsafeRow,
-   * CAN NOT call setNullAt() for decimal column on UnsafeRow, call setDecimal(i, null, precision).
+   * Note: In order to support update decimal with precision > 18 in UnsafeRow, CAN NOT call
+   * setNullAt() for decimal column on UnsafeRow, call setDecimal(i, null, precision).
    */
   def setDecimal(i: Int, value: Decimal, precision: Int): Unit = update(i, value)
 
@@ -100,6 +100,7 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
 }
 
 object InternalRow {
+
   /**
    * This method can be used to construct a [[InternalRow]] with the given values.
    */
@@ -125,35 +126,37 @@ object InternalRow {
   }
 
   /**
-   * Returns an accessor for an `InternalRow` with given data type. The returned accessor
-   * actually takes a `SpecializedGetters` input because it can be generalized to other classes
-   * that implements `SpecializedGetters` (e.g., `ArrayData`) too.
+   * Returns an accessor for an `InternalRow` with given data type. The returned accessor actually
+   * takes a `SpecializedGetters` input because it can be generalized to other classes that
+   * implements `SpecializedGetters` (e.g., `ArrayData`) too.
    */
   def getAccessor(dt: DataType, nullable: Boolean = true): (SpecializedGetters, Int) => Any = {
     val getValueNullSafe: (SpecializedGetters, Int) => Any = dt match {
       case u: UserDefinedType[_] => getAccessor(u.sqlType, nullable)
-      case _ => PhysicalDataType(dt) match {
-        case PhysicalBooleanType => (input, ordinal) => input.getBoolean(ordinal)
-        case PhysicalByteType => (input, ordinal) => input.getByte(ordinal)
-        case PhysicalShortType => (input, ordinal) => input.getShort(ordinal)
-        case PhysicalIntegerType => (input, ordinal) => input.getInt(ordinal)
-        case PhysicalLongType => (input, ordinal) => input.getLong(ordinal)
-        case PhysicalFloatType => (input, ordinal) => input.getFloat(ordinal)
-        case PhysicalDoubleType => (input, ordinal) => input.getDouble(ordinal)
-        case _: PhysicalStringType => (input, ordinal) => input.getUTF8String(ordinal)
-        case PhysicalBinaryType => (input, ordinal) => input.getBinary(ordinal)
-        case PhysicalCalendarIntervalType => (input, ordinal) => input.getInterval(ordinal)
-        case t: PhysicalDecimalType => (input, ordinal) =>
-          input.getDecimal(ordinal, t.precision, t.scale)
-        case t: PhysicalStructType => (input, ordinal) => input.getStruct(ordinal, t.fields.length)
-        case _: PhysicalArrayType => (input, ordinal) => input.getArray(ordinal)
-        case _: PhysicalMapType => (input, ordinal) => input.getMap(ordinal)
-        case _ => (input, ordinal) => input.get(ordinal, dt)
-      }
+      case _ =>
+        PhysicalDataType(dt) match {
+          case PhysicalBooleanType => (input, ordinal) => input.getBoolean(ordinal)
+          case PhysicalByteType => (input, ordinal) => input.getByte(ordinal)
+          case PhysicalShortType => (input, ordinal) => input.getShort(ordinal)
+          case PhysicalIntegerType => (input, ordinal) => input.getInt(ordinal)
+          case PhysicalLongType => (input, ordinal) => input.getLong(ordinal)
+          case PhysicalFloatType => (input, ordinal) => input.getFloat(ordinal)
+          case PhysicalDoubleType => (input, ordinal) => input.getDouble(ordinal)
+          case _: PhysicalStringType => (input, ordinal) => input.getUTF8String(ordinal)
+          case PhysicalBinaryType => (input, ordinal) => input.getBinary(ordinal)
+          case PhysicalCalendarIntervalType => (input, ordinal) => input.getInterval(ordinal)
+          case t: PhysicalDecimalType =>
+            (input, ordinal) => input.getDecimal(ordinal, t.precision, t.scale)
+          case t: PhysicalStructType =>
+            (input, ordinal) => input.getStruct(ordinal, t.fields.length)
+          case _: PhysicalArrayType => (input, ordinal) => input.getArray(ordinal)
+          case _: PhysicalMapType => (input, ordinal) => input.getMap(ordinal)
+          case _ => (input, ordinal) => input.get(ordinal, dt)
+        }
     }
 
-    if (nullable) {
-      (getter, index) => {
+    if (nullable) { (getter, index) =>
+      {
         if (getter.isNullAt(index)) {
           null
         } else {

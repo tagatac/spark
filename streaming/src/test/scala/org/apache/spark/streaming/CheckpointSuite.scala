@@ -43,14 +43,13 @@ import org.apache.spark.util.{Clock, ManualClock, MutableURLClassLoader, ResetSy
 /**
  * A input stream that records the times of restore() invoked
  */
-private[streaming]
-class CheckpointInputDStream(_ssc: StreamingContext) extends InputDStream[Int](_ssc) {
+private[streaming] class CheckpointInputDStream(_ssc: StreamingContext)
+    extends InputDStream[Int](_ssc) {
   protected[streaming] override val checkpointData = new FileInputDStreamCheckpointData
-  override def start(): Unit = { }
-  override def stop(): Unit = { }
+  override def start(): Unit = {}
+  override def stop(): Unit = {}
   override def compute(time: Time): Option[RDD[Int]] = Some(ssc.sc.makeRDD(Seq(1)))
-  private[streaming]
-  class FileInputDStreamCheckpointData extends DStreamCheckpointData(this) {
+  private[streaming] class FileInputDStreamCheckpointData extends DStreamCheckpointData(this) {
     @transient
     var restoredTimes = 0
     override def restore(): Unit = {
@@ -61,20 +60,19 @@ class CheckpointInputDStream(_ssc: StreamingContext) extends InputDStream[Int](_
 }
 
 /**
- * A trait of that can be mixed in to get methods for testing DStream operations under
- * DStream checkpointing. Note that the implementations of this trait has to implement
- * the `setupCheckpointOperation`
+ * A trait of that can be mixed in to get methods for testing DStream operations under DStream
+ * checkpointing. Note that the implementations of this trait has to implement the
+ * `setupCheckpointOperation`
  */
 trait DStreamCheckpointTester { self: SparkFunSuite =>
 
   /**
-   * Tests a streaming operation under checkpointing, by restarting the operation
-   * from checkpoint file and verifying whether the final output is correct.
-   * The output is assumed to have come from a reliable queue which a replay
-   * data as required.
+   * Tests a streaming operation under checkpointing, by restarting the operation from checkpoint
+   * file and verifying whether the final output is correct. The output is assumed to have come
+   * from a reliable queue which a replay data as required.
    *
-   * NOTE: This takes into consideration that the last batch processed before
-   * master failure will be re-processed after restart/recovery.
+   * NOTE: This takes into consideration that the last batch processed before master failure will
+   * be re-processed after restart/recovery.
    */
   protected def testCheckpointedOperation[U: ClassTag, V: ClassTag](
       input: Seq[Seq[U]],
@@ -82,12 +80,13 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
       expectedOutput: Seq[Seq[V]],
       numBatchesBeforeRestart: Int,
       batchDuration: Duration = Milliseconds(500),
-      stopSparkContextAfterTest: Boolean = true
-    ): Unit = {
-    require(numBatchesBeforeRestart < expectedOutput.size,
+      stopSparkContextAfterTest: Boolean = true): Unit = {
+    require(
+      numBatchesBeforeRestart < expectedOutput.size,
       "Number of batches before context restart less than number of expected output " +
         "(i.e. number of total batches to run)")
-    require(StreamingContext.getActive().isEmpty,
+    require(
+      StreamingContext.getActive().isEmpty,
       "Cannot run test with already active streaming context")
 
     // Current code assumes that number of batches to be run = number of inputs
@@ -98,31 +97,37 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
     val checkpointDir = Utils.createTempDir(namePrefix = this.getClass.getSimpleName()).toString
     logDebug(s"Using checkpoint directory $checkpointDir")
     val ssc = createContextForCheckpointOperation(batchDuration)
-    require(ssc.conf.get("spark.streaming.clock") === classOf[ManualClock].getName,
+    require(
+      ssc.conf.get("spark.streaming.clock") === classOf[ManualClock].getName,
       "Cannot run test without manual clock in the conf")
 
     val inputStream = new TestInputStream(ssc, input, numPartitions = 2)
     val operatedStream = operation(inputStream)
     operatedStream.print()
-    val outputStream = new TestOutputStreamWithPartitions(operatedStream,
-      new ConcurrentLinkedQueue[Seq[Seq[V]]])
+    val outputStream =
+      new TestOutputStreamWithPartitions(operatedStream, new ConcurrentLinkedQueue[Seq[Seq[V]]])
     outputStream.register()
     ssc.checkpoint(checkpointDir)
 
     // Do the computation for initial number of batches, create checkpoint file and quit
-    val beforeRestartOutput = generateOutput[V](ssc,
-      Time(batchDurationMillis * numBatchesBeforeRestart), checkpointDir, stopSparkContextAfterTest)
+    val beforeRestartOutput = generateOutput[V](
+      ssc,
+      Time(batchDurationMillis * numBatchesBeforeRestart),
+      checkpointDir,
+      stopSparkContextAfterTest)
     assertOutput(beforeRestartOutput, expectedOutput, beforeRestart = true)
     // Restart and complete the computation from checkpoint file
     logInfo(
       "\n-------------------------------------------\n" +
         "        Restarting stream computation          " +
-        "\n-------------------------------------------\n"
-    )
+        "\n-------------------------------------------\n")
 
     val restartedSsc = new StreamingContext(checkpointDir)
-    val afterRestartOutput = generateOutput[V](restartedSsc,
-      Time(batchDurationMillis * totalNumBatches), checkpointDir, stopSparkContextAfterTest)
+    val afterRestartOutput = generateOutput[V](
+      restartedSsc,
+      Time(batchDurationMillis * totalNumBatches),
+      checkpointDir,
+      stopSparkContextAfterTest)
     assertOutput(afterRestartOutput, expectedOutput, beforeRestart = false)
   }
 
@@ -135,20 +140,18 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
   /**
    * Get the first TestOutputStreamWithPartitions, does not check the provided generic type.
    */
-  protected def getTestOutputStream[V: ClassTag](streams: Array[DStream[_]]):
-    TestOutputStreamWithPartitions[V] = {
-    streams.collect {
-      case ds: TestOutputStreamWithPartitions[V @unchecked] => ds
+  protected def getTestOutputStream[V: ClassTag](
+      streams: Array[DStream[_]]): TestOutputStreamWithPartitions[V] = {
+    streams.collect { case ds: TestOutputStreamWithPartitions[V @unchecked] =>
+      ds
     }.head
   }
-
 
   protected def generateOutput[V: ClassTag](
       ssc: StreamingContext,
       targetBatchTime: Time,
       checkpointDir: String,
-      stopSparkContext: Boolean
-    ): Seq[Seq[V]] = {
+      stopSparkContext: Boolean): Seq[Seq[V]] = {
     try {
       val batchCounter = new BatchCounter(ssc)
       ssc.start()
@@ -189,23 +192,26 @@ trait DStreamCheckpointTester { self: SparkFunSuite =>
     } else {
       expectedOutput.takeRight(output.size)
     }
-    val setComparison = output.zip(expectedPartialOutput).forall {
-      case (o, e) => o.toSet === e.toSet
+    val setComparison = output.zip(expectedPartialOutput).forall { case (o, e) =>
+      o.toSet === e.toSet
     }
-    assert(setComparison, s"set comparison failed\n" +
-      s"Expected output items:\n${expectedPartialOutput.mkString("\n")}\n" +
-      s"Generated output items: ${output.mkString("\n")}"
-    )
+    assert(
+      setComparison,
+      s"set comparison failed\n" +
+        s"Expected output items:\n${expectedPartialOutput.mkString("\n")}\n" +
+        s"Generated output items: ${output.mkString("\n")}")
   }
 }
 
 /**
- * This test suites tests the checkpointing functionality of DStreams -
- * the checkpointing of a DStream's RDDs as well as the checkpointing of
- * the whole DStream graph.
+ * This test suites tests the checkpointing functionality of DStreams - the checkpointing of a
+ * DStream's RDDs as well as the checkpointing of the whole DStream graph.
  */
-class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStreamCheckpointTester
-  with ResetSystemProperties {
+class CheckpointSuite
+    extends TestSuiteBase
+    with LocalStreamingContext
+    with DStreamCheckpointTester
+    with ResetSystemProperties {
 
   override def batchDuration: Duration = Milliseconds(500)
 
@@ -246,9 +252,9 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
         Some(values.sum + state.getOrElse(0))
       }
       st.map(x => (x, 1))
-      .updateStateByKey(updateFunc)
-      .checkpoint(stateStreamCheckpointInterval)
-      .map(t => (t._1, t._2))
+        .updateStateByKey(updateFunc)
+        .checkpoint(stateStreamCheckpointInterval)
+        .map(t => (t._1, t._2))
     }
     ssc = setupStreams(input, operation)
     var stateStream = ssc.graph.getOutputStreams().head.dependencies.head.dependencies.head
@@ -256,8 +262,9 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     def waitForCompletionOfBatch(numBatches: Long): Unit = {
       eventually(timeout(10.seconds), interval(50.millis)) {
         val lastProcessed = ssc.scheduler.jobGenerator.lastProcessedBatch
-        assert(lastProcessed != null &&
-          lastProcessed >= Time(batchDuration.milliseconds * numBatches))
+        assert(
+          lastProcessed != null &&
+            lastProcessed >= Time(batchDuration.milliseconds * numBatches))
       }
     }
 
@@ -269,12 +276,14 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
 
     logInfo("Checkpoint data of state stream = \n" + stateStream.checkpointData)
     var currCheckpointFiles = stateStream.checkpointData.currentCheckpointFiles
-    assert(!currCheckpointFiles.isEmpty,
+    assert(
+      !currCheckpointFiles.isEmpty,
       "No checkpointed RDDs in state stream before first failure")
-    currCheckpointFiles.foreach {
-      case (time, file) =>
-        assert(fs.exists(new Path(file)), "Checkpoint file '" + file +"' for time " + time +
-            " for state stream before first failure does not exist")
+    currCheckpointFiles.foreach { case (time, file) =>
+      assert(
+        fs.exists(new Path(file)),
+        "Checkpoint file '" + file + "' for time " + time +
+          " for state stream before first failure does not exist")
     }
 
     // Run till a further time such that previous checkpoint files in the stream would be deleted
@@ -291,8 +300,10 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     // checkpointed RDDs have been restored or not
     ssc = new StreamingContext(checkpointDir)
     stateStream = ssc.graph.getOutputStreams().head.dependencies.head.dependencies.head
-    logInfo("Restored data of state stream = \n[" + stateStream.generatedRDDs.mkString("\n") + "]")
-    assert(!stateStream.generatedRDDs.isEmpty,
+    logInfo(
+      "Restored data of state stream = \n[" + stateStream.generatedRDDs.mkString("\n") + "]")
+    assert(
+      !stateStream.generatedRDDs.isEmpty,
       "No restored RDDs in state stream after recovery from first failure")
 
     // Run one batch to generate a new checkpoint file and check whether some RDD
@@ -301,11 +312,13 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     advanceTimeWithRealDelay(ssc, 1)
     waitForCompletionOfBatch(secondNumBatches + 1)
     currCheckpointFiles = stateStream.checkpointData.currentCheckpointFiles
-    assert(!currCheckpointFiles.isEmpty,
+    assert(
+      !currCheckpointFiles.isEmpty,
       "No checkpointed RDDs in state stream before second failure")
-    currCheckpointFiles.foreach {
-      case (time, file) =>
-        assert(fs.exists(new Path(file)), "Checkpoint file '" + file +"' for time " + time +
+    currCheckpointFiles.foreach { case (time, file) =>
+      assert(
+        fs.exists(new Path(file)),
+        "Checkpoint file '" + file + "' for time " + time +
           " for state stream before seconds failure does not exist")
     }
     ssc.stop()
@@ -314,8 +327,10 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     // correct checkpoint data
     ssc = new StreamingContext(checkpointDir)
     stateStream = ssc.graph.getOutputStreams().head.dependencies.head.dependencies.head
-    logInfo("Restored data of state stream = \n[" + stateStream.generatedRDDs.mkString("\n") + "]")
-    assert(!stateStream.generatedRDDs.isEmpty,
+    logInfo(
+      "Restored data of state stream = \n[" + stateStream.generatedRDDs.mkString("\n") + "]")
+    assert(
+      !stateStream.generatedRDDs.isEmpty,
       "No restored RDDs in state stream after recovery from second failure")
 
     // Adjust manual clock time as if it is being restarted after a delay; this is a hack because
@@ -452,7 +467,7 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
   // source - TestInputDStream.
   test("recovery with map and reduceByKey operations") {
     testCheckpointedOperation(
-      Seq( Seq("a", "a", "b"), Seq("", ""), Seq(), Seq("a", "a", "b"), Seq("", ""), Seq() ),
+      Seq(Seq("a", "a", "b"), Seq("", ""), Seq(), Seq("a", "a", "b"), Seq("", ""), Seq()),
       (s: DStream[String]) => s.map(x => (x, 1)).reduceByKey(_ + _),
       Seq(
         Seq(("a", 2), ("b", 1)),
@@ -460,12 +475,9 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
         Seq(),
         Seq(("a", 2), ("b", 1)),
         Seq(("", 2)),
-        Seq()
-      ),
-      3
-    )
+        Seq()),
+      3)
   }
-
 
   // This tests whether the ReduceWindowedDStream's RDD checkpoints works correctly such
   // that the system can recover from a master failure. This assumes as reliable,
@@ -474,8 +486,8 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     val n = 10
     val w = 4
     val input = (1 to n).map(_ => Seq("a")).toSeq
-    val output = Seq(
-      Seq(("a", 1)), Seq(("a", 2)), Seq(("a", 3))) ++ (1 to (n - w + 1)).map(x => Seq(("a", 4)))
+    val output = Seq(Seq(("a", 1)), Seq(("a", 2)), Seq(("a", 3))) ++ (1 to (n - w + 1)).map(x =>
+      Seq(("a", 4)))
     val operation = (st: DStream[String]) => {
       st.map(x => (x, 1))
         .reduceByKeyAndWindow(_ + _, _ - _, batchDuration * w, batchDuration)
@@ -506,8 +518,7 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
           Seq(("a", 2), ("b", 1)),
           Seq(("", 2)),
           Seq()),
-        3
-      )
+        3)
     } finally {
       Utils.deleteRecursively(tempDir)
     }
@@ -535,8 +546,7 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
           Seq(("a", 2), ("b", 1)),
           Seq(("", 2)),
           Seq()),
-        3
-      )
+        3)
     } finally {
       Utils.deleteRecursively(tempDir)
     }
@@ -580,8 +590,7 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
           Seq(("a", 2), ("b", 1)),
           Seq(("", 2)),
           Seq()),
-        3
-      )
+        3)
     } finally {
       Utils.deleteRecursively(tempDir)
     }
@@ -639,7 +648,8 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
   // failure, are re-processed or not.
   test("recovery with file input stream") {
     // Set up the streaming context and input streams
-    val batchDuration = Seconds(2)  // Due to 1-second resolution of setLastModified() on some OS's.
+    val batchDuration =
+      Seconds(2) // Due to 1-second resolution of setLastModified() on some OS's.
     val testDir = Utils.createTempDir()
     val outputBuffer = new ConcurrentLinkedQueue[Seq[Int]]
 
@@ -662,8 +672,9 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     def recordedFiles(ssc: StreamingContext): Seq[Int] = {
       val fileInputDStream =
         ssc.graph.getInputStreams().head.asInstanceOf[FileInputDStream[_, _, _]]
-      val filenames = fileInputDStream.batchTimeToSelectedFiles.synchronized
-         { fileInputDStream.batchTimeToSelectedFiles.values.flatten }
+      val filenames = fileInputDStream.batchTimeToSelectedFiles.synchronized {
+        fileInputDStream.batchTimeToSelectedFiles.values.flatten
+      }
       filenames.map(_.split("/").last.toInt).toSeq.sorted
     }
 
@@ -745,7 +756,8 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
         // "batchDuration.milliseconds * 3" has gone before restarting StreamingContext. And because
         // the recovery time is read from the checkpoint time but the original clock doesn't align
         // with the batch time, we need to add the offset "batchDuration.milliseconds / 2".
-        ssc.conf.set("spark.streaming.manualClock.jump",
+        ssc.conf.set(
+          "spark.streaming.manualClock.jump",
           (batchDuration.milliseconds / 2 + batchDuration.milliseconds * 3).toString)
         val oldClockTime = clock.getTimeMillis() // 15000ms
         clock = ssc.scheduler.clock.asInstanceOf[ManualClock]
@@ -835,18 +847,17 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     // create a class which is invisible to app class loader
     val jar = TestUtils.createJarWithClasses(
       classNames = Seq("testClz"),
-      toStringValue = "testStringValue"
-      )
+      toStringValue = "testStringValue")
 
     // invisible to current class loader
     val appClassLoader = getClass.getClassLoader
     intercept[ClassNotFoundException](appClassLoader.loadClass("testClz"))
 
     // visible to mutableURLClassLoader
-    val loader = new MutableURLClassLoader(
-      Array(jar), appClassLoader)
-    assert(loader.loadClass("testClz").getConstructor().newInstance().toString ===
-      "testStringValue")
+    val loader = new MutableURLClassLoader(Array(jar), appClassLoader)
+    assert(
+      loader.loadClass("testClz").getConstructor().newInstance().toString ===
+        "testStringValue")
 
     // create and serialize Array[testClz]
     // scalastyle:off classforname
@@ -856,8 +867,7 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     new ObjectOutputStream(bos).writeObject(arrayObj)
 
     // deserialize the Array[testClz]
-    val ois = new ObjectInputStreamWithLoader(
-      new ByteArrayInputStream(bos.toByteArray), loader)
+    val ois = new ObjectInputStreamWithLoader(new ByteArrayInputStream(bos.toByteArray), loader)
     assert(ois.readObject().asInstanceOf[Class[_]].getName == "[LtestClz;")
     ois.close()
   }
@@ -869,10 +879,14 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
       new CheckpointWriter(jobGenerator, conf, checkpointDir, new Configuration())
     val bytes1 = Array.fill[Byte](10)(1)
     new checkpointWriter.CheckpointWriteHandler(
-      Time(2000), bytes1, clearCheckpointDataLater = false).run()
+      Time(2000),
+      bytes1,
+      clearCheckpointDataLater = false).run()
     val bytes2 = Array.fill[Byte](10)(2)
     new checkpointWriter.CheckpointWriteHandler(
-      Time(1000), bytes2, clearCheckpointDataLater = true).run()
+      Time(1000),
+      bytes2,
+      clearCheckpointDataLater = true).run()
     val checkpointFiles = Checkpoint.getCheckpointFiles(checkpointDir).reverse.map { path =>
       new File(path.toUri)
     }
@@ -939,9 +953,12 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
     }
     @volatile var shouldCheckpointAllMarkedRDDs = false
     @volatile var rddsCheckpointed = false
-    inputDStream.map(i => (i, i))
-      .updateStateByKey(updateFunc).checkpoint(batchDuration)
-      .updateStateByKey(updateFunc).checkpoint(batchDuration)
+    inputDStream
+      .map(i => (i, i))
+      .updateStateByKey(updateFunc)
+      .checkpoint(batchDuration)
+      .updateStateByKey(updateFunc)
+      .checkpoint(batchDuration)
       .foreachRDD { rdd =>
         /**
          * Find all RDDs that are marked for checkpointing in the specified RDD and its ancestors.
@@ -956,8 +973,9 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
         }
 
         shouldCheckpointAllMarkedRDDs =
-          Option(rdd.sparkContext.getLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS)).
-            map(_.toBoolean).getOrElse(false)
+          Option(rdd.sparkContext.getLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS))
+            .map(_.toBoolean)
+            .getOrElse(false)
 
         val stateRDDs = findAllMarkedRDDs(rdd)
         rdd.count()
@@ -971,12 +989,12 @@ class CheckpointSuite extends TestSuiteBase with LocalStreamingContext with DStr
   }
 
   /**
-   * Advances the manual clock on the streaming scheduler by given number of batches.
-   * It also waits for the expected amount of time for each batch.
+   * Advances the manual clock on the streaming scheduler by given number of batches. It also
+   * waits for the expected amount of time for each batch.
    */
-  def advanceTimeWithRealDelay[V: ClassTag](ssc: StreamingContext, numBatches: Long):
-      Iterable[Seq[V]] =
-  {
+  def advanceTimeWithRealDelay[V: ClassTag](
+      ssc: StreamingContext,
+      numBatches: Long): Iterable[Seq[V]] = {
     val clock = ssc.scheduler.clock.asInstanceOf[ManualClock]
     logInfo("Manual clock before advancing = " + clock.getTimeMillis())
     for (i <- 1 to numBatches.toInt) {

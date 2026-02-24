@@ -71,8 +71,9 @@ private[spark] class ClientArguments(args: Array[String]) extends Logging {
     }
 
     if (primaryPyFile != null && primaryRFile != null) {
-      throw new IllegalArgumentException("Cannot have primary-py-file and primary-r-file" +
-        " at the same time")
+      throw new IllegalArgumentException(
+        "Cannot have primary-py-file and primary-r-file" +
+          " at the same time")
     }
 
     if (verbose) {

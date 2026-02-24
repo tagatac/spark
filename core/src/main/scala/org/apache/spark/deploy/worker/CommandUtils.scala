@@ -31,12 +31,11 @@ import org.apache.spark.util.Utils
 /**
  * Utilities for running commands with the spark classpath.
  */
-private[deploy]
-object CommandUtils extends Logging {
+private[deploy] object CommandUtils extends Logging {
 
   /**
-   * Build a ProcessBuilder based on the given parameters.
-   * The `env` argument is exposed for testing.
+   * Build a ProcessBuilder based on the given parameters. The `env` argument is exposed for
+   * testing.
    */
   def buildProcessBuilder(
       command: Command,
@@ -46,8 +45,8 @@ object CommandUtils extends Logging {
       substituteArguments: String => String,
       classPaths: Seq[String] = Seq.empty,
       env: Map[String, String] = sys.env): ProcessBuilder = {
-    val localCommand = buildLocalCommand(
-      command, securityMgr, substituteArguments, classPaths, env)
+    val localCommand =
+      buildLocalCommand(command, securityMgr, substituteArguments, classPaths, env)
     val commandSeq = buildCommandSeq(localCommand, memory, sparkHome)
     val builder = new ProcessBuilder(commandSeq: _*)
     val environment = builder.environment()
@@ -65,9 +64,9 @@ object CommandUtils extends Logging {
   }
 
   /**
-   * Build a command based on the given one, taking into account the local environment
-   * of where this command is expected to run, substitute any placeholders, and append
-   * any extra class paths.
+   * Build a command based on the given one, taking into account the local environment of where
+   * this command is expected to run, substitute any placeholders, and append any extra class
+   * paths.
    */
   private def buildLocalCommand(
       command: Command,
@@ -103,10 +102,8 @@ object CommandUtils extends Logging {
       // filter out secrets from java options
       command.javaOpts.filterNot(opts =>
         opts.startsWith("-D" + SecurityManager.SPARK_AUTH_SECRET_CONF) ||
-        SSLOptions.SPARK_RPC_SSL_PASSWORD_FIELDS.exists(
-          field => opts.startsWith("-D" + field)
-        )
-      ))
+          SSLOptions.SPARK_RPC_SSL_PASSWORD_FIELDS.exists(field =>
+            opts.startsWith("-D" + field))))
   }
 
   /** Spawn a thread that will redirect a given stream to a file */
@@ -120,8 +117,9 @@ object CommandUtils extends Logging {
           Utils.copyStream(in, out, true)
         } catch {
           case e: IOException =>
-            logInfo(log"Redirection to ${MDC(LogKeys.FILE_NAME, file)} closed: " +
-              log"${MDC(LogKeys.ERROR, e.getMessage)}")
+            logInfo(
+              log"Redirection to ${MDC(LogKeys.FILE_NAME, file)} closed: " +
+                log"${MDC(LogKeys.ERROR, e.getMessage)}")
         }
       }
     }.start()

@@ -31,7 +31,7 @@ import org.apache.spark.deploy.k8s.Constants._
 import org.apache.spark.deploy.k8s.KubernetesUtils.buildPodWithServiceAccount
 
 private[spark] class DriverKubernetesCredentialsFeatureStep(kubernetesConf: KubernetesConf)
-  extends KubernetesFeatureConfigStep {
+    extends KubernetesFeatureConfigStep {
   // TODO clean up this class, and credentials in general. See also SparkKubernetesClientFactory.
   // We should use a struct to hold all creds-related fields. A lot of the code is very repetitive.
 
@@ -77,19 +77,21 @@ private[spark] class DriverKubernetesCredentialsFeatureStep(kubernetesConf: Kube
       val driverPodWithMountedKubernetesCredentials =
         new PodBuilder(pod.pod)
           .editOrNewSpec()
-            .addNewVolume()
-              .withName(DRIVER_CREDENTIALS_SECRET_VOLUME_NAME)
-              .withNewSecret().withSecretName(driverCredentialsSecretName).endSecret()
-              .endVolume()
+          .addNewVolume()
+          .withName(DRIVER_CREDENTIALS_SECRET_VOLUME_NAME)
+          .withNewSecret()
+          .withSecretName(driverCredentialsSecretName)
+          .endSecret()
+          .endVolume()
           .endSpec()
           .build()
 
       val driverContainerWithMountedSecretVolume =
         new ContainerBuilder(pod.container)
           .addNewVolumeMount()
-            .withName(DRIVER_CREDENTIALS_SECRET_VOLUME_NAME)
-            .withMountPath(DRIVER_CREDENTIALS_SECRETS_BASE_DIR)
-            .endVolumeMount()
+          .withName(DRIVER_CREDENTIALS_SECRET_VOLUME_NAME)
+          .withMountPath(DRIVER_CREDENTIALS_SECRETS_BASE_DIR)
+          .endVolumeMount()
           .build()
       SparkPod(driverPodWithMountedKubernetesCredentials, driverContainerWithMountedSecretVolume)
     }
@@ -118,26 +120,31 @@ private[spark] class DriverKubernetesCredentialsFeatureStep(kubernetesConf: Kube
       .toMap
       .map { case (k, v) => (k, "<present_but_redacted>") }
     redactedTokens ++
-      resolvedMountedCaCertFile.map { file =>
-        Map(
-          s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CA_CERT_FILE_CONF_SUFFIX" ->
+      resolvedMountedCaCertFile
+        .map { file =>
+          Map(s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CA_CERT_FILE_CONF_SUFFIX" ->
             file)
-      }.getOrElse(Map.empty) ++
-      resolvedMountedClientKeyFile.map { file =>
-        Map(
-          s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CLIENT_KEY_FILE_CONF_SUFFIX" ->
+        }
+        .getOrElse(Map.empty) ++
+      resolvedMountedClientKeyFile
+        .map { file =>
+          Map(s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CLIENT_KEY_FILE_CONF_SUFFIX" ->
             file)
-      }.getOrElse(Map.empty) ++
-      resolvedMountedClientCertFile.map { file =>
-        Map(
-          s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CLIENT_CERT_FILE_CONF_SUFFIX" ->
+        }
+        .getOrElse(Map.empty) ++
+      resolvedMountedClientCertFile
+        .map { file =>
+          Map(s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$CLIENT_CERT_FILE_CONF_SUFFIX" ->
             file)
-      }.getOrElse(Map.empty) ++
-      resolvedMountedOAuthTokenFile.map { file =>
-        Map(
-          s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$OAUTH_TOKEN_FILE_CONF_SUFFIX" ->
-          file)
-      }.getOrElse(Map.empty)
+        }
+        .getOrElse(Map.empty) ++
+      resolvedMountedOAuthTokenFile
+        .map { file =>
+          Map(
+            s"$KUBERNETES_AUTH_DRIVER_MOUNTED_CONF_PREFIX.$OAUTH_TOKEN_FILE_CONF_SUFFIX" ->
+              file)
+        }
+        .getOrElse(Map.empty)
   }
 
   override def getAdditionalKubernetesResources(): Seq[HasMetadata] = {
@@ -149,36 +156,46 @@ private[spark] class DriverKubernetesCredentialsFeatureStep(kubernetesConf: Kube
   }
 
   private def safeFileConfToBase64(conf: String, fileType: String): Option[String] = {
-    kubernetesConf.getOption(conf)
+    kubernetesConf
+      .getOption(conf)
       .map(new File(_))
       .map { file =>
-        require(file.isFile, String.format("%s provided at %s does not exist or is not a file.",
-          fileType, file.getAbsolutePath))
+        require(
+          file.isFile,
+          String.format(
+            "%s provided at %s does not exist or is not a file.",
+            fileType,
+            file.getAbsolutePath))
         Base64.getEncoder().encodeToString(Files.readAllBytes(file.toPath))
       }
   }
 
   /**
-   * Resolve a Kubernetes secret data entry from an optional client credential used by the
-   * driver to talk to the Kubernetes API server.
+   * Resolve a Kubernetes secret data entry from an optional client credential used by the driver
+   * to talk to the Kubernetes API server.
    *
-   * @param userSpecifiedCredential the optional user-specified client credential.
-   * @param secretName name of the Kubernetes secret storing the client credential.
-   * @return a secret data entry in the form of a map from the secret name to the secret data,
-   *         which may be empty if the user-specified credential is empty.
+   * @param userSpecifiedCredential
+   *   the optional user-specified client credential.
+   * @param secretName
+   *   name of the Kubernetes secret storing the client credential.
+   * @return
+   *   a secret data entry in the form of a map from the secret name to the secret data, which may
+   *   be empty if the user-specified credential is empty.
    */
   private def resolveSecretData(
-    userSpecifiedCredential: Option[String],
-    secretName: String): Map[String, String] = {
-    userSpecifiedCredential.map { valueBase64 =>
-      Map(secretName -> valueBase64)
-    }.getOrElse(Map.empty[String, String])
+      userSpecifiedCredential: Option[String],
+      secretName: String): Map[String, String] = {
+    userSpecifiedCredential
+      .map { valueBase64 =>
+        Map(secretName -> valueBase64)
+      }
+      .getOrElse(Map.empty[String, String])
   }
 
   private def resolveSecretLocation(
-    mountedUserSpecified: Option[String],
-    valueMountedFromSubmitter: Option[String],
-    mountedCanonicalLocation: String): Option[String] = {
+      mountedUserSpecified: Option[String],
+      valueMountedFromSubmitter: Option[String],
+      mountedCanonicalLocation: String): Option[String] = {
     mountedUserSpecified.orElse(valueMountedFromSubmitter.map { _ =>
       mountedCanonicalLocation
     })
@@ -186,23 +203,15 @@ private[spark] class DriverKubernetesCredentialsFeatureStep(kubernetesConf: Kube
 
   private def createCredentialsSecret(): Secret = {
     val allSecretData =
-      resolveSecretData(
-        clientKeyDataBase64,
-        DRIVER_CREDENTIALS_CLIENT_KEY_SECRET_NAME) ++
-        resolveSecretData(
-          clientCertDataBase64,
-          DRIVER_CREDENTIALS_CLIENT_CERT_SECRET_NAME) ++
-        resolveSecretData(
-          caCertDataBase64,
-          DRIVER_CREDENTIALS_CA_CERT_SECRET_NAME) ++
-        resolveSecretData(
-          oauthTokenBase64,
-          DRIVER_CREDENTIALS_OAUTH_TOKEN_SECRET_NAME)
+      resolveSecretData(clientKeyDataBase64, DRIVER_CREDENTIALS_CLIENT_KEY_SECRET_NAME) ++
+        resolveSecretData(clientCertDataBase64, DRIVER_CREDENTIALS_CLIENT_CERT_SECRET_NAME) ++
+        resolveSecretData(caCertDataBase64, DRIVER_CREDENTIALS_CA_CERT_SECRET_NAME) ++
+        resolveSecretData(oauthTokenBase64, DRIVER_CREDENTIALS_OAUTH_TOKEN_SECRET_NAME)
 
     new SecretBuilder()
       .withNewMetadata()
-        .withName(driverCredentialsSecretName)
-        .endMetadata()
+      .withName(driverCredentialsSecretName)
+      .endMetadata()
       .withImmutable(true)
       .withData(allSecretData.asJava)
       .build()

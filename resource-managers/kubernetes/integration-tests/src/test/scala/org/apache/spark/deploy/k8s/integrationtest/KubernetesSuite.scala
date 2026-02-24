@@ -40,12 +40,24 @@ import org.apache.spark.deploy.k8s.integrationtest.backend.{IntegrationTestBacke
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
 
-class KubernetesSuite extends SparkFunSuite
-  with BeforeAndAfterAll with BeforeAndAfter with BasicTestsSuite with SparkConfPropagateSuite
-  with SecretsTestsSuite with PythonTestsSuite with ClientModeTestsSuite with PodTemplateSuite
-  with VolumeSuite with PVTestsSuite with DepsTestsSuite with DecommissionSuite with RTestsSuite
-  with Logging with Eventually with Matchers {
-
+class KubernetesSuite
+    extends SparkFunSuite
+    with BeforeAndAfterAll
+    with BeforeAndAfter
+    with BasicTestsSuite
+    with SparkConfPropagateSuite
+    with SecretsTestsSuite
+    with PythonTestsSuite
+    with ClientModeTestsSuite
+    with PodTemplateSuite
+    with VolumeSuite
+    with PVTestsSuite
+    with DepsTestsSuite
+    with DecommissionSuite
+    with RTestsSuite
+    with Logging
+    with Eventually
+    with Matchers {
 
   import KubernetesSuite._
 
@@ -64,18 +76,19 @@ class KubernetesSuite extends SparkFunSuite
   // Default memory limit is 1024M + 384M (minimum overhead constant)
   private val baseMemory = s"${1024 + 384}"
   protected val memOverheadConstant = 0.8
-  private val standardNonJVMMemory = s"${(1024 + 0.4*1024).toInt}"
+  private val standardNonJVMMemory = s"${(1024 + 0.4 * 1024).toInt}"
   protected val additionalMemory = 200
   // 209715200 is 200Mi
   protected val additionalMemoryInBytes = 209715200
-  private val extraDriverTotalMemory = s"${(1024 + memOverheadConstant*1024).toInt}"
+  private val extraDriverTotalMemory = s"${(1024 + memOverheadConstant * 1024).toInt}"
   private val extraExecTotalMemory =
-    s"${(1024 + memOverheadConstant*1024 + additionalMemory).toInt}"
+    s"${(1024 + memOverheadConstant * 1024 + additionalMemory).toInt}"
 
   protected override def logForFailedTest(): Unit = {
     logInfo("\n\n===== EXTRA LOGS FOR THE FAILED TEST\n")
-    logInfo("BEGIN DESCRIBE PODS for application\n" +
-      testBackend.describePods(s"spark-app-locator=$appLocator").mkString("\n"))
+    logInfo(
+      "BEGIN DESCRIBE PODS for application\n" +
+        testBackend.describePods(s"spark-app-locator=$appLocator").mkString("\n"))
     logInfo("END DESCRIBE PODS for the application")
     val driverPodOption = kubernetesTestComponents.kubernetesClient
       .pods()
@@ -87,12 +100,13 @@ class KubernetesSuite extends SparkFunSuite
       .asScala
       .headOption
     driverPodOption.foreach { driverPod =>
-      logInfo("BEGIN driver POD log\n" +
-        kubernetesTestComponents.kubernetesClient
-          .pods()
-          .inNamespace(kubernetesTestComponents.namespace)
-          .withName(driverPod.getMetadata.getName)
-          .getLog)
+      logInfo(
+        "BEGIN driver POD log\n" +
+          kubernetesTestComponents.kubernetesClient
+            .pods()
+            .inNamespace(kubernetesTestComponents.namespace)
+            .withName(driverPod.getMetadata.getName)
+            .getLog)
       logInfo("END driver POD log")
     }
     kubernetesTestComponents.kubernetesClient
@@ -101,32 +115,35 @@ class KubernetesSuite extends SparkFunSuite
       .withLabel("spark-app-locator", appLocator)
       .withLabel("spark-role", "executor")
       .list()
-      .getItems.asScala.foreach { execPod =>
-        val podLog = try {
-          kubernetesTestComponents.kubernetesClient
-            .pods()
-            .inNamespace(kubernetesTestComponents.namespace)
-            .withName(execPod.getMetadata.getName)
-            .getLog
-        } catch {
-          case e: KubernetesClientException =>
-            s"Error fetching log (pod is likely not ready) $e"
-        }
+      .getItems
+      .asScala
+      .foreach { execPod =>
+        val podLog =
+          try {
+            kubernetesTestComponents.kubernetesClient
+              .pods()
+              .inNamespace(kubernetesTestComponents.namespace)
+              .withName(execPod.getMetadata.getName)
+              .getLog
+          } catch {
+            case e: KubernetesClientException =>
+              s"Error fetching log (pod is likely not ready) $e"
+          }
         logInfo(s"\nBEGIN executor (${execPod.getMetadata.getName}) POD log:\n$podLog")
         logInfo(s"END executor (${execPod.getMetadata.getName}) POD log")
       }
   }
 
   /**
-   * Build the image ref for the given image name, taking the repo and tag from the
-   * test configuration.
+   * Build the image ref for the given image name, taking the repo and tag from the test
+   * configuration.
    */
   private def testImageRef(name: String): String = {
-    val tag = sys.props.get(CONFIG_KEY_IMAGE_TAG_FILE)
+    val tag = sys.props
+      .get(CONFIG_KEY_IMAGE_TAG_FILE)
       .map { path =>
         val tagFile = new File(path)
-        require(tagFile.isFile,
-          s"No file found for image tag at ${tagFile.getAbsolutePath}.")
+        require(tagFile.isFile, s"No file found for image tag at ${tagFile.getAbsolutePath}.")
         Files.readString(tagFile.toPath).trim
       }
       .orElse(sys.props.get(CONFIG_KEY_IMAGE_TAG))
@@ -134,7 +151,8 @@ class KubernetesSuite extends SparkFunSuite
         throw new IllegalArgumentException(
           s"One of $CONFIG_KEY_IMAGE_TAG_FILE or $CONFIG_KEY_IMAGE_TAG is required.")
       }
-    val repo = sys.props.get(CONFIG_KEY_IMAGE_REPO)
+    val repo = sys.props
+      .get(CONFIG_KEY_IMAGE_REPO)
       .map { _ + "/" }
       .getOrElse("")
 
@@ -156,14 +174,17 @@ class KubernetesSuite extends SparkFunSuite
       // If someone specified the tgz for the tests look at the extraction dir
       System.getProperty(CONFIG_KEY_UNPACK_DIR),
       // Try the spark test home
-      sys.props("spark.test.home")
-    )
-    val sparkDirProp = possible_spark_dirs.filter(_ != null).find(x =>
-      new File(Paths.get(x).toFile, "bin/spark-submit").exists).orNull
-    require(sparkDirProp != null,
+      sys.props("spark.test.home"))
+    val sparkDirProp = possible_spark_dirs
+      .filter(_ != null)
+      .find(x => new File(Paths.get(x).toFile, "bin/spark-submit").exists)
+      .orNull
+    require(
+      sparkDirProp != null,
       s"Spark home directory must be provided in system properties tested $possible_spark_dirs")
     sparkHomeDir = Paths.get(sparkDirProp)
-    require(sparkHomeDir.toFile.isDirectory,
+    require(
+      sparkHomeDir.toFile.isDirectory,
       s"No directory found for spark home specified at $sparkHomeDir.")
     image = testImageRef(sys.props.getOrElse(CONFIG_KEY_IMAGE_JVM, "spark"))
     pyImage = testImageRef(sys.props.getOrElse(CONFIG_KEY_IMAGE_PYTHON, "spark-py"))
@@ -188,7 +209,8 @@ class KubernetesSuite extends SparkFunSuite
     appLocator = UUID.randomUUID().toString.replaceAll("-", "")
     driverPodName = "spark-test-app-" +
       UUID.randomUUID().toString.replaceAll("-", "") + "-driver"
-    sparkAppConf = kubernetesTestComponents.newSparkAppConf()
+    sparkAppConf = kubernetesTestComponents
+      .newSparkAppConf()
       .set("spark.kubernetes.container.image", image)
       .set("spark.kubernetes.driver.pod.name", driverPodName)
       .set("spark.kubernetes.driver.label.spark-app-locator", appLocator)
@@ -235,8 +257,7 @@ class KubernetesSuite extends SparkFunSuite
       executorPodChecker,
       isJVM,
       customSparkConf = customSparkConf,
-      customAppLocator = customAppLocator
-    )
+      customAppLocator = customAppLocator)
   }
 
   protected def runDFSReadWriteAndVerifyCompletion(
@@ -250,8 +271,9 @@ class KubernetesSuite extends SparkFunSuite
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_DFS_READ_WRITE_TEST,
-      Seq(s"Success! Local Word Count $wordCount and " +
-    s"DFS Word Count $wordCount agree."),
+      Seq(
+        s"Success! Local Word Count $wordCount and " +
+          s"DFS Word Count $wordCount agree."),
       Seq(),
       appArgs,
       driverPodChecker,
@@ -272,8 +294,9 @@ class KubernetesSuite extends SparkFunSuite
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_MINI_READ_WRITE_TEST,
-      Seq(s"Success! Local Word Count $wordCount and " +
-    s"D Word Count $wordCount agree."),
+      Seq(
+        s"Success! Local Word Count $wordCount and " +
+          s"D Word Count $wordCount agree."),
       Seq(),
       appArgs,
       driverPodChecker,
@@ -307,10 +330,8 @@ class KubernetesSuite extends SparkFunSuite
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       appArgs: Array[String] = Array("5"),
       expectedJVMValue: Seq[String]): Unit = {
-    val appArguments = SparkAppArguments(
-      mainAppResource = appResource,
-      mainClass = mainClass,
-      appArgs = appArgs)
+    val appArguments =
+      SparkAppArguments(mainAppResource = appResource, mainClass = mainClass, appArgs = appArgs)
     SparkAppLauncher.launch(
       appArguments,
       sparkAppConf,
@@ -330,12 +351,14 @@ class KubernetesSuite extends SparkFunSuite
 
     Eventually.eventually(TIMEOUT, INTERVAL) {
       expectedJVMValue.foreach { e =>
-        assert(kubernetesTestComponents.kubernetesClient
-          .pods()
-          .inNamespace(kubernetesTestComponents.namespace)
-          .withName(driverPod.getMetadata.getName)
-          .getLog
-          .contains(e), "The application did not complete.")
+        assert(
+          kubernetesTestComponents.kubernetesClient
+            .pods()
+            .inNamespace(kubernetesTestComponents.namespace)
+            .withName(driverPod.getMetadata.getName)
+            .getLog
+            .contains(e),
+          "The application did not complete.")
       }
     }
   }
@@ -357,11 +380,9 @@ class KubernetesSuite extends SparkFunSuite
       customSparkConf: Option[SparkAppConf] = None,
       customAppLocator: Option[String] = None): Unit = {
 
-  // scalastyle:on argcount
-    val appArguments = SparkAppArguments(
-      mainAppResource = appResource,
-      mainClass = mainClass,
-      appArgs = appArgs)
+    // scalastyle:on argcount
+    val appArguments =
+      SparkAppArguments(mainAppResource = appResource, mainClass = mainClass, appArgs = appArgs)
 
     val execPods = scala.collection.mutable.Map[String, Pod]()
     val podsDeleted = scala.collection.mutable.HashSet[String]()
@@ -380,10 +401,11 @@ class KubernetesSuite extends SparkFunSuite
       val resourceStatus = execPod.getStatus
       val conditions = resourceStatus.getConditions().asScala
       val conditionTypes = conditions.map(_.getType())
-      val readyConditions = conditions.filter{cond => cond.getType() == "Ready"}
+      val readyConditions = conditions.filter { cond => cond.getType() == "Ready" }
       val result = readyConditions
         .map(cond => cond.getStatus() == "True")
-        .headOption.getOrElse(false)
+        .headOption
+        .getOrElse(false)
       result
     }
 
@@ -418,12 +440,13 @@ class KubernetesSuite extends SparkFunSuite
                 // Look for the string that indicates we're good to trigger decom on the driver
                 logDebug("Waiting for first collect...")
                 Eventually.eventually(TIMEOUT, INTERVAL) {
-                  assert(kubernetesTestComponents.kubernetesClient
-                    .pods()
-                    .inNamespace(kubernetesTestComponents.namespace)
-                    .withName(driverPodName)
-                    .getLog
-                    .contains("Waiting to give nodes time to finish migration, decom exec 1."),
+                  assert(
+                    kubernetesTestComponents.kubernetesClient
+                      .pods()
+                      .inNamespace(kubernetesTestComponents.namespace)
+                      .withName(driverPodName)
+                      .getLog
+                      .contains("Waiting to give nodes time to finish migration, decom exec 1."),
                     "Decommission test did not complete first collect.")
                 }
                 // Delete the pod to simulate cluster scale down/migration.
@@ -480,41 +503,44 @@ class KubernetesSuite extends SparkFunSuite
       // If we're testing decommissioning we an executors, but we should have an executor
       // at some point.
       Eventually.eventually(TIMEOUT, patienceInterval) {
-        execPods.values.nonEmpty should be (true)
+        execPods.values.nonEmpty should be(true)
       }
     }
     execPods.values.foreach(executorPodChecker(_))
 
     val execPod: Option[Pod] = if (expectedExecutorLogOnCompletion.nonEmpty) {
-      Some(kubernetesTestComponents.kubernetesClient
-        .pods()
-        .inNamespace(kubernetesTestComponents.namespace)
-        .withLabel("spark-app-locator", appLocator)
-        .withLabel("spark-role", "executor")
-        .list()
-        .getItems
-        .get(0))
+      Some(
+        kubernetesTestComponents.kubernetesClient
+          .pods()
+          .inNamespace(kubernetesTestComponents.namespace)
+          .withLabel("spark-app-locator", appLocator)
+          .withLabel("spark-role", "executor")
+          .list()
+          .getItems
+          .get(0))
     } else {
       None
     }
 
     Eventually.eventually(patienceTimeout, patienceInterval) {
       expectedDriverLogOnCompletion.foreach { e =>
-        assert(kubernetesTestComponents.kubernetesClient
-          .pods()
-          .inNamespace(kubernetesTestComponents.namespace)
-          .withName(driverPod.getMetadata.getName)
-          .getLog
-          .contains(e),
+        assert(
+          kubernetesTestComponents.kubernetesClient
+            .pods()
+            .inNamespace(kubernetesTestComponents.namespace)
+            .withName(driverPod.getMetadata.getName)
+            .getLog
+            .contains(e),
           s"The application did not complete, driver log did not contain str ${e}")
       }
       expectedExecutorLogOnCompletion.foreach { e =>
-        assert(kubernetesTestComponents.kubernetesClient
-          .pods()
-          .inNamespace(kubernetesTestComponents.namespace)
-          .withName(execPod.get.getMetadata.getName)
-          .getLog
-          .contains(e),
+        assert(
+          kubernetesTestComponents.kubernetesClient
+            .pods()
+            .inNamespace(kubernetesTestComponents.namespace)
+            .withName(execPod.get.getMetadata.getName)
+            .getLog
+            .contains(e),
           s"The application did not complete, executor log did not contain str ${e}")
       }
     }
@@ -525,8 +551,9 @@ class KubernetesSuite extends SparkFunSuite
     assert(driverPod.getMetadata.getName === driverPodName)
     assert(driverPod.getSpec.getContainers.get(0).getImage === image)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
-    assert(driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === baseMemory)
+    assert(
+      driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === baseMemory)
   }
 
   protected def doExecutorServiceAccountCheck(executorPod: Pod, account: String): Unit = {
@@ -538,48 +565,54 @@ class KubernetesSuite extends SparkFunSuite
     assert(driverPod.getMetadata.getName === driverPodName)
     assert(driverPod.getSpec.getContainers.get(0).getImage === pyImage)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
-    assert(driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === standardNonJVMMemory)
+    assert(
+      driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === standardNonJVMMemory)
   }
 
   protected def doBasicDriverRPodCheck(driverPod: Pod): Unit = {
     assert(driverPod.getMetadata.getName === driverPodName)
     assert(driverPod.getSpec.getContainers.get(0).getImage === rImage)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
-    assert(driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === standardNonJVMMemory)
+    assert(
+      driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === standardNonJVMMemory)
   }
-
 
   protected def doBasicExecutorPodCheck(executorPod: Pod): Unit = {
     assert(executorPod.getSpec.getContainers.get(0).getImage === image)
     assert(executorPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-executor")
-    assert(executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === baseMemory)
+    assert(
+      executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === baseMemory)
   }
 
   protected def doBasicExecutorPyPodCheck(executorPod: Pod): Unit = {
     assert(executorPod.getSpec.getContainers.get(0).getImage === pyImage)
     assert(executorPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-executor")
-    assert(executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === standardNonJVMMemory)
+    assert(
+      executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === standardNonJVMMemory)
   }
 
   protected def doBasicExecutorRPodCheck(executorPod: Pod): Unit = {
     assert(executorPod.getSpec.getContainers.get(0).getImage === rImage)
     assert(executorPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-executor")
-    assert(executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === standardNonJVMMemory)
+    assert(
+      executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === standardNonJVMMemory)
   }
 
   protected def doDriverMemoryCheck(driverPod: Pod): Unit = {
-    assert(driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === extraDriverTotalMemory)
+    assert(
+      driverPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === extraDriverTotalMemory)
   }
 
   protected def doExecutorMemoryCheck(executorPod: Pod): Unit = {
-    assert(executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
-      === extraExecTotalMemory)
+    assert(
+      executorPod.getSpec.getContainers.get(0).getResources.getRequests.get("memory").getAmount
+        === extraExecTotalMemory)
   }
 
   protected def checkCustomSettings(pod: Pod): Unit = {
@@ -591,13 +624,9 @@ class KubernetesSuite extends SparkFunSuite
     val appIdAnnotation = pod.getMetadata.getAnnotations.get("customAppIdAnnotation")
 
     val container = pod.getSpec.getContainers.get(0)
-    val envVars = container
-      .getEnv
-      .asScala
-      .map { env =>
-        (env.getName, env.getValue)
-      }
-      .toMap
+    val envVars = container.getEnv.asScala.map { env =>
+      (env.getName, env.getValue)
+    }.toMap
     assert(envVars("ENV1") === "VALUE1")
     assert(envVars("ENV2") === "VALUE2")
     assert(appIdLabel === envVars(ENV_APPLICATION_ID))
@@ -611,30 +640,32 @@ class KubernetesSuite extends SparkFunSuite
       .withName(driverPodName)
       .delete()
     Eventually.eventually(TIMEOUT, INTERVAL) {
-      assert(kubernetesTestComponents.kubernetesClient
-        .pods()
-        .inNamespace(kubernetesTestComponents.namespace)
-        .withName(driverPodName)
-        .get() == null)
+      assert(
+        kubernetesTestComponents.kubernetesClient
+          .pods()
+          .inNamespace(kubernetesTestComponents.namespace)
+          .withName(driverPodName)
+          .get() == null)
     }
   }
 
   private def deleteExecutorPod(): Unit = {
-    kubernetesTestComponents
-      .kubernetesClient
+    kubernetesTestComponents.kubernetesClient
       .pods()
       .inNamespace(kubernetesTestComponents.namespace)
       .withLabel("spark-app-locator", appLocator)
       .withLabel("spark-role", "executor")
       .delete()
     Eventually.eventually(TIMEOUT, INTERVAL) {
-      assert(kubernetesTestComponents.kubernetesClient
-        .pods()
-        .inNamespace(kubernetesTestComponents.namespace)
-        .withLabel("spark-app-locator", appLocator)
-        .withLabel("spark-role", "executor")
-        .list()
-        .getItems.isEmpty)
+      assert(
+        kubernetesTestComponents.kubernetesClient
+          .pods()
+          .inNamespace(kubernetesTestComponents.namespace)
+          .withLabel("spark-app-locator", appLocator)
+          .withLabel("spark-role", "executor")
+          .list()
+          .getItems
+          .isEmpty)
     }
   }
 }

@@ -47,7 +47,10 @@ case class ParquetDataWithKeyAndComplexTypes(
 /**
  * A collection of tests for parquet data with various forms of partitioning.
  */
-abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with TestHiveSingleton {
+abstract class ParquetPartitioningTest
+    extends QueryTest
+    with SQLTestUtils
+    with TestHiveSingleton {
   import testImplicits._
 
   var partitionedTableDir: File = null
@@ -63,45 +66,64 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
 
     (1 to 10).foreach { p =>
       val partDir = new File(partitionedTableDir, s"p=$p")
-      sparkContext.makeRDD(1 to 10)
+      sparkContext
+        .makeRDD(1 to 10)
         .map(i => ParquetData(i, s"part-$p"))
         .toDF()
-        .write.parquet(partDir.getCanonicalPath)
+        .write
+        .parquet(partDir.getCanonicalPath)
     }
 
     sparkContext
       .makeRDD(1 to 10)
       .map(i => ParquetData(i, s"part-1"))
       .toDF()
-      .write.parquet(new File(normalTableDir, "normal").getCanonicalPath)
+      .write
+      .parquet(new File(normalTableDir, "normal").getCanonicalPath)
 
     partitionedTableDirWithKey = Utils.createTempDir()
 
     (1 to 10).foreach { p =>
       val partDir = new File(partitionedTableDirWithKey, s"p=$p")
-      sparkContext.makeRDD(1 to 10)
+      sparkContext
+        .makeRDD(1 to 10)
         .map(i => ParquetDataWithKey(p, i, s"part-$p"))
         .toDF()
-        .write.parquet(partDir.getCanonicalPath)
+        .write
+        .parquet(partDir.getCanonicalPath)
     }
 
     partitionedTableDirWithKeyAndComplexTypes = Utils.createTempDir()
 
     (1 to 10).foreach { p =>
       val partDir = new File(partitionedTableDirWithKeyAndComplexTypes, s"p=$p")
-      sparkContext.makeRDD(1 to 10).map { i =>
-        ParquetDataWithKeyAndComplexTypes(
-          p, i, s"part-$p", StructContainer(i, f"${i}_string"), 1 to i)
-      }.toDF().write.parquet(partDir.getCanonicalPath)
+      sparkContext
+        .makeRDD(1 to 10)
+        .map { i =>
+          ParquetDataWithKeyAndComplexTypes(
+            p,
+            i,
+            s"part-$p",
+            StructContainer(i, f"${i}_string"),
+            1 to i)
+        }
+        .toDF()
+        .write
+        .parquet(partDir.getCanonicalPath)
     }
 
     partitionedTableDirWithComplexTypes = Utils.createTempDir()
 
     (1 to 10).foreach { p =>
       val partDir = new File(partitionedTableDirWithComplexTypes, s"p=$p")
-      sparkContext.makeRDD(1 to 10).map { i =>
-        ParquetDataWithComplexTypes(i, s"part-$p", StructContainer(i, f"${i}_string"), 1 to i)
-      }.toDF().write.parquet(partDir.getCanonicalPath)
+      sparkContext
+        .makeRDD(1 to 10)
+        .map { i =>
+          ParquetDataWithComplexTypes(i, s"part-$p", StructContainer(i, f"${i}_string"), 1 to i)
+        }
+        .toDF()
+        .write
+        .parquet(partDir.getCanonicalPath)
     }
   }
 
@@ -120,7 +142,8 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
   /**
    * Drop named tables if they exist
    *
-   * @param tableNames tables to drop
+   * @param tableNames
+   *   tables to drop
    */
   def dropTables(tableNames: String*): Unit = {
     tableNames.foreach { name =>
@@ -133,17 +156,14 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
     "partitioned_parquet_with_key",
     "partitioned_parquet_with_complextypes",
     "partitioned_parquet_with_key_and_complextypes").foreach { table =>
-
     test(s"ordering of the partitioning columns $table") {
       checkAnswer(
         sql(s"SELECT p, stringField FROM $table WHERE p = 1"),
-        Seq.fill(10)(Row(1, "part-1"))
-      )
+        Seq.fill(10)(Row(1, "part-1")))
 
       checkAnswer(
         sql(s"SELECT stringField, p FROM $table WHERE p = 1"),
-        Seq.fill(10)(Row("part-1", 1))
-      )
+        Seq.fill(10)(Row("part-1", 1)))
     }
 
     test(s"project the partitioning column $table") {
@@ -158,8 +178,7 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
           Row(7, 10) ::
           Row(8, 10) ::
           Row(9, 10) ::
-          Row(10, 10) :: Nil
-      )
+          Row(10, 10) :: Nil)
     }
 
     test(s"project partitioning and non-partitioning columns $table") {
@@ -174,38 +193,27 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
           Row("part-7", 7, 10) ::
           Row("part-8", 8, 10) ::
           Row("part-9", 9, 10) ::
-          Row("part-10", 10, 10) :: Nil
-      )
+          Row("part-10", 10, 10) :: Nil)
     }
 
     test(s"simple count $table") {
-      checkAnswer(
-        sql(s"SELECT COUNT(*) FROM $table"),
-        Row(100))
+      checkAnswer(sql(s"SELECT COUNT(*) FROM $table"), Row(100))
     }
 
     test(s"pruned count $table") {
-      checkAnswer(
-        sql(s"SELECT COUNT(*) FROM $table WHERE p = 1"),
-        Row(10))
+      checkAnswer(sql(s"SELECT COUNT(*) FROM $table WHERE p = 1"), Row(10))
     }
 
     test(s"non-existent partition $table") {
-      checkAnswer(
-        sql(s"SELECT COUNT(*) FROM $table WHERE p = 1000"),
-        Row(0))
+      checkAnswer(sql(s"SELECT COUNT(*) FROM $table WHERE p = 1000"), Row(0))
     }
 
     test(s"multi-partition pruned count $table") {
-      checkAnswer(
-        sql(s"SELECT COUNT(*) FROM $table WHERE p IN (1,2,3)"),
-        Row(30))
+      checkAnswer(sql(s"SELECT COUNT(*) FROM $table WHERE p IN (1,2,3)"), Row(30))
     }
 
     test(s"non-partition predicates $table") {
-      checkAnswer(
-        sql(s"SELECT COUNT(*) FROM $table WHERE intField IN (1,2,3)"),
-        Row(30))
+      checkAnswer(sql(s"SELECT COUNT(*) FROM $table WHERE intField IN (1,2,3)"), Row(30))
     }
 
     test(s"sum $table") {
@@ -217,36 +225,34 @@ abstract class ParquetPartitioningTest extends QueryTest with SQLTestUtils with 
     test(s"hive udfs $table") {
       checkAnswer(
         sql(s"SELECT concat(stringField, stringField) FROM $table"),
-        sql(s"SELECT stringField FROM $table").rdd.map {
-          case Row(s: String) => Row(s + s)
-        }.collect().toSeq)
+        sql(s"SELECT stringField FROM $table").rdd
+          .map { case Row(s: String) =>
+            Row(s + s)
+          }
+          .collect()
+          .toSeq)
     }
   }
 
-  Seq(
-    "partitioned_parquet_with_key_and_complextypes",
-    "partitioned_parquet_with_complextypes").foreach { table =>
-
-    test(s"SPARK-5775 read struct from $table") {
-      checkAnswer(
-        sql(
-          s"""
+  Seq("partitioned_parquet_with_key_and_complextypes", "partitioned_parquet_with_complextypes")
+    .foreach { table =>
+      test(s"SPARK-5775 read struct from $table") {
+        checkAnswer(
+          sql(s"""
              |SELECT p, structField.intStructField, structField.stringStructField
              |FROM $table WHERE p = 1
            """.stripMargin),
-        (1 to 10).map(i => Row(1, i, f"${i}_string")))
-    }
+          (1 to 10).map(i => Row(1, i, f"${i}_string")))
+      }
 
-    test(s"SPARK-5775 read array from $table") {
-      checkAnswer(
-        sql(s"SELECT arrayField, p FROM $table WHERE p = 1"),
-        (1 to 10).map(i => Row((1 to i).toArray, 1)))
+      test(s"SPARK-5775 read array from $table") {
+        checkAnswer(
+          sql(s"SELECT arrayField, p FROM $table WHERE p = 1"),
+          (1 to 10).map(i => Row((1 to i).toArray, 1)))
+      }
     }
-  }
 
   test("non-part select(*)") {
-    checkAnswer(
-      sql("SELECT COUNT(*) FROM normal_parquet"),
-      Row(10))
+    checkAnswer(sql("SELECT COUNT(*) FROM normal_parquet"), Row(10))
   }
 }

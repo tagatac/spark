@@ -39,7 +39,8 @@ private[spark] class ShufflePartitionPairsWriter(
     blockId: BlockId,
     writeMetrics: ShuffleWriteMetricsReporter,
     checksum: Checksum)
-  extends PairsWriter with Closeable {
+    extends PairsWriter
+    with Closeable {
 
   private var isClosed = false
   private var partitionStream: OutputStream = _
@@ -72,7 +73,8 @@ private[spark] class ShufflePartitionPairsWriter(
         checksumOutputStream = new MutableCheckedOutputStream(timeTrackingStream)
         checksumOutputStream.setChecksum(checksum)
       }
-      wrappedStream = serializerManager.wrapStream(blockId,
+      wrappedStream = serializerManager.wrapStream(
+        blockId,
         if (checksumOutputStream != null) checksumOutputStream else timeTrackingStream)
       objOut = serializerInstance.serializeStream(wrappedStream)
     } catch {

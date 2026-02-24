@@ -35,9 +35,7 @@ import org.apache.spark.tags.WebBrowserTest
 import org.apache.spark.ui.SparkUICssErrorHandler
 
 @WebBrowserTest
-class UISeleniumSuite
-  extends HiveThriftServer2TestBase
-  with WebBrowser with Matchers {
+class UISeleniumSuite extends HiveThriftServer2TestBase with WebBrowser with Matchers {
 
   implicit var webDriver: WebDriver = _
   var server: HiveThriftServer2 = _
@@ -73,7 +71,8 @@ class UISeleniumSuite
       // overrides all other potential log4j configurations contained in other dependency jar files.
       val tempLog4jConf = org.apache.spark.util.Utils.createTempDir().getCanonicalPath
 
-      Files.writeString(new File(s"$tempLog4jConf/log4j2.properties").toPath,
+      Files.writeString(
+        new File(s"$tempLog4jConf/log4j2.properties").toPath,
         """rootLogger.level = info
           |rootLogger.appenderRef.file.ref = console
           |appender.console.type = Console
@@ -121,7 +120,7 @@ class UISeleniumSuite
 
         // check whether statements exists
         queries.foreach { line =>
-          findAll(cssSelector("span.description-input")).map(_.text).toList should contain (line)
+          findAll(cssSelector("span.description-input")).map(_.text).toList should contain(line)
         }
       }
     }
@@ -131,7 +130,7 @@ class UISeleniumSuite
     withJdbcStatement("test_tbl1", "test_tbl2") { statement =>
       val baseURL = s"http://$localhost:$uiPort"
 
-      val Seq(nonMaskedQuery, maskedQuery) = Seq("test_tbl1", "test_tbl2").map (tblName =>
+      val Seq(nonMaskedQuery, maskedQuery) = Seq("test_tbl1", "test_tbl2").map(tblName =>
         s"CREATE TABLE $tblName(a int) " +
           s"OPTIONS(url='jdbc:postgresql://$localhost:5432/$tblName', " +
           "user='test_user', password='abcde')")
@@ -144,30 +143,35 @@ class UISeleniumSuite
         go to (baseURL + "/sqlserver")
         // Take description of 2 statements executed within this test.
         val statements = findAll(cssSelector("span.description-input"))
-          .map(_.text).filter(_.startsWith("CREATE")).take(2).toSeq
+          .map(_.text)
+          .filter(_.startsWith("CREATE"))
+          .take(2)
+          .toSeq
 
         val nonMaskedStatement = statements.filter(_.contains("test_tbl1"))
-        nonMaskedStatement.size should be (1)
-        nonMaskedStatement.head should be (nonMaskedQuery)
+        nonMaskedStatement.size should be(1)
+        nonMaskedStatement.head should be(nonMaskedQuery)
         val maskedStatement = statements.filter(_.contains("test_tbl2"))
-        maskedStatement.size should be (1)
-        maskedStatement.head should be (maskedQuery.replace("'abcde'", "*********(redacted)"))
+        maskedStatement.size should be(1)
+        maskedStatement.head should be(maskedQuery.replace("'abcde'", "*********(redacted)"))
       }
 
       val sessionLink =
         find(cssSelector("table#sessionstat td a")).head.underlying.getDomProperty("href")
       eventually(timeout(10.seconds), interval(50.milliseconds)) {
         go to sessionLink
-        val statements = findAll(
-          cssSelector("span.description-input")).map(_.text).filter(_.startsWith("CREATE")).toSeq
-        statements.size should be (2)
+        val statements = findAll(cssSelector("span.description-input"))
+          .map(_.text)
+          .filter(_.startsWith("CREATE"))
+          .toSeq
+        statements.size should be(2)
 
         val nonMaskedStatement = statements.filter(_.contains("test_tbl1"))
-        nonMaskedStatement.size should be (1)
-        nonMaskedStatement.head should be (nonMaskedQuery)
+        nonMaskedStatement.size should be(1)
+        nonMaskedStatement.head should be(nonMaskedQuery)
         val maskedStatement = statements.filter(_.contains("test_tbl2"))
-        maskedStatement.size should be (1)
-        maskedStatement.head should be (maskedQuery.replace("'abcde'", "*********(redacted)"))
+        maskedStatement.size should be(1)
+        maskedStatement.head should be(maskedQuery.replace("'abcde'", "*********(redacted)"))
       }
     }
   }

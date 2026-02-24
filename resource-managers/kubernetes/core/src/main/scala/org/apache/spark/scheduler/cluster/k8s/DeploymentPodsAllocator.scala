@@ -37,10 +37,10 @@ import org.apache.spark.util.{Clock, Utils}
 /**
  * A pods allocator backed by Kubernetes Deployments.
  *
- * The Deployment controller honours the `controller.kubernetes.io/pod-deletion-cost`
- * annotation, so executors selected by Spark for removal can be prioritised when the
- * deployment scales down. This provides predictable downscale behaviour for dynamic
- * allocation that is not possible with StatefulSets which only remove pods in ordinal order.
+ * The Deployment controller honours the `controller.kubernetes.io/pod-deletion-cost` annotation,
+ * so executors selected by Spark for removal can be prioritised when the deployment scales down.
+ * This provides predictable downscale behaviour for dynamic allocation that is not possible with
+ * StatefulSets which only remove pods in ordinal order.
  */
 class DeploymentPodsAllocator(
     conf: SparkConf,
@@ -48,7 +48,9 @@ class DeploymentPodsAllocator(
     executorBuilder: KubernetesExecutorBuilder,
     kubernetesClient: KubernetesClient,
     snapshotsStore: ExecutorPodsSnapshotsStore,
-    clock: Clock) extends AbstractPodsAllocator() with Logging {
+    clock: Clock)
+    extends AbstractPodsAllocator()
+    with Logging {
 
   private val rpIdToResourceProfile = new mutable.HashMap[Int, ResourceProfile]
 
@@ -59,13 +61,16 @@ class DeploymentPodsAllocator(
   private val kubernetesDriverPodName = conf.get(KUBERNETES_DRIVER_POD_NAME)
 
   val driverPod: Option[Pod] = kubernetesDriverPodName
-    .map(name => Option(kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withName(name)
-      .get())
-      .getOrElse(throw new SparkException(
-        s"No pod was found named $name in the cluster in the " +
-          s"namespace $namespace (this was supposed to be the driver pod.).")))
+    .map(name =>
+      Option(
+        kubernetesClient
+          .pods()
+          .inNamespace(namespace)
+          .withName(name)
+          .get())
+        .getOrElse(
+          throw new SparkException(s"No pod was found named $name in the cluster in the " +
+            s"namespace $namespace (this was supposed to be the driver pod.).")))
 
   private var appId: String = _
 
@@ -155,7 +160,8 @@ class DeploymentPodsAllocator(
       }
 
       val currentAnnotations = Option(meta.getAnnotations)
-        .map(_.asScala).getOrElse(Map.empty[String, String])
+        .map(_.asScala)
+        .getOrElse(Map.empty[String, String])
       if (!currentAnnotations.contains(podDeletionCostAnnotation)) {
         val newAnnotations = currentAnnotations.concat(Seq(podDeletionCostAnnotation -> "0"))
         meta.setAnnotations(newAnnotations.asJava)
@@ -165,17 +171,17 @@ class DeploymentPodsAllocator(
 
       val deployment = new DeploymentBuilder()
         .withNewMetadata()
-          .withName(setName(applicationId, resourceProfileId))
-          .withNamespace(namespace)
+        .withName(setName(applicationId, resourceProfileId))
+        .withNamespace(namespace)
         .endMetadata()
         .withNewSpec()
-          .withReplicas(expected)
-          .withNewSelector()
-            .addToMatchLabels(SPARK_APP_ID_LABEL, applicationId)
-            .addToMatchLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-            .addToMatchLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, resourceProfileId.toString)
-          .endSelector()
-          .withTemplate(podTemplateSpec)
+        .withReplicas(expected)
+        .withNewSelector()
+        .addToMatchLabels(SPARK_APP_ID_LABEL, applicationId)
+        .addToMatchLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+        .addToMatchLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, resourceProfileId.toString)
+        .endSelector()
+        .withTemplate(podTemplateSpec)
         .endSpec()
         .build()
 

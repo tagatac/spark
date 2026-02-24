@@ -22,8 +22,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.util.collection.Utils.createArray
 
 /**
- * Serialization benchmark for VectorUDT.
- * To run this benchmark:
+ * Serialization benchmark for VectorUDT. To run this benchmark:
  * {{{
  * 1. without sbt:
  *    bin/spark-submit --class <this class>

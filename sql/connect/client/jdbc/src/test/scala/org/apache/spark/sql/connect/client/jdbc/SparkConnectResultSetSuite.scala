@@ -22,8 +22,7 @@ import java.sql.{Array => _, _}
 import org.apache.spark.sql.connect.client.jdbc.test.JdbcHelper
 import org.apache.spark.sql.connect.test.{ConnectFunSuite, RemoteSparkSession}
 
-class SparkConnectResultSetSuite extends ConnectFunSuite with RemoteSparkSession
-  with JdbcHelper {
+class SparkConnectResultSetSuite extends ConnectFunSuite with RemoteSparkSession with JdbcHelper {
 
   def jdbcUrl: String = s"jdbc:sc://localhost:$serverPort"
 
@@ -32,15 +31,15 @@ class SparkConnectResultSetSuite extends ConnectFunSuite with RemoteSparkSession
       rs.getType === ResultSet.TYPE_FORWARD_ONLY
       rs.getConcurrency === ResultSet.CONCUR_READ_ONLY
       rs.getFetchDirection === ResultSet.FETCH_FORWARD
-      Seq(ResultSet.FETCH_FORWARD, ResultSet.FETCH_REVERSE,
-        ResultSet.FETCH_UNKNOWN).foreach { direction =>
-        if (direction == ResultSet.FETCH_FORWARD) {
-          rs.setFetchDirection(direction)
-        } else {
-          intercept[SQLException] {
+      Seq(ResultSet.FETCH_FORWARD, ResultSet.FETCH_REVERSE, ResultSet.FETCH_UNKNOWN).foreach {
+        direction =>
+          if (direction == ResultSet.FETCH_FORWARD) {
             rs.setFetchDirection(direction)
+          } else {
+            intercept[SQLException] {
+              rs.setFetchDirection(direction)
+            }
           }
-        }
       }
     }
   }
@@ -124,14 +123,12 @@ class SparkConnectResultSetSuite extends ConnectFunSuite with RemoteSparkSession
   }
 
   test("getTimestamp with multiple columns, rows, and types") {
-    withExecuteQuery(
-      """SELECT ts_tz, ts_ntz, id FROM VALUES
+    withExecuteQuery("""SELECT ts_tz, ts_ntz, id FROM VALUES
         |  (timestamp '2025-01-15 10:30:45.123456', timestamp_ntz '2025-06-20 14:22:33.789012', 1),
         |  (null, timestamp_ntz '2025-03-01 18:30:45.456789', 2),
         |  (timestamp '2025-10-31 23:59:59.999999', null, 3)
         |  AS t(ts_tz, ts_ntz, id)
         |""".stripMargin) { rs =>
-
       // Test findColumn
       assert(rs.findColumn("ts_tz") === 1)
       assert(rs.findColumn("ts_ntz") === 2)

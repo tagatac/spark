@@ -47,9 +47,7 @@ private[sql] class ProtobufOptions(
           errorClass = "STDS_INVALID_OPTION_VALUE.WITH_MESSAGE",
           messageParameters = Map(
             "optionName" -> optionName,
-            "message" -> s"Cannot cast value '$value' to $typeName."
-          )
-        )
+            "message" -> s"Cannot cast value '$value' to $typeName."))
     }
   }
 
@@ -78,16 +76,14 @@ private[sql] class ProtobufOptions(
    * Adds support for recursive fields. If this option is is not specified, recursive fields are
    * not permitted. Setting it to 1 drops the recursive fields, 0 allows it to be recursed once,
    * and 3 allows it to be recursed twice and so on, up to 10. Values larger than 10 are not
-   * allowed in order avoid inadvertently creating very large schemas. If a Protobuf message
-   * has depth beyond this limit, the Spark struct returned is truncated after the recursion limit.
+   * allowed in order avoid inadvertently creating very large schemas. If a Protobuf message has
+   * depth beyond this limit, the Spark struct returned is truncated after the recursion limit.
    *
    * Examples. Consider a Protobuf with a recursive field:
-   *   `message Person { string name = 1; Person friend = 2; }`
-   * The following lists the schema with different values for this setting.
-   *  1:  `struct<name: string>`
-   *  2:  `struct<name: string, friend: struct<name: string>>`
-   *  3:  `struct<name: string, friend: struct<name: string, friend: struct<name: string>>>`
-   * and so on.
+   * `message Person { string name = 1; Person friend = 2; }` The following lists the schema with
+   * different values for this setting. 1: `struct<name: string>` 2:
+   * `struct<name: string, friend: struct<name: string>>` 3:
+   * `struct<name: string, friend: struct<name: string, friend: struct<name: string>>>` and so on.
    */
   val recursiveFieldMaxDepth: Int = getInt("recursive.fields.max.depth", defaultValue = -1)
 
@@ -107,34 +103,27 @@ private[sql] class ProtobufOptions(
    * This this lot more readable than the binary data. This configuration option enables
    * converting Any fields to JSON. The example blow clarifies further.
    *
-   *  Consider two Protobuf types defined as follows:
-   *    message ProtoWithAny {
-   *       string event_name = 1;
-   *       google.protobuf.Any details = 2;
-   *    }
+   * Consider two Protobuf types defined as follows: message ProtoWithAny { string event_name = 1;
+   * google.protobuf.Any details = 2; }
    *
-   *    message Person {
-   *      string name = 1;
-   *      int32 id = 2;
-   *   }
+   * message Person { string name = 1; int32 id = 2; }
    *
    * With this option enabled, schema for `from_protobuf("col", messageName = "ProtoWithAny")`
-   * would be : `STRUCT<event_name: STRING, details: STRING>`.
-   * At run time, if `details` field contains `Person` Protobuf message, the returned value looks
-   * like this:
-   *   ('click', '{"@type":"type.googleapis.com/...ProtoWithAny","name":"Mario","id":100}')
+   * would be : `STRUCT<event_name: STRING, details: STRING>`. At run time, if `details` field
+   * contains `Person` Protobuf message, the returned value looks like this: ('click',
+   * '{"@type":"type.googleapis.com/...ProtoWithAny","name":"Mario","id":100}')
    *
    * Requirements:
-   *  - The definitions for all the possible Protobuf types that are used in Any fields should be
-   *    available in the Protobuf descriptor file passed to `from_protobuf()`. If any Protobuf
-   *    is not found, it will result in error for that record.
-   *  - This feature is supported with Java classes as well. But only the Protobuf types defined
-   *    in the same `proto` file as the primary Java class might be visible.
-   *    E.g. if `ProtoWithAny` and `Person` in above example are in different proto files,
-   *    definition for `Person` may not be found.
+   *   - The definitions for all the possible Protobuf types that are used in Any fields should be
+   *     available in the Protobuf descriptor file passed to `from_protobuf()`. If any Protobuf is
+   *     not found, it will result in error for that record.
+   *   - This feature is supported with Java classes as well. But only the Protobuf types defined
+   *     in the same `proto` file as the primary Java class might be visible. E.g. if
+   *     `ProtoWithAny` and `Person` in above example are in different proto files, definition for
+   *     `Person` may not be found.
    *
-   * This feature should be enabled carefully. JSON conversion and processing are inefficient.
-   * In addition schema safety is also reduced making downstream processing error prone.
+   * This feature should be enabled carefully. JSON conversion and processing are inefficient. In
+   * addition schema safety is also reduced making downstream processing error prone.
    */
   val convertAnyFieldsToJson: Boolean =
     getBoolean(CONVERT_ANY_FIELDS_TO_JSON_CONFIG, defaultValue = false)

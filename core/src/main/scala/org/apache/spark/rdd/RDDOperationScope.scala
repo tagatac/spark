@@ -35,11 +35,11 @@ import org.apache.spark.internal.Logging
  * Examples include, but will not be limited to, existing RDD operations, such as textFile,
  * reduceByKey, and treeAggregate.
  *
- * An operation scope may be nested in other scopes. For instance, a SQL query may enclose
- * scopes associated with the public RDD APIs it uses under the hood.
+ * An operation scope may be nested in other scopes. For instance, a SQL query may enclose scopes
+ * associated with the public RDD APIs it uses under the hood.
  *
- * There is no particular relationship between an operation scope and a stage or a job.
- * A scope may live inside one stage (e.g. map) or span across multiple jobs (e.g. take).
+ * There is no particular relationship between an operation scope and a stage or a job. A scope
+ * may live inside one stage (e.g. map) or span across multiple jobs (e.g. take).
  */
 @JsonInclude(Include.NON_ABSENT)
 @JsonPropertyOrder(Array("id", "name", "parent"))
@@ -53,8 +53,8 @@ private[spark] class RDDOperationScope(
   }
 
   /**
-   * Return a list of scopes that this scope is a part of, including this scope itself.
-   * The result is ordered from the outermost scope (eldest ancestor) to this scope.
+   * Return a list of scopes that this scope is a part of, including this scope itself. The result
+   * is ordered from the outermost scope (eldest ancestor) to this scope.
    */
   @JsonIgnore
   def getAllScopes: Seq[RDDOperationScope] = {
@@ -75,8 +75,8 @@ private[spark] class RDDOperationScope(
 }
 
 /**
- * A collection of utility methods to construct a hierarchical representation of RDD scopes.
- * An RDD scope tracks the series of operations that created a given RDD.
+ * A collection of utility methods to construct a hierarchical representation of RDD scopes. An
+ * RDD scope tracks the series of operations that created a given RDD.
  */
 private[spark] object RDDOperationScope extends Logging {
   private val jsonMapper = new ObjectMapper().registerModule(DefaultScalaModule)
@@ -90,17 +90,17 @@ private[spark] object RDDOperationScope extends Logging {
   def nextScopeId(): Int = scopeCounter.getAndIncrement
 
   /**
-   * Execute the given body such that all RDDs created in this body will have the same scope.
-   * The name of the scope will be the first method name in the stack trace that is not the
-   * same as this method's.
+   * Execute the given body such that all RDDs created in this body will have the same scope. The
+   * name of the scope will be the first method name in the stack trace that is not the same as
+   * this method's.
    *
    * Note: Return statements are NOT allowed in body.
    */
-  private[spark] def withScope[T](
-      sc: SparkContext,
-      allowNesting: Boolean = false)(body: => T): T = {
+  private[spark] def withScope[T](sc: SparkContext, allowNesting: Boolean = false)(
+      body: => T): T = {
     val ourMethodName = "withScope"
-    val callerMethodName = Thread.currentThread.getStackTrace()
+    val callerMethodName = Thread.currentThread
+      .getStackTrace()
       .dropWhile(_.getMethodName != ourMethodName)
       .find(_.getMethodName != ourMethodName)
       .map(_.getMethodName)
@@ -120,8 +120,8 @@ private[spark] object RDDOperationScope extends Logging {
    *
    * Additionally, the caller of this method may optionally ignore the configurations and scopes
    * set by the higher level caller. In this case, this method will ignore the parent caller's
-   * intention to disallow nesting, and the new scope instantiated will not have a parent. This
-   * is useful for scoping physical operations in Spark SQL, for instance.
+   * intention to disallow nesting, and the new scope instantiated will not have a parent. This is
+   * useful for scoping physical operations in Spark SQL, for instance.
    *
    * Note: Return statements are NOT allowed in body.
    */

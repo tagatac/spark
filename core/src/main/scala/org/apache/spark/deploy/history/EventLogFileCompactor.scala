@@ -36,11 +36,11 @@ import org.apache.spark.util.Utils
 /**
  * This class compacts the old event log files into one compact file, via two phases reading:
  *
- * 1) Initialize available [[EventFilterBuilder]] instances, and replay the old event log files with
- * builders, so that these builders can gather the information to create [[EventFilter]] instances.
- * 2) Initialize [[EventFilter]] instances from [[EventFilterBuilder]] instances, and replay the
- * old event log files with filters. Rewrite the events to the compact file which the filters decide
- * to accept.
+ * 1) Initialize available [[EventFilterBuilder]] instances, and replay the old event log files
+ * with builders, so that these builders can gather the information to create [[EventFilter]]
+ * instances. 2) Initialize [[EventFilter]] instances from [[EventFilterBuilder]] instances, and
+ * replay the old event log files with filters. Rewrite the events to the compact file which the
+ * filters decide to accept.
  *
  * This class will calculate the score based on statistic from [[EventFilter]] instances, which
  * represents approximate rate of filtered-out events. Score is being calculated via applying
@@ -51,7 +51,8 @@ class EventLogFileCompactor(
     hadoopConf: Configuration,
     fs: FileSystem,
     maxFilesToRetain: Int,
-    compactionThresholdScore: Double) extends Logging {
+    compactionThresholdScore: Double)
+    extends Logging {
 
   require(maxFilesToRetain > 0, "Max event log files to retain should be higher than 0.")
 
@@ -59,19 +60,18 @@ class EventLogFileCompactor(
    * Compacts the old event log files into one compact file, and clean old event log files being
    * compacted away.
    *
-   * This method assumes caller will provide the sorted list of files which are sorted by
-   * the index of event log file, with at most one compact file placed first if it exists.
+   * This method assumes caller will provide the sorted list of files which are sorted by the
+   * index of event log file, with at most one compact file placed first if it exists.
    *
    * When compacting the files, the range of compaction for given file list is determined as:
    * (first ~ the file where there're `maxFilesToRetain` files on the right side)
    *
    * This method skips compaction for some circumstances described below:
-   * - not enough files on the range of compaction
-   * - score is lower than the threshold of compaction (meaning compaction won't help much)
+   *   - not enough files on the range of compaction
+   *   - score is lower than the threshold of compaction (meaning compaction won't help much)
    *
-   * If this method returns the compaction result as SUCCESS, caller needs to re-read the list
-   * of event log files, as new compact file is available as well as old event log files are
-   * removed.
+   * If this method returns the compaction result as SUCCESS, caller needs to re-read the list of
+   * event log files, as new compact file is available as well as old event log files are removed.
    */
   def compact(eventLogFiles: Seq[FileStatus]): CompactionResult = {
     assertPrecondition(eventLogFiles)
@@ -94,8 +94,10 @@ class EventLogFileCompactor(
       } else {
         rewrite(filters, filesToCompact)
         cleanupCompactedFiles(filesToCompact)
-        CompactionResult(CompactionResultCode.SUCCESS, Some(
-          RollingEventLogFilesWriter.getEventLogFileIndex(filesToCompact.last.getPath.getName)))
+        CompactionResult(
+          CompactionResultCode.SUCCESS,
+          Some(
+            RollingEventLogFilesWriter.getEventLogFileIndex(filesToCompact.last.getPath.getName)))
       }
     }
   }
@@ -104,7 +106,8 @@ class EventLogFileCompactor(
     val idxCompactedFiles = eventLogFiles.zipWithIndex.filter { case (file, _) =>
       EventLogFileWriter.isCompacted(file.getPath)
     }
-    require(idxCompactedFiles.size < 2 && idxCompactedFiles.headOption.forall(_._2 == 0),
+    require(
+      idxCompactedFiles.size < 2 && idxCompactedFiles.headOption.forall(_._2 == 0),
       "The number of compact files should be at most 1, and should be placed first if exists.")
   }
 
@@ -115,8 +118,10 @@ class EventLogFileCompactor(
   private def initializeBuilders(fs: FileSystem, files: Seq[Path]): Seq[EventFilterBuilder] = {
     val bus = new ReplayListenerBus()
 
-    val builders = ServiceLoader.load(classOf[EventFilterBuilder],
-      Utils.getContextOrSparkClassLoader).asScala.toSeq
+    val builders = ServiceLoader
+      .load(classOf[EventFilterBuilder], Utils.getContextOrSparkClassLoader)
+      .asScala
+      .toSeq
     builders.foreach(bus.addListener)
 
     files.foreach { log =>
@@ -147,22 +152,30 @@ class EventLogFileCompactor(
     require(eventLogFiles.nonEmpty)
 
     val lastIndexEventLogPath = eventLogFiles.last.getPath
-    val logWriter = new CompactedEventLogFileWriter(lastIndexEventLogPath, "dummy", None,
-      lastIndexEventLogPath.getParent.toUri, sparkConf, hadoopConf)
+    val logWriter = new CompactedEventLogFileWriter(
+      lastIndexEventLogPath,
+      "dummy",
+      None,
+      lastIndexEventLogPath.getParent.toUri,
+      sparkConf,
+      hadoopConf)
 
     val startTime = System.currentTimeMillis()
     logWriter.start()
     eventLogFiles.foreach { file =>
-      EventFilter.applyFilterToFile(fs, filters, file.getPath,
+      EventFilter.applyFilterToFile(
+        fs,
+        filters,
+        file.getPath,
         onAccepted = (line, _) => logWriter.writeEvent(line, flushLogger = true),
         onRejected = (_, _) => {},
-        onUnidentified = line => logWriter.writeEvent(line, flushLogger = true)
-      )
+        onUnidentified = line => logWriter.writeEvent(line, flushLogger = true))
     }
     logWriter.stop()
     val duration = System.currentTimeMillis() - startTime
-    logInfo(log"Finished rewriting eventLog files to ${MDC(LogKeys.PATH, logWriter.logPath)}" +
-      log" took ${MDC(LogKeys.TOTAL_TIME, duration)} ms.")
+    logInfo(
+      log"Finished rewriting eventLog files to ${MDC(LogKeys.PATH, logWriter.logPath)}" +
+        log" took ${MDC(LogKeys.TOTAL_TIME, duration)} ms.")
 
     logWriter.logPath
   }
@@ -202,9 +215,10 @@ class EventLogFileCompactor(
 /**
  * Describes the result of compaction.
  *
- * @param code The result of compaction.
- * @param compactIndex The index of compact file if the compaction is successful.
- *                     Otherwise it will be None.
+ * @param code
+ *   The result of compaction.
+ * @param compactIndex
+ *   The index of compact file if the compaction is successful. Otherwise it will be None.
  */
 case class CompactionResult(code: CompactionResultCode.Value, compactIndex: Option[Long])
 
@@ -214,8 +228,8 @@ object CompactionResultCode extends Enumeration {
 
 /**
  * This class helps to write compact file; to avoid reimplementing everything, it extends
- * [[SingleEventLogFileWriter]], but only `originalFilePath` is used to determine the
- * path of compact file.
+ * [[SingleEventLogFileWriter]], but only `originalFilePath` is used to determine the path of
+ * compact file.
  */
 private class CompactedEventLogFileWriter(
     originalFilePath: Path,
@@ -224,7 +238,7 @@ private class CompactedEventLogFileWriter(
     logBaseDir: URI,
     sparkConf: SparkConf,
     hadoopConf: Configuration)
-  extends SingleEventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
+    extends SingleEventLogFileWriter(appId, appAttemptId, logBaseDir, sparkConf, hadoopConf) {
 
   override val logPath: String = originalFilePath.toUri.toString + EventLogFileWriter.COMPACTED
 }

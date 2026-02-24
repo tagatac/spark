@@ -70,8 +70,7 @@ class YarnSchedulerBackendSuite extends SparkFunSuite with MockitoSugar with Loc
       numRequested <- 0 until 10
       hostToLocalCount <- IndexedSeq(
         Map(defaultResourceProf.id -> Map.empty[String, Int]),
-        Map(defaultResourceProf.id -> Map("a" -> 1, "b" -> 2))
-      )
+        Map(defaultResourceProf.id -> Map("a" -> 1, "b" -> 2)))
     } {
       yarnSchedulerBackendExtended.setHostToLocalTaskCount(hostToLocalCount)
       sched.setNodeExcludeList(excludelist)
@@ -90,7 +89,8 @@ class YarnSchedulerBackendSuite extends SparkFunSuite with MockitoSugar with Loc
   test("Respect user filters when adding AM IP filter") {
     val conf = new SparkConf(false)
       .set("spark.ui.filters", classOf[TestFilter].getName())
-      .set(s"spark.${classOf[TestFilter].getName()}.param.responseCode",
+      .set(
+        s"spark.${classOf[TestFilter].getName()}.param.responseCode",
         HttpServletResponse.SC_BAD_GATEWAY.toString)
 
     sc = new SparkContext("local", "YarnSchedulerBackendSuite", conf)
@@ -101,10 +101,12 @@ class YarnSchedulerBackendSuite extends SparkFunSuite with MockitoSugar with Loc
     // Before adding the "YARN" filter, should get the code from the filter in SparkConf.
     assert(TestUtils.httpResponseCode(url) === HttpServletResponse.SC_BAD_GATEWAY)
 
-    yarnSchedulerBackend = new YarnSchedulerBackend(sched, sc) { }
+    yarnSchedulerBackend = new YarnSchedulerBackend(sched, sc) {}
 
-    yarnSchedulerBackend.addWebUIFilter(classOf[TestFilter2].getName(),
-      Map("responseCode" -> HttpServletResponse.SC_NOT_ACCEPTABLE.toString), "")
+    yarnSchedulerBackend.addWebUIFilter(
+      classOf[TestFilter2].getName(),
+      Map("responseCode" -> HttpServletResponse.SC_NOT_ACCEPTABLE.toString),
+      "")
 
     sc.ui.get.getDelegatingHandlers.foreach { h =>
       // Two filters above + security filter.

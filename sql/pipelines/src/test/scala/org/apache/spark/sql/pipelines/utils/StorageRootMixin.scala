@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.pipelines.utils
 
-
 import java.io.File
 import java.nio.file.Files
 
@@ -26,9 +25,9 @@ import org.scalatest.{BeforeAndAfterEach, Suite}
 import org.apache.spark.util.Utils
 
 /**
- * A mixin trait for tests that need a temporary directory as the storage root for pipelines.
- * This trait creates a temporary directory before each test and deletes it after each test.
- * The path to the temporary directory is available via the `storageRoot` variable.
+ * A mixin trait for tests that need a temporary directory as the storage root for pipelines. This
+ * trait creates a temporary directory before each test and deletes it after each test. The path
+ * to the temporary directory is available via the `storageRoot` variable.
  */
 trait StorageRootMixin extends BeforeAndAfterEach { self: Suite =>
 

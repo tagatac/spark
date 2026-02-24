@@ -37,10 +37,9 @@ class AvroSchemaHelperSuite extends SharedSparkSession {
   test("handle mixed case field names") {
     val catalystSchema = StructType(
       StructField("a", IntegerType) ::
-      StructField("b", IntegerType) ::
-      StructField("A", IntegerType) ::
-      Nil
-    )
+        StructField("b", IntegerType) ::
+        StructField("A", IntegerType) ::
+        Nil)
 
     val avroSchema = SchemaConverters.toAvroType(catalystSchema)
     val helper =
@@ -89,20 +88,22 @@ class AvroSchemaHelperSuite extends SharedSparkSession {
 
   test("properly match fields between Avro and Catalyst schemas") {
     val catalystSchema = StructType(
-      Seq("catalyst1", "catalyst2", "shared1", "shared2").map(StructField(_, IntegerType))
-    )
-    val avroSchema = SchemaBuilder.record("toplevel").fields()
+      Seq("catalyst1", "catalyst2", "shared1", "shared2").map(StructField(_, IntegerType)))
+    val avroSchema = SchemaBuilder
+      .record("toplevel")
+      .fields()
       .requiredInt("shared1")
       .requiredInt("shared2")
       .requiredInt("avro1")
       .requiredInt("avro2")
       .endRecord()
 
-    val helper = new AvroUtils.AvroSchemaHelper(avroSchema, catalystSchema, Seq(""), Seq(""), false)
-    assert(helper.matchedFields === Seq(
-      AvroMatchedField(catalystSchema("shared1"), 2, avroSchema.getField("shared1")),
-      AvroMatchedField(catalystSchema("shared2"), 3, avroSchema.getField("shared2"))
-    ))
+    val helper =
+      new AvroUtils.AvroSchemaHelper(avroSchema, catalystSchema, Seq(""), Seq(""), false)
+    assert(
+      helper.matchedFields === Seq(
+        AvroMatchedField(catalystSchema("shared1"), 2, avroSchema.getField("shared1")),
+        AvroMatchedField(catalystSchema("shared2"), 3, avroSchema.getField("shared2"))))
     assertThrows[IncompatibleSchemaException] {
       helper.validateNoExtraRequiredAvroFields()
     }
@@ -135,7 +136,9 @@ class AvroSchemaHelperSuite extends SharedSparkSession {
   }
 
   test("SPARK-34378: validateNoExtraRequiredAvroFields detects required and ignores nullable") {
-    val avroSchema = SchemaBuilder.record("record").fields()
+    val avroSchema = SchemaBuilder
+      .record("record")
+      .fields()
       .requiredInt("foo")
       .nullableInt("bar", 1)
       .optionalInt("baz")

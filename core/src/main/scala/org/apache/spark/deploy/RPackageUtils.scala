@@ -87,8 +87,8 @@ private[deploy] object RPackageUtils extends Logging {
   }
 
   /**
-   * Checks the manifest of the Jar whether there is any R source code bundled with it.
-   * Exposed for testing.
+   * Checks the manifest of the Jar whether there is any R source code bundled with it. Exposed
+   * for testing.
    */
   private[deploy] def checkManifestForR(jar: JarFile): Boolean = {
     if (jar.getManifest == null) {
@@ -99,8 +99,8 @@ private[deploy] object RPackageUtils extends Logging {
   }
 
   /**
-   * Runs the standard R package installation code to build the R package from source.
-   * Multiple runs don't cause problems.
+   * Runs the standard R package installation code to build the R package from source. Multiple
+   * runs don't cause problems.
    */
   private def rPackageBuilder(
       dir: File,
@@ -122,7 +122,8 @@ private[deploy] object RPackageUtils extends Logging {
       val env = builder.environment()
       val rPackageDir = RUtils.sparkRPackagePath(isDriver = true)
       env.put("SPARKR_PACKAGE_DIR", rPackageDir.mkString(","))
-      env.put("R_PROFILE_USER",
+      env.put(
+        "R_PROFILE_USER",
         Seq(rPackageDir(0), "SparkR", "profile", "general.R").mkString(File.separator))
 
       val process = builder.start()
@@ -180,8 +181,10 @@ private[deploy] object RPackageUtils extends Logging {
         val jar = new JarFile(file)
         Utils.tryWithSafeFinally {
           if (checkManifestForR(jar)) {
-            print(log"${MDC(PATH, file)} contains R source code. Now installing package.",
-              printStream, Level.INFO)
+            print(
+              log"${MDC(PATH, file)} contains R source code. Now installing package.",
+              printStream,
+              Level.INFO)
             val rSource = extractRFolder(jar, printStream, verbose)
             if (RUtils.rPackages.isEmpty) {
               RUtils.rPackages = Some(Utils.createTempDir().getAbsolutePath)
@@ -199,15 +202,19 @@ private[deploy] object RPackageUtils extends Logging {
             }
           } else {
             if (verbose) {
-              print(log"${MDC(PATH, file)} doesn't contain R source code, skipping...", printStream)
+              print(
+                log"${MDC(PATH, file)} doesn't contain R source code, skipping...",
+                printStream)
             }
           }
         } {
           jar.close()
         }
       } else {
-        print(log"WARN: ${MDC(PATH, file)} resolved as dependency, but not found.",
-          printStream, Level.WARNING)
+        print(
+          log"WARN: ${MDC(PATH, file)} resolved as dependency, but not found.",
+          printStream,
+          Level.WARNING)
       }
     }
   }

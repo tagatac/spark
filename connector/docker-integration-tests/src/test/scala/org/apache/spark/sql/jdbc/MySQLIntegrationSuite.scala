@@ -50,52 +50,86 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
     conn.prepareStatement("INSERT INTO tbl VALUES (42,'fred')").executeUpdate()
     conn.prepareStatement("INSERT INTO tbl VALUES (17,'dave')").executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE bools (b1 BOOLEAN, b2 BIT(1), b3 TINYINT(1))")
+    conn
+      .prepareStatement("CREATE TABLE bools (b1 BOOLEAN, b2 BIT(1), b3 TINYINT(1))")
       .executeUpdate()
     conn.prepareStatement("INSERT INTO bools VALUES (TRUE, b'1', 1)").executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE numbers (onebit BIT(1), tenbits BIT(10), "
-      + "small SMALLINT, med MEDIUMINT, nor INT, big BIGINT, deci DECIMAL(40,20), flt FLOAT, "
-      + "dbl DOUBLE, tiny TINYINT)").executeUpdate()
-
-    conn.prepareStatement("INSERT INTO numbers VALUES (b'0', b'1000100101', "
-      + "17, 77777, 123456789, 123456789012345, 123456789012345.123456789012345, "
-      + "42.75, 1.0000000000000002, -128)").executeUpdate()
-    conn.prepareStatement("INSERT INTO numbers VALUES (null, null, null, null, null," +
-      "null, null, null, null, null)").executeUpdate()
-
-    conn.prepareStatement("CREATE TABLE unsigned_numbers (" +
-      "tiny TINYINT UNSIGNED, small SMALLINT UNSIGNED, med MEDIUMINT UNSIGNED," +
-      "nor INT UNSIGNED, big BIGINT UNSIGNED, deci DECIMAL(40,20) UNSIGNED," +
-      "dbl DOUBLE UNSIGNED, tiny1u TINYINT(1) UNSIGNED)").executeUpdate()
-
-    conn.prepareStatement("INSERT INTO unsigned_numbers VALUES (255, 65535, 16777215, 4294967295," +
-      "9223372036854775808, 123456789012345.123456789012345, 1.0000000000000002, 0)")
+    conn
+      .prepareStatement(
+        "CREATE TABLE numbers (onebit BIT(1), tenbits BIT(10), "
+          + "small SMALLINT, med MEDIUMINT, nor INT, big BIGINT, deci DECIMAL(40,20), flt FLOAT, "
+          + "dbl DOUBLE, tiny TINYINT)")
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE dates (d DATE, t TIME, dt DATETIME, ts TIMESTAMP, "
-      + "yr YEAR, t1 TIME(3))").executeUpdate()
-    conn.prepareStatement("INSERT INTO dates VALUES ('1991-11-09', '13:31:24.123', "
-      + "'1996-01-01 01:23:45', '2009-02-13 23:31:30', '2001', '13:31:24.123')").executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO numbers VALUES (b'0', b'1000100101', "
+          + "17, 77777, 123456789, 123456789012345, 123456789012345.123456789012345, "
+          + "42.75, 1.0000000000000002, -128)")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO numbers VALUES (null, null, null, null, null," +
+          "null, null, null, null, null)")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE unsigned_numbers (" +
+          "tiny TINYINT UNSIGNED, small SMALLINT UNSIGNED, med MEDIUMINT UNSIGNED," +
+          "nor INT UNSIGNED, big BIGINT UNSIGNED, deci DECIMAL(40,20) UNSIGNED," +
+          "dbl DOUBLE UNSIGNED, tiny1u TINYINT(1) UNSIGNED)")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "INSERT INTO unsigned_numbers VALUES (255, 65535, 16777215, 4294967295," +
+          "9223372036854775808, 123456789012345.123456789012345, 1.0000000000000002, 0)")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE dates (d DATE, t TIME, dt DATETIME, ts TIMESTAMP, "
+          + "yr YEAR, t1 TIME(3))")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO dates VALUES ('1991-11-09', '13:31:24.123', "
+          + "'1996-01-01 01:23:45', '2009-02-13 23:31:30', '2001', '13:31:24.123')")
+      .executeUpdate()
 
     // TODO: Test locale conversion for strings.
-    conn.prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c TINYTEXT, "
-      + "d TEXT, e MEDIUMTEXT, f LONGTEXT, g BINARY(4), h VARBINARY(10), i BLOB, j JSON)"
-    ).executeUpdate()
-    conn.prepareStatement("INSERT INTO strings VALUES ('the', 'quick', 'brown', 'fox', " +
-      "'jumps', 'over', 'the', 'lazy', 'dog', '{\"status\": \"merrily\"}')").executeUpdate()
-
-    conn.prepareStatement("CREATE TABLE floats (f1 FLOAT, f2 FLOAT(10), f3 FLOAT(53), " +
-      "f4 FLOAT UNSIGNED, f5 FLOAT(10) UNSIGNED, f6 FLOAT(53) UNSIGNED)").executeUpdate()
-    conn.prepareStatement("INSERT INTO floats VALUES (1.23, 4.56, 7.89, 1.23, 4.56, 7.89)")
+    conn
+      .prepareStatement(
+        "CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c TINYTEXT, "
+          + "d TEXT, e MEDIUMTEXT, f LONGTEXT, g BINARY(4), h VARBINARY(10), i BLOB, j JSON)")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO strings VALUES ('the', 'quick', 'brown', 'fox', " +
+          "'jumps', 'over', 'the', 'lazy', 'dog', '{\"status\": \"merrily\"}')")
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE collections (" +
-        "a SET('cap', 'hat', 'helmet'), b ENUM('S', 'M', 'L', 'XL'))").executeUpdate()
+    conn
+      .prepareStatement(
+        "CREATE TABLE floats (f1 FLOAT, f2 FLOAT(10), f3 FLOAT(53), " +
+          "f4 FLOAT UNSIGNED, f5 FLOAT(10) UNSIGNED, f6 FLOAT(53) UNSIGNED)")
+      .executeUpdate()
+    conn
+      .prepareStatement("INSERT INTO floats VALUES (1.23, 4.56, 7.89, 1.23, 4.56, 7.89)")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE collections (" +
+          "a SET('cap', 'hat', 'helmet'), b ENUM('S', 'M', 'L', 'XL'))")
+      .executeUpdate()
     conn.prepareStatement("INSERT INTO collections VALUES ('cap,hat', 'M')").executeUpdate()
 
     conn.prepareStatement("CREATE TABLE TBL_GEOMETRY (col0 GEOMETRY)").executeUpdate()
-    conn.prepareStatement("INSERT INTO TBL_GEOMETRY VALUES (ST_GeomFromText('POINT(0 0)'))")
+    conn
+      .prepareStatement("INSERT INTO TBL_GEOMETRY VALUES (ST_GeomFromText('POINT(0 0)'))")
       .executeUpdate()
   }
 
@@ -133,8 +167,9 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
     assert(row(8).isInstanceOf[Double])
     assert(row(9).isInstanceOf[Byte])
     assert(!row.getBoolean(0))
-    assert(java.util.Arrays.equals(row.getAs[Array[Byte]](1),
-      Array[Byte](49, 48, 49, 48, 48, 49, 48, 49)))
+    assert(
+      java.util.Arrays
+        .equals(row.getAs[Array[Byte]](1), Array[Byte](49, 48, 49, 48, 48, 49, 48, 49)))
     assert(row.getShort(2) == 17)
     assert(row.getInt(3) == 77777)
     assert(row.getInt(4) == 123456789)
@@ -185,15 +220,18 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
   test("Date types") {
     withDefaultTimeZone(UTC) {
       val df = spark.read.jdbc(jdbcUrl, "dates", new Properties)
-      checkAnswer(df, Row(
-        Date.valueOf("1991-11-09"),
-        Timestamp.valueOf("1970-01-01 13:31:24"),
-        Timestamp.valueOf("1996-01-01 01:23:45"),
-        Timestamp.valueOf("2009-02-13 23:31:30"),
-        Date.valueOf("2001-01-01"),
-        Timestamp.valueOf("1970-01-01 13:31:24.123")))
+      checkAnswer(
+        df,
+        Row(
+          Date.valueOf("1991-11-09"),
+          Timestamp.valueOf("1970-01-01 13:31:24"),
+          Timestamp.valueOf("1996-01-01 01:23:45"),
+          Timestamp.valueOf("2009-02-13 23:31:30"),
+          Date.valueOf("2001-01-01"),
+          Timestamp.valueOf("1970-01-01 13:31:24.123")))
     }
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", "select yr from dates")
       .option("yearIsDateType", false)
@@ -203,15 +241,18 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
 
   test("SPARK-47406: MySQL datetime types with preferTimestampNTZ") {
     withDefaultTimeZone(UTC) {
-      val df = spark.read.option("preferTimestampNTZ", true)
+      val df = spark.read
+        .option("preferTimestampNTZ", true)
         .jdbc(jdbcUrl, "dates", new Properties)
-      checkAnswer(df, Row(
-        Date.valueOf("1991-11-09"),
-        LocalDateTime.of(1970, 1, 1, 13, 31, 24),
-        LocalDateTime.of(1996, 1, 1, 1, 23, 45),
-        Timestamp.valueOf("2009-02-13 23:31:30"),
-        Date.valueOf("2001-01-01"),
-        LocalDateTime.of(1970, 1, 1, 13, 31, 24, 123000000)))
+      checkAnswer(
+        df,
+        Row(
+          Date.valueOf("1991-11-09"),
+          LocalDateTime.of(1970, 1, 1, 13, 31, 24),
+          LocalDateTime.of(1996, 1, 1, 1, 23, 45),
+          Timestamp.valueOf("2009-02-13 23:31:30"),
+          Date.valueOf("2001-01-01"),
+          LocalDateTime.of(1970, 1, 1, 13, 31, 24, 123000000)))
     }
   }
 
@@ -253,31 +294,27 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("query JDBC option") {
-    val expectedResult = Set(
-      (42, "fred"),
-      (17, "dave")
-    ).map { case (x, y) =>
+    val expectedResult = Set((42, "fred"), (17, "dave")).map { case (x, y) =>
       Row(Integer.valueOf(x), String.valueOf(y))
     }
 
     val query = "SELECT x, y FROM tbl WHERE x > 10"
     // query option to pass on the query string.
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", query)
       .load()
     assert(df.collect().toSet === expectedResult)
 
     // query option in the create table path.
-    sql(
-      s"""
+    sql(s"""
          |CREATE OR REPLACE TEMPORARY VIEW queryOption
          |USING org.apache.spark.sql.jdbc
          |OPTIONS (url '$jdbcUrl', query '$query')
        """.stripMargin.replaceAll("\n", " "))
     assert(sql("select x, y from queryOption").collect().toSet == expectedResult)
   }
-
 
   test("SPARK-47478: all boolean synonyms read-write roundtrip") {
     val df = spark.read.jdbc(jdbcUrl, "bools", new Properties)
@@ -303,13 +340,15 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
 
   test("SPARK-47515: Save TimestampNTZType as DATETIME in MySQL") {
     val expected = sql("select timestamp_ntz'2018-11-17 13:33:33' as col0")
-    expected.write.format("jdbc")
+    expected.write
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("dbtable", "TBL_DATETIME_NTZ")
       .save()
 
     val answer = spark.read
-      .option("preferTimestampNTZ", true).jdbc(jdbcUrl, "TBL_DATETIME_NTZ", new Properties)
+      .option("preferTimestampNTZ", true)
+      .jdbc(jdbcUrl, "TBL_DATETIME_NTZ", new Properties)
     checkAnswer(answer, expected)
   }
 
@@ -323,14 +362,16 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
     checkAnswer(df, Row("cap,hat       ", "M "))
     df.write.mode("append").jdbc(jdbcUrl, "collections", new Properties)
     withSQLConf(SQLConf.LEGACY_CHAR_VARCHAR_AS_STRING.key -> "true") {
-      checkAnswer(spark.read.jdbc(jdbcUrl, "collections", new Properties),
+      checkAnswer(
+        spark.read.jdbc(jdbcUrl, "collections", new Properties),
         Row("cap,hat", "M") :: Row("cap,hat", "M") :: Nil)
     }
   }
 
   test("SPARK-47616: Read GEOMETRY from MySQL") {
     val df = spark.read.jdbc(jdbcUrl, "TBL_GEOMETRY", new Properties)
-    checkAnswer(df,
+    checkAnswer(
+      df,
       Row(Array[Byte](0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
   }
 
@@ -344,7 +385,8 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("SPARK-47665: Read/write round-trip for ShortType") {
-    spark.range(3)
+    spark
+      .range(3)
       .selectExpr("CAST(id AS SMALLINT) AS id")
       .write
       .jdbc(jdbcUrl, "smallint_round_trip", new Properties)
@@ -353,7 +395,8 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("SPARK-44638: Char/Varchar in Custom Schema") {
-    val df = spark.read.option("url", jdbcUrl)
+    val df = spark.read
+      .option("url", jdbcUrl)
       .option("query", "SELECT c, d from strings")
       .option("customSchema", "c CHAR(10), d VARCHAR(10)")
       .format("jdbc")
@@ -361,7 +404,6 @@ class MySQLIntegrationSuite extends SharedJDBCIntegrationSuite {
     checkAnswer(df, Row("brown     ", "fox"))
   }
 }
-
 
 /**
  * To run this test suite for a specific version (e.g., mysql:9.6.0):

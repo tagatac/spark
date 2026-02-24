@@ -37,9 +37,8 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 /**
- * A small wrapper that defines a training session for an estimator, some methods to log
- * useful information during this session, and some methods to send
- * [[org.apache.spark.ml.MLEvent]].
+ * A small wrapper that defines a training session for an estimator, some methods to log useful
+ * information during this session, and some methods to send [[org.apache.spark.ml.MLEvent]].
  */
 private[spark] class Instrumentation private () extends Logging with MLEvents {
 
@@ -67,8 +66,9 @@ private[spark] class Instrumentation private () extends Logging with MLEvents {
    * Log some data about the dataset being fit.
    */
   def logDataset(dataset: RDD[_]): Unit = {
-    logInfo(log"training: numPartitions=${MDC(NUM_PARTITIONS, dataset.partitions.length)}" +
-      log" storageLevel=${MDC(STORAGE_LEVEL, dataset.getStorageLevel)}")
+    logInfo(
+      log"training: numPartitions=${MDC(NUM_PARTITIONS, dataset.partitions.length)}" +
+        log" storageLevel=${MDC(STORAGE_LEVEL, dataset.getStorageLevel)}")
   }
 
   /**
@@ -189,7 +189,6 @@ private[spark] class Instrumentation private () extends Logging with MLEvents {
     logInfo(compact(render(name -> compact(render(value.toImmutableArraySeq)))))
   }
 
-
   /**
    * Logs the successful completion of the training session.
    */
@@ -237,13 +236,14 @@ private[spark] object Instrumentation {
 }
 
 /**
- * A small wrapper that contains an optional `Instrumentation` object.
- * Provide some log methods, if the containing `Instrumentation` object is defined,
- * will log via it, otherwise will log via common logger.
+ * A small wrapper that contains an optional `Instrumentation` object. Provide some log methods,
+ * if the containing `Instrumentation` object is defined, will log via it, otherwise will log via
+ * common logger.
  */
-private[spark] class OptionalInstrumentation private(
+private[spark] class OptionalInstrumentation private (
     val instrumentation: Option[Instrumentation],
-    val className: String) extends Logging {
+    val className: String)
+    extends Logging {
 
   protected override def logName: String = className
 
@@ -286,9 +286,9 @@ private[spark] object OptionalInstrumentation {
   }
 
   /**
-   * Creates an `OptionalInstrumentation` object from a `Class` object.
-   * The created `OptionalInstrumentation` object will log messages via common logger and use the
-   * specified class name as logger name.
+   * Creates an `OptionalInstrumentation` object from a `Class` object. The created
+   * `OptionalInstrumentation` object will log messages via common logger and use the specified
+   * class name as logger name.
    */
   def create(clazz: Class[_]): OptionalInstrumentation = {
     new OptionalInstrumentation(None, clazz.getName.stripSuffix("$"))

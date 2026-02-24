@@ -30,7 +30,6 @@ import org.apache.spark.internal.{config, Logging}
 import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
-
 private[spark] case class ProcfsMetrics(
     jvmVmemTotal: Long,
     jvmRSSTotal: Long,
@@ -50,9 +49,8 @@ private[spark] class ProcfsMetricsGetter(procfsDir: String = "/proc/") extends L
 
   private lazy val isProcfsAvailable: Boolean = {
     if (testing) {
-       true
-    }
-    else {
+      true
+    } else {
       val procDirExists = Try(Files.exists(Paths.get(procfsDir))).recover {
         case ioe: IOException =>
           logWarning("Exception checking for procfs dir", ioe)
@@ -74,8 +72,9 @@ private[spark] class ProcfsMetricsGetter(procfsDir: String = "/proc/") extends L
       Integer.parseInt(out.split("\n")(0))
     } catch {
       case e: Exception =>
-        logDebug("Exception when trying to compute pagesize, as a" +
-          " result reporting of ProcessTree metrics is stopped")
+        logDebug(
+          "Exception when trying to compute pagesize, as a" +
+            " result reporting of ProcessTree metrics is stopped")
         isAvailable = false
         0
     }
@@ -109,26 +108,23 @@ private[spark] class ProcfsMetricsGetter(procfsDir: String = "/proc/") extends L
         if (procInfoSplit(1).toLowerCase(Locale.US).contains("java")) {
           allMetrics.copy(
             jvmVmemTotal = allMetrics.jvmVmemTotal + vmem,
-            jvmRSSTotal = allMetrics.jvmRSSTotal + (rssMem)
-          )
-        }
-        else if (procInfoSplit(1).toLowerCase(Locale.US).contains("python")) {
+            jvmRSSTotal = allMetrics.jvmRSSTotal + (rssMem))
+        } else if (procInfoSplit(1).toLowerCase(Locale.US).contains("python")) {
           allMetrics.copy(
             pythonVmemTotal = allMetrics.pythonVmemTotal + vmem,
-            pythonRSSTotal = allMetrics.pythonRSSTotal + (rssMem)
-          )
-        }
-        else {
+            pythonRSSTotal = allMetrics.pythonRSSTotal + (rssMem))
+        } else {
           allMetrics.copy(
             otherVmemTotal = allMetrics.otherVmemTotal + vmem,
-            otherRSSTotal = allMetrics.otherRSSTotal + (rssMem)
-          )
+            otherRSSTotal = allMetrics.otherRSSTotal + (rssMem))
         }
       }
     } catch {
       case f: IOException =>
-        logDebug("There was a problem with reading" +
-          " the stat file of the process. ", f)
+        logDebug(
+          "There was a problem with reading" +
+            " the stat file of the process. ",
+          f)
         throw f
     }
   }

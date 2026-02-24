@@ -76,7 +76,7 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
     val conf1 = conf0.clone.set(AUTH_SECRET, "bad")
     testConnection(conf0, conf1) match {
       case Success(_) => fail("Should have failed")
-      case Failure(t) => t.getMessage should include ("Mismatched response")
+      case Failure(t) => t.getMessage should include("Mismatched response")
     }
   }
 
@@ -100,7 +100,7 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
     val conf1 = conf0.clone.set(NETWORK_AUTH_ENABLED, true)
     testConnection(conf0, conf1) match {
       case Success(_) => fail("Should have failed")
-      case Failure(t) => t.getMessage should include ("Expected SaslMessage")
+      case Failure(t) => t.getMessage should include("Expected SaslMessage")
     }
   }
 
@@ -119,31 +119,41 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
     }
   }
 
-
   /**
-   * Creates two servers with different configurations and sees if they can talk.
-   * Returns Success() if they can transfer a block, and Failure() if the block transfer was failed
+   * Creates two servers with different configurations and sees if they can talk. Returns
+   * Success() if they can transfer a block, and Failure() if the block transfer was failed
    * properly. We will throw an out-of-band exception if something other than that goes wrong.
    */
   private def testConnection(conf0: SparkConf, conf1: SparkConf): Try[Unit] = {
     val blockManager = mock[BlockDataManager]
     val blockId = ShuffleBlockId(0, 1, 2)
     val blockString = "Hello, world!"
-    val blockBuffer = new NioManagedBuffer(ByteBuffer.wrap(
-      blockString.getBytes(StandardCharsets.UTF_8)))
+    val blockBuffer = new NioManagedBuffer(
+      ByteBuffer.wrap(blockString.getBytes(StandardCharsets.UTF_8)))
     when(blockManager.getLocalBlockData(blockId)).thenReturn(blockBuffer)
 
     val securityManager0 = new SecurityManager(conf0)
     val serializerManager0 = new SerializerManager(new JavaSerializer(conf0), conf0)
     val exec0 = new NettyBlockTransferService(
-      conf0, securityManager0, serializerManager0, "localhost", "localhost", 0,
+      conf0,
+      securityManager0,
+      serializerManager0,
+      "localhost",
+      "localhost",
+      0,
       1)
     exec0.init(blockManager)
 
     val securityManager1 = new SecurityManager(conf1)
     val serializerManager1 = new SerializerManager(new JavaSerializer(conf1), conf1)
     val exec1 = new NettyBlockTransferService(
-      conf1, securityManager1, serializerManager1, "localhost", "localhost", 0, 1)
+      conf1,
+      securityManager1,
+      serializerManager1,
+      "localhost",
+      "localhost",
+      0,
+      1)
     exec1.init(blockManager)
 
     val result = fetchBlock(exec0, exec1, "1", blockId) match {
@@ -168,7 +178,11 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
 
     val promise = Promise[ManagedBuffer]()
 
-    self.fetchBlocks(from.hostName, from.port, execId, Array(blockId.toString),
+    self.fetchBlocks(
+      from.hostName,
+      from.port,
+      execId,
+      Array(blockId.toString),
       new BlockFetchingListener {
         override def onBlockFetchFailure(blockId: String, exception: Throwable): Unit = {
           promise.failure(exception)
@@ -177,7 +191,8 @@ class NettyBlockTransferSecuritySuite extends SparkFunSuite with MockitoSugar wi
         override def onBlockFetchSuccess(blockId: String, data: ManagedBuffer): Unit = {
           promise.success(data.retain())
         }
-      }, null)
+      },
+      null)
 
     ThreadUtils.awaitReady(promise.future, FiniteDuration(10, TimeUnit.SECONDS))
     promise.future.value.get

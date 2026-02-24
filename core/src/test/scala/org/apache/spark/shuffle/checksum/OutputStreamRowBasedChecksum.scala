@@ -24,17 +24,16 @@ import org.apache.spark.network.shuffle.checksum.ShuffleChecksumHelper
 import org.apache.spark.util.ExposedBufferByteArrayOutputStream
 
 /**
- * A Concrete implementation of RowBasedChecksum. The checksum for each row is
- * computed by first converting the (key, value) pair to byte array using OutputStreams,
- * and then computing the checksum for the byte array.
- * Note that this checksum computation is very expensive, and it is used only in tests
- * in the core component. A much cheaper implementation of RowBasedChecksum is in
- * UnsafeRowChecksum.
+ * A Concrete implementation of RowBasedChecksum. The checksum for each row is computed by first
+ * converting the (key, value) pair to byte array using OutputStreams, and then computing the
+ * checksum for the byte array. Note that this checksum computation is very expensive, and it is
+ * used only in tests in the core component. A much cheaper implementation of RowBasedChecksum is
+ * in UnsafeRowChecksum.
  *
- * @param checksumAlgorithm the algorithm used for computing checksum.
+ * @param checksumAlgorithm
+ *   the algorithm used for computing checksum.
  */
-class OutputStreamRowBasedChecksum(checksumAlgorithm: String)
-  extends RowBasedChecksum() {
+class OutputStreamRowBasedChecksum(checksumAlgorithm: String) extends RowBasedChecksum() {
 
   private val DEFAULT_INITIAL_SER_BUFFER_SIZE = 32 * 1024
 

@@ -46,11 +46,12 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
     val dynamoDBCreds: Option[SparkAWSCredentials],
     val cloudWatchCreds: Option[SparkAWSCredentials],
     val metricsLevel: MetricsLevel,
-    val metricsEnabledDimensions: Set[String]
-  ) extends ReceiverInputDStream[T](_ssc) {
+    val metricsEnabledDimensions: Set[String])
+    extends ReceiverInputDStream[T](_ssc) {
 
-  private[streaming]
-  override def createBlockRDD(time: Time, blockInfos: Seq[ReceivedBlockInfo]): RDD[T] = {
+  private[streaming] override def createBlockRDD(
+      time: Time,
+      blockInfos: Seq[ReceivedBlockInfo]): RDD[T] = {
 
     // This returns true even for when blockInfos is empty
     val allBlocksHaveRanges = blockInfos.map { _.metadataOption }.forall(_.nonEmpty)
@@ -59,33 +60,51 @@ private[kinesis] class KinesisInputDStream[T: ClassTag](
       // Create a KinesisBackedBlockRDD, even when there are no blocks
       val blockIds = blockInfos.map { _.blockId.asInstanceOf[BlockId] }.toArray
       val seqNumRanges = blockInfos.map {
-        _.metadataOption.get.asInstanceOf[SequenceNumberRanges] }.toArray
+        _.metadataOption.get.asInstanceOf[SequenceNumberRanges]
+      }.toArray
       val isBlockIdValid = blockInfos.map { _.isBlockIdValid() }.toArray
-      logDebug(s"Creating KinesisBackedBlockRDD for $time with ${seqNumRanges.length} " +
+      logDebug(
+        s"Creating KinesisBackedBlockRDD for $time with ${seqNumRanges.length} " +
           s"seq number ranges: ${seqNumRanges.mkString(", ")} ")
 
       new KinesisBackedBlockRDD(
-        context.sc, regionName, endpointUrl, blockIds, seqNumRanges,
+        context.sc,
+        regionName,
+        endpointUrl,
+        blockIds,
+        seqNumRanges,
         isBlockIdValid = isBlockIdValid,
         messageHandler = messageHandler,
         kinesisCreds = kinesisCreds,
         kinesisReadConfigs = KinesisReadConfigurations(ssc))
     } else {
-      logWarning("Kinesis sequence number information was not present with some block metadata," +
-        " it may not be possible to recover from failures")
+      logWarning(
+        "Kinesis sequence number information was not present with some block metadata," +
+          " it may not be possible to recover from failures")
       super.createBlockRDD(time, blockInfos)
     }
   }
 
   override def getReceiver(): Receiver[T] = {
-    new KinesisReceiver(streamName, endpointUrl, regionName, initialPosition,
-      checkpointAppName, checkpointInterval, _storageLevel, messageHandler,
-      kinesisCreds, dynamoDBCreds, cloudWatchCreds,
-      metricsLevel, metricsEnabledDimensions)
+    new KinesisReceiver(
+      streamName,
+      endpointUrl,
+      regionName,
+      initialPosition,
+      checkpointAppName,
+      checkpointInterval,
+      _storageLevel,
+      messageHandler,
+      kinesisCreds,
+      dynamoDBCreds,
+      cloudWatchCreds,
+      metricsLevel,
+      metricsEnabledDimensions)
   }
 }
 
 object KinesisInputDStream {
+
   /**
    * Builder for [[KinesisInputDStream]] instances.
    *
@@ -113,8 +132,10 @@ object KinesisInputDStream {
      * Sets the StreamingContext that will be used to construct the Kinesis DStream. This is a
      * required parameter.
      *
-     * @param ssc [[StreamingContext]] used to construct Kinesis DStreams
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param ssc
+     *   [[StreamingContext]] used to construct Kinesis DStreams
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def streamingContext(ssc: StreamingContext): Builder = {
       streamingContext = Option(ssc)
@@ -125,8 +146,10 @@ object KinesisInputDStream {
      * Sets the StreamingContext that will be used to construct the Kinesis DStream. This is a
      * required parameter.
      *
-     * @param jssc [[JavaStreamingContext]] used to construct Kinesis DStreams
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param jssc
+     *   [[JavaStreamingContext]] used to construct Kinesis DStreams
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def streamingContext(jssc: JavaStreamingContext): Builder = {
       streamingContext = Option(jssc.ssc)
@@ -137,8 +160,10 @@ object KinesisInputDStream {
      * Sets the name of the Kinesis stream that the DStream will read from. This is a required
      * parameter.
      *
-     * @param streamName Name of Kinesis stream that the DStream will read from
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param streamName
+     *   Name of Kinesis stream that the DStream will read from
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def streamName(streamName: String): Builder = {
       this.streamName = Option(streamName)
@@ -149,9 +174,11 @@ object KinesisInputDStream {
      * Sets the KCL application name to use when checkpointing state to DynamoDB. This is a
      * required parameter.
      *
-     * @param appName Value to use for the KCL app name (used when creating the DynamoDB checkpoint
-     *                table and when writing metrics to CloudWatch)
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param appName
+     *   Value to use for the KCL app name (used when creating the DynamoDB checkpoint table and
+     *   when writing metrics to CloudWatch)
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def checkpointAppName(appName: String): Builder = {
       checkpointAppName = Option(appName)
@@ -162,8 +189,10 @@ object KinesisInputDStream {
      * Sets the AWS Kinesis endpoint URL. Defaults to "https://kinesis.us-east-1.amazonaws.com" if
      * no custom value is specified
      *
-     * @param url Kinesis endpoint URL to use
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param url
+     *   Kinesis endpoint URL to use
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def endpointUrl(url: String): Builder = {
       endpointUrl = Option(url)
@@ -171,11 +200,13 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the AWS region to construct clients for. Defaults to "us-east-1" if no custom value
-     * is specified.
+     * Sets the AWS region to construct clients for. Defaults to "us-east-1" if no custom value is
+     * specified.
      *
-     * @param regionName Name of AWS region to use (e.g. "us-west-2")
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param regionName
+     *   Name of AWS region to use (e.g. "us-west-2")
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def regionName(regionName: String): Builder = {
       this.regionName = Option(regionName)
@@ -186,9 +217,11 @@ object KinesisInputDStream {
      * Sets the initial position data is read from in the Kinesis stream. Defaults to
      * [[KinesisInitialPositions.Latest]] if no custom value is specified.
      *
-     * @param initialPosition [[KinesisInitialPosition]] value specifying where Spark Streaming
-     *                        will start reading records in the Kinesis stream from
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param initialPosition
+     *   [[KinesisInitialPosition]] value specifying where Spark Streaming will start reading
+     *   records in the Kinesis stream from
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def initialPosition(initialPosition: KinesisInitialPosition): Builder = {
       this.initialPosition = Option(initialPosition)
@@ -197,12 +230,14 @@ object KinesisInputDStream {
 
     /**
      * Sets the initial position data is read from in the Kinesis stream. Defaults to
-     * [[InitialPositionInStream.LATEST]] if no custom value is specified.
-     * This function would be removed when we deprecate the KinesisUtils.
+     * [[InitialPositionInStream.LATEST]] if no custom value is specified. This function would be
+     * removed when we deprecate the KinesisUtils.
      *
-     * @param initialPosition InitialPositionInStream value specifying where Spark Streaming
-     *                        will start reading records in the Kinesis stream from
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param initialPosition
+     *   InitialPositionInStream value specifying where Spark Streaming will start reading records
+     *   in the Kinesis stream from
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     @deprecated("use initialPosition(initialPosition: KinesisInitialPosition)", "2.3.0")
     def initialPositionInStream(initialPosition: InitialPositionInStream): Builder = {
@@ -215,9 +250,10 @@ object KinesisInputDStream {
      * Sets how often the KCL application state is checkpointed to DynamoDB. Defaults to the Spark
      * Streaming batch interval if no custom value is specified.
      *
-     * @param interval [[Duration]] specifying how often the KCL state should be checkpointed to
-     *                 DynamoDB.
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param interval
+     *   [[Duration]] specifying how often the KCL state should be checkpointed to DynamoDB.
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def checkpointInterval(interval: Duration): Builder = {
       checkpointInterval = Option(interval)
@@ -228,8 +264,10 @@ object KinesisInputDStream {
      * Sets the storage level of the blocks for the DStream created. Defaults to
      * [[StorageLevel.MEMORY_AND_DISK_2]] if no custom value is specified.
      *
-     * @param storageLevel [[StorageLevel]] to use for the DStream data blocks
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param storageLevel
+     *   [[StorageLevel]] to use for the DStream data blocks
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def storageLevel(storageLevel: StorageLevel): Builder = {
       this.storageLevel = Option(storageLevel)
@@ -237,11 +275,13 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS Kinesis
-     * endpoint. Defaults to [[DefaultCredentialsProvider]] if no custom value is specified.
+     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS Kinesis endpoint.
+     * Defaults to [[DefaultCredentialsProvider]] if no custom value is specified.
      *
-     * @param credentials [[SparkAWSCredentials]] to use for Kinesis authentication
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param credentials
+     *   [[SparkAWSCredentials]] to use for Kinesis authentication
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def kinesisCredentials(credentials: SparkAWSCredentials): Builder = {
       kinesisCredsProvider = Option(credentials)
@@ -249,11 +289,13 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS DynamoDB
-     * endpoint. Will use the same credentials used for AWS Kinesis if no custom value is set.
+     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS DynamoDB endpoint.
+     * Will use the same credentials used for AWS Kinesis if no custom value is set.
      *
-     * @param credentials [[SparkAWSCredentials]] to use for DynamoDB authentication
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param credentials
+     *   [[SparkAWSCredentials]] to use for DynamoDB authentication
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def dynamoDBCredentials(credentials: SparkAWSCredentials): Builder = {
       dynamoDBCredsProvider = Option(credentials)
@@ -261,11 +303,13 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS CloudWatch
-     * endpoint. Will use the same credentials used for AWS Kinesis if no custom value is set.
+     * Sets the [[SparkAWSCredentials]] to use for authenticating to the AWS CloudWatch endpoint.
+     * Will use the same credentials used for AWS Kinesis if no custom value is set.
      *
-     * @param credentials [[SparkAWSCredentials]] to use for CloudWatch authentication
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param credentials
+     *   [[SparkAWSCredentials]] to use for CloudWatch authentication
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      */
     def cloudWatchCredentials(credentials: SparkAWSCredentials): Builder = {
       cloudWatchCredsProvider = Option(credentials)
@@ -273,13 +317,15 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the CloudWatch metrics level. Defaults to
-     * [[MetricsLevel.DETAILED]] if no custom value is specified.
+     * Sets the CloudWatch metrics level. Defaults to [[MetricsLevel.DETAILED]] if no custom value
+     * is specified.
      *
-     * @param metricsLevel [[MetricsLevel]] to specify the CloudWatch metrics level
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param metricsLevel
+     *   [[MetricsLevel]] to specify the CloudWatch metrics level
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      * @see
-     * [[https://docs.aws.amazon.com/streams/latest/dev/monitoring-with-kcl.html#metric-levels]]
+     *   [[https://docs.aws.amazon.com/streams/latest/dev/monitoring-with-kcl.html#metric-levels]]
      */
     def metricsLevel(metricsLevel: MetricsLevel): Builder = {
       this.metricsLevel = Option(metricsLevel)
@@ -287,15 +333,16 @@ object KinesisInputDStream {
     }
 
     /**
-     * Sets the enabled CloudWatch metrics dimensions. Defaults to
-     * the set of [[MetricsUtil.OPERATION_DIMENSION_NAME]] and
-     * [[MetricsUtil.SHARD_ID_DIMENSION_NAME]] if no custom value is specified.
+     * Sets the enabled CloudWatch metrics dimensions. Defaults to the set of
+     * [[MetricsUtil.OPERATION_DIMENSION_NAME]] and [[MetricsUtil.SHARD_ID_DIMENSION_NAME]] if no
+     * custom value is specified.
      *
-     * @param metricsEnabledDimensions Set[String] to specify which CloudWatch metrics dimensions
-     *   should be enabled
-     * @return Reference to this [[KinesisInputDStream.Builder]]
+     * @param metricsEnabledDimensions
+     *   Set[String] to specify which CloudWatch metrics dimensions should be enabled
+     * @return
+     *   Reference to this [[KinesisInputDStream.Builder]]
      * @see
-     * [[https://docs.aws.amazon.com/streams/latest/dev/monitoring-with-kcl.html#metric-levels]]
+     *   [[https://docs.aws.amazon.com/streams/latest/dev/monitoring-with-kcl.html#metric-levels]]
      */
     def metricsEnabledDimensions(metricsEnabledDimensions: Set[String]): Builder = {
       this.metricsEnabledDimensions = Option(metricsEnabledDimensions)
@@ -303,12 +350,14 @@ object KinesisInputDStream {
     }
 
     /**
-     * Create a new instance of [[KinesisInputDStream]] with configured parameters and the provided
-     * message handler.
+     * Create a new instance of [[KinesisInputDStream]] with configured parameters and the
+     * provided message handler.
      *
-     * @param handler Function converting [[KinesisClientRecord]] instances read by the KCL to
-     *   DStream type [[T]]
-     * @return Instance of [[KinesisInputDStream]] constructed with configured parameters
+     * @param handler
+     *   Function converting [[KinesisClientRecord]] instances read by the KCL to DStream type
+     *   [[T]]
+     * @return
+     *   Instance of [[KinesisInputDStream]] constructed with configured parameters
      */
     def buildWithMessageHandler[T: ClassTag](
         handler: KinesisClientRecord => T): KinesisInputDStream[T] = {
@@ -334,7 +383,8 @@ object KinesisInputDStream {
      * Create a new instance of [[KinesisInputDStream]] with configured parameters and using the
      * default message handler, which returns [[Array[Byte]]].
      *
-     * @return Instance of [[KinesisInputDStream]] constructed with configured parameters
+     * @return
+     *   Instance of [[KinesisInputDStream]] constructed with configured parameters
      */
     def build(): KinesisInputDStream[Array[Byte]] = buildWithMessageHandler(defaultMessageHandler)
 
@@ -347,7 +397,8 @@ object KinesisInputDStream {
    * Creates a [[KinesisInputDStream.Builder]] for constructing [[KinesisInputDStream]] instances.
    *
    * @since 2.2.0
-   * @return [[KinesisInputDStream.Builder]] instance
+   * @return
+   *   [[KinesisInputDStream.Builder]] instance
    */
   def builder: Builder = new Builder
 

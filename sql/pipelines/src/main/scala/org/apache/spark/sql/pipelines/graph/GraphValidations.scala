@@ -36,23 +36,19 @@ trait GraphValidations extends Logging {
     val multiQueryTables = flowsTo.filter(_._2.size > 1)
     // Non-streaming tables do not support multiflow.
     multiQueryTables
-      .find {
-        case (dest, flows) =>
-          flows.exists(f => !resolvedFlow(f.identifier).df.isStreaming) &&
-          table.contains(dest)
+      .find { case (dest, flows) =>
+        flows.exists(f => !resolvedFlow(f.identifier).df.isStreaming) &&
+        table.contains(dest)
       }
-      .foreach {
-        case (dest, flows) =>
-          throw new AnalysisException(
-            "MATERIALIZED_VIEW_WITH_MULTIPLE_QUERIES",
-            Map(
-              "tableName" -> dest.unquotedString,
-              "flows" -> flows
-                .map(_.displayName)
-                .sorted
-                .mkString(", ")
-            )
-          )
+      .foreach { case (dest, flows) =>
+        throw new AnalysisException(
+          "MATERIALIZED_VIEW_WITH_MULTIPLE_QUERIES",
+          Map(
+            "tableName" -> dest.unquotedString,
+            "flows" -> flows
+              .map(_.displayName)
+              .sorted
+              .mkString(", ")))
       }
 
     multiQueryTables
@@ -82,10 +78,7 @@ trait GraphValidations extends Logging {
           if (resolvedFlow.df.isStreaming) {
             throw new AnalysisException(
               errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_ONCE_FLOW",
-              messageParameters = Map(
-                "flowIdentifier" -> resolvedFlow.identifier.quotedString
-              )
-            )
+              messageParameters = Map("flowIdentifier" -> resolvedFlow.identifier.quotedString))
           }
         } else {
           destTableOpt.foreach { destTable =>
@@ -95,9 +88,7 @@ trait GraphValidations extends Logging {
                   errorClass = "INVALID_FLOW_QUERY_TYPE.BATCH_RELATION_FOR_STREAMING_TABLE",
                   messageParameters = Map(
                     "flowIdentifier" -> resolvedFlow.identifier.quotedString,
-                    "tableIdentifier" -> destTableIdentifier.quotedString
-                  )
-                )
+                    "tableIdentifier" -> destTableIdentifier.quotedString))
               }
             } else {
               if (resolvedFlow.df.isStreaming) {
@@ -107,9 +98,7 @@ trait GraphValidations extends Logging {
                   errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_MATERIALIZED_VIEW",
                   messageParameters = Map(
                     "flowIdentifier" -> resolvedFlow.identifier.quotedString,
-                    "tableIdentifier" -> destTableIdentifier.quotedString
-                  )
-                )
+                    "tableIdentifier" -> destTableIdentifier.quotedString))
               }
             }
           }
@@ -121,13 +110,11 @@ trait GraphValidations extends Logging {
                   errorClass = "INVALID_FLOW_QUERY_TYPE.STREAMING_RELATION_FOR_PERSISTED_VIEW",
                   messageParameters = Map(
                     "flowIdentifier" -> resolvedFlow.identifier.quotedString,
-                    "viewIdentifier" -> destTableIdentifier.quotedString
-                  )
-                )
+                    "viewIdentifier" -> destTableIdentifier.quotedString))
               }
             case _: TemporaryView =>
-              // Temporary views' flows are allowed to be either streaming or batch, so no
-              // validation needs to be done for them
+            // Temporary views' flows are allowed to be either streaming or batch, so no
+            // validation needs to be done for them
           }
         }
       }
@@ -152,11 +139,7 @@ trait GraphValidations extends Logging {
         case Some(unvisitedInput) =>
           throw new AnalysisException(
             "PIPELINE_GRAPH_NOT_TOPOLOGICALLY_SORTED",
-            Map(
-              "flowName" -> f.displayName,
-              "inputName" -> unvisitedInput.unquotedString
-            )
-          )
+            Map("flowName" -> f.displayName, "inputName" -> unvisitedInput.unquotedString))
       }
     }
   }
@@ -179,15 +162,13 @@ trait GraphValidations extends Logging {
         // Filter for upstream datasets that are tables with downstream streaming tables
         case (upstreamDataset, nonResettableDownstreams) if table.contains(upstreamDataset) =>
           nonResettableDownstreams
-            .filter(
-              t => flowsTo(t).exists(f => resolvedFlow(f.identifier).df.isStreaming)
-            )
+            .filter(t => flowsTo(t).exists(f => resolvedFlow(f.identifier).df.isStreaming))
             .map(id => (tableLookup(upstreamDataset), tableLookup(id).displayName))
       }
       .flatten
       .toSeq
-      .filter {
-        case (t, _) => PipelinesTableProperties.resetAllowed.fromMap(t.properties)
+      .filter { case (t, _) =>
+        PipelinesTableProperties.resetAllowed.fromMap(t.properties)
       } // Filter for resettable
 
     upstreamResettableTables
@@ -197,20 +178,17 @@ trait GraphValidations extends Logging {
       .toSeq
       .sortBy(_._2.size) // Output errors from largest to smallest
       .reverse
-      .map {
-        case (nameForEvent, tables) =>
-          throw new AnalysisException(
-            "INVALID_RESETTABLE_DEPENDENCY",
-            Map(
-              "downstreamTable" -> nameForEvent,
-              "upstreamResettableTables" -> tables
-                .map(_.displayName)
-                .sorted
-                .map(t => s"'$t'")
-                .mkString(", "),
-              "resetAllowedKey" -> PipelinesTableProperties.resetAllowed.key
-            )
-          )
+      .map { case (nameForEvent, tables) =>
+        throw new AnalysisException(
+          "INVALID_RESETTABLE_DEPENDENCY",
+          Map(
+            "downstreamTable" -> nameForEvent,
+            "upstreamResettableTables" -> tables
+              .map(_.displayName)
+              .sorted
+              .map(t => s"'$t'")
+              .mkString(", "),
+            "resetAllowedKey" -> PipelinesTableProperties.resetAllowed.key))
       }
   }
 
@@ -221,8 +199,7 @@ trait GraphValidations extends Logging {
       val inferredSchema = SchemaInferenceUtils
         .inferSchemaFromFlows(
           flowsTo(t.identifier).map(f => resolvedFlow(f.identifier)),
-          userSpecifiedSchema = t.specifiedSchema
-        )
+          userSpecifiedSchema = t.specifiedSchema)
 
       t.specifiedSchema.foreach { ss =>
         // Check the inferred schema matches the specified schema. Used to catch errors where the
@@ -230,28 +207,25 @@ trait GraphValidations extends Logging {
         if (inferredSchema != ss) {
           val datasetType = GraphElementTypeUtils
             .getDatasetTypeForMaterializedViewOrStreamingTable(
-              flowsTo(t.identifier).map(f => resolvedFlow(f.identifier))
-            )
+              flowsTo(t.identifier).map(f => resolvedFlow(f.identifier)))
           throw GraphErrors.incompatibleUserSpecifiedAndInferredSchemasError(
             t.identifier,
             datasetType,
             ss,
-            inferredSchema
-          )
+            inferredSchema)
         }
       }
     }
   }
 
   /**
-   * Validates that all flows are resolved. If there are unresolved flows,
-   * detects a possible cyclic dependency and throw the appropriate exception.
+   * Validates that all flows are resolved. If there are unresolved flows, detects a possible
+   * cyclic dependency and throw the appropriate exception.
    */
   protected def validateSuccessfulFlowAnalysis(): Unit = {
     // all failed flows with their errors
-    val flowAnalysisFailures = resolutionFailedFlows.flatMap(
-      f => f.failure.headOption.map(err => (f.identifier, err))
-    )
+    val flowAnalysisFailures =
+      resolutionFailedFlows.flatMap(f => f.failure.headOption.map(err => (f.identifier, err)))
     // only proceed if there are unresolved flows
     if (flowAnalysisFailures.nonEmpty) {
       val failedFlowIdentifiers = flowAnalysisFailures.map(_._1).toSet
@@ -273,30 +247,25 @@ trait GraphValidations extends Logging {
       }
       // if there are flow that failed due to unresolved upstream flows, check for a cycle
       if (failedFlowsSubgraph.nonEmpty) {
-        detectCycle(failedFlowsSubgraph.toMap).foreach {
-          case (upstream, downstream) =>
-            val upstreamDataset = flow(upstream).destinationIdentifier
-            val downstreamDataset = flow(downstream).destinationIdentifier
-            throw CircularDependencyException(
-              downstreamDataset,
-              upstreamDataset
-            )
+        detectCycle(failedFlowsSubgraph.toMap).foreach { case (upstream, downstream) =>
+          val upstreamDataset = flow(upstream).destinationIdentifier
+          val downstreamDataset = flow(downstream).destinationIdentifier
+          throw CircularDependencyException(downstreamDataset, upstreamDataset)
         }
       }
       // otherwise report what flows failed directly vs. depending on a failed flow
       throw UnresolvedPipelineException(
         this,
         directFailures.map { case (id, value) => (id, value) }.toMap,
-        downstreamFailures.map { case (id, value) => (id, value) }.toMap
-      )
+        downstreamFailures.map { case (id, value) => (id, value) }.toMap)
     }
   }
 
   /**
-   * Generic method to detect a cycle in directed graph via DFS traversal.
-   * The graph is given as a reverse adjacency map, that is, a map from
-   * each node to its ancestors.
-   * @return the start and end node of a cycle if found, None otherwise
+   * Generic method to detect a cycle in directed graph via DFS traversal. The graph is given as a
+   * reverse adjacency map, that is, a map from each node to its ancestors.
+   * @return
+   *   the start and end node of a cycle if found, None otherwise
    */
   private def detectCycle(ancestors: Map[TableIdentifier, Seq[TableIdentifier]])
       : Option[(TableIdentifier, TableIdentifier)] = {
@@ -337,10 +306,8 @@ trait GraphValidations extends Logging {
                   "objName" -> persistedView.identifier.toString,
                   "obj" -> "view",
                   "tempObjName" -> tempView.identifier.toString,
-                  "tempObj" -> "temporary view"
-                ),
-                cause = None
-              )
+                  "tempObj" -> "temporary view"),
+                cause = None)
             case _ =>
           }
       }

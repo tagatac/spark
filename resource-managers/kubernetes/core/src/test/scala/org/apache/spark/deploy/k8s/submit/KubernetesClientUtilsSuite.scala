@@ -50,17 +50,23 @@ class KubernetesClientUtilsSuite extends SparkFunSuite with BeforeAndAfter {
   }
 
   test("verify load files, loads only allowed files and not the disallowed files.") {
-    val input: Map[String, Array[Byte]] = Map("test.txt" -> "test123", "z12.zip" -> "zZ",
-      "rere.jar" -> "@31", "spark.jar" -> "@31", "_test" -> "", "sample.conf" -> "conf")
+    val input: Map[String, Array[Byte]] = Map(
+      "test.txt" -> "test123",
+      "z12.zip" -> "zZ",
+      "rere.jar" -> "@31",
+      "spark.jar" -> "@31",
+      "_test" -> "",
+      "sample.conf" -> "conf")
       .map(f => f._1 -> f._2.getBytes(StandardCharsets.UTF_8)) ++
-      Map("binary-file.conf" -> Array[Byte](0x00.toByte, 0xA1.toByte))
+      Map("binary-file.conf" -> Array[Byte](0x00.toByte, 0xa1.toByte))
     val sparkConf = testSetup(input)
     val output = KubernetesClientUtils.loadSparkConfDirFiles(sparkConf)
     val expectedOutput = Map("test.txt" -> "test123", "sample.conf" -> "conf", "_test" -> "")
     assert(output === expectedOutput)
   }
 
-  test("verify load files, truncates the content to maxSize, when keys are very large in number.") {
+  test(
+    "verify load files, truncates the content to maxSize, when keys are very large in number.") {
     val input = (for (i <- 10000 to 1 by -1) yield (s"testConf.${i}" -> "test123456")).toMap
     val sparkConf = testSetup(input.map(f => f._1 -> f._2.getBytes(StandardCharsets.UTF_8)))
       .set(Config.CONFIG_MAP_MAXSIZE.key, "60")
@@ -77,7 +83,9 @@ class KubernetesClientUtilsSuite extends SparkFunSuite with BeforeAndAfter {
     val sparkConf = testSetup(input.map(f => f._1 -> f._2.getBytes(StandardCharsets.UTF_8)))
       .set(Config.CONFIG_MAP_MAXSIZE.key, "80")
     val output = KubernetesClientUtils.loadSparkConfDirFiles(sparkConf)
-    val expectedOutput = Map("testConf.1" -> "test123456", "testConf.2" -> "test123456",
+    val expectedOutput = Map(
+      "testConf.1" -> "test123456",
+      "testConf.2" -> "test123456",
       "testConf.3" -> "test123456")
     assert(output === expectedOutput)
   }
@@ -95,9 +103,9 @@ class KubernetesClientUtilsSuite extends SparkFunSuite with BeforeAndAfter {
     val expectedConfigMap =
       new ConfigMapBuilder()
         .withNewMetadata()
-          .withName(configMapName)
-          .withNamespace(configMapNameSpace)
-          .withLabels(properties.asJava)
+        .withName(configMapName)
+        .withNamespace(configMapNameSpace)
+        .withLabels(properties.asJava)
         .endMetadata()
         .withImmutable(true)
         .addToData(confFileMap.asJava)
@@ -119,9 +127,9 @@ class KubernetesClientUtilsSuite extends SparkFunSuite with BeforeAndAfter {
     val expectedConfigMap =
       new ConfigMapBuilder()
         .withNewMetadata()
-          .withName(configMapName)
-          .withNamespace(configMapNameSpace)
-          .withLabels(properties)
+        .withName(configMapName)
+        .withNamespace(configMapNameSpace)
+        .withLabels(properties)
         .endMetadata()
         .withImmutable(true)
         .addToData(confFileMap)

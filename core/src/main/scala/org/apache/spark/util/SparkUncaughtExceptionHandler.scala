@@ -25,12 +25,15 @@ import org.apache.spark.internal.config.KILL_ON_FATAL_ERROR_DEPTH
 
 /**
  * The default uncaught exception handler for Spark daemons. It terminates the whole process for
- * any Errors, and also terminates the process for Exceptions when the exitOnException flag is true.
+ * any Errors, and also terminates the process for Exceptions when the exitOnException flag is
+ * true.
  *
- * @param exitOnUncaughtException Whether to exit the process on UncaughtException.
+ * @param exitOnUncaughtException
+ *   Whether to exit the process on UncaughtException.
  */
 private[spark] class SparkUncaughtExceptionHandler(val exitOnUncaughtException: Boolean = true)
-  extends Thread.UncaughtExceptionHandler with Logging {
+    extends Thread.UncaughtExceptionHandler
+    with Logging {
 
   locally {
     // eagerly load SparkExitCode class, so the System.exit and runtime.halt have a chance to be
@@ -47,7 +50,6 @@ private[spark] class SparkUncaughtExceptionHandler(val exitOnUncaughtException: 
   private val killOnFatalErrorDepth: Int =
     // At this point SparkEnv might be None
     Option(SparkEnv.get).map(_.conf.get(KILL_ON_FATAL_ERROR_DEPTH)).getOrElse(5)
-
 
   override def uncaughtException(thread: Thread, exception: Throwable): Unit = {
     try {

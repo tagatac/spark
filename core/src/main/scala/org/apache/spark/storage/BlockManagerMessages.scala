@@ -34,7 +34,7 @@ private[spark] object BlockManagerMessages {
 
   // Replicate blocks that were lost due to executor failure
   case class ReplicateBlock(blockId: BlockId, replicas: Seq[BlockManagerId], maxReplicas: Int)
-    extends ToBlockManagerMasterStorageEndpoint
+      extends ToBlockManagerMasterStorageEndpoint
 
   case object DecommissionBlockManager extends ToBlockManagerMasterStorageEndpoint
 
@@ -46,10 +46,11 @@ private[spark] object BlockManagerMessages {
 
   // Remove all blocks belonging to a specific broadcast.
   case class RemoveBroadcast(broadcastId: Long, removeFromDriver: Boolean = true)
-    extends ToBlockManagerMasterStorageEndpoint
+      extends ToBlockManagerMasterStorageEndpoint
 
   // Mark a rdd block as visible.
-  case class MarkRDDBlockAsVisible(blockId: RDDBlockId) extends ToBlockManagerMasterStorageEndpoint
+  case class MarkRDDBlockAsVisible(blockId: RDDBlockId)
+      extends ToBlockManagerMasterStorageEndpoint
 
   /**
    * Driver to Executor message to trigger a thread dump.
@@ -73,7 +74,7 @@ private[spark] object BlockManagerMessages {
       maxOffHeapMemSize: Long,
       sender: RpcEndpointRef,
       isReRegister: Boolean)
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   case class UpdateBlockInfo(
       var blockManagerId: BlockManagerId,
@@ -81,10 +82,10 @@ private[spark] object BlockManagerMessages {
       var storageLevel: StorageLevel,
       var memSize: Long,
       var diskSize: Long)
-    extends ToBlockManagerMaster
-    with Externalizable {
+      extends ToBlockManagerMaster
+      with Externalizable {
 
-    def this() = this(null, null, null, 0, 0)  // For deserialization only
+    def this() = this(null, null, null, 0, 0) // For deserialization only
 
     override def writeExternal(out: ObjectOutput): Unit = Utils.tryOrIOException {
       blockManagerId.writeExternal(out)
@@ -103,7 +104,8 @@ private[spark] object BlockManagerMessages {
     }
   }
 
-  case class UpdateRDDBlockTaskInfo(blockId: RDDBlockId, taskId: Long) extends ToBlockManagerMaster
+  case class UpdateRDDBlockTaskInfo(blockId: RDDBlockId, taskId: Long)
+      extends ToBlockManagerMaster
 
   case class UpdateRDDBlockVisibility(taskId: Long, visible: Boolean) extends ToBlockManagerMaster
 
@@ -112,14 +114,15 @@ private[spark] object BlockManagerMessages {
   case class GetLocations(blockId: BlockId) extends ToBlockManagerMaster
 
   case class GetLocationsAndStatus(blockId: BlockId, requesterHost: String)
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   /**
    * The response message of `GetLocationsAndStatus` request.
    *
-   * @param localDirs if it is persisted-to-disk on the same host as the requester executor is
-   *                  running on then localDirs will be Some and the cached data will be in a file
-   *                  in one of those dirs, otherwise it is None.
+   * @param localDirs
+   *   if it is persisted-to-disk on the same host as the requester executor is running on then
+   *   localDirs will be Some and the cached data will be in a file in one of those dirs,
+   *   otherwise it is None.
    */
   case class BlockLocationsAndStatus(
       locations: Seq[BlockManagerId],
@@ -145,20 +148,20 @@ private[spark] object BlockManagerMessages {
   case class DecommissionBlockManagers(executorIds: Seq[String]) extends ToBlockManagerMaster
 
   case class GetReplicateInfoForRDDBlocks(blockManagerId: BlockManagerId)
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   case class GetBlockStatus(blockId: BlockId, askStorageEndpoints: Boolean = true)
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   case class GetMatchingBlockIds(filter: BlockId => Boolean, askStorageEndpoints: Boolean = true)
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   case class BlockManagerHeartbeat(blockManagerId: BlockManagerId) extends ToBlockManagerMaster
 
   case class IsExecutorAlive(executorId: String) extends ToBlockManagerMaster
 
   case class GetShufflePushMergerLocations(numMergersNeeded: Int, hostsToFilter: Set[String])
-    extends ToBlockManagerMaster
+      extends ToBlockManagerMaster
 
   case class RemoveShufflePushMergerLocation(host: String) extends ToBlockManagerMaster
 

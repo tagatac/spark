@@ -31,13 +31,11 @@ import org.apache.spark.storage.StreamBlockId
 import org.apache.spark.util.{ThreadUtils, Utils}
 
 /**
- * Abstract class that is responsible for supervising a Receiver in the worker.
- * It provides all the necessary interfaces for handling the data received by the receiver.
+ * Abstract class that is responsible for supervising a Receiver in the worker. It provides all
+ * the necessary interfaces for handling the data received by the receiver.
  */
-private[streaming] abstract class ReceiverSupervisor(
-    receiver: Receiver[_],
-    conf: SparkConf
-  ) extends Logging {
+private[streaming] abstract class ReceiverSupervisor(receiver: Receiver[_], conf: SparkConf)
+    extends Logging {
 
   /** Enumeration to identify current state of the Receiver */
   object ReceiverState extends Enumeration {
@@ -77,29 +75,26 @@ private[streaming] abstract class ReceiverSupervisor(
   def pushBytes(
       bytes: ByteBuffer,
       optionalMetadata: Option[Any],
-      optionalBlockId: Option[StreamBlockId]
-    ): Unit
+      optionalBlockId: Option[StreamBlockId]): Unit
 
   /** Store an iterator of received data as a data block into Spark's memory. */
   def pushIterator(
       iterator: Iterator[_],
       optionalMetadata: Option[Any],
-      optionalBlockId: Option[StreamBlockId]
-    ): Unit
+      optionalBlockId: Option[StreamBlockId]): Unit
 
   /** Store an ArrayBuffer of received data as a data block into Spark's memory. */
   def pushArrayBuffer(
       arrayBuffer: ArrayBuffer[_],
       optionalMetadata: Option[Any],
-      optionalBlockId: Option[StreamBlockId]
-    ): Unit
+      optionalBlockId: Option[StreamBlockId]): Unit
 
   /**
    * Create a custom [[BlockGenerator]] that the receiver implementation can directly control
    * using their provided [[BlockGeneratorListener]].
    *
-   * Note: Do not explicitly start or stop the `BlockGenerator`, the `ReceiverSupervisorImpl`
-   * will take care of it.
+   * Note: Do not explicitly start or stop the `BlockGenerator`, the `ReceiverSupervisorImpl` will
+   * take care of it.
    */
   def createBlockGenerator(blockGeneratorListener: BlockGeneratorListener): BlockGenerator
 
@@ -107,24 +102,24 @@ private[streaming] abstract class ReceiverSupervisor(
   def reportError(message: String, throwable: Throwable): Unit
 
   /**
-   * Called when supervisor is started.
-   * Note that this must be called before the receiver.onStart() is called to ensure
-   * things like [[BlockGenerator]]s are started before the receiver starts sending data.
+   * Called when supervisor is started. Note that this must be called before the
+   * receiver.onStart() is called to ensure things like [[BlockGenerator]]s are started before the
+   * receiver starts sending data.
    */
-  protected def onStart(): Unit = { }
+  protected def onStart(): Unit = {}
 
   /**
-   * Called when supervisor is stopped.
-   * Note that this must be called after the receiver.onStop() is called to ensure
-   * things like [[BlockGenerator]]s are cleaned up after the receiver stops sending data.
+   * Called when supervisor is stopped. Note that this must be called after the receiver.onStop()
+   * is called to ensure things like [[BlockGenerator]]s are cleaned up after the receiver stops
+   * sending data.
    */
-  protected def onStop(message: String, error: Option[Throwable]): Unit = { }
+  protected def onStop(message: String, error: Option[Throwable]): Unit = {}
 
   /** Called when receiver is started. Return true if the driver accepts us */
   protected def onReceiverStart(): Boolean
 
   /** Called when receiver is stopped */
-  protected def onReceiverStop(message: String, error: Option[Throwable]): Unit = { }
+  protected def onReceiverStop(message: String, error: Option[Throwable]): Unit = {}
 
   /** Start the supervisor */
   def start(): Unit = {
@@ -151,7 +146,9 @@ private[streaming] abstract class ReceiverSupervisor(
         logInfo(log"Called receiver ${MDC(LogKeys.STREAM_ID, streamId)} onStart")
       } else {
         // The driver refused us
-        stop("Registered unsuccessfully because Driver refused to start receiver " + streamId, None)
+        stop(
+          "Registered unsuccessfully because Driver refused to start receiver " + streamId,
+          None)
       }
     } catch {
       case NonFatal(t) =>
@@ -162,8 +159,9 @@ private[streaming] abstract class ReceiverSupervisor(
   /** Stop receiver */
   def stopReceiver(message: String, error: Option[Throwable]): Unit = synchronized {
     try {
-      logInfo(log"Stopping receiver with message: ${MDC(LogKeys.MESSAGE, message)}: " +
-        log"${MDC(LogKeys.ERROR, error.getOrElse(""))}")
+      logInfo(
+        log"Stopping receiver with message: ${MDC(LogKeys.MESSAGE, message)}: " +
+          log"${MDC(LogKeys.ERROR, error.getOrElse(""))}")
       receiverState match {
         case Initialized =>
           logWarning("Skip stopping receiver because it has not yet stared")
@@ -177,8 +175,9 @@ private[streaming] abstract class ReceiverSupervisor(
       }
     } catch {
       case NonFatal(t) =>
-        logError(log"Error stopping receiver ${MDC(STREAM_ID, streamId)} " +
-          log"${MDC(ERROR, Utils.exceptionString(t))}")
+        logError(
+          log"Error stopping receiver ${MDC(STREAM_ID, streamId)} " +
+            log"${MDC(ERROR, Utils.exceptionString(t))}")
     }
   }
 
@@ -192,8 +191,10 @@ private[streaming] abstract class ReceiverSupervisor(
     Future {
       // This is a blocking action so we should use "futureExecutionContext" which is a cached
       // thread pool.
-      logWarning(log"Restarting receiver with delay ${MDC(DELAY, delay)} ms: " +
-        log"${MDC(MESSAGE, message)}", error.orNull)
+      logWarning(
+        log"Restarting receiver with delay ${MDC(DELAY, delay)} ms: " +
+          log"${MDC(MESSAGE, message)}",
+        error.orNull)
       stopReceiver("Restarting receiver with delay " + delay + "ms: " + message, error)
       logDebug("Sleeping for " + delay)
       Thread.sleep(delay)
@@ -214,7 +215,6 @@ private[streaming] abstract class ReceiverSupervisor(
     logDebug("state = " + receiverState)
     receiverState == Stopped
   }
-
 
   /** Wait the thread until the supervisor is stopped */
   def awaitTermination(): Unit = {

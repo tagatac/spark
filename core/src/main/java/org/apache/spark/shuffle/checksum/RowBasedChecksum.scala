@@ -22,10 +22,10 @@ import scala.util.control.NonFatal
 import org.apache.spark.internal.Logging
 
 /**
- * A class for computing checksum for input (key, value) pairs. The checksum is independent of
- * the order of the input (key, value) pairs. It is done by computing a checksum for each row
- * first, then computing the XOR and SUM for all the row checksums and mixing these two values
- * as the final checksum.
+ * A class for computing checksum for input (key, value) pairs. The checksum is independent of the
+ * order of the input (key, value) pairs. It is done by computing a checksum for each row first,
+ * then computing the XOR and SUM for all the row checksums and mixing these two values as the
+ * final checksum.
  */
 abstract class RowBasedChecksum() extends Serializable with Logging {
   private val ROTATE_POSITIONS = 27
@@ -34,8 +34,8 @@ abstract class RowBasedChecksum() extends Serializable with Logging {
   private var checksumSum: Long = 0
 
   /**
-   * Returns the checksum value. It returns the default checksum value (0) if there
-   * are any errors encountered during the checksum computation.
+   * Returns the checksum value. It returns the default checksum value (0) if there are any errors
+   * encountered during the checksum computation.
    */
   def getValue: Long = {
     if (!hasError) {

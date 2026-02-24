@@ -37,21 +37,27 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 /**
- * Decision tree model for classification or regression.
- * This model stores the decision tree structure and parameters.
- * @param topNode root node
- * @param algo algorithm type -- classification or regression
+ * Decision tree model for classification or regression. This model stores the decision tree
+ * structure and parameters.
+ * @param topNode
+ *   root node
+ * @param algo
+ *   algorithm type -- classification or regression
  */
 @Since("1.0.0")
 class DecisionTreeModel @Since("1.0.0") (
     @Since("1.0.0") val topNode: Node,
-    @Since("1.0.0") val algo: Algo) extends Serializable with Saveable {
+    @Since("1.0.0") val algo: Algo)
+    extends Serializable
+    with Saveable {
 
   /**
    * Predict values for a single data point using the model trained.
    *
-   * @param features array representing a single data point
-   * @return Double prediction from the trained model
+   * @param features
+   *   array representing a single data point
+   * @return
+   *   Double prediction from the trained model
    */
   @Since("1.0.0")
   def predict(features: Vector): Double = {
@@ -61,8 +67,10 @@ class DecisionTreeModel @Since("1.0.0") (
   /**
    * Predict values for the given data set using the model trained.
    *
-   * @param features RDD representing data points to be predicted
-   * @return RDD of predictions for each of the given data points
+   * @param features
+   *   RDD representing data points to be predicted
+   * @return
+   *   RDD of predictions for each of the given data points
    */
   @Since("1.0.0")
   def predict(features: RDD[Vector]): RDD[Double] = {
@@ -72,8 +80,10 @@ class DecisionTreeModel @Since("1.0.0") (
   /**
    * Predict values for the given data set using the model trained.
    *
-   * @param features JavaRDD representing data points to be predicted
-   * @return JavaRDD of predictions for each of the given data points
+   * @param features
+   *   JavaRDD representing data points to be predicted
+   * @return
+   *   JavaRDD of predictions for each of the given data points
    */
   @Since("1.2.0")
   def predict(features: JavaRDD[Vector]): JavaRDD[java.lang.Double] = {
@@ -89,8 +99,8 @@ class DecisionTreeModel @Since("1.0.0") (
   }
 
   /**
-   * Get depth of tree.
-   * E.g.: Depth 0 means 1 leaf node.  Depth 1 means 1 internal node and 2 leaf nodes.
+   * Get depth of tree. E.g.: Depth 0 means 1 leaf node. Depth 1 means 1 internal node and 2 leaf
+   * nodes.
    */
   @Since("1.1.0")
   def depth: Int = {
@@ -105,8 +115,9 @@ class DecisionTreeModel @Since("1.0.0") (
       s"DecisionTreeModel classifier of depth $depth with $numNodes nodes"
     case Regression =>
       s"DecisionTreeModel regressor of depth $depth with $numNodes nodes"
-    case _ => throw new IllegalArgumentException(
-      s"DecisionTreeModel given unknown algo parameter: $algo.")
+    case _ =>
+      throw new IllegalArgumentException(
+        s"DecisionTreeModel given unknown algo parameter: $algo.")
   }
 
   /**
@@ -119,9 +130,11 @@ class DecisionTreeModel @Since("1.0.0") (
   }
 
   /**
-   * @param sc  Spark context used to save model data.
-   * @param path  Path specifying the directory in which to save this model.
-   *              If the directory already exists, this method throws an exception.
+   * @param sc
+   *   Spark context used to save model data.
+   * @param path
+   *   Path specifying the directory in which to save this model. If the directory already exists,
+   *   this method throws an exception.
    */
   @Since("1.3.0")
   override def save(sc: SparkContext, path: String): Unit = {
@@ -183,8 +196,15 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
 
     object NodeData {
       def apply(treeId: Int, n: Node): NodeData = {
-        NodeData(treeId, n.id, PredictData(n.predict), n.impurity, n.isLeaf,
-          n.split.map(SplitData.apply), n.leftNode.map(_.id), n.rightNode.map(_.id),
+        NodeData(
+          treeId,
+          n.id,
+          PredictData(n.predict),
+          n.impurity,
+          n.isLeaf,
+          n.split.map(SplitData.apply),
+          n.leftNode.map(_.id),
+          n.rightNode.map(_.id),
           n.stats.map(_.gain))
       }
 
@@ -193,8 +213,16 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
         val leftNodeId = if (r.isNullAt(6)) None else Some(r.getInt(6))
         val rightNodeId = if (r.isNullAt(7)) None else Some(r.getInt(7))
         val infoGain = if (r.isNullAt(8)) None else Some(r.getDouble(8))
-        NodeData(r.getInt(0), r.getInt(1), PredictData(r.getStruct(2)), r.getDouble(3),
-          r.getBoolean(4), split, leftNodeId, rightNodeId, infoGain)
+        NodeData(
+          r.getInt(0),
+          r.getInt(1),
+          PredictData(r.getStruct(2)),
+          r.getDouble(3),
+          r.getBoolean(4),
+          split,
+          leftNodeId,
+          rightNodeId,
+          infoGain)
       }
     }
 
@@ -204,7 +232,8 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
       // TODO: Fix this issue for real.
       val memThreshold = 768
       if (sc.isLocal) {
-        val driverMemory = sc.getReadOnlyConf.getOption("spark.driver.memory")
+        val driverMemory = sc.getReadOnlyConf
+          .getOption("spark.driver.memory")
           .orElse(Option(System.getenv("SPARK_DRIVER_MEMORY")))
           .map(Utils.memoryStringToMb)
           .getOrElse(Utils.DEFAULT_DRIVER_MEM_MB)
@@ -227,9 +256,10 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
 
       // Create JSON metadata.
       val spark = SparkSession.builder().sparkContext(sc).getOrCreate()
-      val metadata = compact(render(
-        ("class" -> thisClassName) ~ ("version" -> thisFormatVersion) ~
-          ("algo" -> model.algo.toString) ~ ("numNodes" -> model.numNodes)))
+      val metadata = compact(
+        render(
+          ("class" -> thisClassName) ~ ("version" -> thisFormatVersion) ~
+            ("algo" -> model.algo.toString) ~ ("numNodes" -> model.numNodes)))
       spark.createDataFrame(Seq(Tuple1(metadata))).write.text(Loader.metadataPath(path))
 
       // Create Parquet data.
@@ -248,11 +278,14 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
       val nodes = dataRDD.rdd.map(NodeData.apply)
       // Build node data into a tree.
       val trees = constructTrees(nodes)
-      assert(trees.length == 1,
+      assert(
+        trees.length == 1,
         s"Decision tree should contain exactly one tree but got ${trees.length} trees.")
       val model = new DecisionTreeModel(trees(0), Algo.fromString(algo))
-      assert(model.numNodes == numNodes, s"Unable to load DecisionTreeModel data from: $dataPath." +
-        s" Expected $numNodes nodes but found ${model.numNodes}")
+      assert(
+        model.numNodes == numNodes,
+        s"Unable to load DecisionTreeModel data from: $dataPath." +
+          s" Expected $numNodes nodes but found ${model.numNodes}")
       model
     }
 
@@ -263,22 +296,24 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
         .collect()
         .map { case (treeId, data) =>
           (treeId, constructTree(data))
-        }.sortBy(_._1)
+        }
+        .sortBy(_._1)
       val numTrees = trees.length
       val treeIndices = trees.map(_._1).toImmutableArraySeq
-      assert(treeIndices == (0 until numTrees),
+      assert(
+        treeIndices == (0 until numTrees),
         s"Tree indices must start from 0 and increment by 1, but we found $treeIndices.")
       trees.map(_._2)
     }
 
     /**
      * Given a list of nodes from a tree, construct the tree.
-     * @param data array of all node data in a tree.
+     * @param data
+     *   array of all node data in a tree.
      */
     def constructTree(data: Array[NodeData]): Node = {
       val dataMap: Map[Int, NodeData] = data.map(n => n.nodeId -> n).toMap
-      assert(dataMap.contains(1),
-        s"DecisionTree missing root node (id = 1).")
+      assert(dataMap.contains(1), s"DecisionTree missing root node (id = 1).")
       constructNode(1, dataMap, mutable.Map.empty)
     }
 
@@ -286,9 +321,9 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
      * Builds a node from the node data map and adds new nodes to the input nodes map.
      */
     private def constructNode(
-      id: Int,
-      dataMap: Map[Int, NodeData],
-      nodes: mutable.Map[Int, Node]): Node = {
+        id: Int,
+        dataMap: Map[Int, NodeData],
+        nodes: mutable.Map[Int, Node]): Node = {
       if (nodes.contains(id)) {
         return nodes(id)
       }
@@ -299,10 +334,22 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
         } else {
           val leftNode = constructNode(data.leftNodeId.get, dataMap, nodes)
           val rightNode = constructNode(data.rightNodeId.get, dataMap, nodes)
-          val stats = new InformationGainStats(data.infoGain.get, data.impurity, leftNode.impurity,
-            rightNode.impurity, leftNode.predict, rightNode.predict)
-          new Node(data.nodeId, data.predict.toPredict, data.impurity, data.isLeaf,
-            data.split.map(_.toSplit), Some(leftNode), Some(rightNode), Some(stats))
+          val stats = new InformationGainStats(
+            data.infoGain.get,
+            data.impurity,
+            leftNode.impurity,
+            rightNode.impurity,
+            leftNode.predict,
+            rightNode.predict)
+          new Node(
+            data.nodeId,
+            data.predict.toPredict,
+            data.impurity,
+            data.isLeaf,
+            data.split.map(_.toSplit),
+            Some(leftNode),
+            Some(rightNode),
+            Some(stats))
         }
       nodes += node.id -> node
       node
@@ -310,10 +357,12 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
   }
 
   /**
-   *
-   * @param sc  Spark context used for loading model files.
-   * @param path  Path specifying the directory to which the model was saved.
-   * @return  Model instance
+   * @param sc
+   *   Spark context used for loading model files.
+   * @param path
+   *   Path specifying the directory to which the model was saved.
+   * @return
+   *   Model instance
    */
   @Since("1.3.0")
   override def load(sc: SparkContext, path: String): DecisionTreeModel = {
@@ -325,10 +374,11 @@ object DecisionTreeModel extends Loader[DecisionTreeModel] with Logging {
     (loadedClassName, version) match {
       case (className, "1.0") if className == classNameV1_0 =>
         SaveLoadV1_0.load(sc, path, algo, numNodes)
-      case _ => throw new Exception(
-        s"DecisionTreeModel.load did not recognize model with (className, format version):" +
-        s"($loadedClassName, $version).  Supported:\n" +
-        s"  ($classNameV1_0, 1.0)")
+      case _ =>
+        throw new Exception(
+          s"DecisionTreeModel.load did not recognize model with (className, format version):" +
+            s"($loadedClassName, $version).  Supported:\n" +
+            s"  ($classNameV1_0, 1.0)")
     }
   }
 }

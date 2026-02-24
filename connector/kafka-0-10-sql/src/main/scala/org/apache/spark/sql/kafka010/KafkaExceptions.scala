@@ -40,9 +40,7 @@ object KafkaExceptions {
       "MISMATCHED_TOPIC_PARTITIONS_BETWEEN_END_OFFSET_AND_PREFETCHED",
       Map(
         "tpsForPrefetched" -> tpsForPrefetched.toString(),
-        "tpsForEndOffset" -> tpsForEndOffset.toString()
-      )
-    )
+        "tpsForEndOffset" -> tpsForEndOffset.toString()))
     new SparkException(errMsg)
   }
 
@@ -51,11 +49,7 @@ object KafkaExceptions {
       endOffset: Map[TopicPartition, Long]): SparkException = {
     val errMsg = KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(
       "END_OFFSET_HAS_GREATER_OFFSET_FOR_TOPIC_PARTITION_THAN_PREFETCHED",
-      Map(
-        "prefetchedOffset" -> prefetchedOffset.toString(),
-        "endOffset" -> endOffset.toString()
-      )
-    )
+      Map("prefetchedOffset" -> prefetchedOffset.toString(), "endOffset" -> endOffset.toString()))
     new SparkException(errMsg)
   }
 
@@ -66,9 +60,7 @@ object KafkaExceptions {
       "LOST_TOPIC_PARTITIONS_IN_END_OFFSET_WITH_TRIGGER_AVAILABLENOW",
       Map(
         "tpsForLatestOffset" -> tpsForLatestOffset.toString(),
-        "tpsForEndOffset" -> tpsForEndOffset.toString()
-      )
-    )
+        "tpsForEndOffset" -> tpsForEndOffset.toString()))
     new SparkException(errMsg)
   }
 
@@ -77,11 +69,7 @@ object KafkaExceptions {
       endOffset: Map[TopicPartition, Long]): SparkException = {
     val errMsg = KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(
       "END_OFFSET_HAS_GREATER_OFFSET_FOR_TOPIC_PARTITION_THAN_LATEST_WITH_TRIGGER_AVAILABLENOW",
-      Map(
-        "latestOffset" -> latestOffset.toString(),
-        "endOffset" -> endOffset.toString()
-      )
-    )
+      Map("latestOffset" -> latestOffset.toString(), "endOffset" -> endOffset.toString()))
     new SparkException(errMsg)
   }
 
@@ -244,10 +232,10 @@ private[kafka010] class KafkaIllegalStateException(
     messageParameters: Map[String, String],
     cause: Throwable = null,
     sqlState: Option[String] = None)
-  extends IllegalStateException(
-    KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(
-      errorClass, messageParameters), cause)
-  with SparkThrowable {
+    extends IllegalStateException(
+      KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(errorClass, messageParameters),
+      cause)
+    with SparkThrowable {
 
   override def getSqlState: String =
     sqlState.getOrElse(KafkaExceptionsHelper.errorClassesJsonReader.getSqlState(errorClass))
@@ -265,10 +253,10 @@ private[kafka010] class KafkaIllegalArgumentException(
     messageParameters: Map[String, String],
     cause: Throwable = null,
     sqlState: Option[String] = None)
-  extends IllegalArgumentException(
-    KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(
-      errorClass, messageParameters), cause)
-  with SparkThrowable {
+    extends IllegalArgumentException(
+      KafkaExceptionsHelper.errorClassesJsonReader.getErrorMessage(errorClass, messageParameters),
+      cause)
+    with SparkThrowable {
 
   override def getSqlState: String =
     sqlState.getOrElse(KafkaExceptionsHelper.errorClassesJsonReader.getSqlState(errorClass))

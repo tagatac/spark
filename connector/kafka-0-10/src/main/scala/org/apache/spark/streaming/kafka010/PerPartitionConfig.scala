@@ -26,9 +26,10 @@ import org.apache.spark.ReadOnlySparkConf
  * because they need tweaking on a per-partition basis,
  */
 abstract class PerPartitionConfig extends Serializable {
+
   /**
-   *  Maximum rate (number of records per second) at which data will be read
-   *  from each Kafka partition.
+   * Maximum rate (number of records per second) at which data will be read from each Kafka
+   * partition.
    */
   def maxRatePerPartition(topicPartition: TopicPartition): Long
   def minRatePerPartition(topicPartition: TopicPartition): Long = 1
@@ -37,8 +38,7 @@ abstract class PerPartitionConfig extends Serializable {
 /**
  * Default per-partition configuration
  */
-private class DefaultPerPartitionConfig(conf: ReadOnlySparkConf)
-    extends PerPartitionConfig {
+private class DefaultPerPartitionConfig(conf: ReadOnlySparkConf) extends PerPartitionConfig {
   val maxRate = conf.get(MAX_RATE_PER_PARTITION)
   val minRate = conf.get(MIN_RATE_PER_PARTITION)
 

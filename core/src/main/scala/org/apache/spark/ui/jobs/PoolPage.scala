@@ -28,23 +28,34 @@ import org.apache.spark.ui.{UIUtils, WebUIPage}
 private[ui] class PoolPage(parent: StagesTab) extends WebUIPage("pool") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
-    val poolName = Option(request.getParameter("poolname")).map { poolname =>
-      UIUtils.decodeURLParameter(poolname)
-    }.getOrElse {
-      throw new IllegalArgumentException(s"Missing poolname parameter")
-    }
+    val poolName = Option(request.getParameter("poolname"))
+      .map { poolname =>
+        UIUtils.decodeURLParameter(poolname)
+      }
+      .getOrElse {
+        throw new IllegalArgumentException(s"Missing poolname parameter")
+      }
 
     // For now, pool information is only accessible in live UIs
     val pool = parent.sc.flatMap(_.getPoolForName(poolName)).getOrElse {
       throw new IllegalArgumentException(s"Unknown pool: $poolName")
     }
 
-    val uiPool = parent.store.asOption(parent.store.pool(poolName)).getOrElse(
-      new PoolData(poolName, Set()))
+    val uiPool =
+      parent.store.asOption(parent.store.pool(poolName)).getOrElse(new PoolData(poolName, Set()))
     val activeStages = uiPool.stageIds.toSeq.map(parent.store.lastStageAttempt(_))
     val activeStagesTable =
-      new StageTableBase(parent.store, request, activeStages, "", "activeStage", parent.basePath,
-        "stages/pool", parent.isFairScheduler, parent.killEnabled, false)
+      new StageTableBase(
+        parent.store,
+        request,
+        activeStages,
+        "",
+        "activeStage",
+        parent.basePath,
+        "stages/pool",
+        parent.isFairScheduler,
+        parent.killEnabled,
+        false)
 
     val poolTable = new PoolTable(Map(pool -> uiPool), parent)
     var content = <h4>Summary </h4> ++ poolTable.toNodeSeq(request)
@@ -58,7 +69,7 @@ private[ui] class PoolPage(parent: StagesTab) extends WebUIPage("pool") {
             <a>Active Stages ({activeStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-poolActiveStages collapsible-table">
+          <div class="aggregated-poolActiveStages collapsible-table">
           {activeStagesTable.toNodeSeq}
         </div>
     }

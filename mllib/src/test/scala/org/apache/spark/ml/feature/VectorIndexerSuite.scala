@@ -87,7 +87,8 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
     assert(densePoints2Seq.head.size == sparsePoints2Seq.head.size)
     assert(densePoints1Seq.head.size != densePoints2Seq.head.size)
     def checkPair(dvSeq: Seq[Vector], svSeq: Seq[Vector]): Unit = {
-      assert(dvSeq.zip(svSeq).forall { case (dv, sv) => dv.toArray === sv.toArray },
+      assert(
+        dvSeq.zip(svSeq).forall { case (dv, sv) => dv.toArray === sv.toArray },
         "typo in unit test")
     }
     checkPair(densePoints1Seq, sparsePoints1Seq)
@@ -129,8 +130,9 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
     testTransformer[FeatureData](sparsePoints1, model, "indexed") { _ => }
 
     // If the data is local Dataset, it throws AssertionError directly.
-    withClue("Did not throw error when fit, transform were called on " +
-      "vectors of different lengths") {
+    withClue(
+      "Did not throw error when fit, transform were called on " +
+        "vectors of different lengths") {
       testTransformerByInterceptingException[FeatureData](
         densePoints2,
         model,
@@ -139,8 +141,9 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
     }
     // If the data is distributed Dataset, it throws SparkException
     // which is the wrapper of AssertionError.
-    withClue("Did not throw error when fit, transform were called " +
-      "on vectors of different lengths") {
+    withClue(
+      "Did not throw error when fit, transform were called " +
+        "on vectors of different lengths") {
       testTransformerByInterceptingException[FeatureData](
         densePoints2.repartition(2),
         model,
@@ -161,9 +164,11 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
       val sparseModel = sparseVectorIndexer.fit(sparsePoints)
       val denseMap = denseModel.categoryMaps
       val sparseMap = sparseModel.categoryMaps
-      assert(denseMap.keys.toSet == sparseMap.keys.toSet,
+      assert(
+        denseMap.keys.toSet == sparseMap.keys.toSet,
         "Categorical features chosen from dense vs. sparse vectors did not match.")
-      assert(denseMap == sparseMap,
+      assert(
+        denseMap == sparseMap,
         "Categorical feature value indexes chosen from dense vs. sparse vectors did not match.")
     }
     testDenseSparse(densePoints1, sparsePoints1)
@@ -213,22 +218,25 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
                 assert(attr.values.get === origValueSet.toArray.sorted.map(_.toString))
                 assert(attr.isOrdinal.get === false)
               case _ =>
-                throw new RuntimeException(errMsg.message + s". Categorical feature $feature " +
-                  s"failed metadata check. Found feature attribute: $featureAttr.")
+                throw new RuntimeException(
+                  errMsg.message + s". Categorical feature $feature " +
+                    s"failed metadata check. Found feature attribute: $featureAttr.")
             }
           }
           // Check numerical feature metadata.
-          Range(0, model.numFeatures).filter(feature => !categoricalFeatures.contains(feature))
+          Range(0, model.numFeatures)
+            .filter(feature => !categoricalFeatures.contains(feature))
             .foreach { feature: Int =>
-            val featureAttr = featureAttrs(feature)
-            featureAttr match {
-              case attr: NumericAttribute =>
-                assert(featureAttr.index.get === feature)
-              case _ =>
-                throw new RuntimeException(errMsg.message + s". Numerical feature $feature " +
-                  s"failed metadata check. Found feature attribute: $featureAttr.")
+              val featureAttr = featureAttrs(feature)
+              featureAttr match {
+                case attr: NumericAttribute =>
+                  assert(featureAttr.index.get === feature)
+                case _ =>
+                  throw new RuntimeException(
+                    errMsg.message + s". Numerical feature $feature " +
+                      s"failed metadata check. Found feature attribute: $featureAttr.")
+              }
             }
-          }
         }
       } catch {
         case e: org.scalatest.exceptions.TestFailedException =>
@@ -242,8 +250,9 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
   }
 
   test("handle invalid") {
-    for ((points, pointsTestInvalid) <- Seq((densePoints1, densePoints1TestInvalid),
-      (sparsePoints1, sparsePoints1TestInvalid))) {
+    for ((points, pointsTestInvalid) <- Seq(
+        (densePoints1, densePoints1TestInvalid),
+        (sparsePoints1, sparsePoints1TestInvalid))) {
       val vectorIndexer = getIndexer.setMaxCategories(4).setHandleInvalid("error")
       val model = vectorIndexer.fit(points)
       testTransformerByInterceptingException[FeatureData](
@@ -258,19 +267,22 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
         Vectors.dense(0.0, 1.0, 2.0),
         Vectors.dense(0.0, 0.0, 1.0),
         Vectors.dense(1.0, 3.0, 2.0))
-      testTransformerByGlobalCheckFunc[FeatureData](pointsTestInvalid, model1, "indexed") { rows =>
-        assert(rows.map(_(0)) == expected)
+      testTransformerByGlobalCheckFunc[FeatureData](pointsTestInvalid, model1, "indexed") {
+        rows =>
+          assert(rows.map(_(0)) == expected)
       }
       testTransformerByGlobalCheckFunc[FeatureData](points, model1, "indexed") { rows =>
         assert(rows.map(_(0)) == expected)
       }
       val vectorIndexer2 = getIndexer.setMaxCategories(4).setHandleInvalid("keep")
       val model2 = vectorIndexer2.fit(points)
-      testTransformerByGlobalCheckFunc[FeatureData](pointsTestInvalid, model2, "indexed") { rows =>
-        assert(rows.map(_(0)) == expected ++ Array(
-          Vectors.dense(2.0, 2.0, 0.0),
-          Vectors dense(0.0, 4.0, 2.0),
-          Vectors.dense(1.0, 3.0, 3.0)))
+      testTransformerByGlobalCheckFunc[FeatureData](pointsTestInvalid, model2, "indexed") {
+        rows =>
+          assert(
+            rows.map(_(0)) == expected ++ Array(
+              Vectors.dense(2.0, 2.0, 0.0),
+              Vectors dense (0.0, 4.0, 2.0),
+              Vectors.dense(1.0, 3.0, 3.0)))
       }
     }
   }
@@ -305,19 +317,20 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
     val vectorIndexer = getIndexer.setMaxCategories(2)
     val model = vectorIndexer.fit(densePoints1WithMeta)
     // Check that ML metadata are preserved.
-    testTransformerByGlobalCheckFunc[FeatureData](densePoints1WithMeta, model, "indexed") { rows =>
-      val transAttributes: Array[Attribute] =
-        AttributeGroup.fromStructField(rows.head.schema("indexed")).attributes.get
-      featureAttributes.zip(transAttributes).foreach { case (orig, trans) =>
-        assert(orig.name === trans.name)
-        (orig, trans) match {
-          case (orig: NumericAttribute, trans: NumericAttribute) =>
-            assert(orig.max.nonEmpty && orig.max === trans.max)
-          case _ =>
-          // do nothing
-          // TODO: Once input features marked as categorical are handled correctly, check that here.
+    testTransformerByGlobalCheckFunc[FeatureData](densePoints1WithMeta, model, "indexed") {
+      rows =>
+        val transAttributes: Array[Attribute] =
+          AttributeGroup.fromStructField(rows.head.schema("indexed")).attributes.get
+        featureAttributes.zip(transAttributes).foreach { case (orig, trans) =>
+          assert(orig.name === trans.name)
+          (orig, trans) match {
+            case (orig: NumericAttribute, trans: NumericAttribute) =>
+              assert(orig.max.nonEmpty && orig.max === trans.max)
+            case _ =>
+            // do nothing
+            // TODO: Once input features marked as categorical are handled correctly, check that here.
+          }
         }
-      }
     }
   }
 
@@ -330,8 +343,10 @@ class VectorIndexerSuite extends MLTest with DefaultReadWriteTest with Logging {
   }
 
   test("VectorIndexerModel read/write") {
-    val categoryMaps = Map(0 -> Map(0.0 -> 0, 1.0 -> 1), 1 -> Map(0.0 -> 0, 1.0 -> 1,
-      2.0 -> 2, 3.0 -> 3), 2 -> Map(0.0 -> 0, -1.0 -> 1, 2.0 -> 2))
+    val categoryMaps = Map(
+      0 -> Map(0.0 -> 0, 1.0 -> 1),
+      1 -> Map(0.0 -> 0, 1.0 -> 1, 2.0 -> 2, 3.0 -> 3),
+      2 -> Map(0.0 -> 0, -1.0 -> 1, 2.0 -> 2))
     val instance = new VectorIndexerModel("myVectorIndexerModel", 3, categoryMaps)
     val newInstance = testDefaultReadWrite(instance)
     assert(newInstance.numFeatures === instance.numFeatures)

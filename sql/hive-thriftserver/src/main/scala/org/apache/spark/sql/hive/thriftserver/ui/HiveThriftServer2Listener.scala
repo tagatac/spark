@@ -40,13 +40,16 @@ private[thriftserver] class HiveThriftServer2Listener(
     kvstore: ElementTrackingStore,
     sparkConf: SparkConf,
     server: Option[HiveServer2],
-    live: Boolean = true) extends SparkListener with Logging {
+    live: Boolean = true)
+    extends SparkListener
+    with Logging {
 
   private val sessionList = new ConcurrentHashMap[String, LiveSessionData]()
   private val executionList = new ConcurrentHashMap[String, LiveExecutionData]()
 
   private val (retainedStatements: Int, retainedSessions: Int) = {
-    (sparkConf.get(SQLConf.THRIFTSERVER_UI_STATEMENT_LIMIT),
+    (
+      sparkConf.get(SQLConf.THRIFTSERVER_UI_STATEMENT_LIMIT),
       sparkConf.get(SQLConf.THRIFTSERVER_UI_SESSION_LIMIT))
   }
 
@@ -86,9 +89,9 @@ private[thriftserver] class HiveThriftServer2Listener(
       val groupId = properties.getProperty(SparkContext.SPARK_JOB_GROUP_ID)
       if (groupId != null) {
         updateJobDetails(jobStart.jobId.toString, groupId)
-        }
       }
     }
+  }
 
   private def updateJobDetails(jobId: String, groupId: String): Unit = {
     val execList = executionList.values().asScala.filter(_.groupId == groupId).toSeq
@@ -102,11 +105,15 @@ private[thriftserver] class HiveThriftServer2Listener(
       // Execution end event (Refer SPARK-27019). To handle that situation, if occurs in
       // Thriftserver, following code will take care. Here will come only if JobStart event comes
       // after Execution End event.
-      val storeExecInfo = KVUtils.viewToSeq(
-        kvstore.view(classOf[ExecutionInfo]), Int.MaxValue)(_.groupId == groupId)
+      val storeExecInfo = KVUtils.viewToSeq(kvstore.view(classOf[ExecutionInfo]), Int.MaxValue)(
+        _.groupId == groupId)
       storeExecInfo.foreach { exec =>
-        val liveExec = getOrCreateExecution(exec.execId, exec.statement, exec.sessionId,
-          exec.startTimestamp, exec.userName)
+        val liveExec = getOrCreateExecution(
+          exec.execId,
+          exec.statement,
+          exec.sessionId,
+          exec.startTimestamp,
+          exec.userName)
         liveExec.jobId += jobId
         updateStoreWithTriggerEnabled(liveExec)
         executionList.remove(liveExec.execId)
@@ -141,18 +148,14 @@ private[thriftserver] class HiveThriftServer2Listener(
         sessionData.finishTimestamp = e.finishTime
         updateStoreWithTriggerEnabled(sessionData)
         sessionList.remove(e.sessionId)
-      case None => logWarning(
-        log"onSessionClosed called with unknown session id: ${MDC(SESSION_ID, e.sessionId)}"
-      )
+      case None =>
+        logWarning(
+          log"onSessionClosed called with unknown session id: ${MDC(SESSION_ID, e.sessionId)}")
     }
 
   private def onOperationStart(e: SparkListenerThriftServerOperationStart): Unit = {
-    val executionData = getOrCreateExecution(
-      e.id,
-      e.statement,
-      e.sessionId,
-      e.startTime,
-      e.userName)
+    val executionData =
+      getOrCreateExecution(e.id, e.statement, e.sessionId, e.startTime, e.userName)
 
     executionData.state = ExecutionState.STARTED
     executionList.put(e.id, executionData)
@@ -163,9 +166,10 @@ private[thriftserver] class HiveThriftServer2Listener(
       case Some(sessionData) =>
         sessionData.totalExecution += 1
         updateLiveStore(sessionData)
-      case None => logWarning(
-        log"onOperationStart called with unknown session id: ${MDC(SESSION_ID, e.sessionId)}." +
-        log"Regardless, the operation has been registered.")
+      case None =>
+        logWarning(
+          log"onOperationStart called with unknown session id: ${MDC(SESSION_ID, e.sessionId)}." +
+            log"Regardless, the operation has been registered.")
     }
   }
 
@@ -175,9 +179,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.executePlan = e.executionPlan
         executionData.state = ExecutionState.COMPILED
         updateLiveStore(executionData)
-      case None => logWarning(
-        log"onOperationParsed called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationParsed called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   private def onOperationCanceled(e: SparkListenerThriftServerOperationCanceled): Unit =
@@ -186,9 +190,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.finishTimestamp = e.finishTime
         executionData.state = ExecutionState.CANCELED
         updateLiveStore(executionData)
-      case None => logWarning(
-        log"onOperationCanceled called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationCanceled called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   private def onOperationTimeout(e: SparkListenerThriftServerOperationTimeout): Unit =
@@ -197,9 +201,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.finishTimestamp = e.finishTime
         executionData.state = ExecutionState.TIMEDOUT
         updateLiveStore(executionData)
-      case None => logWarning(
-        log"onOperationCanceled called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationCanceled called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   private def onOperationError(e: SparkListenerThriftServerOperationError): Unit =
@@ -209,9 +213,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.detail = e.errorMsg
         executionData.state = ExecutionState.FAILED
         updateLiveStore(executionData)
-      case None => logWarning(
-        log"onOperationError called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationError called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   private def onOperationFinished(e: SparkListenerThriftServerOperationFinish): Unit =
@@ -220,9 +224,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.finishTimestamp = e.finishTime
         executionData.state = ExecutionState.FINISHED
         updateLiveStore(executionData)
-      case None => logWarning(
-        log"onOperationFinished called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationFinished called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   private def onOperationClosed(e: SparkListenerThriftServerOperationClosed): Unit =
@@ -232,9 +236,9 @@ private[thriftserver] class HiveThriftServer2Listener(
         executionData.state = ExecutionState.CLOSED
         updateStoreWithTriggerEnabled(executionData)
         executionList.remove(e.id)
-      case None => logWarning(
-        log"onOperationClosed called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}"
-      )
+      case None =>
+        logWarning(
+          log"onOperationClosed called with unknown operation id: ${MDC(STATEMENT_ID, e.id)}")
     }
 
   // Update both live and history stores. Trigger is enabled by default, hence
@@ -259,20 +263,25 @@ private[thriftserver] class HiveThriftServer2Listener(
   }
 
   private def getOrCreateSession(
-     sessionId: String,
-     startTime: Long,
-     ip: String,
-     username: String): LiveSessionData = {
-    sessionList.computeIfAbsent(sessionId,
+      sessionId: String,
+      startTime: Long,
+      ip: String,
+      username: String): LiveSessionData = {
+    sessionList.computeIfAbsent(
+      sessionId,
       (_: String) => new LiveSessionData(sessionId, startTime, ip, username))
   }
 
   private def getOrCreateExecution(
-    execId: String, statement: String,
-    sessionId: String, startTimestamp: Long,
-    userName: String): LiveExecutionData = {
-    executionList.computeIfAbsent(execId,
-      (_: String) => new LiveExecutionData(execId, statement, sessionId, startTimestamp, userName))
+      execId: String,
+      statement: String,
+      sessionId: String,
+      startTimestamp: Long,
+      userName: String): LiveExecutionData = {
+    executionList.computeIfAbsent(
+      execId,
+      (_: String) =>
+        new LiveExecutionData(execId, statement, sessionId, startTimestamp, userName))
   }
 
   private def cleanupExecutions(count: Long): Unit = {
@@ -318,15 +327,16 @@ private[thriftserver] class LiveExecutionData(
     val statement: String,
     val sessionId: String,
     val startTimestamp: Long,
-    val userName: String) extends LiveEntity {
+    val userName: String)
+    extends LiveEntity {
 
-    var finishTimestamp: Long = 0L
-    var closeTimestamp: Long = 0L
-    var executePlan: String = ""
-    var detail: String = ""
-    var state: ExecutionState.Value = ExecutionState.STARTED
-    val jobId: ArrayBuffer[String] = ArrayBuffer[String]()
-    var groupId: String = ""
+  var finishTimestamp: Long = 0L
+  var closeTimestamp: Long = 0L
+  var executePlan: String = ""
+  var detail: String = ""
+  var state: ExecutionState.Value = ExecutionState.STARTED
+  val jobId: ArrayBuffer[String] = ArrayBuffer[String]()
+  var groupId: String = ""
 
   override protected def doUpdate(): Any = {
     new ExecutionInfo(
@@ -349,18 +359,13 @@ private[thriftserver] class LiveSessionData(
     val sessionId: String,
     val startTimeStamp: Long,
     val ip: String,
-    val username: String) extends LiveEntity {
+    val username: String)
+    extends LiveEntity {
 
   var finishTimestamp: Long = 0L
   var totalExecution: Int = 0
 
   override protected def doUpdate(): Any = {
-    new SessionInfo(
-      sessionId,
-      startTimeStamp,
-      ip,
-      username,
-      finishTimestamp,
-      totalExecution)
+    new SessionInfo(sessionId, startTimeStamp, ip, username, finishTimestamp, totalExecution)
   }
 }

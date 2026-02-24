@@ -70,35 +70,39 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
 
   private def makeJobEvent(jobs: Seq[v1.JobData]): Seq[String] = {
     val now = System.currentTimeMillis()
-    jobs.filter { job =>
-      job.status != JobExecutionStatus.UNKNOWN && job.submissionTime.isDefined
-    }.sortBy { j =>
-      (j.completionTime.map(_.getTime).getOrElse(now), j.submissionTime.get.getTime)
-    }.takeRight(MAX_TIMELINE_JOBS).map { job =>
-      val jobId = job.jobId
-      val status = job.status
-      val (_, lastStageDescription) = lastStageNameAndDescription(store, job)
-      val jobDescription = UIUtils.makeDescription(
-        job.description.getOrElse(lastStageDescription),
-        "",
-        plainText = true).text
-
-      val submissionTime = job.submissionTime.get.getTime()
-      val completionTime = job.completionTime.map(_.getTime()).getOrElse(now)
-      val classNameByStatus = status match {
-        case JobExecutionStatus.SUCCEEDED => "succeeded"
-        case JobExecutionStatus.FAILED => "failed"
-        case JobExecutionStatus.RUNNING => "running"
-        case JobExecutionStatus.UNKNOWN => "unknown"
+    jobs
+      .filter { job =>
+        job.status != JobExecutionStatus.UNKNOWN && job.submissionTime.isDefined
       }
+      .sortBy { j =>
+        (j.completionTime.map(_.getTime).getOrElse(now), j.submissionTime.get.getTime)
+      }
+      .takeRight(MAX_TIMELINE_JOBS)
+      .map { job =>
+        val jobId = job.jobId
+        val status = job.status
+        val (_, lastStageDescription) = lastStageNameAndDescription(store, job)
+        val jobDescription = UIUtils
+          .makeDescription(job.description.getOrElse(lastStageDescription), "", plainText = true)
+          .text
 
-      // The timeline library treats contents as HTML, so we have to escape them. We need to add
-      // extra layers of escaping in order to embed this in a JavaScript string literal.
-      val escapedDesc = Utility.escape(jobDescription)
-      val jsEscapedDescForTooltip = StringEscapeUtils.escapeEcmaScript(Utility.escape(escapedDesc))
-      val jsEscapedDescForLabel = StringEscapeUtils.escapeEcmaScript(escapedDesc)
-      val jobEventJsonAsStr =
-        s"""
+        val submissionTime = job.submissionTime.get.getTime()
+        val completionTime = job.completionTime.map(_.getTime()).getOrElse(now)
+        val classNameByStatus = status match {
+          case JobExecutionStatus.SUCCEEDED => "succeeded"
+          case JobExecutionStatus.FAILED => "failed"
+          case JobExecutionStatus.RUNNING => "running"
+          case JobExecutionStatus.UNKNOWN => "unknown"
+        }
+
+        // The timeline library treats contents as HTML, so we have to escape them. We need to add
+        // extra layers of escaping in order to embed this in a JavaScript string literal.
+        val escapedDesc = Utility.escape(jobDescription)
+        val jsEscapedDescForTooltip =
+          StringEscapeUtils.escapeEcmaScript(Utility.escape(escapedDesc))
+        val jsEscapedDescForLabel = StringEscapeUtils.escapeEcmaScript(escapedDesc)
+        val jobEventJsonAsStr =
+          s"""
            |{
            |  'className': 'job application-timeline-object ${classNameByStatus}',
            |  'group': 'jobs',
@@ -109,28 +113,28 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
            |     'data-title="${jsEscapedDescForTooltip} (Job ${jobId})<br>' +
            |     'Status: ${status}<br>' +
            |     'Submitted: ${UIUtils.formatDate(new Date(submissionTime))}' +
-           |     '${
-                     if (status != JobExecutionStatus.RUNNING) {
-                       s"""<br>Completed: ${UIUtils.formatDate(new Date(completionTime))}"""
-                     } else {
-                       ""
-                     }
-                  }">' +
+           |     '${if (status != JobExecutionStatus.RUNNING) {
+              s"""<br>Completed: ${UIUtils.formatDate(new Date(completionTime))}"""
+            } else {
+              ""
+            }}">' +
            |    '${jsEscapedDescForLabel} (Job ${jobId})</div>'
            |}
          """.stripMargin
-      jobEventJsonAsStr
-    }
+        jobEventJsonAsStr
+      }
   }
 
-  private def makeExecutorEvent(executors: Seq[v1.ExecutorSummary]):
-      Seq[String] = {
+  private def makeExecutorEvent(executors: Seq[v1.ExecutorSummary]): Seq[String] = {
     val events = ListBuffer[String]()
-    executors.sortBy { e =>
-      e.removeTime.map(_.getTime).getOrElse(e.addTime.getTime)
-    }.takeRight(MAX_TIMELINE_EXECUTORS).foreach { e =>
-      val addedEvent =
-        s"""
+    executors
+      .sortBy { e =>
+        e.removeTime.map(_.getTime).getOrElse(e.addTime.getTime)
+      }
+      .takeRight(MAX_TIMELINE_EXECUTORS)
+      .foreach { e =>
+        val addedEvent =
+          s"""
            |{
            |  'className': 'executor added',
            |  'group': 'executors',
@@ -142,11 +146,11 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
            |    'data-html="true">Executor ${e.id} added</div>'
            |}
          """.stripMargin
-      events += addedEvent
+        events += addedEvent
 
-      e.removeTime.foreach { removeTime =>
-        val removedEvent =
-          s"""
+        e.removeTime.foreach { removeTime =>
+          val removedEvent =
+            s"""
              |{
              |  'className': 'executor removed',
              |  'group': 'executors',
@@ -155,18 +159,18 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
              |    'data-toggle="tooltip" data-placement="top"' +
              |    'data-title="Executor ${e.id}<br>' +
              |    'Removed at ${UIUtils.formatDate(removeTime)}' +
-             |    '${
-                      e.removeReason.map { reason =>
-                        s"""<br>Reason: ${StringEscapeUtils.escapeEcmaScript(
-                          reason.replace("\n", " "))}"""
-                      }.getOrElse("")
-                   }"' +
+             |    '${e.removeReason
+                .map { reason =>
+                  s"""<br>Reason: ${StringEscapeUtils.escapeEcmaScript(
+                      reason.replace("\n", " "))}"""
+                }
+                .getOrElse("")}"' +
              |    'data-html="true">Executor ${e.id} removed</div>'
              |}
            """.stripMargin
-        events += removedEvent
+          events += removedEvent
+        }
       }
-    }
     events.toSeq
   }
 
@@ -203,7 +207,7 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
         Event Timeline
       </a>
     </span> ++
-    <div id="application-timeline" class="collapsed">
+      <div id="application-timeline" class="collapsed">
       {
         if (MAX_TIMELINE_JOBS < jobs.size) {
           <div>
@@ -235,9 +239,12 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
         </div>
       </div>
     </div> ++
-    <script type="text/javascript" nonce={CspNonce.get}>
-      {Unparsed(s"drawApplicationTimeline(${groupJsonArrayAsStr}," +
-      s"${eventArrayAsStr}, ${startTime}, ${UIUtils.getTimeZoneOffset()});")}
+      <script type="text/javascript" nonce={CspNonce.get}>
+      {
+        Unparsed(
+          s"drawApplicationTimeline(${groupJsonArrayAsStr}," +
+            s"${eventArrayAsStr}, ${startTime}, ${UIUtils.getTimeZoneOffset()});")
+      }
     </script>
   }
 
@@ -262,10 +269,9 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
         UIUtils.prependBaseUri(request, parent.basePath),
         "jobs", // subPath
         killEnabled,
-        jobIdTitle
-      ).table(jobPage)
+        jobIdTitle).table(jobPage)
     } catch {
-      case e @ (_ : IllegalArgumentException | _ : IndexOutOfBoundsException) =>
+      case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
         <div class="alert alert-error">
           <p>Error while rendering job table:</p>
           <pre>
@@ -297,7 +303,12 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
     }
 
     val activeJobsTable =
-      jobsTable(request, "active", "activeJob", activeJobs.toSeq, killEnabled = parent.killEnabled)
+      jobsTable(
+        request,
+        "active",
+        "activeJob",
+        activeJobs.toSeq,
+        killEnabled = parent.killEnabled)
     val completedJobsTable =
       jobsTable(request, "completed", "completedJob", completedJobs.toSeq, killEnabled = false)
     val failedJobsTable =
@@ -315,7 +326,10 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
     }
 
     // SPARK-33991 Avoid enumeration conversion error.
-    val schedulingMode = store.environmentInfo().sparkProperties.toMap
+    val schedulingMode = store
+      .environmentInfo()
+      .sparkProperties
+      .toMap
       .get(SCHEDULER_MODE.key)
       .map { mode => SchedulingMode.withName(mode.toUpperCase(Locale.ROOT)).toString }
       .getOrElse("Unknown")
@@ -335,47 +349,49 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
           <li>
             <strong>Total Uptime:</strong>
             {
-              if (endTime < 0 && parent.sc.isDefined) {
-                UIUtils.formatDuration(System.currentTimeMillis() - startTime)
-              } else if (endTime > 0) {
-                UIUtils.formatDuration(endTime - startTime)
-              }
-            }
+        if (endTime < 0 && parent.sc.isDefined) {
+          UIUtils.formatDuration(System.currentTimeMillis() - startTime)
+        } else if (endTime > 0) {
+          UIUtils.formatDuration(endTime - startTime)
+        }
+      }
           </li>
           <li>
             <strong>Scheduling Mode: </strong>
             {schedulingMode}
           </li>
           {
-            if (shouldShowActiveJobs) {
-              <li>
+        if (shouldShowActiveJobs) {
+          <li>
                 <a href="#active"><strong>Active Jobs:</strong></a>
                 {activeJobs.size}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowCompletedJobs) {
-              <li id="completed-summary">
+        if (shouldShowCompletedJobs) {
+          <li id="completed-summary">
                 <a href="#completed"><strong>Completed Jobs:</strong></a>
                 {completedJobNumStr}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowFailedJobs) {
-              <li>
+        if (shouldShowFailedJobs) {
+          <li>
                 <a href="#failed"><strong>Failed Jobs:</strong></a>
                 {failedJobs.size}
               </li>
-            }
-          }
+        }
+      }
         </ul>
       </div>
 
     var content = summary
-    content ++= makeTimeline((activeJobs ++ completedJobs ++ failedJobs).toSeq,
-      store.executorList(false), startTime)
+    content ++= makeTimeline(
+      (activeJobs ++ completedJobs ++ failedJobs).toSeq,
+      store.executorList(false),
+      startTime)
 
     if (shouldShowActiveJobs) {
       content ++=
@@ -387,7 +403,7 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
             <a>Active Jobs ({activeJobs.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-activeJobs collapsible-table">
+          <div class="aggregated-activeJobs collapsible-table">
           {activeJobsTable}
         </div>
     }
@@ -401,7 +417,7 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
             <a>Completed Jobs ({completedJobNumStr})</a>
           </h4>
         </span> ++
-        <div class="aggregated-completedJobs collapsible-table">
+          <div class="aggregated-completedJobs collapsible-table">
           {completedJobsTable}
         </div>
     }
@@ -415,7 +431,7 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
             <a>Failed Jobs ({failedJobs.size})</a>
           </h4>
         </span> ++
-      <div class="aggregated-failedJobs collapsible-table">
+          <div class="aggregated-failedJobs collapsible-table">
         {failedJobsTable}
       </div>
     }
@@ -423,8 +439,7 @@ private[ui] class AllJobsPage(parent: JobsTab, store: AppStatusStore) extends We
     val helpText = """A job is triggered by an action, like count() or saveAsTextFile().""" +
       " Click on a job to see information about the stages of tasks inside it."
 
-    UIUtils.headerSparkPage(request, "Spark Jobs", content, parent,
-      helpText = Some(helpText))
+    UIUtils.headerSparkPage(request, "Spark Jobs", content, parent, helpText = Some(helpText))
   }
 
 }
@@ -446,7 +461,8 @@ private[ui] class JobDataSource(
     basePath: String,
     pageSize: Int,
     sortColumn: String,
-    desc: Boolean) extends PagedDataSource[JobTableRowData](pageSize) {
+    desc: Boolean)
+    extends PagedDataSource[JobTableRowData](pageSize) {
 
   import ApiHelper._
 
@@ -482,8 +498,7 @@ private[ui] class JobDataSource(
       submissionTime.map(_.getTime()).getOrElse(-1L),
       formattedSubmissionTime,
       jobDescription,
-      detailUrl
-    )
+      detailUrl)
   }
 
   /**
@@ -517,8 +532,8 @@ private[ui] class JobPagedTable(
     basePath: String,
     subPath: String,
     killEnabled: Boolean,
-    jobIdTitle: String
-  ) extends PagedTable[JobTableRowData] {
+    jobIdTitle: String)
+    extends PagedTable[JobTableRowData] {
 
   private val (sortColumn, desc, pageSize) = getTableParameters(request, jobTag, jobIdTitle)
   private val parameterPath = basePath + s"/$subPath/?" + getParameterOtherTable(request, jobTag)
@@ -533,13 +548,7 @@ private[ui] class JobPagedTable(
 
   override def pageNumberFormField: String = jobTag + ".page"
 
-  override val dataSource = new JobDataSource(
-    store,
-    data,
-    basePath,
-    pageSize,
-    sortColumn,
-    desc)
+  override val dataSource = new JobDataSource(store, data, basePath, pageSize, sortColumn, desc)
 
   override def pageLink(page: Int): String = {
     parameterPath +
@@ -560,16 +569,25 @@ private[ui] class JobPagedTable(
         (jobIdTitle, true, None),
         ("Description", true, None),
         ("Submitted", true, None),
-        ("Duration", true, Some("Elapsed time since the job was submitted " +
-          "until execution completion of all its stages.")),
+        (
+          "Duration",
+          true,
+          Some(
+            "Elapsed time since the job was submitted " +
+              "until execution completion of all its stages.")),
         ("Stages: Succeeded/Total", false, None),
-        ("Tasks (for all stages): Succeeded/Total", false, None)
-      )
+        ("Tasks (for all stages): Succeeded/Total", false, None))
 
     isSortColumnValid(jobHeadersAndCssClasses, sortColumn)
 
-    headerRow(jobHeadersAndCssClasses, desc, pageSize, sortColumn, parameterPath,
-      jobTag, tableHeaderId)
+    headerRow(
+      jobHeadersAndCssClasses,
+      desc,
+      pageSize,
+      sortColumn,
+      parameterPath,
+      jobTag,
+      tableHeaderId)
   }
 
   override def row(jobTableRow: JobTableRowData): Seq[Node] = {
@@ -603,10 +621,15 @@ private[ui] class JobPagedTable(
         {if (job.numSkippedStages > 0) s"(${job.numSkippedStages} skipped)"}
       </td>
       <td class="progress-cell">
-        {UIUtils.makeProgressBar(started = job.numActiveTasks,
+        {
+      UIUtils.makeProgressBar(
+        started = job.numActiveTasks,
         completed = job.numCompletedIndices,
-        failed = job.numFailedTasks, skipped = job.numSkippedTasks,
-        reasonToNumKilled = job.killedTasksSummary, total = job.numTasks - job.numSkippedTasks)}
+        failed = job.numFailedTasks,
+        skipped = job.numSkippedTasks,
+        reasonToNumKilled = job.killedTasksSummary,
+        total = job.numTasks - job.numSkippedTasks)
+    }
       </td>
     </tr>
   }

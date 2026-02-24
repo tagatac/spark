@@ -135,9 +135,7 @@ class CompressionCodecSuite extends SparkFunSuite {
       parameters = Map(
         "codecName" -> "foobar",
         "configKey" -> "\"spark.io.compression.codec\"",
-        "configVal" -> "\"snappy\""
-      )
-    )
+        "configVal" -> "\"snappy\""))
   }
 
   private def testConcatenationOfSerializedStreams(codec: CompressionCodec): Unit = {
@@ -155,7 +153,8 @@ class CompressionCodecSuite extends SparkFunSuite {
       out.close()
       baos.toByteArray
     }
-    val concatenatedBytes = codec.compressedInputStream(new ByteArrayInputStream(bytes1 ++ bytes2))
+    val concatenatedBytes =
+      codec.compressedInputStream(new ByteArrayInputStream(bytes1 ++ bytes2))
     val decompressed: Array[Byte] = new Array[Byte](128)
     Utils.readFully(concatenatedBytes, decompressed, 0, decompressed.length)
     assert(decompressed.toSeq === (0 to 127))

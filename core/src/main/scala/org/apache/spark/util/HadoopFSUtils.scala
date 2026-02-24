@@ -37,51 +37,70 @@ import org.apache.spark.util.ArrayImplicits._
  * Utility functions to simplify and speed-up file listing.
  */
 private[spark] object HadoopFSUtils extends Logging {
+
   /**
-   * Lists a collection of paths recursively. Picks the listing strategy adaptively depending
-   * on the number of paths to list.
+   * Lists a collection of paths recursively. Picks the listing strategy adaptively depending on
+   * the number of paths to list.
    *
    * This may only be called on the driver.
    *
-   * @param sc Spark context used to run parallel listing.
-   * @param paths Input paths to list
-   * @param hadoopConf Hadoop configuration
-   * @param filter Path filter used to exclude leaf files from result
-   * @param ignoreMissingFiles Ignore missing files that happen during recursive listing
-   *                           (e.g., due to race conditions)
-   * @param ignoreLocality Whether to fetch data locality info when listing leaf files. If false,
-   *                       this will return `FileStatus` without `BlockLocation` info.
-   * @param parallelismThreshold The threshold to enable parallelism. If the number of input paths
-   *                             is smaller than this value, this will fallback to use
-   *                             sequential listing.
-   * @param parallelismMax The maximum parallelism for listing. If the number of input paths is
-   *                       larger than this value, parallelism will be throttled to this value
-   *                       to avoid generating too many tasks.
-   * @return for each input path, the set of discovered files for the path
+   * @param sc
+   *   Spark context used to run parallel listing.
+   * @param paths
+   *   Input paths to list
+   * @param hadoopConf
+   *   Hadoop configuration
+   * @param filter
+   *   Path filter used to exclude leaf files from result
+   * @param ignoreMissingFiles
+   *   Ignore missing files that happen during recursive listing (e.g., due to race conditions)
+   * @param ignoreLocality
+   *   Whether to fetch data locality info when listing leaf files. If false, this will return
+   *   `FileStatus` without `BlockLocation` info.
+   * @param parallelismThreshold
+   *   The threshold to enable parallelism. If the number of input paths is smaller than this
+   *   value, this will fallback to use sequential listing.
+   * @param parallelismMax
+   *   The maximum parallelism for listing. If the number of input paths is larger than this
+   *   value, parallelism will be throttled to this value to avoid generating too many tasks.
+   * @return
+   *   for each input path, the set of discovered files for the path
    */
   def parallelListLeafFiles(
-    sc: SparkContext,
-    paths: Seq[Path],
-    hadoopConf: Configuration,
-    filter: PathFilter,
-    ignoreMissingFiles: Boolean,
-    ignoreLocality: Boolean,
-    parallelismThreshold: Int,
-    parallelismMax: Int): Seq[(Path, Seq[FileStatus])] = {
-    parallelListLeafFilesInternal(sc, paths, hadoopConf, filter, isRootLevel = true,
-      ignoreMissingFiles, ignoreLocality, parallelismThreshold, parallelismMax)
+      sc: SparkContext,
+      paths: Seq[Path],
+      hadoopConf: Configuration,
+      filter: PathFilter,
+      ignoreMissingFiles: Boolean,
+      ignoreLocality: Boolean,
+      parallelismThreshold: Int,
+      parallelismMax: Int): Seq[(Path, Seq[FileStatus])] = {
+    parallelListLeafFilesInternal(
+      sc,
+      paths,
+      hadoopConf,
+      filter,
+      isRootLevel = true,
+      ignoreMissingFiles,
+      ignoreLocality,
+      parallelismThreshold,
+      parallelismMax)
   }
 
   /**
-   * Lists a collection of paths recursively with a single API invocation.
-   * Like parallelListLeafFiles, this ignores FileNotFoundException on the given root path.
+   * Lists a collection of paths recursively with a single API invocation. Like
+   * parallelListLeafFiles, this ignores FileNotFoundException on the given root path.
    *
    * This is able to be called on both driver and executors.
    *
-   * @param path a path to list
-   * @param hadoopConf Hadoop configuration
-   * @param filter Path filter used to exclude leaf files from result
-   * @return  the set of discovered files for the path
+   * @param path
+   *   a path to list
+   * @param hadoopConf
+   *   Hadoop configuration
+   * @param filter
+   *   Path filter used to exclude leaf files from result
+   * @return
+   *   the set of discovered files for the path
    */
   def listFiles(
       path: Path,
@@ -100,8 +119,9 @@ private[spark] object HadoopFSUtils extends Logging {
       Seq((path, statues.toImmutableArraySeq))
     } catch {
       case _: FileNotFoundException =>
-        logWarning(log"The root directory ${MDC(PATH, path)} " +
-          log"was not found. Was it deleted very recently?")
+        logWarning(
+          log"The root directory ${MDC(PATH, path)} " +
+            log"was not found. Was it deleted very recently?")
         Seq((path, Seq.empty[FileStatus]))
     }
   }
@@ -134,9 +154,10 @@ private[spark] object HadoopFSUtils extends Logging {
       }
     }
 
-    logInfo(log"Listing leaf files and directories in parallel under" +
-      log"${MDC(NUM_PATHS, paths.length)} paths." +
-      log" The first several paths are: ${MDC(PATHS, paths.take(10).mkString(", "))}.")
+    logInfo(
+      log"Listing leaf files and directories in parallel under" +
+        log"${MDC(NUM_PATHS, paths.length)} paths." +
+        log" The first several paths are: ${MDC(PATHS, paths.take(10).mkString(", "))}.")
     HiveCatalogMetrics.incrementParallelListingJobCount(1)
 
     val serializableConfiguration = new SerializableConfiguration(hadoopConf)
@@ -172,7 +193,9 @@ private[spark] object HadoopFSUtils extends Logging {
               parallelismMax = 0)
             (path, leafFiles)
           }
-        }.collect().toImmutableArraySeq
+        }
+        .collect()
+        .toImmutableArraySeq
     } finally {
       sc.setJobDescription(previousJobDescription)
     }
@@ -185,7 +208,8 @@ private[spark] object HadoopFSUtils extends Logging {
    *
    * If sessionOpt is None, this may be called on executors.
    *
-   * @return all children of path that match the specified filter.
+   * @return
+   *   all children of path that match the specified filter.
    */
   private def listLeafFiles(
       path: Path,
@@ -203,52 +227,54 @@ private[spark] object HadoopFSUtils extends Logging {
 
     // Note that statuses only include FileStatus for the files and dirs directly under path,
     // and does not include anything else recursively.
-    val statuses: Array[FileStatus] = try {
-      fs match {
-        // DistributedFileSystem overrides listLocatedStatus to make 1 single call to namenode
-        // to retrieve the file status with the file block location. The reason to still fallback
-        // to listStatus is because the default implementation would potentially throw a
-        // FileNotFoundException which is better handled by doing the lookups manually below.
-        case (_: DistributedFileSystem | _: ViewFileSystem) if !ignoreLocality =>
-          val remoteIter = fs.listLocatedStatus(path)
-          new Iterator[LocatedFileStatus]() {
-            def next(): LocatedFileStatus = remoteIter.next
-            def hasNext: Boolean = remoteIter.hasNext
-          }.toArray
-        case _ => fs.listStatus(path)
+    val statuses: Array[FileStatus] =
+      try {
+        fs match {
+          // DistributedFileSystem overrides listLocatedStatus to make 1 single call to namenode
+          // to retrieve the file status with the file block location. The reason to still fallback
+          // to listStatus is because the default implementation would potentially throw a
+          // FileNotFoundException which is better handled by doing the lookups manually below.
+          case (_: DistributedFileSystem | _: ViewFileSystem) if !ignoreLocality =>
+            val remoteIter = fs.listLocatedStatus(path)
+            new Iterator[LocatedFileStatus]() {
+              def next(): LocatedFileStatus = remoteIter.next
+              def hasNext: Boolean = remoteIter.hasNext
+            }.toArray
+          case _ => fs.listStatus(path)
+        }
+      } catch {
+        // If we are listing a root path for SQL (e.g. a top level directory of a table), we need to
+        // ignore FileNotFoundExceptions during this root level of the listing because
+        //
+        //  (a) certain code paths might construct an InMemoryFileIndex with root paths that
+        //      might not exist (i.e. not all callers are guaranteed to have checked
+        //      path existence prior to constructing InMemoryFileIndex) and,
+        //  (b) we need to ignore deleted root paths during REFRESH TABLE, otherwise we break
+        //      existing behavior and break the ability drop SessionCatalog tables when tables'
+        //      root directories have been deleted (which breaks a number of Spark's own tests).
+        //
+        // If we are NOT listing a root path then a FileNotFoundException here means that the
+        // directory was present in a previous level of file listing but is absent in this
+        // listing, likely indicating a race condition (e.g. concurrent table overwrite or S3
+        // list inconsistency).
+        //
+        // The trade-off in supporting existing behaviors / use-cases is that we won't be
+        // able to detect race conditions involving root paths being deleted during
+        // InMemoryFileIndex construction. However, it's still a net improvement to detect and
+        // fail-fast on the non-root cases. For more info see the SPARK-27676 review discussion.
+        case _: FileNotFoundException if isRootPath || ignoreMissingFiles =>
+          logWarning(
+            log"The directory ${MDC(PATH, path)} " +
+              log"was not found. Was it deleted very recently?")
+          Array.empty[FileStatus]
+        case u: UnsupportedOperationException =>
+          throw new SparkUnsupportedOperationException(
+            errorClass = "FAILED_READ_FILE.UNSUPPORTED_FILE_SYSTEM",
+            messageParameters = Map(
+              "path" -> path.toString,
+              "fileSystemClass" -> fs.getClass.getName,
+              "method" -> u.getStackTrace.head.getMethodName))
       }
-    } catch {
-      // If we are listing a root path for SQL (e.g. a top level directory of a table), we need to
-      // ignore FileNotFoundExceptions during this root level of the listing because
-      //
-      //  (a) certain code paths might construct an InMemoryFileIndex with root paths that
-      //      might not exist (i.e. not all callers are guaranteed to have checked
-      //      path existence prior to constructing InMemoryFileIndex) and,
-      //  (b) we need to ignore deleted root paths during REFRESH TABLE, otherwise we break
-      //      existing behavior and break the ability drop SessionCatalog tables when tables'
-      //      root directories have been deleted (which breaks a number of Spark's own tests).
-      //
-      // If we are NOT listing a root path then a FileNotFoundException here means that the
-      // directory was present in a previous level of file listing but is absent in this
-      // listing, likely indicating a race condition (e.g. concurrent table overwrite or S3
-      // list inconsistency).
-      //
-      // The trade-off in supporting existing behaviors / use-cases is that we won't be
-      // able to detect race conditions involving root paths being deleted during
-      // InMemoryFileIndex construction. However, it's still a net improvement to detect and
-      // fail-fast on the non-root cases. For more info see the SPARK-27676 review discussion.
-      case _: FileNotFoundException if isRootPath || ignoreMissingFiles =>
-        logWarning(log"The directory ${MDC(PATH, path)} " +
-          log"was not found. Was it deleted very recently?")
-        Array.empty[FileStatus]
-      case u: UnsupportedOperationException =>
-        throw new SparkUnsupportedOperationException(
-          errorClass = "FAILED_READ_FILE.UNSUPPORTED_FILE_SYSTEM",
-          messageParameters = Map(
-            "path" -> path.toString,
-            "fileSystemClass" -> fs.getClass.getName,
-            "method" -> u.getStackTrace.head.getMethodName))
-    }
 
     val filteredStatuses =
       statuses.filterNot(status => shouldFilterOutPathName(status.getPath.getName))
@@ -266,8 +292,7 @@ private[spark] object HadoopFSUtils extends Logging {
             ignoreMissingFiles = ignoreMissingFiles,
             ignoreLocality = ignoreLocality,
             parallelismThreshold = parallelismThreshold,
-            parallelismMax = parallelismMax
-          ).flatMap(_._2)
+            parallelismMax = parallelismMax).flatMap(_._2)
         case _ =>
           dirs.flatMap { dir =>
             listLeafFiles(
@@ -317,9 +342,22 @@ private[spark] object HadoopFSUtils extends Logging {
               new BlockLocation(loc.getNames, loc.getHosts, loc.getOffset, loc.getLength)
             }
           }
-          val lfs = new LocatedFileStatus(f.getLen, f.isDirectory, f.getReplication, f.getBlockSize,
-            f.getModificationTime, 0, null, null, null, null, f.getPath,
-            f.hasAcl, f.isEncrypted, f.isErasureCoded, locations)
+          val lfs = new LocatedFileStatus(
+            f.getLen,
+            f.isDirectory,
+            f.getReplication,
+            f.getBlockSize,
+            f.getModificationTime,
+            0,
+            null,
+            null,
+            null,
+            null,
+            f.getPath,
+            f.hasAcl,
+            f.isEncrypted,
+            f.isErasureCoded,
+            locations)
           if (f.isSymlink) {
             lfs.setSymlink(f.getSymlink)
           }
@@ -334,8 +372,9 @@ private[spark] object HadoopFSUtils extends Logging {
     }
 
     if (missingFiles.nonEmpty) {
-      logWarning(log"the following files were missing during file scan:\n  " +
-        log"${MDC(PATHS, missingFiles.mkString("\n  "))}")
+      logWarning(
+        log"the following files were missing during file scan:\n  " +
+          log"${MDC(PATHS, missingFiles.mkString("\n  "))}")
     }
 
     resolvedLeafStatuses.toImmutableArraySeq

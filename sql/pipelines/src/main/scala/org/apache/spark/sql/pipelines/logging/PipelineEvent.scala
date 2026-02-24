@@ -23,13 +23,20 @@ import org.apache.spark.sql.pipelines.graph.QueryOrigin
 
 /**
  * An internal event that is emitted during the run of a pipeline.
- * @param id A globally unique id
- * @param timestamp The time of the event
- * @param origin Where the event originated from
- * @param level Security level of the event
- * @param message A user-friendly description of the event
- * @param details The details of the event
- * @param error An error that occurred during the event
+ * @param id
+ *   A globally unique id
+ * @param timestamp
+ *   The time of the event
+ * @param origin
+ *   Where the event originated from
+ * @param level
+ *   Security level of the event
+ * @param message
+ *   A user-friendly description of the event
+ * @param details
+ *   The details of the event
+ * @param error
+ *   An error that occurred during the event
  */
 case class PipelineEvent(
     id: String,
@@ -39,6 +46,7 @@ case class PipelineEvent(
     message: String,
     details: EventDetails,
     error: Option[Throwable]) {
+
   /** Combines the message and error (if any) into a single string */
   def messageWithError: String = {
     if (error.nonEmpty) {
@@ -58,15 +66,17 @@ case class PipelineEvent(
 
 /**
  * Describes where the event originated from
- * @param datasetName The name of the dataset
- * @param flowName The name of the flow
- * @param sourceCodeLocation The location of the source code
+ * @param datasetName
+ *   The name of the dataset
+ * @param flowName
+ *   The name of the flow
+ * @param sourceCodeLocation
+ *   The location of the source code
  */
 case class PipelineEventOrigin(
     datasetName: Option[String],
     flowName: Option[String],
-    sourceCodeLocation: Option[QueryOrigin]
-)
+    sourceCodeLocation: Option[QueryOrigin])
 
 // Additional details about the PipelineEvent
 sealed trait EventDetails

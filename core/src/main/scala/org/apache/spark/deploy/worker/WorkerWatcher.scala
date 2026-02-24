@@ -24,16 +24,16 @@ import org.apache.spark.internal.LogKeys.WORKER_URL
 import org.apache.spark.rpc._
 
 /**
- * Endpoint which connects to a worker process and terminates the JVM if the
- * connection is severed.
- * Provides fate sharing between a worker and its associated child processes.
+ * Endpoint which connects to a worker process and terminates the JVM if the connection is
+ * severed. Provides fate sharing between a worker and its associated child processes.
  */
 private[spark] class WorkerWatcher(
     override val rpcEnv: RpcEnv,
     workerUrl: String,
     isTesting: Boolean = false,
     isChildProcessStopping: AtomicBoolean = new AtomicBoolean(false))
-  extends RpcEndpoint with Logging {
+    extends RpcEndpoint
+    with Logging {
 
   logInfo(log"Connecting to worker ${MDC(WORKER_URL, workerUrl)}")
   if (!isTesting) {
@@ -63,8 +63,8 @@ private[spark] class WorkerWatcher(
       }.start()
     }
 
-  override def receive: PartialFunction[Any, Unit] = {
-    case e => logWarning(log"Received unexpected message: ${MDC(LogKeys.ERROR, e)}")
+  override def receive: PartialFunction[Any, Unit] = { case e =>
+    logWarning(log"Received unexpected message: ${MDC(LogKeys.ERROR, e)}")
   }
 
   override def onConnected(remoteAddress: RpcAddress): Unit = {
@@ -76,7 +76,8 @@ private[spark] class WorkerWatcher(
   override def onDisconnected(remoteAddress: RpcAddress): Unit = {
     if (isWorker(remoteAddress)) {
       // This log message will never be seen
-      logError(log"Lost connection to worker rpc endpoint ${MDC(WORKER_URL, workerUrl)}. Exiting.")
+      logError(
+        log"Lost connection to worker rpc endpoint ${MDC(WORKER_URL, workerUrl)}. Exiting.")
       exitNonZero()
     }
   }

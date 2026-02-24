@@ -26,15 +26,15 @@ import org.apache.spark.network.shuffle.RemoteBlockPushResolver
 import org.apache.spark.storage.LogBlockType.LogBlockType
 
 /**
- * :: DeveloperApi ::
- * Identifies a particular Block of data, usually associated with a single file.
- * A Block can be uniquely identified by its filename, but each type of Block has a different
- * set of keys which produce its unique name.
+ * :: DeveloperApi :: Identifies a particular Block of data, usually associated with a single
+ * file. A Block can be uniquely identified by its filename, but each type of Block has a
+ * different set of keys which produce its unique name.
  *
  * If your BlockId should be serializable, be sure to add it to the BlockId.apply() method.
  */
 @DeveloperApi
 sealed abstract class BlockId {
+
   /** A globally unique identifier for this Block. Can be used for ser/de. */
   def name: String
 
@@ -43,7 +43,7 @@ sealed abstract class BlockId {
   def isRDD: Boolean = isInstanceOf[RDDBlockId]
   def isShuffle: Boolean = {
     (isInstanceOf[ShuffleBlockId] || isInstanceOf[ShuffleBlockBatchId] ||
-     isInstanceOf[ShuffleDataBlockId] || isInstanceOf[ShuffleIndexBlockId])
+    isInstanceOf[ShuffleDataBlockId] || isInstanceOf[ShuffleIndexBlockId])
   }
   def isShuffleChunk: Boolean = isInstanceOf[ShuffleBlockChunkId]
   def isBroadcast: Boolean = isInstanceOf[BroadcastBlockId]
@@ -65,11 +65,8 @@ case class ShuffleBlockId(shuffleId: Int, mapId: Long, reduceId: Int) extends Bl
 
 // The batch id of continuous shuffle blocks of same mapId in range [startReduceId, endReduceId).
 @DeveloperApi
-case class ShuffleBlockBatchId(
-    shuffleId: Int,
-    mapId: Long,
-    startReduceId: Int,
-    endReduceId: Int) extends BlockId {
+case class ShuffleBlockBatchId(shuffleId: Int, mapId: Long, startReduceId: Int, endReduceId: Int)
+    extends BlockId {
   override def name: String = {
     "shuffle_" + shuffleId + "_" + mapId + "_" + startReduceId + "_" + endReduceId
   }
@@ -77,13 +74,10 @@ case class ShuffleBlockBatchId(
 
 @Since("3.2.0")
 @DeveloperApi
-case class ShuffleBlockChunkId(
-    shuffleId: Int,
-    shuffleMergeId: Int,
-    reduceId: Int,
-    chunkId: Int) extends BlockId {
+case class ShuffleBlockChunkId(shuffleId: Int, shuffleMergeId: Int, reduceId: Int, chunkId: Int)
+    extends BlockId {
   override def name: String =
-    "shuffleChunk_" + shuffleId  + "_" + shuffleMergeId + "_" + reduceId + "_" + chunkId
+    "shuffleChunk_" + shuffleId + "_" + shuffleMergeId + "_" + reduceId + "_" + chunkId
 }
 
 @DeveloperApi
@@ -104,21 +98,16 @@ case class ShuffleChecksumBlockId(shuffleId: Int, mapId: Long, reduceId: Int) ex
 
 @Since("3.2.0")
 @DeveloperApi
-case class ShufflePushBlockId(
-    shuffleId: Int,
-    shuffleMergeId: Int,
-    mapIndex: Int,
-    reduceId: Int) extends BlockId {
+case class ShufflePushBlockId(shuffleId: Int, shuffleMergeId: Int, mapIndex: Int, reduceId: Int)
+    extends BlockId {
   override def name: String = "shufflePush_" + shuffleId + "_" +
     shuffleMergeId + "_" + mapIndex + "_" + reduceId + ""
 }
 
 @Since("3.2.0")
 @DeveloperApi
-case class ShuffleMergedBlockId(
-    shuffleId: Int,
-    shuffleMergeId: Int,
-    reduceId: Int) extends BlockId {
+case class ShuffleMergedBlockId(shuffleId: Int, shuffleMergeId: Int, reduceId: Int)
+    extends BlockId {
   override def name: String = "shuffleMerged_" + shuffleId + "_" +
     shuffleMergeId + "_" + reduceId
 }
@@ -129,7 +118,8 @@ case class ShuffleMergedDataBlockId(
     appId: String,
     shuffleId: Int,
     shuffleMergeId: Int,
-    reduceId: Int) extends BlockId {
+    reduceId: Int)
+    extends BlockId {
   override def name: String = RemoteBlockPushResolver.MERGED_SHUFFLE_FILE_NAME_PREFIX + "_" +
     appId + "_" + shuffleId + "_" + shuffleMergeId + "_" + reduceId + ".data"
 }
@@ -140,7 +130,8 @@ case class ShuffleMergedIndexBlockId(
     appId: String,
     shuffleId: Int,
     shuffleMergeId: Int,
-    reduceId: Int) extends BlockId {
+    reduceId: Int)
+    extends BlockId {
   override def name: String = RemoteBlockPushResolver.MERGED_SHUFFLE_FILE_NAME_PREFIX + "_" +
     appId + "_" + shuffleId + "_" + shuffleMergeId + "_" + reduceId + ".index"
 }
@@ -151,7 +142,8 @@ case class ShuffleMergedMetaBlockId(
     appId: String,
     shuffleId: Int,
     shuffleMergeId: Int,
-    reduceId: Int) extends BlockId {
+    reduceId: Int)
+    extends BlockId {
   override def name: String = RemoteBlockPushResolver.MERGED_SHUFFLE_FILE_NAME_PREFIX + "_" +
     appId + "_" + shuffleId + "_" + shuffleMergeId + "_" + reduceId + ".meta"
 }
@@ -185,9 +177,10 @@ object LogBlockType extends Enumeration {
 /**
  * Identifies a block of log data.
  *
- * @param lastLogTime the timestamp of the last log entry in this block, used for filtering
- *                    and log management.
- * @param executorId the ID of the executor that produced this log block.
+ * @param lastLogTime
+ *   the timestamp of the last log entry in this block, used for filtering and log management.
+ * @param executorId
+ *   the ID of the executor that produced this log block.
  */
 abstract sealed class LogBlockId extends BlockId {
   def lastLogTime: Long
@@ -206,8 +199,7 @@ object LogBlockId {
 }
 
 // Used for test purpose only.
-case class TestLogBlockId(lastLogTime: Long, executorId: String)
-  extends LogBlockId {
+case class TestLogBlockId(lastLogTime: Long, executorId: String) extends LogBlockId {
   override def name: String =
     "test_log_" + lastLogTime + "_" + executorId
 
@@ -217,11 +209,14 @@ case class TestLogBlockId(lastLogTime: Long, executorId: String)
 /**
  * Identifies a block of Python worker log data.
  *
- * @param lastLogTime the timestamp of the last log entry in this block, used for filtering
- *                    and log management.
- * @param executorId the ID of the executor that produced this log block.
- * @param sessionId the session ID to isolate the logs.
- * @param workerId the worker ID to distinguish the Python worker process.
+ * @param lastLogTime
+ *   the timestamp of the last log entry in this block, used for filtering and log management.
+ * @param executorId
+ *   the ID of the executor that produced this log block.
+ * @param sessionId
+ *   the session ID to isolate the logs.
+ * @param workerId
+ *   the worker ID to distinguish the Python worker process.
  */
 @DeveloperApi
 case class PythonWorkerLogBlockId(
@@ -229,7 +224,7 @@ case class PythonWorkerLogBlockId(
     executorId: String,
     sessionId: String,
     workerId: String)
-  extends LogBlockId {
+    extends LogBlockId {
   override def name: String = {
     s"python_worker_log_${lastLogTime}_${executorId}_${sessionId}_$workerId"
   }
@@ -299,21 +294,17 @@ object BlockId {
     case SHUFFLE_INDEX(shuffleId, mapId, reduceId) =>
       ShuffleIndexBlockId(shuffleId.toInt, mapId.toLong, reduceId.toInt)
     case SHUFFLE_PUSH(shuffleId, shuffleMergeId, mapIndex, reduceId) =>
-      ShufflePushBlockId(shuffleId.toInt, shuffleMergeId.toInt, mapIndex.toInt,
-        reduceId.toInt)
+      ShufflePushBlockId(shuffleId.toInt, shuffleMergeId.toInt, mapIndex.toInt, reduceId.toInt)
     case SHUFFLE_MERGED(shuffleId, shuffleMergeId, reduceId) =>
       ShuffleMergedBlockId(shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt)
     case SHUFFLE_MERGED_DATA(appId, shuffleId, shuffleMergeId, reduceId) =>
       ShuffleMergedDataBlockId(appId, shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt)
     case SHUFFLE_MERGED_INDEX(appId, shuffleId, shuffleMergeId, reduceId) =>
-      ShuffleMergedIndexBlockId(appId, shuffleId.toInt, shuffleMergeId.toInt,
-        reduceId.toInt)
+      ShuffleMergedIndexBlockId(appId, shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt)
     case SHUFFLE_MERGED_META(appId, shuffleId, shuffleMergeId, reduceId) =>
-      ShuffleMergedMetaBlockId(appId, shuffleId.toInt, shuffleMergeId.toInt,
-        reduceId.toInt)
+      ShuffleMergedMetaBlockId(appId, shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt)
     case SHUFFLE_CHUNK(shuffleId, shuffleMergeId, reduceId, chunkId) =>
-      ShuffleBlockChunkId(shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt,
-        chunkId.toInt)
+      ShuffleBlockChunkId(shuffleId.toInt, shuffleMergeId.toInt, reduceId.toInt, chunkId.toInt)
     case BROADCAST(broadcastId, field) =>
       BroadcastBlockId(broadcastId.toLong, field.stripPrefix("_"))
     case TASKRESULT(taskId) =>

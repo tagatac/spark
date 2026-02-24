@@ -38,7 +38,7 @@ import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.hive.HiveExternalCatalog
 
 class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: Path)
-  extends Logging {
+    extends Logging {
   private var stagingDirForCreating: Option[Path] = None
 
   lazy val externalTempPath: Path = getExternalTmpPath(path)
@@ -82,9 +82,7 @@ class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: P
   }
 
   private def getExternalScratchDir(extURI: URI, stagingDir: String): Path = {
-    getStagingDir(
-      new Path(extURI.getScheme, extURI.getAuthority, extURI.getPath),
-      stagingDir)
+    getStagingDir(new Path(extURI.getScheme, extURI.getAuthority, extURI.getPath), stagingDir)
   }
 
   private[hive] def getStagingDir(inputPath: Path, stagingDir: String): Path = {
@@ -102,9 +100,10 @@ class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: P
     // under the table directory.
     if (isSubDir(new Path(stagingPathName), inputPath, fs) &&
       !stagingPathName.stripPrefix(inputPathName).stripPrefix("/").startsWith(".")) {
-      logDebug(s"The staging dir '$stagingPathName' should be a child directory starts " +
-        "with '.' to avoid being deleted if we set hive.exec.stagingdir under the table " +
-        "directory.")
+      logDebug(
+        s"The staging dir '$stagingPathName' should be a child directory starts " +
+          "with '.' to avoid being deleted if we set hive.exec.stagingdir under the table " +
+          "directory.")
       stagingPathName = new Path(inputPathName, ".hive-staging").toString
     }
 
@@ -127,7 +126,7 @@ class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: P
     "hive_" + dateTimeFormatter.format(new Date().toInstant) + "_" + Math.abs(rand.nextLong)
   }
 
-  def deleteTmpPath() : Unit = {
+  def deleteTmpPath(): Unit = {
     // Attempt to delete the staging directory and the inclusive files. If failed, the files are
     // expected to be dropped at the normal termination of VM since deleteOnExit is used.
     try {
@@ -158,7 +157,8 @@ class HiveTempPath(session: SparkSession, val hadoopConf: Configuration, path: P
     } catch {
       case e: IOException =>
         throw QueryExecutionErrors.cannotCreateStagingDirError(
-          s"'${stagingDirForCreating.toString}': ${e.getMessage}", e)
+          s"'${stagingDirForCreating.toString}': ${e.getMessage}",
+          e)
     }
   }
 

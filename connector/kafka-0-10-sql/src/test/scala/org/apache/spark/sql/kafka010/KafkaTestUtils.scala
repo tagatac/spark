@@ -59,14 +59,14 @@ import org.apache.spark.util.{SecurityUtils, ShutdownHookManager, Utils}
 import org.apache.spark.util.ArrayImplicits._
 
 /**
- * This is a helper class for Kafka test suites. This has the functionality to set up
- * and tear down local Kafka servers, and to push data using Kafka producers.
+ * This is a helper class for Kafka test suites. This has the functionality to set up and tear
+ * down local Kafka servers, and to push data using Kafka producers.
  *
  * The reason to put Kafka test utility class in src is to test Python related Kafka APIs.
  */
-class KafkaTestUtils(
-    withBrokerProps: Map[String, Object] = Map.empty,
-    secure: Boolean = false) extends PrivateMethodTester with Logging {
+class KafkaTestUtils(withBrokerProps: Map[String, Object] = Map.empty, secure: Boolean = false)
+    extends PrivateMethodTester
+    with Logging {
 
   private val JAVA_AUTH_CONFIG = "java.security.auth.login.config"
 
@@ -159,13 +159,16 @@ class KafkaTestUtils(
     val addedConfig =
       addedKrb5Config("default_tkt_enctypes", "aes128-cts-hmac-sha1-96") +
         addedKrb5Config("default_tgs_enctypes", "aes128-cts-hmac-sha1-96")
-    val rewriteKrb5Conf = krb5Conf.map(s =>
-      if (s.contains("libdefaults")) {
-        rewritten = true
-        s + addedConfig
-      } else {
-        s
-      }).filter(!_.trim.startsWith("#")).mkString(System.lineSeparator())
+    val rewriteKrb5Conf = krb5Conf
+      .map(s =>
+        if (s.contains("libdefaults")) {
+          rewritten = true
+          s + addedConfig
+        } else {
+          s
+        })
+      .filter(!_.trim.startsWith("#"))
+      .mkString(System.lineSeparator())
 
     val krb5confStr = if (!rewritten) {
       "[libdefaults]" + addedConfig + System.lineSeparator() +
@@ -251,8 +254,15 @@ class KafkaTestUtils(
     zookeeper = new EmbeddedZookeeper(s"$zkHost:$zkPort")
     // Get the actual zookeeper binding port
     zkPort = zookeeper.actualPort
-    zkClient = KafkaZkClient(s"$zkHost:$zkPort", isSecure = false, zkSessionTimeout,
-      zkConnectionTimeout, 1, Time.SYSTEM, "test", new ZKClientConfig)
+    zkClient = KafkaZkClient(
+      s"$zkHost:$zkPort",
+      isSecure = false,
+      zkSessionTimeout,
+      zkConnectionTimeout,
+      1,
+      Time.SYSTEM,
+      "test",
+      new ZKClientConfig)
     zkReady = true
   }
 
@@ -263,14 +273,18 @@ class KafkaTestUtils(
     val protocolName = if (!secure) PLAINTEXT.name else SASL_PLAINTEXT.name
 
     // Kafka broker startup
-    Utils.startServiceOnPort(brokerPort, port => {
-      brokerPort = port
-      brokerConf = new KafkaConfig(brokerConfiguration, doLog = false)
-      server = new KafkaServer(brokerConf)
-      server.startup()
-      brokerPort = server.boundPort(new ListenerName(protocolName))
-      (server, brokerPort)
-    }, new SparkConf(), "KafkaBroker")
+    Utils.startServiceOnPort(
+      brokerPort,
+      port => {
+        brokerPort = port
+        brokerConf = new KafkaConfig(brokerConfiguration, doLog = false)
+        server = new KafkaServer(brokerConf)
+        server.startup()
+        brokerPort = server.boundPort(new ListenerName(protocolName))
+        (server, brokerPort)
+      },
+      new SparkConf(),
+      "KafkaBroker")
 
     adminClient = AdminClient.create(adminClientConfiguration)
     brokerReady = true
@@ -380,8 +394,10 @@ class KafkaTestUtils(
   }
 
   def getAllTopicsAndPartitionSize(): Seq[(String, Int)] = {
-    zkClient.getPartitionsForTopics(zkClient.getAllTopicsInCluster())
-      .map { case (k, v) => (k, v.size) }.toSeq
+    zkClient
+      .getPartitionsForTopics(zkClient.getAllTopicsInCluster())
+      .map { case (k, v) => (k, v.size) }
+      .toSeq
   }
 
   /** Create a Kafka topic and wait until it is propagated to the whole cluster */
@@ -429,18 +445,19 @@ class KafkaTestUtils(
 
   def sendMessages(msgs: Seq[ProducerRecord[String, String]]): Seq[(String, RecordMetadata)] = {
     producer = new KafkaProducer[String, String](producerConfiguration)
-    val offsets = try {
-      msgs.map { msg =>
-        val metadata = producer.send(msg).get(10, TimeUnit.SECONDS)
-        logInfo(s"\tSent ($msg) to partition ${metadata.partition}, offset ${metadata.offset}")
-        (msg.value(), metadata)
+    val offsets =
+      try {
+        msgs.map { msg =>
+          val metadata = producer.send(msg).get(10, TimeUnit.SECONDS)
+          logInfo(s"\tSent ($msg) to partition ${metadata.partition}, offset ${metadata.offset}")
+          (msg.value(), metadata)
+        }
+      } finally {
+        if (producer != null) {
+          producer.close()
+          producer = null
+        }
       }
-    } finally {
-      if (producer != null) {
-        producer.close()
-        producer = null
-      }
-    }
     offsets
   }
 
@@ -453,15 +470,29 @@ class KafkaTestUtils(
     server.logManager.invokePrivate(cleanupLogsPrivateMethod())
   }
 
-  private def getOffsets(topics: Set[String], offsetSpec: OffsetSpec): Map[TopicPartition, Long] = {
-    val listOffsetsParams = adminClient.describeTopics(topics.asJava).allTopicNames().get().asScala
+  private def getOffsets(
+      topics: Set[String],
+      offsetSpec: OffsetSpec): Map[TopicPartition, Long] = {
+    val listOffsetsParams = adminClient
+      .describeTopics(topics.asJava)
+      .allTopicNames()
+      .get()
+      .asScala
       .flatMap { topicDescription =>
         topicDescription._2.partitions().asScala.map { topicPartitionInfo =>
           new TopicPartition(topicDescription._1, topicPartitionInfo.partition())
         }
-      }.map(_ -> offsetSpec).toMap.asJava
-    val partitionOffsets = adminClient.listOffsets(listOffsetsParams).all().get().asScala
-      .map(result => result._1 -> result._2.offset()).toMap
+      }
+      .map(_ -> offsetSpec)
+      .toMap
+      .asJava
+    val partitionOffsets = adminClient
+      .listOffsets(listOffsetsParams)
+      .all()
+      .get()
+      .asScala
+      .map(result => result._1 -> result._2.offset())
+      .toMap
     partitionOffsets
   }
 
@@ -521,7 +552,8 @@ class KafkaTestUtils(
     props.put("key.serializer", classOf[StringSerializer].getName)
     // wait for all in-sync replicas to ack sends
     props.put("acks", "all")
-    props.put("partitioner.class",
+    props.put(
+      "partitioner.class",
       classOf[org.apache.kafka.clients.producer.internals.DefaultPartitioner].getName)
     setAuthenticationConfigIfNeeded(props)
     props
@@ -543,7 +575,9 @@ class KafkaTestUtils(
   private def setAuthenticationConfigIfNeeded(props: Properties): Unit = {
     if (secure) {
       val jaasParams = KafkaTokenUtil.getKeytabJaasParams(
-        clientKeytabFile.getAbsolutePath, clientPrincipal, brokerServiceName)
+        clientKeytabFile.getAbsolutePath,
+        clientPrincipal,
+        brokerServiceName)
       props.put(SaslConfigs.SASL_JAAS_CONFIG, jaasParams)
       props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SASL_PLAINTEXT.name)
     }
@@ -560,20 +594,26 @@ class KafkaTestUtils(
     assert(!zkClient.isTopicMarkedForDeletion(topic), "topic is still marked for deletion")
     assert(!zkClient.topicExists(topic), "topic still exists")
     // ensure that the topic-partition has been deleted from all brokers' replica managers
-    assert(servers.forall(server => topicAndPartitions.forall(tp =>
-      server.replicaManager.getPartition(tp) == HostedPartition.None)),
+    assert(
+      servers.forall(server =>
+        topicAndPartitions.forall(tp =>
+          server.replicaManager.getPartition(tp) == HostedPartition.None)),
       s"topic $topic still exists in the replica manager")
     // ensure that logs from all replicas are deleted if delete topic is marked successful
-    assert(servers.forall(server => topicAndPartitions.forall(tp =>
-      server.getLogManager.getLog(tp).isEmpty)),
+    assert(
+      servers.forall(server =>
+        topicAndPartitions.forall(tp => server.getLogManager.getLog(tp).isEmpty)),
       s"topic $topic still exists in log manager")
     // ensure that topic is removed from all cleaner offsets
-    assert(servers.forall(server => topicAndPartitions.forall { tp =>
-      val checkpoints = server.getLogManager.liveLogDirs.map { logDir =>
-        new OffsetCheckpointFile(new File(logDir, "cleaner-offset-checkpoint")).read()
-      }
-      checkpoints.forall(checkpointsPerLogDir => !checkpointsPerLogDir.contains(tp))
-    }), s"checkpoint for topic $topic still exists")
+    assert(
+      servers.forall(server =>
+        topicAndPartitions.forall { tp =>
+          val checkpoints = server.getLogManager.liveLogDirs.map { logDir =>
+            new OffsetCheckpointFile(new File(logDir, "cleaner-offset-checkpoint")).read()
+          }
+          checkpoints.forall(checkpointsPerLogDir => !checkpointsPerLogDir.contains(tp))
+        }),
+      s"checkpoint for topic $topic still exists")
     // ensure the topic is gone
     assert(
       !zkClient.getAllTopicsInCluster().contains(topic),
@@ -601,17 +641,19 @@ class KafkaTestUtils(
 
   private def waitUntilMetadataIsPropagated(topic: String, partition: Int): Unit = {
     def isPropagated = server.dataPlaneRequestProcessor.metadataCache
-        .getPartitionInfo(topic, partition) match {
+      .getPartitionInfo(topic, partition) match {
       case Some(partitionState) =>
         zkClient.getLeaderForPartition(new TopicPartition(topic, partition)).isDefined &&
-          FetchRequest.isValidBrokerId(partitionState.leader) &&
-          !partitionState.replicas.isEmpty
+        FetchRequest.isValidBrokerId(partitionState.leader) &&
+        !partitionState.replicas.isEmpty
 
       case _ =>
         false
     }
     eventually(timeout(1.minute)) {
-      assert(isPropagated, s"Partition [$topic, $partition] metadata not propagated after timeout")
+      assert(
+        isPropagated,
+        s"Partition [$topic, $partition] metadata not propagated after timeout")
     }
   }
 

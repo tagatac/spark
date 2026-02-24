@@ -29,19 +29,21 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.NextIterator
 
 /** Partition of the KafkaSourceRDD */
-private[kafka010] case class KafkaSourceRDDPartition(
-  index: Int, offsetRange: KafkaOffsetRange) extends Partition
-
+private[kafka010] case class KafkaSourceRDDPartition(index: Int, offsetRange: KafkaOffsetRange)
+    extends Partition
 
 /**
  * An RDD that reads data from Kafka based on offset ranges across multiple partitions.
- * Additionally, it allows preferred locations to be set for each topic + partition, so that
- * the [[KafkaSource]] can ensure the same executor always reads the same topic + partition
- * and cached KafkaConsumers (see [[KafkaDataConsumer]] can be used read data efficiently.
+ * Additionally, it allows preferred locations to be set for each topic + partition, so that the
+ * [[KafkaSource]] can ensure the same executor always reads the same topic + partition and cached
+ * KafkaConsumers (see [[KafkaDataConsumer]] can be used read data efficiently.
  *
- * @param sc the [[SparkContext]]
- * @param executorKafkaParams Kafka configuration for creating KafkaConsumer on the executors
- * @param offsetRanges Offset ranges that define the Kafka data belonging to this RDD
+ * @param sc
+ *   the [[SparkContext]]
+ * @param executorKafkaParams
+ *   Kafka configuration for creating KafkaConsumer on the executors
+ * @param offsetRanges
+ *   Offset ranges that define the Kafka data belonging to this RDD
  */
 private[kafka010] class KafkaSourceRDD(
     sc: SparkContext,
@@ -49,11 +51,12 @@ private[kafka010] class KafkaSourceRDD(
     offsetRanges: Seq[KafkaOffsetRange],
     pollTimeoutMs: Long,
     failOnDataLoss: Boolean)
-  extends RDD[ConsumerRecord[Array[Byte], Array[Byte]]](sc, Nil) {
+    extends RDD[ConsumerRecord[Array[Byte], Array[Byte]]](sc, Nil) {
 
   override def persist(newLevel: StorageLevel): this.type = {
-    logError("Kafka ConsumerRecord is not serializable. " +
-      "Use .map to extract fields before calling .persist or .window")
+    logError(
+      "Kafka ConsumerRecord is not serializable. " +
+        "Use .map to extract fields before calling .persist or .window")
     super.persist(newLevel)
   }
 
@@ -70,19 +73,19 @@ private[kafka010] class KafkaSourceRDD(
       thePart: Partition,
       context: TaskContext): Iterator[ConsumerRecord[Array[Byte], Array[Byte]]] = {
     val sourcePartition = thePart.asInstanceOf[KafkaSourceRDDPartition]
-    val consumer = KafkaDataConsumer.acquire(
-      sourcePartition.offsetRange.topicPartition, executorKafkaParams)
+    val consumer =
+      KafkaDataConsumer.acquire(sourcePartition.offsetRange.topicPartition, executorKafkaParams)
 
     val range = resolveRange(consumer, sourcePartition.offsetRange)
     if (range.fromOffset < 0 || range.untilOffset < 0) {
       throw SparkException.internalError(
         s"Should not have negative offsets for topic ${range.topic} partition ${range.partition} " +
-          s"at this point: fromOffset ${range.fromOffset} untilOffset ${range.untilOffset}"
-      )
+          s"at this point: fromOffset ${range.fromOffset} untilOffset ${range.untilOffset}")
     }
     if (range.fromOffset == range.untilOffset) {
-      logInfo(log"Beginning offset ${MDC(FROM_OFFSET, range.fromOffset)} is the same as ending " +
-        log"offset skipping ${MDC(TOPIC, range.topic)} ${MDC(PARTITION_ID, range.partition)}")
+      logInfo(
+        log"Beginning offset ${MDC(FROM_OFFSET, range.fromOffset)} is the same as ending " +
+          log"offset skipping ${MDC(TOPIC, range.topic)} ${MDC(PARTITION_ID, range.partition)}")
       consumer.release()
       Iterator.empty
     } else {
@@ -124,14 +127,16 @@ private[kafka010] class KafkaSourceRDD(
       // Late bind the offset range
       val availableOffsetRange = consumer.getAvailableOffsetRange()
       val fromOffset = if (range.fromOffset < 0) {
-        assert(range.fromOffset == KafkaOffsetRangeLimit.EARLIEST,
+        assert(
+          range.fromOffset == KafkaOffsetRangeLimit.EARLIEST,
           s"earliest offset ${range.fromOffset} does not equal ${KafkaOffsetRangeLimit.EARLIEST}")
         availableOffsetRange.earliest
       } else {
         range.fromOffset
       }
       val untilOffset = if (range.untilOffset < 0) {
-        assert(range.untilOffset == KafkaOffsetRangeLimit.LATEST,
+        assert(
+          range.untilOffset == KafkaOffsetRangeLimit.LATEST,
           s"latest offset ${range.untilOffset} does not equal ${KafkaOffsetRangeLimit.LATEST}")
         availableOffsetRange.latest
       } else {
@@ -142,11 +147,9 @@ private[kafka010] class KafkaSourceRDD(
         fromOffset,
         untilOffset,
         range.topicPartition,
-        KafkaExceptions.resolvedStartOffsetGreaterThanEndOffset
-      )
+        KafkaExceptions.resolvedStartOffsetGreaterThanEndOffset)
 
-      KafkaOffsetRange(range.topicPartition,
-        fromOffset, untilOffset, range.preferredLoc)
+      KafkaOffsetRange(range.topicPartition, fromOffset, untilOffset, range.preferredLoc)
     } else {
       range
     }

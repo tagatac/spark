@@ -35,8 +35,11 @@ import org.apache.spark.sql.test.SharedSparkSession
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.util.{ProtobufUtils => CommonProtobufUtils}
 
-class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with ProtobufTestBase
-  with Serializable {
+class ProtobufFunctionsSuite
+    extends QueryTest
+    with SharedSparkSession
+    with ProtobufTestBase
+    with Serializable {
 
   import testImplicits._
 
@@ -54,17 +57,17 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
    * Runs the given closure twice. Once with descriptor file and second time with Java class name.
    */
   private def checkWithFileAndClassName(messageName: String)(
-    fn: (String, Option[Array[Byte]]) => Unit): Unit = {
-      withClue("(With descriptor file)") {
-        fn(messageName, Some(testFileDesc))
-      }
-      withClue("(With Java class name)") {
-        fn(s"$javaClassNamePrefix$messageName", None)
-      }
+      fn: (String, Option[Array[Byte]]) => Unit): Unit = {
+    withClue("(With descriptor file)") {
+      fn(messageName, Some(testFileDesc))
+    }
+    withClue("(With Java class name)") {
+      fn(s"$javaClassNamePrefix$messageName", None)
+    }
   }
 
   private def checkWithProto2FileAndClassName(messageName: String)(
-    fn: (String, Option[Array[Byte]]) => Unit): Unit = {
+      fn: (String, Option[Array[Byte]]) => Unit): Unit = {
     withClue("(With descriptor file)") {
       fn(messageName, Some(proto2FileDesc))
     }
@@ -75,21 +78,21 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
   // A wrapper to invoke the right variable of from_protobuf() depending on arguments.
   private def from_protobuf_wrapper(
-    col: Column,
-    messageName: String,
-    descBytesOpt: Option[Array[Byte]],
-    options: Map[String, String] = Map.empty): Column = {
+      col: Column,
+      messageName: String,
+      descBytesOpt: Option[Array[Byte]],
+      options: Map[String, String] = Map.empty): Column = {
     descBytesOpt match {
-      case Some(descBytes) => functions.from_protobuf(
-        col, messageName, descBytes, options.asJava
-      )
+      case Some(descBytes) => functions.from_protobuf(col, messageName, descBytes, options.asJava)
       case None => functions.from_protobuf(col, messageName, options.asJava)
     }
   }
 
   // A wrapper to invoke the right variable of to_protobuf() depending on arguments.
   private def to_protobuf_wrapper(
-    col: Column, messageName: String, descBytesOpt: Option[Array[Byte]]): Column = {
+      col: Column,
+      messageName: String,
+      descBytesOpt: Option[Array[Byte]]): Column = {
     descBytesOpt match {
       case Some(descBytes) => functions.to_protobuf(col, messageName, descBytes)
       case None => functions.to_protobuf(col, messageName)
@@ -99,31 +102,31 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
   test("roundtrip in to_protobuf and from_protobuf - struct") {
     val df = spark
       .range(1, 10)
-      .select(struct(
-        $"id",
-        $"id".cast("string").as("string_value"),
-        $"id".cast("int").as("int32_value"),
-        $"id".cast("int").as("uint32_value"),
-        $"id".cast("int").as("sint32_value"),
-        $"id".cast("int").as("fixed32_value"),
-        $"id".cast("int").as("sfixed32_value"),
-        $"id".cast("long").as("int64_value"),
-        $"id".cast("long").as("uint64_value"),
-        $"id".cast("long").as("sint64_value"),
-        $"id".cast("long").as("fixed64_value"),
-        $"id".cast("long").as("sfixed64_value"),
-        $"id".cast("double").as("double_value"),
-        lit(1202.00).cast(org.apache.spark.sql.types.FloatType).as("float_value"),
-        lit(true).as("bool_value"),
-        lit("0".getBytes).as("bytes_value")).as("SimpleMessage"))
+      .select(
+        struct(
+          $"id",
+          $"id".cast("string").as("string_value"),
+          $"id".cast("int").as("int32_value"),
+          $"id".cast("int").as("uint32_value"),
+          $"id".cast("int").as("sint32_value"),
+          $"id".cast("int").as("fixed32_value"),
+          $"id".cast("int").as("sfixed32_value"),
+          $"id".cast("long").as("int64_value"),
+          $"id".cast("long").as("uint64_value"),
+          $"id".cast("long").as("sint64_value"),
+          $"id".cast("long").as("fixed64_value"),
+          $"id".cast("long").as("sfixed64_value"),
+          $"id".cast("double").as("double_value"),
+          lit(1202.00).cast(org.apache.spark.sql.types.FloatType).as("float_value"),
+          lit(true).as("bool_value"),
+          lit("0".getBytes).as("bytes_value")).as("SimpleMessage"))
 
-    checkWithFileAndClassName("SimpleMessage") {
-      case (name, descBytesOpt) =>
-        val protoStructDF = df.select(
-          to_protobuf_wrapper($"SimpleMessage", name, descBytesOpt).as("proto"))
-        val actualDf = protoStructDF.select(
-          from_protobuf_wrapper($"proto", name, descBytesOpt).as("proto.*"))
-        checkAnswer(actualDf, df)
+    checkWithFileAndClassName("SimpleMessage") { case (name, descBytesOpt) =>
+      val protoStructDF =
+        df.select(to_protobuf_wrapper($"SimpleMessage", name, descBytesOpt).as("proto"))
+      val actualDf =
+        protoStructDF.select(from_protobuf_wrapper($"proto", name, descBytesOpt).as("proto.*"))
+      checkAnswer(actualDf, df)
     }
   }
 
@@ -145,20 +148,19 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
     val df = Seq(protoMessage.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("SimpleMessageRepeated") {
-      case (name, descFilePathOpt) =>
-        List(
-          Map.empty[String, String],
-          Map("enums.as.ints" -> "false"),
-          Map("enums.as.ints" -> "true")).foreach(opts => {
-          val fromProtoDF = df.select(
-            from_protobuf_wrapper($"value", name, descFilePathOpt, opts).as("value_from"))
-          val toProtoDF = fromProtoDF.select(
-            to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-          val toFromProtoDF = toProtoDF.select(
-            from_protobuf_wrapper($"value_to", name, descFilePathOpt, opts).as("value_to_from"))
-          checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
-        })
+    checkWithFileAndClassName("SimpleMessageRepeated") { case (name, descFilePathOpt) =>
+      List(
+        Map.empty[String, String],
+        Map("enums.as.ints" -> "false"),
+        Map("enums.as.ints" -> "true")).foreach(opts => {
+        val fromProtoDF =
+          df.select(from_protobuf_wrapper($"value", name, descFilePathOpt, opts).as("value_from"))
+        val toProtoDF = fromProtoDF.select(
+          to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+        val toFromProtoDF = toProtoDF.select(
+          from_protobuf_wrapper($"value_to", name, descFilePathOpt, opts).as("value_to_from"))
+        checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
+      })
     }
   }
 
@@ -191,15 +193,14 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
     val df = Seq(dynamicMessage.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("RepeatedMessage") {
-      case (name, descFilePathOpt) =>
-        val fromProtoDF = df.select(
-          from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
-        val toProtoDF = fromProtoDF.select(
-          to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-        val toFromProtoDF = toProtoDF.select(
-          from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
-        checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
+    checkWithFileAndClassName("RepeatedMessage") { case (name, descFilePathOpt) =>
+      val fromProtoDF =
+        df.select(from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
+      val toProtoDF = fromProtoDF.select(
+        to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+      val toFromProtoDF = toProtoDF.select(
+        from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
+      checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
     }
   }
 
@@ -246,15 +247,14 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
     val df = Seq(dynamicMessage.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("RepeatedMessage") {
-      case (name, descFilePathOpt) =>
-        val fromProtoDF = df.select(
-          from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
-        val toProtoDF = fromProtoDF.select(
-          to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-        val toFromProtoDF = toProtoDF.select(
-          from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
-        checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
+    checkWithFileAndClassName("RepeatedMessage") { case (name, descFilePathOpt) =>
+      val fromProtoDF =
+        df.select(from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
+      val toProtoDF = fromProtoDF.select(
+        to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+      val toFromProtoDF = toProtoDF.select(
+        from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
+      checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
     }
   }
 
@@ -342,15 +342,14 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
     val df = Seq(dynamicMessage.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("SimpleMessageMap") {
-      case (name, descFilePathOpt) =>
-        val fromProtoDF = df.select(
-          from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
-        val toProtoDF = fromProtoDF.select(
-          to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-        val toFromProtoDF = toProtoDF.select(
-          from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
-        checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
+    checkWithFileAndClassName("SimpleMessageMap") { case (name, descFilePathOpt) =>
+      val fromProtoDF =
+        df.select(from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
+      val toProtoDF = fromProtoDF.select(
+        to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+      val toFromProtoDF = toProtoDF.select(
+        from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
+      checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
     }
   }
 
@@ -383,22 +382,22 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val df = Seq(dynamicMessage.toByteArray).toDF("value")
 
     // Test that roundtrip serde works correctly both with and without enums as ints.
-    checkWithFileAndClassName("SimpleMessageEnum") {
-      case (name, descFilePathOpt) =>
-        List(
-          Map.empty[String, String],
-          Map("enums.as.ints" -> "false"),
-          Map("enums.as.ints" -> "true"))
-          .foreach(opts => {
-            val fromProtoDF = df.select(
-              from_protobuf_wrapper($"value", name, descFilePathOpt, opts).as("value_from"))
-            val toProtoDF = fromProtoDF.select(
-              to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-            val toFromProtoDF = toProtoDF.select(
-              from_protobuf_wrapper($"value_to", name, descFilePathOpt, opts).as("value_to_from"))
-            checkAnswer(fromProtoDF.select($"value_from.*"),
-              toFromProtoDF.select($"value_to_from.*"))
-          })
+    checkWithFileAndClassName("SimpleMessageEnum") { case (name, descFilePathOpt) =>
+      List(
+        Map.empty[String, String],
+        Map("enums.as.ints" -> "false"),
+        Map("enums.as.ints" -> "true"))
+        .foreach(opts => {
+          val fromProtoDF = df.select(
+            from_protobuf_wrapper($"value", name, descFilePathOpt, opts).as("value_from"))
+          val toProtoDF = fromProtoDF.select(
+            to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+          val toFromProtoDF = toProtoDF.select(
+            from_protobuf_wrapper($"value_to", name, descFilePathOpt, opts).as("value_to_from"))
+          checkAnswer(
+            fromProtoDF.select($"value_from.*"),
+            toFromProtoDF.select($"value_to_from.*"))
+        })
     }
   }
 
@@ -431,58 +430,61 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
     val df = Seq(dynamicMessage.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("MultipleExample") {
-      case (name, descFilePathOpt) =>
-        val fromProtoDF = df.select(
-          from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
-        val toProtoDF = fromProtoDF.select(
-          to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
-        val toFromProtoDF = toProtoDF.select(
-          from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
-        checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
+    checkWithFileAndClassName("MultipleExample") { case (name, descFilePathOpt) =>
+      val fromProtoDF =
+        df.select(from_protobuf_wrapper($"value", name, descFilePathOpt).as("value_from"))
+      val toProtoDF = fromProtoDF.select(
+        to_protobuf_wrapper($"value_from", name, descFilePathOpt).as("value_to"))
+      val toFromProtoDF = toProtoDF.select(
+        from_protobuf_wrapper($"value_to", name, descFilePathOpt).as("value_to_from"))
+      checkAnswer(fromProtoDF.select($"value_from.*"), toFromProtoDF.select($"value_to_from.*"))
     }
 
     // Simple recursion
     checkWithFileAndClassName("recursiveB") { // B -> A -> B
       case (name, descFilePathOpt) =>
         val e = intercept[AnalysisException] {
-          emptyBinaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
+          emptyBinaryDF
+            .select(
+              from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
             .show()
         }
-        assert(e.getMessage.contains(
-          "Found recursive reference in Protobuf schema, which can not be processed by Spark"
-        ))
+        assert(
+          e.getMessage.contains(
+            "Found recursive reference in Protobuf schema, which can not be processed by Spark"))
     }
   }
 
   test("Recursive fields in Protobuf should result in an error, C->D->Array(C)") {
-    checkWithFileAndClassName("recursiveD") {
-      case (name, descFilePathOpt) =>
-        val e = intercept[AnalysisException] {
-          emptyBinaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
-            .show()
-        }
-        assert(e.getMessage.contains(
-          "Found recursive reference in Protobuf schema, which can not be processed by Spark"
-        ))
+    checkWithFileAndClassName("recursiveD") { case (name, descFilePathOpt) =>
+      val e = intercept[AnalysisException] {
+        emptyBinaryDF
+          .select(from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
+          .show()
+      }
+      assert(
+        e.getMessage.contains(
+          "Found recursive reference in Protobuf schema, which can not be processed by Spark"))
     }
   }
 
   test("Setting depth to 0 or -1 should trigger error on recursive fields (B -> A -> B)") {
     for (depth <- Seq("0", "-1")) {
       val e = intercept[AnalysisException] {
-        emptyBinaryDF.select(
-          functions.from_protobuf(
-            $"binary", "recursiveB", testFileDesc,
-            Map("recursive.fields.max.depth" -> depth).asJava
-          ).as("messageFromProto")
-        ).show()
+        emptyBinaryDF
+          .select(
+            functions
+              .from_protobuf(
+                $"binary",
+                "recursiveB",
+                testFileDesc,
+                Map("recursive.fields.max.depth" -> depth).asJava)
+              .as("messageFromProto"))
+          .show()
       }
-      assert(e.getMessage.contains(
-        "Found recursive reference in Protobuf schema, which can not be processed by Spark"
-      ))
+      assert(
+        e.getMessage.contains(
+          "Found recursive reference in Protobuf schema, which can not be processed by Spark"))
     }
   }
 
@@ -522,10 +524,8 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
       }
     }
-    assert(
-      toProtoDfToFromProtoDf.select("toProtoToFromProto.value").first().isNullAt(0))
-    assert(
-      toProtoDfToFromProtoDf.select("toProtoToFromProto.actual.*").first().isNullAt(0))
+    assert(toProtoDfToFromProtoDf.select("toProtoToFromProto.value").first().isNullAt(0))
+    assert(toProtoDfToFromProtoDf.select("toProtoToFromProto.actual.*").first().isNullAt(0))
   }
 
   test("Handle extra fields : newProducer -> oldConsumer") {
@@ -557,25 +557,21 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
   test("roundtrip in to_protobuf and from_protobuf - with nulls") {
     val schema = StructType(
-      StructField("requiredMsg",
+      StructField(
+        "requiredMsg",
         StructType(
           StructField("key", StringType, nullable = false) ::
             StructField("col_1", IntegerType, nullable = true) ::
             StructField("col_2", StringType, nullable = false) ::
-            StructField("col_3", IntegerType, nullable = true) :: Nil
-        ),
-        nullable = true
-      ) :: Nil
-    )
+            StructField("col_3", IntegerType, nullable = true) :: Nil),
+        nullable = true) :: Nil)
     val inputDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(
-        Row(Row("key1", null, "value2", null))
-      )),
-      schema
-    )
+      spark.sparkContext.parallelize(Seq(Row(Row("key1", null, "value2", null)))),
+      schema)
 
     val toProtobuf = inputDf.select(
-      functions.to_protobuf($"requiredMsg", "requiredMsg", testFileDesc)
+      functions
+        .to_protobuf($"requiredMsg", "requiredMsg", testFileDesc)
         .as("to_proto"))
 
     val binary = toProtobuf.first().get(0).asInstanceOf[Array[Byte]]
@@ -585,20 +581,24 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       .descriptor
     val actualMessage = DynamicMessage.parseFrom(messageDescriptor, binary)
 
-    assert(actualMessage.getField(messageDescriptor.findFieldByName("key"))
-      == inputDf.select("requiredMsg.key").first().get(0))
-    assert(actualMessage.getField(messageDescriptor.findFieldByName("col_2"))
-      == inputDf.select("requiredMsg.col_2").first().get(0))
+    assert(
+      actualMessage.getField(messageDescriptor.findFieldByName("key"))
+        == inputDf.select("requiredMsg.key").first().get(0))
+    assert(
+      actualMessage.getField(messageDescriptor.findFieldByName("col_2"))
+        == inputDf.select("requiredMsg.col_2").first().get(0))
     assert(actualMessage.getField(messageDescriptor.findFieldByName("col_1")) == 0)
     assert(actualMessage.getField(messageDescriptor.findFieldByName("col_3")) == 0)
 
     val fromProtoDf = toProtobuf.select(
       functions.from_protobuf($"to_proto", "requiredMsg", testFileDesc) as Symbol("from_proto"))
 
-    assert(fromProtoDf.select("from_proto.key").first().get(0)
-      == inputDf.select("requiredMsg.key").first().get(0))
-    assert(fromProtoDf.select("from_proto.col_2").first().get(0)
-      == inputDf.select("requiredMsg.col_2").first().get(0))
+    assert(
+      fromProtoDf.select("from_proto.key").first().get(0)
+        == inputDf.select("requiredMsg.key").first().get(0))
+    assert(
+      fromProtoDf.select("from_proto.col_2").first().get(0)
+        == inputDf.select("requiredMsg.col_2").first().get(0))
     assert(fromProtoDf.select("from_proto.col_1").first().isNullAt(0))
     assert(fromProtoDf.select("from_proto.col_3").first().isNullAt(0))
   }
@@ -625,15 +625,15 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val df = Seq(basicMessage.toByteArray).toDF("value")
 
     val resultFrom = df
-      .select(from_protobuf_wrapper($"value", "BasicMessage",
-        Some(testFileDesc)) as Symbol("sample"))
+      .select(
+        from_protobuf_wrapper($"value", "BasicMessage", Some(testFileDesc)) as Symbol("sample"))
       .where("sample.string_value == \"slam\"")
 
     val resultToFrom = resultFrom
-      .select(to_protobuf_wrapper($"sample", "BasicMessage",
-        Some(testFileDesc)) as Symbol("value"))
-      .select(from_protobuf_wrapper($"value", "BasicMessage",
-        Some(testFileDesc)) as Symbol("sample"))
+      .select(
+        to_protobuf_wrapper($"sample", "BasicMessage", Some(testFileDesc)) as Symbol("value"))
+      .select(
+        from_protobuf_wrapper($"value", "BasicMessage", Some(testFileDesc)) as Symbol("sample"))
       .where("sample.string_value == \"slam\"")
 
     assert(resultFrom.except(resultToFrom).isEmpty)
@@ -641,83 +641,74 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
   test("Handle TimestampType between to_protobuf and from_protobuf") {
     val schema = StructType(
-      StructField("timeStampMsg",
-        StructType(
-          StructField("key", StringType, nullable = true) ::
-            StructField("stmp", TimestampType, nullable = true) :: Nil
-        ),
-        nullable = true
-      ) :: Nil
-    )
+      StructField(
+        "timeStampMsg",
+        StructType(StructField("key", StringType, nullable = true) ::
+          StructField("stmp", TimestampType, nullable = true) :: Nil),
+        nullable = true) :: Nil)
 
     val inputDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(
-        Row(Row("key1", Timestamp.valueOf("2016-05-09 10:12:43.999")))
-      )),
-      schema
-    )
+      spark.sparkContext.parallelize(
+        Seq(Row(Row("key1", Timestamp.valueOf("2016-05-09 10:12:43.999"))))),
+      schema)
 
-    checkWithFileAndClassName("timeStampMsg") {
-      case (name, descFilePathOpt) =>
-        val toProtoDf = inputDf
-          .select(to_protobuf_wrapper($"timeStampMsg", name,
-            descFilePathOpt) as Symbol("to_proto"))
+    checkWithFileAndClassName("timeStampMsg") { case (name, descFilePathOpt) =>
+      val toProtoDf = inputDf
+        .select(to_protobuf_wrapper($"timeStampMsg", name, descFilePathOpt) as Symbol("to_proto"))
 
-        val fromProtoDf = toProtoDf
-          .select(from_protobuf_wrapper($"to_proto", name,
-            descFilePathOpt) as Symbol("timeStampMsg"))
+      val fromProtoDf = toProtoDf
+        .select(
+          from_protobuf_wrapper($"to_proto", name, descFilePathOpt) as Symbol("timeStampMsg"))
 
-        val actualFields = fromProtoDf.schema.fields.toList
-        val expectedFields = inputDf.schema.fields.toList
+      val actualFields = fromProtoDf.schema.fields.toList
+      val expectedFields = inputDf.schema.fields.toList
 
-        assert(actualFields.size === expectedFields.size)
-        assert(actualFields === expectedFields)
-        assert(fromProtoDf.select("timeStampMsg.key").first().get(0)
+      assert(actualFields.size === expectedFields.size)
+      assert(actualFields === expectedFields)
+      assert(
+        fromProtoDf.select("timeStampMsg.key").first().get(0)
           === inputDf.select("timeStampMsg.key").first().get(0))
-        assert(fromProtoDf.select("timeStampMsg.stmp").first().get(0)
+      assert(
+        fromProtoDf.select("timeStampMsg.stmp").first().get(0)
           === inputDf.select("timeStampMsg.stmp").first().get(0))
     }
   }
 
   test("Handle DayTimeIntervalType between to_protobuf and from_protobuf") {
     val schema = StructType(
-      StructField("durationMsg",
+      StructField(
+        "durationMsg",
         StructType(
           StructField("key", StringType, nullable = true) ::
-            StructField("duration",
-              DayTimeIntervalType.defaultConcreteType, nullable = true) :: Nil
-        ),
-        nullable = true
-      ) :: Nil
-    )
+            StructField(
+              "duration",
+              DayTimeIntervalType.defaultConcreteType,
+              nullable = true) :: Nil),
+        nullable = true) :: Nil)
 
     val inputDf = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(
-        Row(Row("key1",
-          Duration.ofDays(1).plusHours(2).plusMinutes(3).plusSeconds(4)
-        ))
-      )),
-      schema
-    )
+      spark.sparkContext.parallelize(
+        Seq(Row(Row("key1", Duration.ofDays(1).plusHours(2).plusMinutes(3).plusSeconds(4))))),
+      schema)
 
-    checkWithFileAndClassName("durationMsg") {
-      case (name, descFilePathOpt) =>
-        val toProtoDf = inputDf
-          .select(to_protobuf_wrapper($"durationMsg", name,
-            descFilePathOpt) as Symbol("to_proto"))
+    checkWithFileAndClassName("durationMsg") { case (name, descFilePathOpt) =>
+      val toProtoDf = inputDf
+        .select(to_protobuf_wrapper($"durationMsg", name, descFilePathOpt) as Symbol("to_proto"))
 
-        val fromProtoDf = toProtoDf
-          .select(from_protobuf_wrapper($"to_proto", name,
-            descFilePathOpt) as Symbol("durationMsg"))
+      val fromProtoDf = toProtoDf
+        .select(
+          from_protobuf_wrapper($"to_proto", name, descFilePathOpt) as Symbol("durationMsg"))
 
-        val actualFields = fromProtoDf.schema.fields.toList
-        val expectedFields = inputDf.schema.fields.toList
+      val actualFields = fromProtoDf.schema.fields.toList
+      val expectedFields = inputDf.schema.fields.toList
 
-        assert(actualFields.size === expectedFields.size)
-        assert(actualFields === expectedFields)
-        assert(fromProtoDf.select("durationMsg.key").first().get(0)
+      assert(actualFields.size === expectedFields.size)
+      assert(actualFields === expectedFields)
+      assert(
+        fromProtoDf.select("durationMsg.key").first().get(0)
           === inputDf.select("durationMsg.key").first().get(0))
-        assert(fromProtoDf.select("durationMsg.duration").first().get(0)
+      assert(
+        fromProtoDf.select("durationMsg.duration").first().get(0)
           === inputDf.select("durationMsg.duration").first().get(0))
     }
   }
@@ -727,9 +718,10 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val descWithoutImports = descriptorSetWithoutImports(testFileDesc, "BasicMessage")
 
     val e = intercept[AnalysisException] {
-      df.select(functions.from_protobuf($"value", "BasicMessage",
-          descWithoutImports) as Symbol("sample"))
-        .where("sample.string_value == \"slam\"").show()
+      df.select(
+        functions.from_protobuf($"value", "BasicMessage", descWithoutImports) as Symbol("sample"))
+        .where("sample.string_value == \"slam\"")
+        .show()
     }
     checkError(
       exception = e,
@@ -739,41 +731,42 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
   test("Verify OneOf field between from_protobuf -> to_protobuf and struct -> from_protobuf") {
     val descriptor = ProtobufUtils.buildDescriptor("OneOfEvent", Some(testFileDesc)).descriptor
-    val oneOfEvent = OneOfEvent.newBuilder()
+    val oneOfEvent = OneOfEvent
+      .newBuilder()
       .setKey("key")
       .setCol1(123)
       .setCol3(109202L)
       .setCol2("col2value")
-      .addCol4("col4value").build()
+      .addCol4("col4value")
+      .build()
 
     val df = Seq(oneOfEvent.toByteArray).toDF("value")
 
-    checkWithFileAndClassName("OneOfEvent") {
-      case (name, descFilePathOpt) =>
-        val fromProtoDf = df.select(
-          from_protobuf_wrapper($"value", name, descFilePathOpt) as Symbol("sample"))
-        val toDf = fromProtoDf.select(
-          to_protobuf_wrapper($"sample", name, descFilePathOpt) as Symbol("toProto"))
-        val toFromDf = toDf.select(
-          from_protobuf_wrapper($"toProto", name, descFilePathOpt) as Symbol("fromToProto"))
-        checkAnswer(fromProtoDf, toFromDf)
-        val actualFieldNames = fromProtoDf.select("sample.*").schema.fields.toSeq.map(f => f.name)
-        descriptor.getFields.asScala.map(f => {
-          assert(actualFieldNames.contains(f.getName))
-        })
+    checkWithFileAndClassName("OneOfEvent") { case (name, descFilePathOpt) =>
+      val fromProtoDf =
+        df.select(from_protobuf_wrapper($"value", name, descFilePathOpt) as Symbol("sample"))
+      val toDf = fromProtoDf.select(
+        to_protobuf_wrapper($"sample", name, descFilePathOpt) as Symbol("toProto"))
+      val toFromDf = toDf.select(
+        from_protobuf_wrapper($"toProto", name, descFilePathOpt) as Symbol("fromToProto"))
+      checkAnswer(fromProtoDf, toFromDf)
+      val actualFieldNames = fromProtoDf.select("sample.*").schema.fields.toSeq.map(f => f.name)
+      descriptor.getFields.asScala.map(f => {
+        assert(actualFieldNames.contains(f.getName))
+      })
 
-        val eventFromSpark = OneOfEvent.parseFrom(
-          toDf.select("toProto").take(1).toSeq(0).getAs[Array[Byte]](0))
-        // OneOf field: the last set value(by order) will overwrite all previous ones.
-        assert(eventFromSpark.getCol2.equals("col2value"))
-        assert(eventFromSpark.getCol3 == 0)
-        val expectedFields = descriptor.getFields.asScala.map(f => f.getName)
-        eventFromSpark.getDescriptorForType.getFields.asScala.map(f => {
-          assert(expectedFields.contains(f.getName))
-        })
+      val eventFromSpark =
+        OneOfEvent.parseFrom(toDf.select("toProto").take(1).toSeq(0).getAs[Array[Byte]](0))
+      // OneOf field: the last set value(by order) will overwrite all previous ones.
+      assert(eventFromSpark.getCol2.equals("col2value"))
+      assert(eventFromSpark.getCol3 == 0)
+      val expectedFields = descriptor.getFields.asScala.map(f => f.getName)
+      eventFromSpark.getDescriptorForType.getFields.asScala.map(f => {
+        assert(expectedFields.contains(f.getName))
+      })
 
-        val schema = DataType.fromJson(
-          """
+      val schema = DataType
+        .fromJson("""
             | {
             |   "type":"struct",
             |   "fields":[
@@ -790,40 +783,40 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
             |     }
             |   ]
             | }
-            |""".stripMargin).asInstanceOf[StructType]
-        assert(fromProtoDf.schema == schema)
+            |""".stripMargin)
+        .asInstanceOf[StructType]
+      assert(fromProtoDf.schema == schema)
 
-        val data = Seq(
-          Row(Row("key", 123, "col2value", 109202L, Seq("col4value"))),
-          Row(Row("key2", null, null, null, null)) // Leave the rest null, including "col_4" array.
-        )
-        val dataDf = spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
-        val dataDfToProto = dataDf.select(
-          to_protobuf_wrapper($"sample", name, descFilePathOpt) as Symbol("toProto"))
+      val data = Seq(
+        Row(Row("key", 123, "col2value", 109202L, Seq("col4value"))),
+        Row(Row("key2", null, null, null, null)) // Leave the rest null, including "col_4" array.
+      )
+      val dataDf = spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
+      val dataDfToProto =
+        dataDf.select(to_protobuf_wrapper($"sample", name, descFilePathOpt) as Symbol("toProto"))
 
-        val toProtoResults = dataDfToProto.select("toProto").collect()
-        val eventFromSparkSchema = OneOfEvent.parseFrom(toProtoResults(0).getAs[Array[Byte]](0))
-        assert(eventFromSparkSchema.getCol2.isEmpty)
-        assert(eventFromSparkSchema.getCol3 == 109202L)
-        eventFromSparkSchema.getDescriptorForType.getFields.asScala.map(f => {
-          assert(expectedFields.contains(f.getName))
-        })
-        val secondEventFromSpark = OneOfEvent.parseFrom(toProtoResults(1).getAs[Array[Byte]](0))
-        assert(secondEventFromSpark.getKey == "key2")
+      val toProtoResults = dataDfToProto.select("toProto").collect()
+      val eventFromSparkSchema = OneOfEvent.parseFrom(toProtoResults(0).getAs[Array[Byte]](0))
+      assert(eventFromSparkSchema.getCol2.isEmpty)
+      assert(eventFromSparkSchema.getCol3 == 109202L)
+      eventFromSparkSchema.getDescriptorForType.getFields.asScala.map(f => {
+        assert(expectedFields.contains(f.getName))
+      })
+      val secondEventFromSpark = OneOfEvent.parseFrom(toProtoResults(1).getAs[Array[Byte]](0))
+      assert(secondEventFromSpark.getKey == "key2")
     }
   }
 
   test("Fail for recursion field with complex schema without recursive.fields.max.depth") {
-    checkWithFileAndClassName("EventWithRecursion") {
-      case (name, descFilePathOpt) =>
-        val e = intercept[AnalysisException] {
-          emptyBinaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
-            .show()
-        }
-        assert(e.getMessage.contains(
-          "Found recursive reference in Protobuf schema, which can not be processed by Spark"
-        ))
+    checkWithFileAndClassName("EventWithRecursion") { case (name, descFilePathOpt) =>
+      val e = intercept[AnalysisException] {
+        emptyBinaryDF
+          .select(from_protobuf_wrapper($"binary", name, descFilePathOpt).as("messageFromProto"))
+          .show()
+      }
+      assert(
+        e.getMessage.contains(
+          "Found recursive reference in Protobuf schema, which can not be processed by Spark"))
     }
   }
 
@@ -834,24 +827,28 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val em2 = EM2.newBuilder().setTeamsize(100).setEm2Manager(manager).build()
     val em = EM.newBuilder().setTeamsize(100).setEmManager(manager).build()
     val ic = IC.newBuilder().addSkills("java").setIcManager(manager).build()
-    val employee = Employee.newBuilder().setFirstName("firstName")
-      .setLastName("lastName").setEm2(em2).setEm(em).setIc(ic).build()
+    val employee = Employee
+      .newBuilder()
+      .setFirstName("firstName")
+      .setLastName("lastName")
+      .setEm2(em2)
+      .setEm(em)
+      .setIc(ic)
+      .build()
 
     val df = Seq(employee.toByteArray).toDF("protoEvent")
     val options = new java.util.HashMap[String, String]()
     options.put("recursive.fields.max.depth", "2")
 
     val fromProtoDf = df.select(
-      functions.from_protobuf($"protoEvent", "Employee", testFileDesc,
-        options) as Symbol("sample"))
+      functions.from_protobuf($"protoEvent", "Employee", testFileDesc, options) as Symbol(
+        "sample"))
 
     val toDf = fromProtoDf.select(
       functions.to_protobuf($"sample", "Employee", testFileDesc) as Symbol("toProto"))
     val toFromDf = toDf.select(
-      functions.from_protobuf($"toProto",
-        "Employee",
-        testFileDesc,
-        options) as Symbol("fromToProto"))
+      functions.from_protobuf($"toProto", "Employee", testFileDesc, options) as Symbol(
+        "fromToProto"))
 
     checkAnswer(fromProtoDf, toFromDf)
 
@@ -860,39 +857,54 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       assert(actualFieldNames.contains(f.getName))
     })
 
-    val eventFromSpark = Employee.parseFrom(
-      toDf.select("toProto").take(1).toSeq(0).getAs[Array[Byte]](0))
+    val eventFromSpark =
+      Employee.parseFrom(toDf.select("toProto").take(1).toSeq(0).getAs[Array[Byte]](0))
 
     assert(eventFromSpark.getIc.getIcManager.getFirstName.equals("firstName"))
     assert(eventFromSpark.getIc.getIcManager.getLastName.equals("lastName"))
     assert(eventFromSpark.getEm2.getEm2Manager.getFirstName.isEmpty)
   }
 
-  test("Verify OneOf field with recursive fields between from_protobuf -> to_protobuf." +
-    "and struct -> from_protobuf") {
+  test(
+    "Verify OneOf field with recursive fields between from_protobuf -> to_protobuf." +
+      "and struct -> from_protobuf") {
     val descriptor = ProtobufUtils
       .buildDescriptor("OneOfEventWithRecursion", Some(testFileDesc))
       .descriptor
 
-    val nestedTwo = OneOfEventWithRecursion.newBuilder()
-      .setKey("keyNested2").setValue("valueNested2").build()
-    val nestedOne = EventRecursiveA.newBuilder()
+    val nestedTwo = OneOfEventWithRecursion
+      .newBuilder()
+      .setKey("keyNested2")
+      .setValue("valueNested2")
+      .build()
+    val nestedOne = EventRecursiveA
+      .newBuilder()
       .setKey("keyNested1")
-      .setRecursiveOneOffInA(nestedTwo).build()
-    val oneOfRecursionEvent = OneOfEventWithRecursion.newBuilder()
+      .setRecursiveOneOffInA(nestedTwo)
+      .build()
+    val oneOfRecursionEvent = OneOfEventWithRecursion
+      .newBuilder()
       .setKey("keyNested0")
       .setValue("valueNested0")
-      .setRecursiveA(nestedOne).build()
-    val recursiveA = EventRecursiveA.newBuilder().setKey("recursiveAKey")
-      .setRecursiveOneOffInA(oneOfRecursionEvent).build()
-    val recursiveB = EventRecursiveB.newBuilder()
+      .setRecursiveA(nestedOne)
+      .build()
+    val recursiveA = EventRecursiveA
+      .newBuilder()
+      .setKey("recursiveAKey")
+      .setRecursiveOneOffInA(oneOfRecursionEvent)
+      .build()
+    val recursiveB = EventRecursiveB
+      .newBuilder()
       .setKey("recursiveBKey")
-      .setValue("recursiveBvalue").build()
-    val oneOfEventWithRecursion = OneOfEventWithRecursion.newBuilder()
+      .setValue("recursiveBvalue")
+      .build()
+    val oneOfEventWithRecursion = OneOfEventWithRecursion
+      .newBuilder()
       .setKey("key")
       .setValue("value")
       .setRecursiveB(recursiveB)
-      .setRecursiveA(recursiveA).build()
+      .setRecursiveA(recursiveA)
+      .build()
 
     val df = Seq(oneOfEventWithRecursion.toByteArray).toDF("value")
 
@@ -900,17 +912,16 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     options.put("recursive.fields.max.depth", "2") // Recursive fields appear twice.
 
     val fromProtoDf = df.select(
-      functions.from_protobuf($"value",
-        "OneOfEventWithRecursion",
-        testFileDesc, options) as Symbol("sample"))
+      functions
+        .from_protobuf($"value", "OneOfEventWithRecursion", testFileDesc, options) as Symbol(
+        "sample"))
     val toDf = fromProtoDf.select(
-      functions.to_protobuf($"sample", "OneOfEventWithRecursion",
-        testFileDesc) as Symbol("toProto"))
+      functions.to_protobuf($"sample", "OneOfEventWithRecursion", testFileDesc) as Symbol(
+        "toProto"))
     val toFromDf = toDf.select(
-      functions.from_protobuf($"toProto",
-        "OneOfEventWithRecursion",
-        testFileDesc,
-        options) as Symbol("fromToProto"))
+      functions
+        .from_protobuf($"toProto", "OneOfEventWithRecursion", testFileDesc, options) as Symbol(
+        "fromToProto"))
 
     checkAnswer(fromProtoDf, toFromDf)
 
@@ -978,17 +989,15 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     assert(fromProtoDf.schema == schema)
     val data = Seq(
       Row(
-        Row("key1",
-          Row(
-            Row("keyNested0", null, null, "valueNested0"),
-            "recursiveAKey"),
+        Row(
+          "key1",
+          Row(Row("keyNested0", null, null, "valueNested0"), "recursiveAKey"),
           null,
-          "value1")
-      )
-    )
+          "value1")))
     val dataDf = spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
-    val dataDfToProto = dataDf.select(functions.to_protobuf($"sample",
-      "OneOfEventWithRecursion", testFileDesc) as Symbol("toProto"))
+    val dataDfToProto = dataDf.select(
+      functions.to_protobuf($"sample", "OneOfEventWithRecursion", testFileDesc) as Symbol(
+        "toProto"))
 
     val eventFromSparkSchema = OneOfEventWithRecursion.parseFrom(
       dataDfToProto.select("toProto").first().getAs[Array[Byte]](0))
@@ -1014,26 +1023,26 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       "sample STRUCT<name: STRING>" // 'bff' field is dropped to due to limit of 1.
     )
     val expectedDfOne = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(Row(Row("person0", null)))), schemaOne)
+      spark.sparkContext.parallelize(Seq(Row(Row("person0", null)))),
+      schemaOne)
     testFromProtobufWithOptions(df, expectedDfOne, optionsZero, "EventPerson")
 
     val optionsTwo = new java.util.HashMap[String, String]()
     optionsTwo.put("recursive.fields.max.depth", "2")
-    val schemaTwo = structFromDDL(
-      """
+    val schemaTwo = structFromDDL("""
         | sample STRUCT<
         |     name: STRING,
         |     bff: STRUCT<name: STRING> -- Recursion is terminated here.
         | >
         |""".stripMargin)
     val expectedDfTwo = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(Row(Row("person0", Row("person1", null))))), schemaTwo)
+      spark.sparkContext.parallelize(Seq(Row(Row("person0", Row("person1", null))))),
+      schemaTwo)
     testFromProtobufWithOptions(df, expectedDfTwo, optionsTwo, "EventPerson")
 
     val optionsThree = new java.util.HashMap[String, String]()
     optionsThree.put("recursive.fields.max.depth", "3")
-    val schemaThree = structFromDDL(
-      """
+    val schemaThree = structFromDDL("""
         | sample STRUCT<
         |     name: STRING,
         |     bff: STRUCT<
@@ -1042,15 +1051,16 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         |     >
         | >
         |""".stripMargin)
-    val expectedDfThree = spark.createDataFrame(spark.sparkContext.parallelize(
-      Seq(Row(Row("person0", Row("person1", Row("person2", null)))))), schemaThree)
+    val expectedDfThree = spark.createDataFrame(
+      spark.sparkContext.parallelize(
+        Seq(Row(Row("person0", Row("person1", Row("person2", null)))))),
+      schemaThree)
     testFromProtobufWithOptions(df, expectedDfThree, optionsThree, "EventPerson")
 
     // Test recursive level 1 with EventPersonWrapper. In this case the top level struct
     // 'EventPersonWrapper' itself does not recurse unlike 'EventPerson'.
     // "bff" appears twice: Once allowed recursion and second time as terminated "null" type.
-    val wrapperSchemaOne = structFromDDL(
-      """
+    val wrapperSchemaOne = structFromDDL("""
         | sample STRUCT<
         |     person: STRUCT< -- 1st level
         |         name: STRING,
@@ -1065,8 +1075,7 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       Seq(EventPersonWrapper.newBuilder().setPerson(eventPerson0).build().toByteArray).toDF(),
       expectedWrapperDfTwo,
       optionsTwo,
-      "EventPersonWrapper"
-    )
+      "EventPersonWrapper")
   }
 
   test("Verify exceptions are correctly propagated with errors") {
@@ -1078,15 +1087,13 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val ex = intercept[AnalysisException] {
       Seq(Array[Byte]())
         .toDF()
-        .select(
-          functions.from_protobuf($"value", "SomeMessage", invalidDescPath)
-        ).collect()
+        .select(functions.from_protobuf($"value", "SomeMessage", invalidDescPath))
+        .collect()
     }
     checkError(
       ex,
       condition = "PROTOBUF_DESCRIPTOR_FILE_NOT_FOUND",
-      parameters = Map("filePath" -> "/non/existent/path.desc")
-    )
+      parameters = Map("filePath" -> "/non/existent/path.desc"))
     assert(ex.getCause != null)
   }
 
@@ -1094,59 +1101,53 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     // Verifies schema for recursive proto in an array field & map field.
     val options = Map("recursive.fields.max.depth" -> "3")
 
-    checkWithFileAndClassName("PersonWithRecursiveArray") {
-      case (name, descFilePathOpt) =>
-        val expectedSchema = StructType(
-          // DDL: "proto STRUCT<name: string, friends: array<
-          //    struct<name: string, friends: array<struct<name: string>>>>>"
-          // Can not use DataType.fromDDL(), it does not support "containsNull: false" for arrays.
-          StructField("proto",
-            StructType( // 1st level
-              StructField("name", StringType) :: StructField("friends", // 2nd level
-                ArrayType(
-                  StructType(StructField("name", StringType) :: StructField("friends", // 3rd level
+    checkWithFileAndClassName("PersonWithRecursiveArray") { case (name, descFilePathOpt) =>
+      val expectedSchema = StructType(
+        // DDL: "proto STRUCT<name: string, friends: array<
+        //    struct<name: string, friends: array<struct<name: string>>>>>"
+        // Can not use DataType.fromDDL(), it does not support "containsNull: false" for arrays.
+        StructField(
+          "proto",
+          StructType( // 1st level
+            StructField("name", StringType) :: StructField(
+              "friends", // 2nd level
+              ArrayType(
+                StructType(
+                  StructField("name", StringType) :: StructField(
+                    "friends", // 3rd level
                     ArrayType(
                       StructType(StructField("name", StringType) :: Nil), // 4th, array dropped
-                      containsNull = false)
-                  ):: Nil),
-                  containsNull = false)
-              ) :: Nil
-            )
-          ) :: Nil
-        )
+                      containsNull = false)) :: Nil),
+                containsNull = false)) :: Nil)) :: Nil)
 
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto")
-        )
-        assert(df.schema == expectedSchema)
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto"))
+      assert(df.schema == expectedSchema)
     }
 
-    checkWithFileAndClassName("PersonWithRecursiveMap") {
-      case (name, descFilePathOpt) =>
-        val expectedSchema = StructType(
-          // DDL: "proto STRUCT<name: string, groups: map<
-          //    struct<name: string, group: map<struct<name: string>>>>>"
-          StructField("proto",
-            StructType( // 1st level
-              StructField("name", StringType) :: StructField("groups", // 2nd level
-                MapType(
-                  StringType,
-                  StructType(StructField("name", StringType) :: StructField("groups", // 3rd level
+    checkWithFileAndClassName("PersonWithRecursiveMap") { case (name, descFilePathOpt) =>
+      val expectedSchema = StructType(
+        // DDL: "proto STRUCT<name: string, groups: map<
+        //    struct<name: string, group: map<struct<name: string>>>>>"
+        StructField(
+          "proto",
+          StructType( // 1st level
+            StructField("name", StringType) :: StructField(
+              "groups", // 2nd level
+              MapType(
+                StringType,
+                StructType(
+                  StructField("name", StringType) :: StructField(
+                    "groups", // 3rd level
                     MapType(
                       StringType,
                       StructType(StructField("name", StringType) :: Nil), // 4th, array dropped
-                      valueContainsNull = false)
-                  ):: Nil),
-                  valueContainsNull = false)
-              ) :: Nil
-            )
-          ) :: Nil
-        )
+                      valueContainsNull = false)) :: Nil),
+                valueContainsNull = false)) :: Nil)) :: Nil)
 
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto")
-        )
-        assert(df.schema == expectedSchema)
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto"))
+      assert(df.schema == expectedSchema)
     }
   }
 
@@ -1156,24 +1157,22 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val options = Map("retain.empty.message.types" -> "true")
 
     // EmptyProto at the top level. It will be an empty struct.
-    checkWithFileAndClassName("EmptyProto") {
-      case (name, descFilePathOpt) =>
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto")
-        )
-        // Top level empty message is retained by adding dummy column to the schema.
-        assert(df.schema ==
+    checkWithFileAndClassName("EmptyProto") { case (name, descFilePathOpt) =>
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto"))
+      // Top level empty message is retained by adding dummy column to the schema.
+      assert(
+        df.schema ==
           structFromDDL("empty_proto struct<__dummy_field_in_empty_struct: string>"))
     }
 
     // Inner level empty message is retained by adding dummy column to the schema.
-    checkWithFileAndClassName("EmptyProtoWrapper") {
-      case (name, descFilePathOpt) =>
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper")
-        )
-        // Nested empty message is retained by adding dummy column to the schema.
-        assert(df.schema == structFromDDL("wrapper struct" +
+    checkWithFileAndClassName("EmptyProtoWrapper") { case (name, descFilePathOpt) =>
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper"))
+      // Nested empty message is retained by adding dummy column to the schema.
+      assert(
+        df.schema == structFromDDL("wrapper struct" +
           "<name: string, empty_proto struct<__dummy_field_in_empty_struct: string>>"))
     }
   }
@@ -1183,39 +1182,34 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     // as a field by inserting a dummy column as sub column, such schema can be written to parquet.
     val options = Map("retain.empty.message.types" -> "true")
     withTempDir { file =>
-      val binaryDF = Seq(
-        EmptyProtoWrapper.newBuilder.setName("my_name").build().toByteArray)
+      val binaryDF = Seq(EmptyProtoWrapper.newBuilder.setName("my_name").build().toByteArray)
         .toDF("binary")
-      checkWithFileAndClassName("EmptyProtoWrapper") {
-        case (name, descFilePathOpt) =>
-          val df = binaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper")
-          )
-          df.write.format("parquet").mode("overwrite").save(file.getAbsolutePath)
+      checkWithFileAndClassName("EmptyProtoWrapper") { case (name, descFilePathOpt) =>
+        val df = binaryDF.select(
+          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper"))
+        df.write.format("parquet").mode("overwrite").save(file.getAbsolutePath)
       }
       val resultDF = spark.read.format("parquet").load(file.getAbsolutePath)
-      assert(resultDF.schema == structFromDDL("wrapper struct" +
-          "<name: string, empty_proto struct<__dummy_field_in_empty_struct: string>>"
-      ))
+      assert(
+        resultDF.schema == structFromDDL("wrapper struct" +
+          "<name: string, empty_proto struct<__dummy_field_in_empty_struct: string>>"))
       // The dummy column of empty proto should have null value.
       checkAnswer(resultDF, Seq(Row(Row("my_name", null))))
     }
 
     // When top level message is empty, write to parquet.
     withTempDir { file =>
-      val binaryDF = Seq(
-        EmptyProto.newBuilder.build().toByteArray)
+      val binaryDF = Seq(EmptyProto.newBuilder.build().toByteArray)
         .toDF("binary")
-      checkWithFileAndClassName("EmptyProto") {
-        case (name, descFilePathOpt) =>
-          val df = binaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto")
-          )
-          df.write.format("parquet").mode("overwrite").save(file.getAbsolutePath)
+      checkWithFileAndClassName("EmptyProto") { case (name, descFilePathOpt) =>
+        val df = binaryDF.select(
+          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto"))
+        df.write.format("parquet").mode("overwrite").save(file.getAbsolutePath)
       }
       val resultDF = spark.read.format("parquet").load(file.getAbsolutePath)
-      assert(resultDF.schema ==
-        structFromDDL("empty_proto struct<__dummy_field_in_empty_struct: string>"))
+      assert(
+        resultDF.schema ==
+          structFromDDL("empty_proto struct<__dummy_field_in_empty_struct: string>"))
       // The dummy column of empty proto should have null value.
       checkAnswer(resultDF, Seq(Row(Row(null))))
     }
@@ -1228,22 +1222,18 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val options = Map("recursive.fields.max.depth" -> "4")
 
     // EmptyRecursiveProto at the top level. It will be an empty struct.
-    checkWithFileAndClassName("EmptyRecursiveProto") {
-      case (name, descFilePathOpt) =>
-          val df = emptyBinaryDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto")
-          )
-        assert(df.schema == structFromDDL("empty_proto struct<>"))
+    checkWithFileAndClassName("EmptyRecursiveProto") { case (name, descFilePathOpt) =>
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto"))
+      assert(df.schema == structFromDDL("empty_proto struct<>"))
     }
 
     // EmptyRecursiveProto at inner level.
-    checkWithFileAndClassName("EmptyRecursiveProtoWrapper") {
-      case (name, descFilePathOpt) =>
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper")
-        )
-        // 'empty_recursive' field is dropped from the schema. Only "name" is present.
-        assert(df.schema == structFromDDL("wrapper struct<name: string>"))
+    checkWithFileAndClassName("EmptyRecursiveProtoWrapper") { case (name, descFilePathOpt) =>
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("wrapper"))
+      // 'empty_recursive' field is dropped from the schema. Only "name" is present.
+      assert(df.schema == structFromDDL("wrapper struct<name: string>"))
     }
   }
 
@@ -1275,79 +1265,70 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
          |    |    |    |-- recursive_array: array (nullable = true)
          |    |    |    |    |-- element: struct (containsNull = false)
          |    |    |    |    |    |-- __dummy_field_in_empty_struct: string (nullable = true)
-    */
+     */
     val structWithRecursiveDepthEquals3 = StructType(
-      StructField("empty_proto",
+      StructField(
+        "empty_proto",
         StructType(
           StructField("recursive_field", structWithRecursiveDepthEquals2) ::
-            StructField("recursive_array",
-              ArrayType(structWithRecursiveDepthEquals2, containsNull = false)
-          ) :: Nil
-        )
-      ) :: Nil
-    )
+            StructField(
+              "recursive_array",
+              ArrayType(structWithRecursiveDepthEquals2, containsNull = false)) :: Nil)) :: Nil)
 
     val options = Map("recursive.fields.max.depth" -> "3", "retain.empty.message.types" -> "true")
-    checkWithFileAndClassName("EmptyRecursiveProto") {
-      case (name, descFilePathOpt) =>
-        val df = emptyBinaryDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto")
-        )
-        assert(df.schema == structWithRecursiveDepthEquals3)
+    checkWithFileAndClassName("EmptyRecursiveProto") { case (name, descFilePathOpt) =>
+      val df = emptyBinaryDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("empty_proto"))
+      assert(df.schema == structWithRecursiveDepthEquals3)
     }
   }
 
   test("Converting Any fields to JSON") {
     // Verifies schema and deserialization when 'convert.any.fields.to.json' is set.
-    checkWithFileAndClassName("ProtoWithAny") {
-      case (name, descFilePathOpt) =>
+    checkWithFileAndClassName("ProtoWithAny") { case (name, descFilePathOpt) =>
 
-        // Json: {"key":"k", "value"":"v", "basic_enum": "FIRST"}
-        val simpleEnumProto = SimpleMessageEnum
+      // Json: {"key":"k", "value"":"v", "basic_enum": "FIRST"}
+      val simpleEnumProto = SimpleMessageEnum
+        .newBuilder()
+        .setKey("k")
+        .setValue("v")
+        .setBasicEnum(BasicEnumMessage.BasicEnum.FIRST)
+        .build()
+
+      // proto: 'message { string event_name = 1; google.protobuf.Any details = 2 }'
+      val inputDF = Seq(
+        ProtoWithAny
           .newBuilder()
-          .setKey("k")
-          .setValue("v")
-          .setBasicEnum(BasicEnumMessage.BasicEnum.FIRST)
+          .setEventName("click")
+          .setDetails(AnyProto.pack(simpleEnumProto))
           .build()
+          .toByteArray).toDF("binary")
 
-        // proto: 'message { string event_name = 1; google.protobuf.Any details = 2 }'
-        val inputDF = Seq(
-          ProtoWithAny
-            .newBuilder()
-            .setEventName("click")
-            .setDetails(AnyProto.pack(simpleEnumProto))
-            .build()
-            .toByteArray
-        ).toDF("binary")
+      // Check schema with default options where Any field not converted to json.
+      val df = inputDF.select(from_protobuf_wrapper($"binary", name, descFilePathOpt).as("proto"))
+      // Default behavior: 'details' is a struct with 'type_url' and binary 'value'.
+      assert(
+        df.schema.toDDL ==
+          "proto STRUCT<event_name: STRING, details: STRUCT<type_url: STRING, value: BINARY>>")
 
-        // Check schema with default options where Any field not converted to json.
-        val df = inputDF.select(
-          from_protobuf_wrapper($"binary", name, descFilePathOpt).as("proto")
-        )
-        // Default behavior: 'details' is a struct with 'type_url' and binary 'value'.
-        assert(df.schema.toDDL ==
-          "proto STRUCT<event_name: STRING, details: STRUCT<type_url: STRING, value: BINARY>>"
-        )
+      val expectedJson =
+        """{"@type":""" + // The json includes "@type" field as well.
+          """"type.googleapis.com/org.apache.spark.sql.protobuf.protos.SimpleMessageEnum",""" +
+          """"key":"k","value":"v","basic_enum":"FIRST"}"""
 
-        val expectedJson =
-          """{"@type":""" + // The json includes "@type" field as well.
-            """"type.googleapis.com/org.apache.spark.sql.protobuf.protos.SimpleMessageEnum",""" +
-            """"key":"k","value":"v","basic_enum":"FIRST"}"""
+      val expectedJsonWithEnumsAsInts =
+        """{"@type":""" + // The json includes "@type" field as well.
+          """"type.googleapis.com/org.apache.spark.sql.protobuf.protos.SimpleMessageEnum",""" +
+          """"key":"k","value":"v","basic_enum":1}"""
 
-        val expectedJsonWithEnumsAsInts =
-          """{"@type":""" + // The json includes "@type" field as well.
-            """"type.googleapis.com/org.apache.spark.sql.protobuf.protos.SimpleMessageEnum",""" +
-            """"key":"k","value":"v","basic_enum":1}"""
-
-        List(
-          (Map.empty[String, String], expectedJson),
-          (Map("enums.as.ints" -> "true"), expectedJsonWithEnumsAsInts)
-        ).foreach { case (additionalOptions, expected) =>
+      List(
+        (Map.empty[String, String], expectedJson),
+        (Map("enums.as.ints" -> "true"), expectedJsonWithEnumsAsInts)).foreach {
+        case (additionalOptions, expected) =>
           val options =
             Map(ProtobufOptions.CONVERT_ANY_FIELDS_TO_JSON_CONFIG -> "true") ++ additionalOptions
           val dfJson = inputDF.select(
-            from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto")
-          )
+            from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto"))
 
           // Now 'details' should be a string.
           assert(dfJson.schema.toDDL == "proto STRUCT<event_name: STRING, details: STRING>")
@@ -1356,7 +1337,7 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           val row = dfJson.collect()(0).getStruct(0)
           assert(row.getString(0) == "click")
           assert(row.getString(1) == expected)
-        }
+      }
     }
   }
 
@@ -1376,17 +1357,20 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       // Use 3 different types of protos for 'items'. One with an Any field, and one without,
       // and one with default instance of Any. The last one triggers JsonFormat bug.
 
-      val simpleProto = SimpleMessage.newBuilder() // Json: {"id":10,"string_value":"galaxy"}
+      val simpleProto = SimpleMessage
+        .newBuilder() // Json: {"id":10,"string_value":"galaxy"}
         .setId(10)
         .setStringValue("galaxy")
         .build()
 
-      val protoWithAny = ProtoWithAny.newBuilder()
+      val protoWithAny = ProtoWithAny
+        .newBuilder()
         .setEventName("click")
         .setDetails(AnyProto.pack(simpleProto))
         .build()
 
-      val protoWithAnyArrayBytes = ProtoWithAnyArray.newBuilder()
+      val protoWithAnyArrayBytes = ProtoWithAnyArray
+        .newBuilder()
         .setDescription("nested any demo")
         .addItems(AnyProto.pack(simpleProto)) // A simple proto
         .addItems(AnyProto.pack(protoWithAny)) // A proto with any field inside it.
@@ -1397,22 +1381,19 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       val inputDF = Seq(protoWithAnyArrayBytes).toDF("binary")
 
       // check default schema
-      val df = inputDF.select(
-        from_protobuf_wrapper($"binary", name, descFilePathOpt).as("proto")
-      )
+      val df = inputDF.select(from_protobuf_wrapper($"binary", name, descFilePathOpt).as("proto"))
       // Default behavior: 'details' is a struct with 'type_url' and binary 'value'.
-      assert(df.schema.toDDL == "proto STRUCT<description: STRING, " +
-        "items: ARRAY<STRUCT<type_url: STRING, value: BINARY>>>"
-      )
+      assert(
+        df.schema.toDDL == "proto STRUCT<description: STRING, " +
+          "items: ARRAY<STRUCT<type_url: STRING, value: BINARY>>>")
 
       // Print df to see how the Any fields look like without json conversion.
       log.info(s"Input row without json conversion: ${df.collect()(0)}")
 
       // String for items with 'convert.to.json' option enabled.
       val options = Map(ProtobufOptions.CONVERT_ANY_FIELDS_TO_JSON_CONFIG -> "true")
-      val dfJson = inputDF.select(from_protobuf_wrapper(
-        $"binary", name, descFilePathOpt, options).as("proto")
-      )
+      val dfJson = inputDF.select(
+        from_protobuf_wrapper($"binary", name, descFilePathOpt, options).as("proto"))
       // Now 'details' should be a string.
       assert(dfJson.schema.toDDL == "proto STRUCT<description: STRING, items: ARRAY<STRING>>")
 
@@ -1420,15 +1401,13 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       val items = row.getList[String](1)
 
       assert(row.getString(0) == "nested any demo")
-      assert(items.get(0) == compactJson(
-        """
+      assert(items.get(0) == compactJson("""
           | {
           |   "@type":"type.googleapis.com/org.apache.spark.sql.protobuf.protos.SimpleMessage",
           |   "id":"10",
           |   "string_value":"galaxy"
           | }""".stripMargin))
-      assert(items.get(1) == compactJson(
-        """
+      assert(items.get(1) == compactJson("""
           | {
           |   "@type":"type.googleapis.com/org.apache.spark.sql.protobuf.protos.ProtoWithAny",
           |   "event_name":"click",
@@ -1445,60 +1424,63 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
   test("test explicitly set zero values - proto3") {
     // All fields explicitly zero. Message, map, repeated, and oneof fields
     // are left unset, as null is their zero value.
-    val explicitZero = spark.range(1).select(
-      lit(
-        Proto3AllTypes.newBuilder()
-          .setInt(0)
-          .setText("")
-          .setEnumVal(Proto3AllTypes.NestedEnum.NOTHING)
-          .setOptionalInt(0)
-          .setOptionalText("")
-          .setOptionalEnumVal(Proto3AllTypes.NestedEnum.NOTHING)
-          .setOptionA(0)
-          .build()
-          .toByteArray).as("raw_proto"))
+    val explicitZero = spark
+      .range(1)
+      .select(
+        lit(
+          Proto3AllTypes
+            .newBuilder()
+            .setInt(0)
+            .setText("")
+            .setEnumVal(Proto3AllTypes.NestedEnum.NOTHING)
+            .setOptionalInt(0)
+            .setOptionalText("")
+            .setOptionalEnumVal(Proto3AllTypes.NestedEnum.NOTHING)
+            .setOptionA(0)
+            .build()
+            .toByteArray).as("raw_proto"))
 
     // By default, we deserialize zero values for fields without
     // field presence (i.e. most primitives in proto3) as null.
     // For fields with field presence, (explicitly optional, oneof, etc)
     // we're able to get the explicitly set zero value.
-    val expected = spark.range(1).select(
-      struct(
-        lit(null).as("int"),
-        lit(null).as("text"),
-        lit(null).as("enum_val"),
-        lit(null).as("message"),
-        lit(0).as("optional_int"),
-        lit("").as("optional_text"),
-        lit("NOTHING").as("optional_enum_val"),
-        lit(null).as("optional_message"),
-        lit(Array.emptyIntArray).as("repeated_num"),
-        lit(Array.emptyByteArray).as("repeated_message"),
-        lit(0).as("option_a"),
-        lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+    val expected = spark
+      .range(1)
+      .select(
+        struct(
+          lit(null).as("int"),
+          lit(null).as("text"),
+          lit(null).as("enum_val"),
+          lit(null).as("message"),
+          lit(0).as("optional_int"),
+          lit("").as("optional_text"),
+          lit("NOTHING").as("optional_enum_val"),
+          lit(null).as("optional_message"),
+          lit(Array.emptyIntArray).as("repeated_num"),
+          lit(Array.emptyByteArray).as("repeated_message"),
+          lit(0).as("option_a"),
+          lit(null).as("option_b"),
+          typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     // With the emit.default.values flag set, we'll fill in
     // the fields without presence info.
-    val expectedWithFlag = spark.range(1).select(
-      struct(
-        lit(0).as("int"),
-        lit("").as("text"),
-        lit("NOTHING").as("enum_val"),
-        lit(null).as("message"),
-        lit(0).as("optional_int"),
-        lit("").as("optional_text"),
-        lit("NOTHING").as("optional_enum_val"),
-        lit(null).as("optional_message"),
-        lit(Array.emptyIntArray).as("repeated_num"),
-        lit(Array.emptyByteArray).as("repeated_message"),
-        lit(0).as("option_a"),
-        lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+    val expectedWithFlag = spark
+      .range(1)
+      .select(
+        struct(
+          lit(0).as("int"),
+          lit("").as("text"),
+          lit("NOTHING").as("enum_val"),
+          lit(null).as("message"),
+          lit(0).as("optional_int"),
+          lit("").as("optional_text"),
+          lit("NOTHING").as("optional_enum_val"),
+          lit(null).as("optional_message"),
+          lit(Array.emptyIntArray).as("repeated_num"),
+          lit(Array.emptyByteArray).as("repeated_message"),
+          lit(0).as("option_a"),
+          lit(null).as("option_b"),
+          typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     checkWithFileAndClassName("Proto3AllTypes") { case (name, descFilePathOpt) =>
       checkAnswer(
@@ -1506,71 +1488,71 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           from_protobuf_wrapper($"raw_proto", name, descFilePathOpt).as("proto")),
         expected)
       checkAnswer(
-        explicitZero.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descFilePathOpt,
-          Map("emit.default.values" -> "true")).as("proto")),
+        explicitZero.select(
+          from_protobuf_wrapper(
+            $"raw_proto",
+            name,
+            descFilePathOpt,
+            Map("emit.default.values" -> "true")).as("proto")),
         expectedWithFlag)
     }
   }
 
   test("test unset values - proto3") {
     // Test how we deserialize fields not being present at all.
-    val empty = spark.range(1)
-      .select(lit(
-        Proto3AllTypes.newBuilder().build().toByteArray
-      ).as("raw_proto"))
+    val empty = spark
+      .range(1)
+      .select(lit(Proto3AllTypes.newBuilder().build().toByteArray).as("raw_proto"))
 
-    val expected = spark.range(1).select(
-      struct(
-        lit(null).as("int"),
-        lit(null).as("text"),
-        lit(null).as("enum_val"),
-        lit(null).as("message"),
-        lit(null).as("optional_int"),
-        lit(null).as("optional_text"),
-        lit(null).as("optional_enum_val"),
-        lit(null).as("optional_message"),
-        lit(Array.emptyIntArray).as("repeated_num"),
-        lit(Array.emptyByteArray).as("repeated_message"),
-        lit(null).as("option_a"),
-        lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+    val expected = spark
+      .range(1)
+      .select(
+        struct(
+          lit(null).as("int"),
+          lit(null).as("text"),
+          lit(null).as("enum_val"),
+          lit(null).as("message"),
+          lit(null).as("optional_int"),
+          lit(null).as("optional_text"),
+          lit(null).as("optional_enum_val"),
+          lit(null).as("optional_message"),
+          lit(Array.emptyIntArray).as("repeated_num"),
+          lit(Array.emptyByteArray).as("repeated_message"),
+          lit(null).as("option_a"),
+          lit(null).as("option_b"),
+          typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     // With the emit.default.values flag set, we'll fill in
     // the fields without presence info.
-    val expectedWithFlag = spark.range(1).select(
-      struct(
-        lit(0).as("int"),
-        lit("").as("text"),
-        lit("NOTHING").as("enum_val"),
-        lit(null).as("message"),
-        lit(null).as("optional_int"),
-        lit(null).as("optional_text"),
-        lit(null).as("optional_enum_val"),
-        lit(null).as("optional_message"),
-        lit(Array.emptyIntArray).as("repeated_num"),
-        lit(Array.emptyByteArray).as("repeated_message"),
-        lit(null).as("option_a"),
-        lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+    val expectedWithFlag = spark
+      .range(1)
+      .select(
+        struct(
+          lit(0).as("int"),
+          lit("").as("text"),
+          lit("NOTHING").as("enum_val"),
+          lit(null).as("message"),
+          lit(null).as("optional_int"),
+          lit(null).as("optional_text"),
+          lit(null).as("optional_enum_val"),
+          lit(null).as("optional_message"),
+          lit(Array.emptyIntArray).as("repeated_num"),
+          lit(Array.emptyByteArray).as("repeated_message"),
+          lit(null).as("option_a"),
+          lit(null).as("option_b"),
+          typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     checkWithFileAndClassName("Proto3AllTypes") { case (name, descFilePathOpt) =>
       checkAnswer(
-        empty.select(
-          from_protobuf_wrapper($"raw_proto", name, descFilePathOpt).as("proto")),
+        empty.select(from_protobuf_wrapper($"raw_proto", name, descFilePathOpt).as("proto")),
         expected)
       checkAnswer(
-        empty.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descFilePathOpt,
-          Map("emit.default.values" -> "true")).as("proto")),
+        empty.select(
+          from_protobuf_wrapper(
+            $"raw_proto",
+            name,
+            descFilePathOpt,
+            Map("emit.default.values" -> "true")).as("proto")),
         expectedWithFlag)
     }
   }
@@ -1578,20 +1560,24 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
   test("test explicitly set zero values - proto2") {
     // All fields explicitly zero. Message, map, repeated, and oneof fields
     // are left unset, as null is their zero value.
-    val explicitZero = spark.range(1).select(
-      lit(
-        Proto2AllTypes.newBuilder()
-          .setInt(0)
-          .setText("")
-          .setEnumVal(Proto2AllTypes.NestedEnum.NOTHING)
-          .setOptionA(0)
-          .build()
-          .toByteArray).as("raw_proto"))
+    val explicitZero = spark
+      .range(1)
+      .select(
+        lit(
+          Proto2AllTypes
+            .newBuilder()
+            .setInt(0)
+            .setText("")
+            .setEnumVal(Proto2AllTypes.NestedEnum.NOTHING)
+            .setOptionA(0)
+            .build()
+            .toByteArray).as("raw_proto"))
 
     // We are able to get the zero value back when deserializing since
     // most proto2 fields have field presence information.
-    val expected = spark.range(1).select(
-      struct(
+    val expected = spark
+      .range(1)
+      .select(struct(
         lit(0).as("int"),
         lit("").as("text"),
         lit("NOTHING").as("enum_val"),
@@ -1600,21 +1586,19 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         lit(Array.emptyByteArray).as("repeated_message"),
         lit(0).as("option_a"),
         lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+        typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     checkWithProto2FileAndClassName("Proto2AllTypes") { case (name, descBytesOpt) =>
       checkAnswer(
-        explicitZero.select(
-          from_protobuf_wrapper($"raw_proto", name, descBytesOpt).as("proto")),
+        explicitZero.select(from_protobuf_wrapper($"raw_proto", name, descBytesOpt).as("proto")),
         expected)
       checkAnswer(
-        explicitZero.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descBytesOpt,
-          Map("emit.default.values" -> "true")).as("proto")),
+        explicitZero.select(
+          from_protobuf_wrapper(
+            $"raw_proto",
+            name,
+            descBytesOpt,
+            Map("emit.default.values" -> "true")).as("proto")),
         expected)
     }
   }
@@ -1622,11 +1606,12 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
   test("test unset fields - proto2 types") {
     // All fields explicitly zero. Message, map, repeated, and oneof fields
     // have null, i.e. not set, as their empty versions.
-    val empty = spark.range(1).select(
-      lit(Proto2AllTypes.newBuilder().build().toByteArray).as("raw_proto"))
+    val empty =
+      spark.range(1).select(lit(Proto2AllTypes.newBuilder().build().toByteArray).as("raw_proto"))
 
-    val expected = spark.range(1).select(
-      struct(
+    val expected = spark
+      .range(1)
+      .select(struct(
         lit(null).as("int"),
         lit(null).as("text"),
         lit(null).as("enum_val"),
@@ -1635,59 +1620,60 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         lit(Array.emptyByteArray).as("repeated_message"),
         lit(null).as("option_a"),
         lit(null).as("option_b"),
-        typedLit(Map.empty[String, String]).as("map")
-      ).as("proto")
-    )
+        typedLit(Map.empty[String, String]).as("map")).as("proto"))
 
     // emit.default.values will not materialize values for fields with presence
     // info available, which is most fields within proto2.
     checkWithProto2FileAndClassName("Proto2AllTypes") { case (name, descFilePathOpt) =>
       checkAnswer(
-        empty.select(
-          from_protobuf_wrapper($"raw_proto", name, descFilePathOpt).as("proto")),
+        empty.select(from_protobuf_wrapper($"raw_proto", name, descFilePathOpt).as("proto")),
         expected)
       checkAnswer(
-        empty.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descFilePathOpt,
-          Map("emit.default.values" -> "true")).as("proto")),
+        empty.select(
+          from_protobuf_wrapper(
+            $"raw_proto",
+            name,
+            descFilePathOpt,
+            Map("emit.default.values" -> "true")).as("proto")),
         expected)
     }
   }
 
   test("test enum deserialization") {
-    val message = spark.range(1).select(
-      lit(SimpleMessageEnum
-        .newBuilder()
-        .setKey("key")
-        .setValue("value")
-        .setBasicEnum(BasicEnumMessage.BasicEnum.FIRST)
-        .setNestedEnum(SimpleMessageEnum.NestedEnum.NESTED_SECOND)
-        .addRepeatedEnum(BasicEnumMessage.BasicEnum.FIRST)
-        .build().toByteArray).as("raw_proto"))
+    val message = spark
+      .range(1)
+      .select(
+        lit(
+          SimpleMessageEnum
+            .newBuilder()
+            .setKey("key")
+            .setValue("value")
+            .setBasicEnum(BasicEnumMessage.BasicEnum.FIRST)
+            .setNestedEnum(SimpleMessageEnum.NestedEnum.NESTED_SECOND)
+            .addRepeatedEnum(BasicEnumMessage.BasicEnum.FIRST)
+            .build()
+            .toByteArray).as("raw_proto"))
 
-    val expected = spark.range(1).select(
-      struct(
+    val expected = spark
+      .range(1)
+      .select(struct(
         lit("key").as("key"),
         lit("value").as("value"),
         lit("FIRST").as("basic_enum"),
         lit("NESTED_SECOND").as("nested_enum"),
-        typedLit(Seq("FIRST")).as("repeated_enum")
-      ).as("proto")
-    )
+        typedLit(Seq("FIRST")).as("repeated_enum")).as("proto"))
 
     // With enums.as.ints, we expect the numerical value
     // to be returned when deserializing.
-    val expectedWithOption = spark.range(1).select(
-      struct(
-        lit("key").as("key"),
-        lit("value").as("value"),
-        lit(1).as("basic_enum"),
-        lit(2).as("nested_enum"),
-        typedLit(Seq(1)).as("repeated_enum")
-      ).as("proto")
-    )
+    val expectedWithOption = spark
+      .range(1)
+      .select(
+        struct(
+          lit("key").as("key"),
+          lit("value").as("value"),
+          lit(1).as("basic_enum"),
+          lit(2).as("nested_enum"),
+          typedLit(Seq(1)).as("repeated_enum")).as("proto"))
 
     checkWithFileAndClassName("SimpleMessageEnum") { case (name, descFilePathOpt) =>
       List(Map.empty[String, String], Map("enums.as.ints" -> "false")).foreach(opts => {
@@ -1697,28 +1683,21 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           expected)
       })
       checkAnswer(
-        message.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descFilePathOpt,
-          Map("enums.as.ints" -> "true")).as("proto")),
+        message.select(
+          from_protobuf_wrapper(
+            $"raw_proto",
+            name,
+            descFilePathOpt,
+            Map("enums.as.ints" -> "true")).as("proto")),
         expectedWithOption)
     }
   }
 
   test("raise enum serialization error") {
     // Confirm that attempting to serialize an invalid enum value will raise the correct exception.
-    val df = spark.range(1).select(
-      struct(
-        lit("INVALID_VALUE").as("basic_enum")
-      ).as("proto")
-    )
+    val df = spark.range(1).select(struct(lit("INVALID_VALUE").as("basic_enum")).as("proto"))
 
-    val dfWithInt = spark.range(1).select(
-      struct(
-        lit(9999).as("basic_enum")
-      ).as("proto")
-    )
+    val dfWithInt = spark.range(1).select(struct(lit(9999).as("basic_enum")).as("proto"))
 
     checkWithFileAndClassName("SimpleMessageEnum") { case (name, descFilePathOpt) =>
       var parseError = intercept[AnalysisException] {
@@ -1750,13 +1729,12 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
   test("non-struct SQL type") {
     val dfWithInt = spark
       .range(1)
-      .select(
-        lit(9999).as("int_col")
-      )
+      .select(lit(9999).as("int_col"))
 
     val parseError = intercept[AnalysisException] {
-      dfWithInt.select(
-        to_protobuf_wrapper($"int_col", "SimpleMessageEnum", Some(testFileDesc))).collect()
+      dfWithInt
+        .select(to_protobuf_wrapper($"int_col", "SimpleMessageEnum", Some(testFileDesc)))
+        .collect()
     }
     val descMsg = testFileDesc.map("%02X".format(_)).mkString("")
     checkError(
@@ -1766,50 +1744,46 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         "inputName" -> "data",
         "inputType" -> "\"INT\"",
         "sqlExpr" ->
-          s"""\"to_protobuf(int_col, SimpleMessageEnum, X'$descMsg', NULL)\""""
-      ),
-      queryContext = Array(ExpectedContext(
-        fragment = "fn",
-        callSitePattern = ".*"))
-    )
+          s"""\"to_protobuf(int_col, SimpleMessageEnum, X'$descMsg', NULL)\""""),
+      queryContext = Array(ExpectedContext(fragment = "fn", callSitePattern = ".*")))
   }
 
   test("test unsigned integer types") {
     // Test that we correctly handle unsigned integer parsing.
     // We're using Integer/Long's `MIN_VALUE` as it has a 1 in the sign bit.
-    val sample = spark.range(1).select(
-      lit(
-        SimpleMessage
-          .newBuilder()
-          .setUint32Value(Integer.MIN_VALUE)
-          .setUint64Value(Long.MinValue)
-          .build()
-          .toByteArray
-      ).as("raw_proto"))
+    val sample = spark
+      .range(1)
+      .select(
+        lit(
+          SimpleMessage
+            .newBuilder()
+            .setUint32Value(Integer.MIN_VALUE)
+            .setUint64Value(Long.MinValue)
+            .build()
+            .toByteArray).as("raw_proto"))
 
-    val expectedWithoutFlag = spark.range(1).select(
-      lit(Integer.MIN_VALUE).as("uint32_value"),
-      lit(Long.MinValue).as("uint64_value")
-    )
+    val expectedWithoutFlag = spark
+      .range(1)
+      .select(lit(Integer.MIN_VALUE).as("uint32_value"), lit(Long.MinValue).as("uint64_value"))
 
-    val expectedWithFlag = spark.range(1).select(
-      lit(Integer.toUnsignedLong(Integer.MIN_VALUE).longValue).as("uint32_value"),
-      lit(BigDecimal(java.lang.Long.toUnsignedString(Long.MinValue))).as("uint64_value")
-    )
+    val expectedWithFlag = spark
+      .range(1)
+      .select(
+        lit(Integer.toUnsignedLong(Integer.MIN_VALUE).longValue).as("uint32_value"),
+        lit(BigDecimal(java.lang.Long.toUnsignedString(Long.MinValue))).as("uint64_value"))
 
     checkWithFileAndClassName("SimpleMessage") { case (name, descFilePathOpt) =>
-      List(
-        Map.empty[String, String],
-        Map("upcast.unsigned.ints" -> "false")).foreach(opts => {
+      List(Map.empty[String, String], Map("upcast.unsigned.ints" -> "false")).foreach(opts => {
         checkAnswer(
-          sample.select(
-              from_protobuf_wrapper($"raw_proto", name, descFilePathOpt, opts).as("proto"))
+          sample
+            .select(from_protobuf_wrapper($"raw_proto", name, descFilePathOpt, opts).as("proto"))
             .select("proto.uint32_value", "proto.uint64_value"),
           expectedWithoutFlag)
       })
 
       checkAnswer(
-        sample.select(
+        sample
+          .select(
             from_protobuf_wrapper(
               $"raw_proto",
               name,
@@ -1820,92 +1794,88 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     }
   }
 
-
   test("well known types deserialization and round trip") {
-    val message = spark.range(1).select(
-      lit(WellKnownWrapperTypes
-        .newBuilder()
-        .setBoolVal(BoolValue.of(true))
-        .setInt32Val(Int32Value.of(100))
-        .setUint32Val(UInt32Value.of(200))
-        .setInt64Val(Int64Value.of(300))
-        .setUint64Val(UInt64Value.of(400))
-        .setStringVal(StringValue.of("string"))
-        .setBytesVal(BytesValue.of(ByteString.copyFromUtf8("bytes")))
-        .setFloatVal(FloatValue.of(1.23f))
-        .setDoubleVal(DoubleValue.of(4.56))
-        .addInt32List(Int32Value.of(1))
-        .addInt32List(Int32Value.of(2))
-        .putWktMap(1, StringValue.of("mapval"))
-        .build().toByteArray
-      ).as("raw_proto"))
+    val message = spark
+      .range(1)
+      .select(
+        lit(
+          WellKnownWrapperTypes
+            .newBuilder()
+            .setBoolVal(BoolValue.of(true))
+            .setInt32Val(Int32Value.of(100))
+            .setUint32Val(UInt32Value.of(200))
+            .setInt64Val(Int64Value.of(300))
+            .setUint64Val(UInt64Value.of(400))
+            .setStringVal(StringValue.of("string"))
+            .setBytesVal(BytesValue.of(ByteString.copyFromUtf8("bytes")))
+            .setFloatVal(FloatValue.of(1.23f))
+            .setDoubleVal(DoubleValue.of(4.56))
+            .addInt32List(Int32Value.of(1))
+            .addInt32List(Int32Value.of(2))
+            .putWktMap(1, StringValue.of("mapval"))
+            .build()
+            .toByteArray).as("raw_proto"))
 
     // By default, well known wrapper types should come out as structs.
-    val expectedWithoutFlag = spark.range(1).select(
-      struct(
-        struct(lit(true) as ("value")).as("bool_val"),
-        struct(lit(100).as("value")).as("int32_val"),
-        struct(lit(200).as("value")).as("uint32_val"),
-        struct(lit(300).as("value")).as("int64_val"),
-        struct(lit(400).as("value")).as("uint64_val"),
-        struct(lit("string").as("value")).as("string_val"),
-        struct(lit("bytes".getBytes).as("value")).as("bytes_val"),
-        struct(lit(1.23f).as("value")).as("float_val"),
-        struct(lit(4.56).as("value")).as("double_val"),
-        array(struct(lit(1).as("value")), struct(lit(2).as("value"))).as("int32_list"),
-        map(lit(1), struct(lit("mapval").as("value"))).as("wkt_map")
-      ).as("proto")
-    )
+    val expectedWithoutFlag = spark
+      .range(1)
+      .select(
+        struct(
+          struct(lit(true) as ("value")).as("bool_val"),
+          struct(lit(100).as("value")).as("int32_val"),
+          struct(lit(200).as("value")).as("uint32_val"),
+          struct(lit(300).as("value")).as("int64_val"),
+          struct(lit(400).as("value")).as("uint64_val"),
+          struct(lit("string").as("value")).as("string_val"),
+          struct(lit("bytes".getBytes).as("value")).as("bytes_val"),
+          struct(lit(1.23f).as("value")).as("float_val"),
+          struct(lit(4.56).as("value")).as("double_val"),
+          array(struct(lit(1).as("value")), struct(lit(2).as("value"))).as("int32_list"),
+          map(lit(1), struct(lit("mapval").as("value"))).as("wkt_map")).as("proto"))
 
     // With the flag set, ensure that well known wrapper types get deserialized as primitives.
-    val expectedWithFlag = spark.range(1).select(
-      struct(
-        lit(true).as("bool_val"),
-        lit(100).as("int32_val"),
-        lit(200).as("uint32_val"),
-        lit(300).as("int64_val"),
-        lit(400).as("uint64_val"),
-        lit("string").as("string_val"),
-        lit("bytes".getBytes).as("bytes_val"),
-        lit(1.23f).as("float_val"),
-        lit(4.56).as("double_val"),
-        typedLit(List(1, 2)).as("int32_list"),
-        typedLit(Map(1 -> "mapval")).as("wkt_map")
-      ).as("proto")
-    )
+    val expectedWithFlag = spark
+      .range(1)
+      .select(
+        struct(
+          lit(true).as("bool_val"),
+          lit(100).as("int32_val"),
+          lit(200).as("uint32_val"),
+          lit(300).as("int64_val"),
+          lit(400).as("uint64_val"),
+          lit("string").as("string_val"),
+          lit("bytes".getBytes).as("bytes_val"),
+          lit(1.23f).as("float_val"),
+          lit(4.56).as("double_val"),
+          typedLit(List(1, 2)).as("int32_list"),
+          typedLit(Map(1 -> "mapval")).as("wkt_map")).as("proto"))
 
     checkWithFileAndClassName("WellKnownWrapperTypes") { case (name, descFilePathOpt) =>
       // With the option as false, ensure that deserialization works, and the
       // value can be round-tripped.
       List(Map.empty[String, String], Map("unwrap.primitive.wrapper.types" -> "false"))
         .foreach(opts => {
-        val parsed = message.select(from_protobuf_wrapper(
-          $"raw_proto",
-          name,
-          descFilePathOpt,
-          opts).as("parsed"))
-        checkAnswer(parsed, expectedWithoutFlag)
+          val parsed = message.select(
+            from_protobuf_wrapper($"raw_proto", name, descFilePathOpt, opts).as("parsed"))
+          checkAnswer(parsed, expectedWithoutFlag)
 
-        // Verify that round-tripping gives us the same parsed representation.
-        val reserialized = parsed.select(
-          to_protobuf_wrapper($"parsed", name, descFilePathOpt).as("reserialized"))
-        val reparsed = reserialized.select(
-          from_protobuf_wrapper($"reserialized", name, descFilePathOpt, opts).as("reparsed"))
-        checkAnswer(parsed, reparsed)
-      })
+          // Verify that round-tripping gives us the same parsed representation.
+          val reserialized = parsed.select(
+            to_protobuf_wrapper($"parsed", name, descFilePathOpt).as("reserialized"))
+          val reparsed = reserialized.select(
+            from_protobuf_wrapper($"reserialized", name, descFilePathOpt, opts).as("reparsed"))
+          checkAnswer(parsed, reparsed)
+        })
 
       // Without the option not set or set as false, ensure that the deserialization is as
       // expected and that round-tripping works.
       val opt = Map("unwrap.primitive.wrapper.types" -> "true")
-      val parsed = message.select(from_protobuf_wrapper(
-        $"raw_proto",
-        name,
-        descFilePathOpt,
-        opt).as("parsed"))
+      val parsed = message.select(
+        from_protobuf_wrapper($"raw_proto", name, descFilePathOpt, opt).as("parsed"))
       checkAnswer(parsed, expectedWithFlag)
 
-      val reserialized = parsed.select(
-        to_protobuf_wrapper($"parsed", name, descFilePathOpt).as("reserialized"))
+      val reserialized =
+        parsed.select(to_protobuf_wrapper($"parsed", name, descFilePathOpt).as("reserialized"))
       val reparsed = reserialized.select(
         from_protobuf_wrapper($"reserialized", name, descFilePathOpt, opt).as("reparsed"))
       checkAnswer(parsed, reparsed)
@@ -1919,20 +1889,22 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     // "unwrap.primitive.wrapper.types" and "emit.default.values" flags.
 
     // Setup test data for the three cases of unset, explicitly zero, and non-zero.
-    val unset = spark.range(1).select(
-      lit(
-        WellKnownWrapperTypes.newBuilder().build().toByteArray
-      ).as("raw_proto"))
+    val unset = spark
+      .range(1)
+      .select(lit(WellKnownWrapperTypes.newBuilder().build().toByteArray).as("raw_proto"))
 
-    val explicitZero = spark.range(1).select(
-      lit(
-        WellKnownWrapperTypes.newBuilder().setInt32Val(Int32Value.of(0)).build().toByteArray
-      ).as("raw_proto"))
+    val explicitZero = spark
+      .range(1)
+      .select(
+        lit(WellKnownWrapperTypes.newBuilder().setInt32Val(Int32Value.of(0)).build().toByteArray)
+          .as("raw_proto"))
 
-    val explicitNonzero = spark.range(1).select(
-      lit(
-        WellKnownWrapperTypes.newBuilder().setInt32Val(Int32Value.of(100)).build().toByteArray
-      ).as("raw_proto"))
+    val explicitNonzero = spark
+      .range(1)
+      .select(
+        lit(
+          WellKnownWrapperTypes.newBuilder().setInt32Val(Int32Value.of(100)).build().toByteArray)
+          .as("raw_proto"))
 
     val expectedEmpty = spark.range(1).select(lit(null).as("int32_val"))
 
@@ -1944,43 +1916,40 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       } {
         // For unset values, we'll always get back null.
         checkAnswer(
-          unset.select(
-            from_protobuf_wrapper(
-              $"raw_proto",
-              name,
-              descFilePathOpt,
-              Map("unwrap.primitive.wrapper.types" -> unwrap, "emit.default.values" -> defaults)
-            ).as("proto")
-          ).select("proto.int32_val"),
-          expectedEmpty
-        )
+          unset
+            .select(
+              from_protobuf_wrapper(
+                $"raw_proto",
+                name,
+                descFilePathOpt,
+                Map(
+                  "unwrap.primitive.wrapper.types" -> unwrap,
+                  "emit.default.values" -> defaults)).as("proto"))
+            .select("proto.int32_val"),
+          expectedEmpty)
 
         // For explicit zero, we should get back null or zero based on emit default values.
         val parsedExplicitZero =
-          explicitZero.select(
-            from_protobuf_wrapper(
-              $"raw_proto",
-              name,
-              descFilePathOpt,
-              Map("unwrap.primitive.wrapper.types" -> unwrap, "emit.default.values" -> defaults)
-            ).as("proto")
-          ).select("proto.int32_val")
+          explicitZero
+            .select(
+              from_protobuf_wrapper(
+                $"raw_proto",
+                name,
+                descFilePathOpt,
+                Map(
+                  "unwrap.primitive.wrapper.types" -> unwrap,
+                  "emit.default.values" -> defaults)).as("proto"))
+            .select("proto.int32_val")
 
         if (unwrap == "false") {
           if (defaults == "false") {
             checkAnswer(
               parsedExplicitZero,
-              spark.range(1).select(
-                struct(lit(null).as("value"))
-              ).as("int32_val")
-            )
+              spark.range(1).select(struct(lit(null).as("value"))).as("int32_val"))
           } else {
             checkAnswer(
               parsedExplicitZero,
-              spark.range(1).select(
-                struct(lit(0).as("value"))
-              ).as("int32_val")
-            )
+              spark.range(1).select(struct(lit(0).as("value"))).as("int32_val"))
           }
         } else {
           if (defaults == "false") {
@@ -1993,24 +1962,23 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         // For nonzero, we should get back the number or wrapped version regardless
         // of the value of emit defaults.
         val parsedNonzero =
-          explicitNonzero.select(
-            from_protobuf_wrapper(
-              $"raw_proto",
-              name,
-              descFilePathOpt,
-              Map("unwrap.primitive.wrapper.types" -> unwrap, "emit.default.values" -> defaults)
-            ).as("proto")
-          ).select("proto.int32_val")
+          explicitNonzero
+            .select(
+              from_protobuf_wrapper(
+                $"raw_proto",
+                name,
+                descFilePathOpt,
+                Map(
+                  "unwrap.primitive.wrapper.types" -> unwrap,
+                  "emit.default.values" -> defaults)).as("proto"))
+            .select("proto.int32_val")
 
         if (unwrap == "true") {
           checkAnswer(parsedNonzero, Seq((100)).toDF("int32_val"))
         } else {
           checkAnswer(
             parsedNonzero,
-            spark.range(1).select(
-              struct(lit(100).as("value")).as("int32_val")
-            )
-          )
+            spark.range(1).select(struct(lit(100).as("value")).as("int32_val")))
         }
       }
     }
@@ -2030,14 +1998,16 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
     val unsignedInt = 2147483652L
     val unsignedLong = BigDecimal("9223372036854775812")
 
-    val unsigned = spark.range(1).select(
-      lit(
-        WellKnownWrapperTypes.newBuilder()
-          .setUint32Val(UInt32Value.of(originalInt))
-          .setUint64Val(UInt64Value.of(originalLong))
-          .build().toByteArray
-      ).as("raw_proto"))
-
+    val unsigned = spark
+      .range(1)
+      .select(
+        lit(
+          WellKnownWrapperTypes
+            .newBuilder()
+            .setUint32Val(UInt32Value.of(originalInt))
+            .setUint64Val(UInt64Value.of(originalLong))
+            .build()
+            .toByteArray).as("raw_proto"))
 
     // For every combination of unwrap/upcast, check that we get the correct values back.
     checkWithFileAndClassName("WellKnownWrapperTypes") { case (name, descFilePathOpt) =>
@@ -2045,51 +2015,57 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
         unwrap <- Seq("true", "false")
         upcast <- Seq("true", "false")
       } {
-        val parsed = unsigned.select(
-          from_protobuf_wrapper(
-            $"raw_proto",
-            name,
-            descFilePathOpt,
-            Map("unwrap.primitive.wrapper.types" -> unwrap, "upcast.unsigned.ints" -> upcast)
-          ).as("proto")
-        ).select("proto.uint32_val", "proto.uint64_val")
+        val parsed = unsigned
+          .select(
+            from_protobuf_wrapper(
+              $"raw_proto",
+              name,
+              descFilePathOpt,
+              Map("unwrap.primitive.wrapper.types" -> unwrap, "upcast.unsigned.ints" -> upcast))
+              .as("proto"))
+          .select("proto.uint32_val", "proto.uint64_val")
 
         if (unwrap == "false") {
           if (upcast == "false") {
             // unwrap=false, upcast=false should give back negative numbers in struct format.
             checkAnswer(
               parsed,
-              spark.range(1).select(
-                struct(lit(originalInt).as("value")).as("uint32_value"),
-                struct(lit(originalLong).as("value")).as("uint64_value")
-              ).as("int32_val")
-            )
+              spark
+                .range(1)
+                .select(
+                  struct(lit(originalInt).as("value")).as("uint32_value"),
+                  struct(lit(originalLong).as("value")).as("uint64_value"))
+                .as("int32_val"))
           } else {
             // unwrap=false, upcast=true should give back large positive numbers in struct format.
             checkAnswer(
               parsed,
-              spark.range(1).select(
-                 struct(lit(unsignedInt).as("value")).as("uint32_value"),
-                 struct(lit(unsignedLong).as("value")).as("uint64_value")
-              ).as("int32_val")
-            )
+              spark
+                .range(1)
+                .select(
+                  struct(lit(unsignedInt).as("value")).as("uint32_value"),
+                  struct(lit(unsignedLong).as("value")).as("uint64_value"))
+                .as("int32_val"))
           }
-        }
-        else {
+        } else {
           // unwrap=true, upcast=false should give back negative primitives.
           if (upcast == "false") {
-            checkAnswer(parsed,
-              spark.range(1).select(
-                lit(originalInt).as("uint32_value"),
-                lit(originalLong).as("uint64_value")
-              ))
+            checkAnswer(
+              parsed,
+              spark
+                .range(1)
+                .select(
+                  lit(originalInt).as("uint32_value"),
+                  lit(originalLong).as("uint64_value")))
           } else {
             // unwrap=true, upcast=true should give back large positive primitives.
-            checkAnswer(parsed,
-              spark.range(1).select(
-                lit(unsignedInt).as("uint32_value"),
-                lit(unsignedLong).as("uint64_value")
-              ))
+            checkAnswer(
+              parsed,
+              spark
+                .range(1)
+                .select(
+                  lit(unsignedInt).as("uint32_value"),
+                  lit(unsignedLong).as("uint64_value")))
           }
         }
       }
@@ -2098,8 +2074,7 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
   test("SPARK-49121: from_protobuf and to_protobuf SQL functions") {
     withTable("protobuf_test_table") {
-      sql(
-        """
+      sql("""
           |CREATE TABLE protobuf_test_table AS
           |  SELECT named_struct(
           |    'id', 1L,
@@ -2135,14 +2110,13 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
 
       checkAnswer(
         spark.sql(fromProtobufSql),
-        Seq(Row(Row(1L, "test_string", 32, 64L, 123.456, 789.01F, true, "sample_bytes".getBytes)))
-      )
+        Seq(
+          Row(Row(1L, "test_string", 32, 64L, 123.456, 789.01f, true, "sample_bytes".getBytes))))
 
       // Negative tests for to_protobuf.
       var fragment = s"to_protobuf(complex_struct, 42, '$testFileDescFile', map())"
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT
              |  to_protobuf(complex_struct, 42, '$testFileDescFile', map())
              |FROM protobuf_test_table
@@ -2153,14 +2127,10 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           "msg" -> ("The second argument of the TO_PROTOBUF SQL function must be a constant " +
             "string representing the Protobuf message name"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = fragment,
-          start = 10,
-          stop = fragment.length + 9))
-      )
+        queryContext =
+          Array(ExpectedContext(fragment = fragment, start = 10, stop = fragment.length + 9)))
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT
              |  to_protobuf(complex_struct, 'SimpleMessageJavaTypes', 42, map())
              |FROM protobuf_test_table
@@ -2171,15 +2141,14 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           "msg" -> ("The third argument of the TO_PROTOBUF SQL function must be a constant " +
             "string or binary data representing the Protobuf descriptor file path"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = "to_protobuf(complex_struct, 'SimpleMessageJavaTypes', 42, map())",
-          start = 10,
-          stop = 73))
-      )
+        queryContext = Array(
+          ExpectedContext(
+            fragment = "to_protobuf(complex_struct, 'SimpleMessageJavaTypes', 42, map())",
+            start = 10,
+            stop = 73)))
       fragment = s"to_protobuf(complex_struct, 'SimpleMessageJavaTypes', '$testFileDescFile', 42)"
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT
              |  to_protobuf(complex_struct, 'SimpleMessageJavaTypes', '$testFileDescFile', 42)
              |FROM protobuf_test_table
@@ -2192,17 +2161,13 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
             "map of strings to strings containing the options to use for converting the value " +
             "to Protobuf format"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = fragment,
-          start = 10,
-          stop = fragment.length + 9))
-      )
+        queryContext =
+          Array(ExpectedContext(fragment = fragment, start = 10, stop = fragment.length + 9)))
 
       // Negative tests for from_protobuf.
       fragment = s"from_protobuf(protobuf_data, 42, '$testFileDescFile', map())"
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT from_protobuf(protobuf_data, 42, '$testFileDescFile', map())
              |FROM ($toProtobufSql)
              |""".stripMargin)),
@@ -2212,14 +2177,10 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           "msg" -> ("The second argument of the FROM_PROTOBUF SQL function must be a constant " +
             "string representing the Protobuf message name"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = fragment,
-          start = 8,
-          stop = fragment.length + 7))
-      )
+        queryContext =
+          Array(ExpectedContext(fragment = fragment, start = 8, stop = fragment.length + 7)))
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', 42, map())
              |FROM ($toProtobufSql)
              |""".stripMargin)),
@@ -2229,15 +2190,15 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
           "msg" -> ("The third argument of the FROM_PROTOBUF SQL function must be a constant " +
             "string or binary data representing the Protobuf descriptor file path"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = "from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', 42, map())",
-          start = 8,
-          stop = 72))
-      )
-      fragment = s"from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', '$testFileDescFile', 42)"
+        queryContext = Array(
+          ExpectedContext(
+            fragment = "from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', 42, map())",
+            start = 8,
+            stop = 72)))
+      fragment =
+        s"from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', '$testFileDescFile', 42)"
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |SELECT
              |  from_protobuf(protobuf_data, 'SimpleMessageJavaTypes', '$testFileDescFile', 42)
              |FROM ($toProtobufSql)
@@ -2250,11 +2211,8 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
             "map of strings to strings containing the options to use for converting the value " +
             "from Protobuf format"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = fragment,
-          start = 10,
-          stop = fragment.length + 9))
-      )
+        queryContext =
+          Array(ExpectedContext(fragment = fragment, start = 10, stop = fragment.length + 9)))
     }
   }
 
@@ -2265,19 +2223,15 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       "upcast.unsigned.ints",
       "unwrap.primitive.wrapper.types",
       "retain.empty.message.types",
-      "convert.any.fields.to.json"
-    ).foreach { opt =>
+      "convert.any.fields.to.json").foreach { opt =>
       val e = intercept[AnalysisException] {
         ProtobufOptions(Map(opt -> "not_a_bool"))
       }
       checkError(
         exception = e,
         condition = "STDS_INVALID_OPTION_VALUE.WITH_MESSAGE",
-        parameters = Map(
-          "optionName" -> opt,
-          "message" -> "Cannot cast value 'not_a_bool' to Boolean."
-        )
-      )
+        parameters =
+          Map("optionName" -> opt, "message" -> "Cannot cast value 'not_a_bool' to Boolean."))
     }
   }
 
@@ -2290,16 +2244,14 @@ class ProtobufFunctionsSuite extends QueryTest with SharedSparkSession with Prot
       condition = "STDS_INVALID_OPTION_VALUE.WITH_MESSAGE",
       parameters = Map(
         "optionName" -> "recursive.fields.max.depth",
-        "message" -> "Cannot cast value 'not_an_int' to Int."
-      )
-    )
+        "message" -> "Cannot cast value 'not_an_int' to Int."))
   }
 
   def testFromProtobufWithOptions(
-    df: DataFrame,
-    expectedDf: DataFrame,
-    options: java.util.HashMap[String, String],
-    messageName: String): Unit = {
+      df: DataFrame,
+      expectedDf: DataFrame,
+      options: java.util.HashMap[String, String],
+      messageName: String): Unit = {
     val fromProtoDf = df.select(
       functions.from_protobuf($"value", messageName, testFileDesc, options) as Symbol("sample"))
     assert(expectedDf.schema === fromProtoDf.schema)

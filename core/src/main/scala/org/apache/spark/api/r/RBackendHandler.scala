@@ -33,13 +33,13 @@ import org.apache.spark.util.{ThreadUtils, Utils}
 import org.apache.spark.util.ArrayImplicits._
 
 /**
- * Handler for RBackend
- * TODO: This is marked as sharable to get a handle to RBackend. Is it safe to re-use
- * this across connections ?
+ * Handler for RBackend TODO: This is marked as sharable to get a handle to RBackend. Is it safe
+ * to re-use this across connections ?
  */
 @Sharable
 private[r] class RBackendHandler(server: RBackend)
-  extends SimpleChannelInboundHandler[Array[Byte]] with Logging {
+    extends SimpleChannelInboundHandler[Array[Byte]]
+    with Logging {
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: Array[Byte]): Unit = {
     val bis = new ByteArrayInputStream(msg)
@@ -89,7 +89,8 @@ private[r] class RBackendHandler(server: RBackend)
       // To avoid timeouts when reading results in SparkR driver, we will be regularly sending
       // heartbeat responses. We use special code +1 to signal the client that backend is
       // alive and it should continue blocking for result.
-      val execService = ThreadUtils.newDaemonSingleThreadScheduledExecutor("SparkRKeepAliveThread")
+      val execService =
+        ThreadUtils.newDaemonSingleThreadScheduledExecutor("SparkRKeepAliveThread")
       val pingRunner = new Runnable {
         override def run(): Unit = {
           val pingBaos = new ByteArrayOutputStream()
@@ -150,21 +151,21 @@ private[r] class RBackendHandler(server: RBackend)
       val methods = cls.getMethods
       val selectedMethods = methods.filter(m => m.getName == methodName)
       if (selectedMethods.length > 0) {
-        val index = findMatchedSignature(
-          selectedMethods.map(_.getParameterTypes),
-          args)
+        val index = findMatchedSignature(selectedMethods.map(_.getParameterTypes), args)
 
         if (index.isEmpty) {
-          logWarning(log"cannot find matching method " +
-            log"${MDC(CLASS_NAME, cls)}.${MDC(METHOD_NAME, methodName)}. Candidates are:")
+          logWarning(
+            log"cannot find matching method " +
+              log"${MDC(CLASS_NAME, cls)}.${MDC(METHOD_NAME, methodName)}. Candidates are:")
           selectedMethods.foreach { method =>
-            logWarning(log"${MDC(METHOD_NAME, methodName)}(" +
-              log"${MDC(METHOD_PARAM_TYPES, method.getParameterTypes.mkString(","))})")
+            logWarning(
+              log"${MDC(METHOD_NAME, methodName)}(" +
+                log"${MDC(METHOD_PARAM_TYPES, method.getParameterTypes.mkString(","))})")
           }
           throw new Exception(s"No matched method found for $cls.$methodName")
         }
 
-        val ret = selectedMethods(index.get).invoke(obj, args : _*)
+        val ret = selectedMethods(index.get).invoke(obj, args: _*)
 
         // Write status bit
         writeInt(dos, 0)
@@ -172,26 +173,27 @@ private[r] class RBackendHandler(server: RBackend)
       } else if (methodName == "<init>") {
         // methodName should be "<init>" for constructor
         val ctors = cls.getConstructors
-        val index = findMatchedSignature(
-          ctors.map(_.getParameterTypes),
-          args)
+        val index = findMatchedSignature(ctors.map(_.getParameterTypes), args)
 
         if (index.isEmpty) {
-          logWarning(log"cannot find matching constructor for ${MDC(CLASS_NAME, cls)}. "
-            + log"Candidates are:")
+          logWarning(
+            log"cannot find matching constructor for ${MDC(CLASS_NAME, cls)}. "
+              + log"Candidates are:")
           ctors.foreach { ctor =>
-            logWarning(log"${MDC(CLASS_NAME, cls)}(" +
-              log"${MDC(METHOD_PARAM_TYPES, ctor.getParameterTypes.mkString(","))})")
+            logWarning(
+              log"${MDC(CLASS_NAME, cls)}(" +
+                log"${MDC(METHOD_PARAM_TYPES, ctor.getParameterTypes.mkString(","))})")
           }
           throw new Exception(s"No matched constructor found for $cls")
         }
 
-        val obj = ctors(index.get).newInstance(args : _*)
+        val obj = ctors(index.get).newInstance(args: _*)
 
         writeInt(dos, 0)
         writeObject(dos, obj.asInstanceOf[AnyRef], server.jvmObjectTracker)
       } else {
-        throw new IllegalArgumentException("invalid method " + methodName + " for object " + objId)
+        throw new IllegalArgumentException(
+          "invalid method " + methodName + " for object " + objId)
       }
     } catch {
       case e: Exception =>
@@ -252,7 +254,7 @@ private[r] class RBackendHandler(server: RBackend)
               }
             }
             if ((parameterType.isPrimitive || args(i) != null) &&
-                !parameterWrapperType.isInstance(args(i))) {
+              !parameterWrapperType.isInstance(args(i))) {
               argMatched = false
             }
           }
@@ -281,5 +283,3 @@ private[r] class RBackendHandler(server: RBackend)
     None
   }
 }
-
-

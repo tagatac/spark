@@ -36,7 +36,10 @@ import org.apache.spark.streaming.{Duration, TestSuiteBase}
 /**
  * Suite of Kinesis streaming receiver tests focusing mostly on the KinesisRecordProcessor
  */
-class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAfter
+class KinesisReceiverSuite
+    extends TestSuiteBase
+    with Matchers
+    with BeforeAndAfter
     with MockitoSugar {
 
   val app = "TestKinesisReceiver"
@@ -48,14 +51,17 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   val checkpointInterval = Duration(10)
   val someSeqNum = Some(seqNum)
 
-  val dummyInitializationInput = InitializationInput.builder()
+  val dummyInitializationInput = InitializationInput
+    .builder()
     .shardId(shardId)
     .build()
 
-  val record1 = KinesisClientRecord.builder()
+  val record1 = KinesisClientRecord
+    .builder()
     .data(ByteBuffer.wrap("Spark In Action".getBytes(StandardCharsets.UTF_8)))
     .build()
-  val record2 = KinesisClientRecord.builder()
+  val record2 = KinesisClientRecord
+    .builder()
     .data(ByteBuffer.wrap("Learning Spark".getBytes(StandardCharsets.UTF_8)))
     .build()
   val batch = Arrays.asList(record1, record2)
@@ -74,7 +80,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
 
     val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
     recordProcessor.initialize(dummyInitializationInput)
-    val processRecordsInput = ProcessRecordsInput.builder()
+    val processRecordsInput = ProcessRecordsInput
+      .builder()
       .records(batch)
       .checkpointer(checkpointerMock)
       .build()
@@ -91,7 +98,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
 
     val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
     recordProcessor.initialize(dummyInitializationInput)
-    val processRecordsInput = ProcessRecordsInput.builder()
+    val processRecordsInput = ProcessRecordsInput
+      .builder()
       .records(batch)
       .checkpointer(checkpointerMock)
       .build()
@@ -108,7 +116,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.getCurrentLimit).thenReturn(Int.MaxValue)
 
     val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
-    val processRecordsInput = ProcessRecordsInput.builder()
+    val processRecordsInput = ProcessRecordsInput
+      .builder()
       .records(batch)
       .checkpointer(checkpointerMock)
       .build()
@@ -122,14 +131,13 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("shouldn't update checkpointer when exception occurs during store") {
     when(receiverMock.isStopped()).thenReturn(false)
     when(receiverMock.getCurrentLimit).thenReturn(Int.MaxValue)
-    when(
-      receiverMock.addRecords(anyString, anyList())
-    ).thenThrow(new RuntimeException())
+    when(receiverMock.addRecords(anyString, anyList())).thenThrow(new RuntimeException())
 
     intercept[RuntimeException] {
       val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
       recordProcessor.initialize(dummyInitializationInput)
-      val processRecordsInput = ProcessRecordsInput.builder()
+      val processRecordsInput = ProcessRecordsInput
+        .builder()
         .records(batch)
         .checkpointer(checkpointerMock)
         .build()
@@ -145,7 +153,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.getLatestSeqNumToCheckpoint(shardId)).thenReturn(someSeqNum)
 
     val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
-    val shutdownRequestedInput = ShutdownRequestedInput.builder()
+    val shutdownRequestedInput = ShutdownRequestedInput
+      .builder()
       .checkpointer(checkpointerMock)
       .build()
     recordProcessor.initialize(dummyInitializationInput)
@@ -158,7 +167,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     when(receiverMock.getLatestSeqNumToCheckpoint(shardId)).thenReturn(someSeqNum)
 
     val recordProcessor = new KinesisRecordProcessor(receiverMock, schedulerId)
-    val shardEndedInput = ShardEndedInput.builder()
+    val shardEndedInput = ShardEndedInput
+      .builder()
       .checkpointer(checkpointerMock)
       .build()
     recordProcessor.initialize(dummyInitializationInput)
@@ -175,8 +185,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
     recordProcessor.initialize(dummyInitializationInput)
     recordProcessor.leaseLost(leaseLostInput)
 
-    verify(receiverMock, times(1)).removeCheckpointer(meq(shardId),
-      meq[RecordProcessorCheckpointer](null))
+    verify(receiverMock, times(1))
+      .removeCheckpointer(meq(shardId), meq[RecordProcessorCheckpointer](null))
   }
 
   test("retry success on first attempt") {
@@ -192,8 +202,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("retry success on second attempt after a Kinesis throttling exception") {
     val expectedIsStopped = false
     when(receiverMock.isStopped())
-        .thenThrow(new ThrottlingException("error message"))
-        .thenReturn(expectedIsStopped)
+      .thenThrow(new ThrottlingException("error message"))
+      .thenReturn(expectedIsStopped)
 
     val actualVal = KinesisRecordProcessor.retryRandom(receiverMock.isStopped(), 2, 100)
     assert(actualVal == expectedIsStopped)
@@ -204,8 +214,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("retry success on second attempt after a Kinesis dependency exception") {
     val expectedIsStopped = false
     when(receiverMock.isStopped())
-        .thenThrow(new KinesisClientLibDependencyException("error message"))
-        .thenReturn(expectedIsStopped)
+      .thenThrow(new KinesisClientLibDependencyException("error message"))
+      .thenReturn(expectedIsStopped)
 
     val actualVal = KinesisRecordProcessor.retryRandom(receiverMock.isStopped(), 2, 100)
     assert(actualVal == expectedIsStopped)
@@ -246,8 +256,8 @@ class KinesisReceiverSuite extends TestSuiteBase with Matchers with BeforeAndAft
   test("retry failed after exhausting all retries") {
     val expectedErrorMessage = "final try error message"
     when(checkpointerMock.checkpoint())
-        .thenThrow(new ThrottlingException("error message"))
-        .thenThrow(new ThrottlingException(expectedErrorMessage))
+      .thenThrow(new ThrottlingException("error message"))
+      .thenThrow(new ThrottlingException(expectedErrorMessage))
 
     val exception = intercept[RuntimeException] {
       KinesisRecordProcessor.retryRandom(checkpointerMock.checkpoint(), 2, 100)

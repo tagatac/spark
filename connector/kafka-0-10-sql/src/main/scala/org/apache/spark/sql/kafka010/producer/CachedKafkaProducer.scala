@@ -28,7 +28,8 @@ import org.apache.spark.internal.LogKeys.PRODUCER_ID
 
 private[kafka010] class CachedKafkaProducer(
     val cacheKey: Seq[(String, Object)],
-    val producer: KafkaProducer[Array[Byte], Array[Byte]]) extends Logging {
+    val producer: KafkaProducer[Array[Byte], Array[Byte]])
+    extends Logging {
   val id: String = ju.UUID.randomUUID().toString
 
   private[producer] def close(): Unit = {

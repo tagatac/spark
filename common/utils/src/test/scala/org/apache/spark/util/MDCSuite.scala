@@ -62,8 +62,9 @@ class MDCSuite
     val e = intercept[IllegalArgumentException] {
       MDC(RANGE, log)
     }
-    assert(e.getMessage ===
-      "requirement failed: the class of value cannot be MessageWithContext")
+    assert(
+      e.getMessage ===
+        "requirement failed: the class of value cannot be MessageWithContext")
   }
 
   test("check MDC stripMargin") {

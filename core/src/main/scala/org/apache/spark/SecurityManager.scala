@@ -36,19 +36,19 @@ import org.apache.spark.util.Utils
 /**
  * Spark class responsible for security.
  *
- * In general this class should be instantiated by the SparkEnv and most components
- * should access it from that. There are some cases where the SparkEnv hasn't been
- * initialized yet and this class must be instantiated directly.
+ * In general this class should be instantiated by the SparkEnv and most components should access
+ * it from that. There are some cases where the SparkEnv hasn't been initialized yet and this
+ * class must be instantiated directly.
  *
- * This class implements all of the configuration related to security features described
- * in the "Security" document. Please refer to that document for specific features implemented
- * here.
+ * This class implements all of the configuration related to security features described in the
+ * "Security" document. Please refer to that document for specific features implemented here.
  */
 private[spark] class SecurityManager(
     sparkConf: SparkConf,
     val ioEncryptionKey: Option[Array[Byte]] = None,
     authSecretFileConf: ConfigEntry[Option[String]] = AUTH_SECRET_FILE)
-  extends Logging with SecretKeyHolder {
+    extends Logging
+    with SecretKeyHolder {
 
   import SecurityManager._
 
@@ -75,8 +75,8 @@ private[spark] class SecurityManager(
   private var modifyAclsGroups: Set[String] = _
 
   // always add the current user and SPARK_USER to the viewAcls
-  private val defaultAclUsers = Set[String](System.getProperty("user.name", ""),
-    Utils.getCurrentUserName())
+  private val defaultAclUsers =
+    Set[String](System.getProperty("user.name", ""), Utils.getCurrentUserName())
 
   setViewAcls(defaultAclUsers, sparkConf.get(UI_VIEW_ACLS))
   setModifyAcls(defaultAclUsers, sparkConf.get(MODIFY_ACLS))
@@ -86,20 +86,24 @@ private[spark] class SecurityManager(
 
   private var secretKey: String = _
 
-  private val sslRpcEnabled = sparkConf.getBoolean(
-    "spark.ssl.rpc.enabled", false)
+  private val sslRpcEnabled = sparkConf.getBoolean("spark.ssl.rpc.enabled", false)
 
-  logInfo(log"SecurityManager: authentication ${MDC(LogKeys.AUTH_ENABLED,
-    if (authOn) "enabled" else "disabled")}" +
+  logInfo(log"SecurityManager: authentication ${MDC(
+      LogKeys.AUTH_ENABLED,
+      if (authOn) "enabled" else "disabled")}" +
     log"; ui acls ${MDC(LogKeys.UI_ACLS, if (aclsOn) "enabled" else "disabled")}" +
-    log"; users with view permissions: ${MDC(LogKeys.VIEW_ACLS,
-      if (viewAcls.nonEmpty) viewAcls.mkString(", ")
-    else "EMPTY")} groups with view permissions: ${MDC(LogKeys.VIEW_ACLS_GROUPS,
-      if (viewAclsGroups.nonEmpty) viewAclsGroups.mkString(", ") else "EMPTY")}" +
-    log"; users with modify permissions: ${MDC(LogKeys.MODIFY_ACLS,
-      if (modifyAcls.nonEmpty) modifyAcls.mkString(", ") else "EMPTY")}" +
-    log"; groups with modify permissions: ${MDC(LogKeys.MODIFY_ACLS_GROUPS,
-      if (modifyAclsGroups.nonEmpty) modifyAclsGroups.mkString(", ") else "EMPTY")}" +
+    log"; users with view permissions: ${MDC(
+        LogKeys.VIEW_ACLS,
+        if (viewAcls.nonEmpty) viewAcls.mkString(", ")
+        else "EMPTY")} groups with view permissions: ${MDC(
+        LogKeys.VIEW_ACLS_GROUPS,
+        if (viewAclsGroups.nonEmpty) viewAclsGroups.mkString(", ") else "EMPTY")}" +
+    log"; users with modify permissions: ${MDC(
+        LogKeys.MODIFY_ACLS,
+        if (modifyAcls.nonEmpty) modifyAcls.mkString(", ") else "EMPTY")}" +
+    log"; groups with modify permissions: ${MDC(
+        LogKeys.MODIFY_ACLS_GROUPS,
+        if (modifyAclsGroups.nonEmpty) modifyAclsGroups.mkString(", ") else "EMPTY")}" +
     log"; RPC SSL ${MDC(LogKeys.RPC_SSL_ENABLED, if (sslRpcEnabled) "enabled" else "disabled")}")
 
   private val hadoopConf = SparkHadoopUtil.get.newConfiguration(sparkConf)
@@ -117,8 +121,8 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls should be set before the view or modify acls.  If you modify the admin
-   * acls you should also set the view and modify acls again to pick up the changes.
+   * Admin acls should be set before the view or modify acls. If you modify the admin acls you
+   * should also set the view and modify acls again to pick up the changes.
    */
   def setViewAcls(defaultUsers: Set[String], allowedUsers: Seq[String]): Unit = {
     viewAcls = adminAcls ++ defaultUsers ++ allowedUsers
@@ -130,8 +134,9 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls groups should be set before the view or modify acls groups. If you modify the admin
-   * acls groups you should also set the view and modify acls groups again to pick up the changes.
+   * Admin acls groups should be set before the view or modify acls groups. If you modify the
+   * admin acls groups you should also set the view and modify acls groups again to pick up the
+   * changes.
    */
   def setViewAclsGroups(allowedUserGroups: Seq[String]): Unit = {
     viewAclsGroups = adminAclsGroups ++ allowedUserGroups
@@ -158,8 +163,8 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls should be set before the view or modify acls.  If you modify the admin
-   * acls you should also set the view and modify acls again to pick up the changes.
+   * Admin acls should be set before the view or modify acls. If you modify the admin acls you
+   * should also set the view and modify acls again to pick up the changes.
    */
   def setModifyAcls(defaultUsers: Set[String], allowedUsers: Seq[String]): Unit = {
     modifyAcls = adminAcls ++ defaultUsers ++ allowedUsers
@@ -167,13 +172,14 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls groups should be set before the view or modify acls groups. If you modify the admin
-   * acls groups you should also set the view and modify acls groups again to pick up the changes.
+   * Admin acls groups should be set before the view or modify acls groups. If you modify the
+   * admin acls groups you should also set the view and modify acls groups again to pick up the
+   * changes.
    */
   def setModifyAclsGroups(allowedUserGroups: Seq[String]): Unit = {
     modifyAclsGroups = adminAclsGroups ++ allowedUserGroups
-    logInfo(log"Changing modify acls groups to: ${MDC(LogKeys.MODIFY_ACLS,
-      modifyAcls.mkString(","))}")
+    logInfo(
+      log"Changing modify acls groups to: ${MDC(LogKeys.MODIFY_ACLS, modifyAcls.mkString(","))}")
   }
 
   /**
@@ -196,8 +202,8 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls should be set before the view or modify acls.  If you modify the admin
-   * acls you should also set the view and modify acls again to pick up the changes.
+   * Admin acls should be set before the view or modify acls. If you modify the admin acls you
+   * should also set the view and modify acls again to pick up the changes.
    */
   def setAdminAcls(adminUsers: Seq[String]): Unit = {
     adminAcls = adminUsers.toSet
@@ -205,12 +211,14 @@ private[spark] class SecurityManager(
   }
 
   /**
-   * Admin acls groups should be set before the view or modify acls groups. If you modify the admin
-   * acls groups you should also set the view and modify acls groups again to pick up the changes.
+   * Admin acls groups should be set before the view or modify acls groups. If you modify the
+   * admin acls groups you should also set the view and modify acls groups again to pick up the
+   * changes.
    */
   def setAdminAclsGroups(adminUserGroups: Seq[String]): Unit = {
     adminAclsGroups = adminUserGroups.toSet
-    logInfo(log"Changing admin acls groups to: ${MDC(LogKeys.ADMIN_ACLS, adminAcls.mkString(","))}")
+    logInfo(
+      log"Changing admin acls groups to: ${MDC(LogKeys.ADMIN_ACLS, adminAcls.mkString(","))}")
   }
 
   def setAcls(aclSetting: Boolean): Unit = {
@@ -222,60 +230,68 @@ private[spark] class SecurityManager(
 
   /**
    * Check to see if Acls for the UI are enabled
-   * @return true if UI authentication is enabled, otherwise false
+   * @return
+   *   true if UI authentication is enabled, otherwise false
    */
   def aclsEnabled(): Boolean = aclsOn
 
   /**
-   * Checks whether the given user is an admin. This gives the user both view and
-   * modify permissions, and also allows the user to impersonate other users when
-   * making UI requests.
+   * Checks whether the given user is an admin. This gives the user both view and modify
+   * permissions, and also allows the user to impersonate other users when making UI requests.
    */
   def checkAdminPermissions(user: String): Boolean = {
     isUserInACL(user, adminAcls, adminAclsGroups)
   }
 
   /**
-   * Checks the given user against the view acl and groups list to see if they have
-   * authorization to view the UI. If the UI acls are disabled
-   * via spark.acls.enable, all users have view access. If the user is null
-   * it is assumed authentication is off and all users have access. Also if any one of the
-   * UI acls or groups specify the WILDCARD(*) then all users have view access.
+   * Checks the given user against the view acl and groups list to see if they have authorization
+   * to view the UI. If the UI acls are disabled via spark.acls.enable, all users have view
+   * access. If the user is null it is assumed authentication is off and all users have access.
+   * Also if any one of the UI acls or groups specify the WILDCARD(*) then all users have view
+   * access.
    *
-   * @param user to see if is authorized
-   * @return true is the user has permission, otherwise false
+   * @param user
+   *   to see if is authorized
+   * @return
+   *   true is the user has permission, otherwise false
    */
   def checkUIViewPermissions(user: String): Boolean = {
-    logDebug("user=" + user + " aclsEnabled=" + aclsEnabled() + " viewAcls=" +
-      viewAcls.mkString(",") + " viewAclsGroups=" + viewAclsGroups.mkString(","))
+    logDebug(
+      "user=" + user + " aclsEnabled=" + aclsEnabled() + " viewAcls=" +
+        viewAcls.mkString(",") + " viewAclsGroups=" + viewAclsGroups.mkString(","))
     isUserInACL(user, viewAcls, viewAclsGroups)
   }
 
   /**
    * Checks the given user against the modify acl and groups list to see if they have
-   * authorization to modify the application. If the modify acls are disabled
-   * via spark.acls.enable, all users have modify access. If the user is null
-   * it is assumed authentication isn't turned on and all users have access. Also if any one
-   * of the modify acls or groups specify the WILDCARD(*) then all users have modify access.
+   * authorization to modify the application. If the modify acls are disabled via
+   * spark.acls.enable, all users have modify access. If the user is null it is assumed
+   * authentication isn't turned on and all users have access. Also if any one of the modify acls
+   * or groups specify the WILDCARD(*) then all users have modify access.
    *
-   * @param user to see if is authorized
-   * @return true is the user has permission, otherwise false
+   * @param user
+   *   to see if is authorized
+   * @return
+   *   true is the user has permission, otherwise false
    */
   def checkModifyPermissions(user: String): Boolean = {
-    logDebug("user=" + user + " aclsEnabled=" + aclsEnabled() + " modifyAcls=" +
-      modifyAcls.mkString(",") + " modifyAclsGroups=" + modifyAclsGroups.mkString(","))
+    logDebug(
+      "user=" + user + " aclsEnabled=" + aclsEnabled() + " modifyAcls=" +
+        modifyAcls.mkString(",") + " modifyAclsGroups=" + modifyAclsGroups.mkString(","))
     isUserInACL(user, modifyAcls, modifyAclsGroups)
   }
 
   /**
    * Check to see if authentication for the Spark communication protocols is enabled
-   * @return true if authentication is enabled, otherwise false
+   * @return
+   *   true if authentication is enabled, otherwise false
    */
   def isAuthenticationEnabled(): Boolean = authOn
 
   /**
    * Checks whether network encryption should be enabled.
-   * @return Whether to enable encryption when connecting to services that support it.
+   * @return
+   *   Whether to enable encryption when connecting to services that support it.
    */
   def isEncryptionEnabled(): Boolean = {
     val encryptionEnabled = sparkConf.get(Network.NETWORK_CRYPTO_ENABLED) ||
@@ -290,26 +306,29 @@ private[spark] class SecurityManager(
 
   /**
    * Checks whether RPC SSL is enabled or not
-   * @return Whether RPC SSL is enabled or not
+   * @return
+   *   Whether RPC SSL is enabled or not
    */
   def isSslRpcEnabled(): Boolean = sslRpcEnabled
 
   /**
    * Returns the SSLOptions object for the RPC namespace
-   * @return the SSLOptions object for the RPC namespace
+   * @return
+   *   the SSLOptions object for the RPC namespace
    */
   def getRpcSSLOptions(): SSLOptions = rpcSSLOptions
 
   /**
-   * Gets the user used for authenticating SASL connections.
-   * For now use a single hardcoded user.
-   * @return the SASL user as a String
+   * Gets the user used for authenticating SASL connections. For now use a single hardcoded user.
+   * @return
+   *   the SASL user as a String
    */
   def getSaslUser(): String = "sparkSaslUser"
 
   /**
    * Gets the secret key.
-   * @return the secret key as a String if authentication is enabled, otherwise returns null
+   * @return
+   *   the secret key as a String if authentication is enabled, otherwise returns null
    */
   def getSecretKey(): String = {
     if (isAuthenticationEnabled()) {
@@ -362,7 +381,8 @@ private[spark] class SecurityManager(
         false
 
       case _ =>
-        require(sparkConf.contains(SPARK_AUTH_SECRET_CONF),
+        require(
+          sparkConf.contains(SPARK_AUTH_SECRET_CONF),
           s"A secret key must be specified via the $SPARK_AUTH_SECRET_CONF config.")
         return
     }
@@ -388,9 +408,13 @@ private[spark] class SecurityManager(
       sparkConf.getOption(SparkLauncher.SPARK_MASTER).map {
         case SparkMasterRegex.KUBERNETES_REGEX(_) =>
           val secretFile = new File(secretFilePath)
-          require(secretFile.isFile, s"No file found containing the secret key at $secretFilePath.")
+          require(
+            secretFile.isFile,
+            s"No file found containing the secret key at $secretFilePath.")
           val base64Key = Base64.getEncoder.encodeToString(Files.readAllBytes(secretFile.toPath))
-          require(!base64Key.isEmpty, s"Secret key from file located at $secretFilePath is empty.")
+          require(
+            !base64Key.isEmpty,
+            s"Secret key from file located at $secretFilePath is empty.")
           base64Key
         case _ =>
           throw new IllegalArgumentException(
@@ -404,10 +428,10 @@ private[spark] class SecurityManager(
       aclUsers: Set[String],
       aclGroups: Set[String]): Boolean = {
     if (user == null ||
-        !aclsEnabled() ||
-        aclUsers.contains(WILDCARD_ACL) ||
-        aclUsers.contains(user) ||
-        aclGroups.contains(WILDCARD_ACL)) {
+      !aclsEnabled() ||
+      aclUsers.contains(WILDCARD_ACL) ||
+      aclUsers.contains(user) ||
+      aclGroups.contains(WILDCARD_ACL)) {
       true
     } else {
       val userGroups = Utils.getCurrentUserGroups(sparkConf, user)
@@ -421,10 +445,11 @@ private[spark] class SecurityManager(
   override def getSecretKey(appId: String): String = getSecretKey()
 
   /**
-   * If the RPC SSL settings are enabled, returns a map containing the password
-   * values so they can be passed to executors or other subprocesses.
+   * If the RPC SSL settings are enabled, returns a map containing the password values so they can
+   * be passed to executors or other subprocesses.
    *
-   * @return Map containing environment variables to pass
+   * @return
+   *   Map containing environment variables to pass
    */
   def getEnvironmentForSslRpcPasswords: Map[String, String] = {
     if (rpcSSLOptions.enabled) {

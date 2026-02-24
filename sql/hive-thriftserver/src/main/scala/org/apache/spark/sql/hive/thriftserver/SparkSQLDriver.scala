@@ -36,16 +36,14 @@ import org.apache.spark.sql.execution.HiveResult.hiveResultString
 import org.apache.spark.sql.internal.{SQLConf, VariableSubstitution}
 import org.apache.spark.util.Utils
 
-
 private[hive] class SparkSQLDriver(val sparkSession: SparkSession = SparkSQLEnv.sparkSession)
-  extends Driver
-  with Logging {
+    extends Driver
+    with Logging {
 
   private[hive] var tableSchema: Schema = _
   private[hive] var hiveResponse: Seq[String] = _
 
-  override def init(): Unit = {
-  }
+  override def init(): Unit = {}
 
   private def getResultSetSchema(query: QueryExecution): Schema = {
     val analyzed = query.analyzed
@@ -72,8 +70,8 @@ private[hive] class SparkSQLDriver(val sparkSession: SparkSession = SparkSQLEnv.
       // parameter markers. If any parameter markers (:name or ?) are found in the SQL,
       // the pre-parser will throw UNBOUND_SQL_PARAMETER with proper position information.
       val emptyParamContext = NamedParameterContext(Map.empty)
-      val logicalPlan = sparkSession.sessionState.sqlParser.parsePlanWithParameters(
-        substitutorCommand, emptyParamContext)
+      val logicalPlan = sparkSession.sessionState.sqlParser
+        .parsePlanWithParameters(substitutorCommand, emptyParamContext)
       val conf = sparkSession.sessionState.conf
 
       val shuffleCleanupMode =
@@ -101,12 +99,12 @@ private[hive] class SparkSQLDriver(val sparkSession: SparkSession = SparkSQLEnv.
       tableSchema = getResultSetSchema(execution)
       new CommandProcessorResponse(0)
     } catch {
-        case st: SparkThrowable =>
-          logDebug(s"Failed in [$command]", st)
-          throw st
-        case cause: Throwable =>
-          logError(log"Failed in [${MDC(COMMAND, command)}]", cause)
-          throw new QueryExecutionException(Utils.stackTraceToString(cause))
+      case st: SparkThrowable =>
+        logDebug(s"Failed in [$command]", st)
+        throw st
+      case cause: Throwable =>
+        logError(log"Failed in [${MDC(COMMAND, command)}]", cause)
+        throw new QueryExecutionException(Utils.stackTraceToString(cause))
     }
   }
 

@@ -22,22 +22,8 @@ import org.scalatest.Assertions.fail
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.classic.SparkSession
 import org.apache.spark.sql.pipelines.common.{FlowStatus, RunState}
-import org.apache.spark.sql.pipelines.graph.{
-  AllFlows,
-  AllTables,
-  DataflowGraph,
-  FlowFilter,
-  NoTables,
-  PipelineUpdateContext,
-  TableFilter
-}
-import org.apache.spark.sql.pipelines.logging.{
-  EventLevel,
-  FlowProgress,
-  FlowProgressEventLogger,
-  PipelineEvent,
-  RunProgress
-}
+import org.apache.spark.sql.pipelines.graph.{AllFlows, AllTables, DataflowGraph, FlowFilter, NoTables, PipelineUpdateContext, TableFilter}
+import org.apache.spark.sql.pipelines.logging.{EventLevel, FlowProgress, FlowProgressEventLogger, PipelineEvent, RunProgress}
 
 trait ExecutionTest
     extends PipelineTest
@@ -48,12 +34,18 @@ trait TestPipelineUpdateContextMixin {
 
   /**
    * A test implementation of the PipelineUpdateContext trait.
-   * @param spark The Spark session to use.
-   * @param unresolvedGraph The unresolved dataflow graph.
-   * @param fullRefreshTables Set of tables to be fully refreshed.
-   * @param refreshTables  Set of tables to be refreshed.
-   * @param resetCheckpointFlows Set of flows to be reset.
-   * @param failOnErrorEvent Whether to fail test when receiving event with error.
+   * @param spark
+   *   The Spark session to use.
+   * @param unresolvedGraph
+   *   The unresolved dataflow graph.
+   * @param fullRefreshTables
+   *   Set of tables to be fully refreshed.
+   * @param refreshTables
+   *   Set of tables to be refreshed.
+   * @param resetCheckpointFlows
+   *   Set of flows to be reset.
+   * @param failOnErrorEvent
+   *   Whether to fail test when receiving event with error.
    */
   case class TestPipelineUpdateContext(
       spark: SparkSession,
@@ -62,8 +54,8 @@ trait TestPipelineUpdateContextMixin {
       fullRefreshTables: TableFilter = NoTables,
       refreshTables: TableFilter = AllTables,
       resetCheckpointFlows: FlowFilter = AllFlows,
-      failOnErrorEvent: Boolean = false
-  ) extends PipelineUpdateContext {
+      failOnErrorEvent: Boolean = false)
+      extends PipelineUpdateContext {
     val eventBuffer = new PipelineRunEventBuffer()
 
     override val eventCallback: PipelineEvent => Unit = { event =>
@@ -92,18 +84,23 @@ trait TestPipelineUpdateContextMixin {
 trait EventVerificationTestHelpers {
 
   /**
-   * Asserts that there is a FlowProgress event in the event log with the specified flow name
-   * and status and matching the specified error condition.
+   * Asserts that there is a FlowProgress event in the event log with the specified flow name and
+   * status and matching the specified error condition.
    *
-   * @param identifier Flow identifier to look for events for
-   * @param expectedFlowStatus Expected FlowStatus
-   * @param expectedEventLevel Expected EventLevel of the event.
-   * @param errorChecker Condition that the event's exception, if any, must pass in order for this
-   *                     function to return true.
-   * @param msgChecker Condition that the event's msg must pass in order for the function to return
-   *                   true.
-   * @param cond Predicate to filter the flow progress events by. Useful for more complex event
-   *             verification.
+   * @param identifier
+   *   Flow identifier to look for events for
+   * @param expectedFlowStatus
+   *   Expected FlowStatus
+   * @param expectedEventLevel
+   *   Expected EventLevel of the event.
+   * @param errorChecker
+   *   Condition that the event's exception, if any, must pass in order for this function to
+   *   return true.
+   * @param msgChecker
+   *   Condition that the event's msg must pass in order for the function to return true.
+   * @param cond
+   *   Predicate to filter the flow progress events by. Useful for more complex event
+   *   verification.
    */
   protected def assertFlowProgressEvent(
       eventBuffer: PipelineRunEventBuffer,
@@ -113,15 +110,14 @@ trait EventVerificationTestHelpers {
       errorChecker: Throwable => Boolean = _ => true,
       msgChecker: String => Boolean = _ => true,
       cond: PipelineEvent => Boolean = _ => true,
-      expectedNumOfEvents: Option[Int] = None
-  ): Unit = {
+      expectedNumOfEvents: Option[Int] = None): Unit = {
     // Get all events for the flow. This list is logged if the assertion
     // fails to help with debugging. Only minimal filtering is done here
     // so we have a complete list of events to look at for debugging.
-    val flowEvents = eventBuffer.getEvents.filter(_.details.isInstanceOf[FlowProgress]).filter {
-      event =>
+    val flowEvents =
+      eventBuffer.getEvents.filter(_.details.isInstanceOf[FlowProgress]).filter { event =>
         event.origin.flowName == Option(identifier.unquotedString)
-    }
+      }
 
     var matchingEvents = flowEvents.filter(e => msgChecker(e.message))
     matchingEvents = matchingEvents
@@ -138,29 +134,29 @@ trait EventVerificationTestHelpers {
 
     assert(
       matchingEvents.nonEmpty,
-      s"Could not find a matching event for $identifier. Logs for $identifier are $flowEvents"
-    )
+      s"Could not find a matching event for $identifier. Logs for $identifier are $flowEvents")
     assert(
       expectedNumOfEvents.forall(_ == matchingEvents.size),
       s"Found ${matchingEvents.size} events for $identifier but expected " +
-      s"$expectedNumOfEvents events. Logs for $identifier are $flowEvents"
-    )
+        s"$expectedNumOfEvents events. Logs for $identifier are $flowEvents")
   }
 
   /**
-   * Asserts emitted flow progress event logs for a given flow have the expected sequence of
-   * event levels and flow statuses in the expected order.
+   * Asserts emitted flow progress event logs for a given flow have the expected sequence of event
+   * levels and flow statuses in the expected order.
    *
-   * @param eventBuffer The event buffer containing the events.
-   * @param identifier The identifier of the flow to check.
-   * @param expectedFlowProgressStatus A sequence of tuples containing the expected event level
-   *                                   and flow status in the expected order.
+   * @param eventBuffer
+   *   The event buffer containing the events.
+   * @param identifier
+   *   The identifier of the flow to check.
+   * @param expectedFlowProgressStatus
+   *   A sequence of tuples containing the expected event level and flow status in the expected
+   *   order.
    */
   protected def assertFlowProgressStatusInOrder(
       eventBuffer: PipelineRunEventBuffer,
       identifier: TableIdentifier,
-      expectedFlowProgressStatus: Seq[(EventLevel, FlowStatus)]
-  ): Unit = {
+      expectedFlowProgressStatus: Seq[(EventLevel, FlowStatus)]): Unit = {
     // Get all events for the flow. This list is logged if the assertion
     // fails to help with debugging. Only minimal filtering is done here
     // so we have a complete list of events to look at for debugging.
@@ -177,22 +173,20 @@ trait EventVerificationTestHelpers {
     assert(
       actualFlowProgressStatus == expectedFlowProgressStatus,
       s"Expected flow progress status for $identifier to be " +
-      s"$expectedFlowProgressStatus but got $actualFlowProgressStatus. " +
-      s"Logs for $identifier are " +
-      s"${eventBuffer.getEvents.filter(_.origin.flowName == Option(identifier.unquotedString))}. " +
-      s"All events in the buffer are ${eventBuffer.getEvents.mkString("\n")}"
-    )
+        s"$expectedFlowProgressStatus but got $actualFlowProgressStatus. " +
+        s"Logs for $identifier are " +
+        s"${eventBuffer.getEvents.filter(_.origin.flowName == Option(identifier.unquotedString))}. " +
+        s"All events in the buffer are ${eventBuffer.getEvents.mkString("\n")}")
   }
 
   /**
-   * Asserts that there is no `FlowProgress` event
-   * in the event log with the specified flow name and status and metrics checkers.
+   * Asserts that there is no `FlowProgress` event in the event log with the specified flow name
+   * and status and metrics checkers.
    */
   protected def assertNoFlowProgressEvent(
       eventBuffer: PipelineRunEventBuffer,
       identifier: TableIdentifier,
-      flowStatus: FlowStatus
-  ): Unit = {
+      flowStatus: FlowStatus): Unit = {
     val flowEvents = eventBuffer.getEvents
       .filter(_.details.isInstanceOf[FlowProgress])
       .filter(_.origin.flowName == Option(identifier.unquotedString))
@@ -200,12 +194,12 @@ trait EventVerificationTestHelpers {
       !flowEvents.filter(_.details.isInstanceOf[FlowProgress]).exists { e =>
         e.details.asInstanceOf[FlowProgress].status == flowStatus
       },
-      s"Found a matching event for flow $identifier. Logs for $identifier are $flowEvents"
-    )
+      s"Found a matching event for flow $identifier. Logs for $identifier are $flowEvents")
   }
 
   /** Returns a map of flow names to their latest FlowStatus. */
-  protected def latestFlowStatuses(eventBuffer: PipelineRunEventBuffer): Map[String, FlowStatus] = {
+  protected def latestFlowStatuses(
+      eventBuffer: PipelineRunEventBuffer): Map[String, FlowStatus] = {
     eventBuffer.getEvents
       .filter(_.details.isInstanceOf[FlowProgress])
       .groupBy(_.origin.flowName.get)
@@ -224,8 +218,7 @@ trait EventVerificationTestHelpers {
    */
   protected def assertPlanningEvent(
       eventBuffer: PipelineRunEventBuffer,
-      identifier: TableIdentifier
-  ): Unit = {
+      identifier: TableIdentifier): Unit = {
     val flowEventLogName = identifier.unquotedString
     val expectedPlanningMessage = s"Flow '$flowEventLogName' is PLANNING."
     val foundPlanningEvent = eventBuffer.getEvents
@@ -239,21 +232,23 @@ trait EventVerificationTestHelpers {
       }
     assert(
       foundPlanningEvent.nonEmpty &&
-      foundPlanningEvent.head.message.contains(expectedPlanningMessage),
-      s"Planning event not found for flow $flowEventLogName"
-    )
+        foundPlanningEvent.head.message.contains(expectedPlanningMessage),
+      s"Planning event not found for flow $flowEventLogName")
   }
 
   /**
-   * Asserts that there is a RunProgress event in the event log with the specified id
-   * and state and matching the specified error condition.
+   * Asserts that there is a RunProgress event in the event log with the specified id and state
+   * and matching the specified error condition.
    *
-   * @param state        Expected RunState
-   * @param expectedEventLevel Expected EventLevel of the event.
-   * @param errorChecker Condition that the event's exception, if any, must pass in order for this
-   *                     function to return true.
-   * @param msgChecker   Condition that the event's msg must pass in order for the function to
-   *                     return true.
+   * @param state
+   *   Expected RunState
+   * @param expectedEventLevel
+   *   Expected EventLevel of the event.
+   * @param errorChecker
+   *   Condition that the event's exception, if any, must pass in order for this function to
+   *   return true.
+   * @param msgChecker
+   *   Condition that the event's msg must pass in order for the function to return true.
    */
   protected def assertRunProgressEvent(
       eventBuffer: PipelineRunEventBuffer,
@@ -280,7 +275,6 @@ trait EventVerificationTestHelpers {
     assert(
       expectedEvent.isDefined,
       s"Could not find a matching event with run state $state. " +
-      s"Logs are $runEvents"
-    )
+        s"Logs are $runEvents")
   }
 }

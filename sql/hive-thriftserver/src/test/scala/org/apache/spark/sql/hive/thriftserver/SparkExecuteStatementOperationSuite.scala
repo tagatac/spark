@@ -43,10 +43,12 @@ class SparkExecuteStatementOperationSuite extends SparkFunSuite with SharedSpark
     val tableSchema = StructType(Seq(field1, field2))
     val columns = SparkExecuteStatementOperation.toTTableSchema(tableSchema)
     assert(columns.getColumnsSize == 2)
-    assert(columns.getColumns.get(0).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
-      === TTypeId.NULL_TYPE)
-    assert(columns.getColumns.get(1).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
-      === TTypeId.NULL_TYPE)
+    assert(
+      columns.getColumns.get(0).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
+        === TTypeId.NULL_TYPE)
+    assert(
+      columns.getColumns.get(1).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
+        === TTypeId.NULL_TYPE)
   }
 
   test("SPARK-20146 Comment should be preserved") {
@@ -56,12 +58,14 @@ class SparkExecuteStatementOperationSuite extends SparkFunSuite with SharedSpark
     val columns = SparkExecuteStatementOperation.toTTableSchema(tableSchema)
     assert(columns.getColumnsSize == 2)
     assert(columns.getColumns.get(0).getColumnName == "column1")
-    assert(columns.getColumns.get(0).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
-      === TTypeId.STRING_TYPE)
+    assert(
+      columns.getColumns.get(0).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
+        === TTypeId.STRING_TYPE)
     assert(columns.getColumns.get(0).getComment == "comment 1")
     assert(columns.getColumns.get(1).getColumnName == "column2")
-    assert(columns.getColumns.get(1).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
-      === TTypeId.INT_TYPE)
+    assert(
+      columns.getColumns.get(1).getTypeDesc.getTypes.get(0).getPrimitiveEntry.getType
+        === TTypeId.INT_TYPE)
     assert(columns.getColumns.get(1).getComment == "")
   }
 
@@ -80,45 +84,54 @@ class SparkExecuteStatementOperationSuite extends SparkFunSuite with SharedSpark
   Seq(
     (OperationState.CANCELED, (_: SparkExecuteStatementOperation).cancel()),
     (OperationState.TIMEDOUT, (_: SparkExecuteStatementOperation).timeoutCancel()),
-    (OperationState.CLOSED, (_: SparkExecuteStatementOperation).close())
-  ).foreach { case (finalState, transition) =>
-    test("SPARK-32057 SparkExecuteStatementOperation should not transiently become ERROR " +
-      s"before being set to $finalState") {
-      val hiveSession = new HiveSessionImpl(TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V1,
-      "username", "password", new HiveConf, "ip address")
-      hiveSession.open(new util.HashMap)
+    (OperationState.CLOSED, (_: SparkExecuteStatementOperation).close())).foreach {
+    case (finalState, transition) =>
+      test(
+        "SPARK-32057 SparkExecuteStatementOperation should not transiently become ERROR " +
+          s"before being set to $finalState") {
+        val hiveSession = new HiveSessionImpl(
+          TProtocolVersion.HIVE_CLI_SERVICE_PROTOCOL_V1,
+          "username",
+          "password",
+          new HiveConf,
+          "ip address")
+        hiveSession.open(new util.HashMap)
 
-      HiveThriftServer2.eventManager = mock(classOf[HiveThriftServer2EventManager])
+        HiveThriftServer2.eventManager = mock(classOf[HiveThriftServer2EventManager])
 
-      val spySparkSession = spy[SparkSession](spark)
+        val spySparkSession = spy[SparkSession](spark)
 
-      // When cancel() is called on the operation, cleanup causes an exception to be thrown inside
-      // of execute(). This should not cause the state to become ERROR. The exception here will be
-      // triggered in our custom cleanup().
-      val signal = new Semaphore(0)
-      val dataFrame = mock(classOf[DataFrame], RETURNS_DEEP_STUBS)
-      when(dataFrame.collect()).thenAnswer((_: InvocationOnMock) => {
-        signal.acquire()
-        throw new RuntimeException("Operation was cancelled by test cleanup.")
-      })
-      val statement = "stmt"
-      doReturn(dataFrame, Nil: _*).when(spySparkSession).sql(statement)
+        // When cancel() is called on the operation, cleanup causes an exception to be thrown inside
+        // of execute(). This should not cause the state to become ERROR. The exception here will be
+        // triggered in our custom cleanup().
+        val signal = new Semaphore(0)
+        val dataFrame = mock(classOf[DataFrame], RETURNS_DEEP_STUBS)
+        when(dataFrame.collect()).thenAnswer((_: InvocationOnMock) => {
+          signal.acquire()
+          throw new RuntimeException("Operation was cancelled by test cleanup.")
+        })
+        val statement = "stmt"
+        doReturn(dataFrame, Nil: _*).when(spySparkSession).sql(statement)
 
-      val executeStatementOperation = new MySparkExecuteStatementOperation(spySparkSession,
-        hiveSession, statement, signal, finalState)
+        val executeStatementOperation = new MySparkExecuteStatementOperation(
+          spySparkSession,
+          hiveSession,
+          statement,
+          signal,
+          finalState)
 
-      val run = new Thread() {
-        override def run(): Unit = executeStatementOperation.runInternal()
+        val run = new Thread() {
+          override def run(): Unit = executeStatementOperation.runInternal()
+        }
+        assert(executeStatementOperation.getStatus.getState === OperationState.INITIALIZED)
+        run.start()
+        eventually(timeout(5.seconds)) {
+          assert(executeStatementOperation.getStatus.getState === OperationState.RUNNING)
+        }
+        transition(executeStatementOperation)
+        run.join()
+        assert(executeStatementOperation.getStatus.getState === finalState)
       }
-      assert(executeStatementOperation.getStatus.getState === OperationState.INITIALIZED)
-      run.start()
-      eventually(timeout(5.seconds)) {
-        assert(executeStatementOperation.getStatus.getState === OperationState.RUNNING)
-      }
-      transition(executeStatementOperation)
-      run.join()
-      assert(executeStatementOperation.getStatus.getState === finalState)
-    }
   }
 
   private class MySparkExecuteStatementOperation(
@@ -127,8 +140,13 @@ class SparkExecuteStatementOperationSuite extends SparkFunSuite with SharedSpark
       statement: String,
       signal: Semaphore,
       finalState: OperationState)
-    extends SparkExecuteStatementOperation(session, hiveSession, statement,
-      new util.HashMap, false, 0) {
+      extends SparkExecuteStatementOperation(
+        session,
+        hiveSession,
+        statement,
+        new util.HashMap,
+        false,
+        0) {
 
     override def cleanup(): Unit = {
       super.cleanup()

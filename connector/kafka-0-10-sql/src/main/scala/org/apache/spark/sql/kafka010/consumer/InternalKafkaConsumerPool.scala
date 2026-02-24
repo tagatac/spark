@@ -39,17 +39,18 @@ import org.apache.spark.sql.kafka010.consumer.KafkaDataConsumer.CacheKey
  * should be destroyed.
  *
  * The soft capacity of pool is determined by "spark.kafka.consumer.cache.capacity" config value,
- * and the pool will have reasonable default value if the value is not provided.
- * (The instance will do its best effort to respect soft capacity but it can exceed when there's
- * a borrowing request and there's neither free space nor idle object to clear.)
+ * and the pool will have reasonable default value if the value is not provided. (The instance
+ * will do its best effort to respect soft capacity but it can exceed when there's a borrowing
+ * request and there's neither free space nor idle object to clear.)
  *
- * This class guarantees that no caller will get pooled object once the object is borrowed and
- * not yet returned, hence provide thread-safety usage of non-thread-safe [[InternalKafkaConsumer]]
+ * This class guarantees that no caller will get pooled object once the object is borrowed and not
+ * yet returned, hence provide thread-safety usage of non-thread-safe [[InternalKafkaConsumer]]
  * unless caller shares the object to multiple threads.
  */
 private[consumer] class InternalKafkaConsumerPool(
     objectFactory: ObjectFactory,
-    poolConfig: PoolConfig) extends Logging {
+    poolConfig: PoolConfig)
+    extends Logging {
   def this(conf: SparkConf) = {
     this(new ObjectFactory, new PoolConfig(conf))
   }
@@ -58,21 +59,21 @@ private[consumer] class InternalKafkaConsumerPool(
   assert(poolConfig.getMaxTotal < 0)
 
   private val pool = {
-    val internalPool = new GenericKeyedObjectPool[CacheKey, InternalKafkaConsumer](
-      objectFactory, poolConfig)
+    val internalPool =
+      new GenericKeyedObjectPool[CacheKey, InternalKafkaConsumer](objectFactory, poolConfig)
     internalPool.setSwallowedExceptionListener(CustomSwallowedExceptionListener)
     internalPool
   }
 
   /**
-   * Borrows [[InternalKafkaConsumer]] object from the pool. If there's no idle object for the key,
-   * the pool will create the [[InternalKafkaConsumer]] object.
+   * Borrows [[InternalKafkaConsumer]] object from the pool. If there's no idle object for the
+   * key, the pool will create the [[InternalKafkaConsumer]] object.
    *
-   * If the pool doesn't have idle object for the key and also exceeds the soft capacity,
-   * pool will try to clear some of idle objects.
+   * If the pool doesn't have idle object for the key and also exceeds the soft capacity, pool
+   * will try to clear some of idle objects.
    *
-   * Borrowed object must be returned by either calling returnObject or invalidateObject, otherwise
-   * the object will be kept in pool as active object.
+   * Borrowed object must be returned by either calling returnObject or invalidateObject,
+   * otherwise the object will be kept in pool as active object.
    */
   def borrowObject(key: CacheKey, kafkaParams: ju.Map[String, Object]): InternalKafkaConsumer = {
     updateKafkaParamForKey(key, kafkaParams)
@@ -101,9 +102,9 @@ private[consumer] class InternalKafkaConsumerPool(
   }
 
   /**
-   * Closes the keyed object pool. Once the pool is closed,
-   * borrowObject will fail with [[IllegalStateException]], but returnObject and invalidateObject
-   * will continue to work, with returned objects destroyed on return.
+   * Closes the keyed object pool. Once the pool is closed, borrowObject will fail with
+   * [[IllegalStateException]], but returnObject and invalidateObject will continue to work, with
+   * returned objects destroyed on return.
    *
    * Also destroys idle instances in the pool.
    */
@@ -132,9 +133,15 @@ private[consumer] class InternalKafkaConsumerPool(
   private[kafka010] def numActiveInGroupIdPrefix(groupIdPrefix: String): Int = {
     import scala.jdk.CollectionConverters._
 
-    pool.getNumActivePerKey().asScala.filter { case (key, _) =>
-      key.startsWith(groupIdPrefix + "-")
-    }.values.map(_.toInt).sum
+    pool
+      .getNumActivePerKey()
+      .asScala
+      .filter { case (key, _) =>
+        key.startsWith(groupIdPrefix + "-")
+      }
+      .values
+      .map(_.toInt)
+      .sum
   }
 
   // TODO: revisit the relation between CacheKey and kafkaParams - for now it looks a bit weird
@@ -147,8 +154,10 @@ private[consumer] class InternalKafkaConsumerPool(
     // otherwise we can't reuse the cached object and cache key should contain kafkaParam.
     // So it should be safe to put the key/value pair only when the key doesn't exist.
     val oldKafkaParams = objectFactory.keyToKafkaParams.putIfAbsent(key, kafkaParams)
-    require(oldKafkaParams == null || kafkaParams == oldKafkaParams, "Kafka parameters for same " +
-      s"cache key should be equal. old parameters: $oldKafkaParams new parameters: $kafkaParams")
+    require(
+      oldKafkaParams == null || kafkaParams == oldKafkaParams,
+      "Kafka parameters for same " +
+        s"cache key should be equal. old parameters: $oldKafkaParams new parameters: $kafkaParams")
   }
 
   private def extractCacheKey(consumer: InternalKafkaConsumer): CacheKey = {
@@ -175,8 +184,7 @@ private[consumer] object InternalKafkaConsumerPool {
 
       val jmxEnabled = conf.get(CONSUMER_CACHE_JMX_ENABLED)
       val minEvictableIdleTimeMillis = conf.get(CONSUMER_CACHE_TIMEOUT)
-      val evictorThreadRunIntervalMillis = conf.get(
-        CONSUMER_CACHE_EVICTOR_THREAD_RUN_INTERVAL)
+      val evictorThreadRunIntervalMillis = conf.get(CONSUMER_CACHE_EVICTOR_THREAD_RUN_INTERVAL)
 
       // NOTE: Below lines define the behavior, so do not modify unless you know what you are
       // doing, and update the class doc accordingly if necessary when you modify.
@@ -192,7 +200,8 @@ private[consumer] object InternalKafkaConsumerPool {
 
       // Set minimum evictable idle time which will be referred from evictor thread
       setMinEvictableIdleDuration(Duration.ofMillis(minEvictableIdleTimeMillis))
-      setSoftMinEvictableIdleDuration(BaseObjectPoolConfig.DEFAULT_SOFT_MIN_EVICTABLE_IDLE_DURATION)
+      setSoftMinEvictableIdleDuration(
+        BaseObjectPoolConfig.DEFAULT_SOFT_MIN_EVICTABLE_IDLE_DURATION)
 
       // evictor thread will run test with ten idle objects
       setTimeBetweenEvictionRuns(Duration.ofMillis(evictorThreadRunIntervalMillis))
@@ -213,8 +222,10 @@ private[consumer] object InternalKafkaConsumerPool {
     override def create(key: CacheKey): InternalKafkaConsumer = {
       Option(keyToKafkaParams.get(key)) match {
         case Some(kafkaParams) => new InternalKafkaConsumer(key.topicPartition, kafkaParams)
-        case None => throw new IllegalStateException("Kafka params should be set before " +
-          "borrowing object.")
+        case None =>
+          throw new IllegalStateException(
+            "Kafka params should be set before " +
+              "borrowing object.")
       }
     }
 

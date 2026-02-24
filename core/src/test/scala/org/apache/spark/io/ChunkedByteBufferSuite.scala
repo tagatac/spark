@@ -31,13 +31,13 @@ class ChunkedByteBufferSuite extends SparkFunSuite with SharedSparkContext {
 
   /**
    * compare two ChunkedByteBuffer:
-   * - chunks nums equal
-   * - each chunk's content
+   *   - chunks nums equal
+   *   - each chunk's content
    */
   def assertBufferEqual(buffer1: ChunkedByteBuffer, buffer2: ChunkedByteBuffer): Unit = {
     assert(buffer1.chunks.length == buffer2.chunks.length)
-    assert(buffer1.chunks.zip(buffer2.chunks).forall {
-      case (chunk1, chunk2) => chunk1 == chunk2
+    assert(buffer1.chunks.zip(buffer2.chunks).forall { case (chunk1, chunk2) =>
+      chunk1 == chunk2
     })
   }
 
@@ -103,8 +103,8 @@ class ChunkedByteBufferSuite extends SparkFunSuite with SharedSparkContext {
 
   test(
     "Externalizable: writeExternal() and readExternal() should handle off-heap buffer properly") {
-    val chunkedByteBuffer = new ChunkedByteBuffer(
-      (0 until 10).map(_ => ByteBuffer.allocateDirect(10)).toArray)
+    val chunkedByteBuffer =
+      new ChunkedByteBuffer((0 until 10).map(_ => ByteBuffer.allocateDirect(10)).toArray)
     val baos = new ByteArrayOutputStream()
     val objOut = new ObjectOutputStream(baos)
     chunkedByteBuffer.writeExternal(objOut)

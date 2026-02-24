@@ -62,25 +62,27 @@ private[spark] object SerDeUtil extends Logging {
   }
   initialize()
 
-
   /**
-   * Convert an RDD of Java objects to Array (no recursive conversions).
-   * It is only used by pyspark.sql.
+   * Convert an RDD of Java objects to Array (no recursive conversions). It is only used by
+   * pyspark.sql.
    */
   def toJavaArray(jrdd: JavaRDD[Any]): JavaRDD[Array[_]] = {
-    jrdd.rdd.map {
-      case objs: JArrayList[_] =>
-        objs.toArray
-      case obj if obj.getClass.isArray =>
-        obj.asInstanceOf[Array[_]].toArray
-    }.toJavaRDD()
+    jrdd.rdd
+      .map {
+        case objs: JArrayList[_] =>
+          objs.toArray
+        case obj if obj.getClass.isArray =>
+          obj.asInstanceOf[Array[_]].toArray
+      }
+      .toJavaRDD()
   }
 
   /**
    * Choose batch size based on size of objects
    */
   private[spark] class AutoBatchedPickler(iter: Iterator[Any]) extends Iterator[Array[Byte]] {
-    private val pickle = new Pickler(/* useMemo = */ true,
+    private val pickle = new Pickler(
+      /* useMemo = */ true,
       /* valueCompare = */ false)
     private var batch = 1
     private val buffer = new mutable.ArrayBuffer[Any]
@@ -116,25 +118,28 @@ private[spark] object SerDeUtil extends Logging {
    * Convert an RDD of serialized Python objects to RDD of objects, that is usable by PySpark.
    */
   def pythonToJava(pyRDD: JavaRDD[Array[Byte]], batched: Boolean): JavaRDD[Any] = {
-    pyRDD.rdd.mapPartitions { iter =>
-      initialize()
-      val unpickle = new Unpickler
-      iter.flatMap { row =>
-        val obj = unpickle.loads(row)
-        if (batched) {
-          obj match {
-            case array: Array[Any] => array.toImmutableArraySeq
-            case _ => obj.asInstanceOf[JArrayList[_]].asScala
+    pyRDD.rdd
+      .mapPartitions { iter =>
+        initialize()
+        val unpickle = new Unpickler
+        iter.flatMap { row =>
+          val obj = unpickle.loads(row)
+          if (batched) {
+            obj match {
+              case array: Array[Any] => array.toImmutableArraySeq
+              case _ => obj.asInstanceOf[JArrayList[_]].asScala
+            }
+          } else {
+            Seq(obj)
           }
-        } else {
-          Seq(obj)
         }
       }
-    }.toJavaRDD()
+      .toJavaRDD()
   }
 
   private def checkPickle(t: (Any, Any)): (Boolean, Boolean) = {
-    val pickle = new Pickler(/* useMemo = */ true,
+    val pickle = new Pickler(
+      /* useMemo = */ true,
       /* valueCompare = */ false)
     val kt = Try {
       pickle.dumps(t._1)
@@ -171,9 +176,9 @@ private[spark] object SerDeUtil extends Logging {
   }
 
   /**
-   * Convert an RDD of key-value pairs to an RDD of serialized Python objects, that is usable
-   * by PySpark. By default, if serialization fails, toString is called and the string
-   * representation is serialized
+   * Convert an RDD of key-value pairs to an RDD of serialized Python objects, that is usable by
+   * PySpark. By default, if serialization fails, toString is called and the string representation
+   * is serialized
    */
   def pairRDDToPython(rdd: RDD[(Any, Any)], batchSize: Int): RDD[Array[Byte]] = {
     val (keyFailed, valueFailed) = rdd.take(1) match {
@@ -190,7 +195,8 @@ private[spark] object SerDeUtil extends Logging {
       if (batchSize == 0) {
         new AutoBatchedPickler(cleaned)
       } else {
-        val pickle = new Pickler(/* useMemo = */ true,
+        val pickle = new Pickler(
+          /* useMemo = */ true,
           /* valueCompare = */ false)
         cleaned.grouped(batchSize).map(batched => pickle.dumps(batched.asJava))
       }
@@ -203,17 +209,17 @@ private[spark] object SerDeUtil extends Logging {
   def pythonToPairRDD[K, V](pyRDD: RDD[Array[Byte]], batched: Boolean): RDD[(K, V)] = {
     def isPair(obj: Any): Boolean = {
       Option(obj.getClass.getComponentType).exists(!_.isPrimitive) &&
-        obj.asInstanceOf[Array[_]].length == 2
+      obj.asInstanceOf[Array[_]].length == 2
     }
 
     val rdd = pythonToJava(pyRDD, batched).rdd
     rdd.take(1) match {
       case Array(obj) if isPair(obj) =>
-        // we only accept (K, V)
+      // we only accept (K, V)
       case Array() =>
-        // we also accept empty collections
-      case Array(other) => throw new SparkException(
-        s"RDD element of type ${other.getClass.getName} cannot be used")
+      // we also accept empty collections
+      case Array(other) =>
+        throw new SparkException(s"RDD element of type ${other.getClass.getName} cannot be used")
     }
     rdd.map { obj =>
       val arr = obj.asInstanceOf[Array[_]]

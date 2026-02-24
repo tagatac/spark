@@ -52,12 +52,20 @@ class LogKeysSuite
 
   private val regenerateGoldenFiles: Boolean = System.getenv("SPARK_GENERATE_GOLDEN_FILES") == "1"
 
-  private val logKeyFilePath = getWorkspaceFilePath("common", "utils", "src", "main", "java",
-    "org", "apache", "spark", "internal", "LogKeys.java")
+  private val logKeyFilePath = getWorkspaceFilePath(
+    "common",
+    "utils",
+    "src",
+    "main",
+    "java",
+    "org",
+    "apache",
+    "spark",
+    "internal",
+    "LogKeys.java")
 
   // regenerate the file `LogKeys.java` with its members sorted alphabetically
-  private def regenerateLogKeyFile(
-      originalKeys: Seq[String], sortedKeys: Seq[String]): Unit = {
+  private def regenerateLogKeyFile(originalKeys: Seq[String], sortedKeys: Seq[String]): Unit = {
     if (originalKeys != sortedKeys) {
       val logKeyFile = logKeyFilePath.toFile
       logInfo(s"Regenerating the file $logKeyFile")
@@ -83,8 +91,7 @@ class LogKeysSuite
     if (regenerateGoldenFiles) {
       regenerateLogKeyFile(originalKeys, sortedKeys)
     } else {
-      assert(originalKeys === sortedKeys,
-        "The members of LogKeys must be sorted alphabetically")
+      assert(originalKeys === sortedKeys, "The members of LogKeys must be sorted alphabetically")
     }
   }
 }

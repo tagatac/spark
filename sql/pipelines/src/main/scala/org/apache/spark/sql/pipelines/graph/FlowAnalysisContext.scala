@@ -27,14 +27,18 @@ import org.apache.spark.sql.pipelines.AnalysisWarning
 /**
  * A context used when evaluating a `Flow`'s query into a concrete DataFrame.
  *
- * @param allInputs            Set of identifiers for all `Input`s defined in the DataflowGraph.
- * @param availableInputs      Inputs available to be referenced with `read` or `readStream`.
- * @param queryContext         The context of the query being evaluated.
- * @param requestedInputs      A mutable buffer populated with names of all inputs that were
- *                             requested.
- * @param spark                the spark session to be used.
- * @param externalInputs The names of external inputs that were used to evaluate
- *                                 the flow's query.
+ * @param allInputs
+ *   Set of identifiers for all `Input`s defined in the DataflowGraph.
+ * @param availableInputs
+ *   Inputs available to be referenced with `read` or `readStream`.
+ * @param queryContext
+ *   The context of the query being evaluated.
+ * @param requestedInputs
+ *   A mutable buffer populated with names of all inputs that were requested.
+ * @param spark
+ *   the spark session to be used.
+ * @param externalInputs
+ *   The names of external inputs that were used to evaluate the flow's query.
  */
 private[pipelines] case class FlowAnalysisContext(
     allInputs: Set[TableIdentifier],
@@ -46,8 +50,7 @@ private[pipelines] case class FlowAnalysisContext(
     shouldLowerCaseNames: Boolean = false,
     analysisWarnings: mutable.Buffer[AnalysisWarning] = new ListBuffer[AnalysisWarning],
     spark: SparkSession,
-    externalInputs: mutable.HashSet[TableIdentifier] = mutable.HashSet.empty
-) {
+    externalInputs: mutable.HashSet[TableIdentifier] = mutable.HashSet.empty) {
 
   /** Map from `Input` name to the actual `Input` */
   val availableInput: Map[TableIdentifier, Input] =

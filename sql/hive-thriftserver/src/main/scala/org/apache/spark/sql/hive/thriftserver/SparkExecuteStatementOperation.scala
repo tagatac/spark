@@ -46,9 +46,9 @@ private[hive] class SparkExecuteStatementOperation(
     confOverlay: JMap[String, String],
     runInBackground: Boolean = true,
     queryTimeout: Long)
-  extends ExecuteStatementOperation(parentSession, statement, confOverlay, runInBackground)
-  with SparkOperation
-  with Logging {
+    extends ExecuteStatementOperation(parentSession, statement, confOverlay, runInBackground)
+    with SparkOperation
+    with Logging {
 
   // If a timeout value `queryTimeout` is specified by users and it is smaller than
   // a global timeout value, we use the user-specified value.
@@ -96,29 +96,30 @@ private[hive] class SparkExecuteStatementOperation(
     }
   }
 
-  private def getNextRowSetInternal(
-      order: FetchOrientation,
-      maxRowsL: Long): TRowSet = withLocalProperties {
-    log.debug(s"Received getNextRowSet request order=${order} and maxRowsL=${maxRowsL} " +
-      s"with ${statementId}")
-    validateDefaultFetchOrientation(order)
-    assertState(OperationState.FINISHED)
-    setHasResultSet(true)
+  private def getNextRowSetInternal(order: FetchOrientation, maxRowsL: Long): TRowSet =
+    withLocalProperties {
+      log.debug(
+        s"Received getNextRowSet request order=${order} and maxRowsL=${maxRowsL} " +
+          s"with ${statementId}")
+      validateDefaultFetchOrientation(order)
+      assertState(OperationState.FINISHED)
+      setHasResultSet(true)
 
-    if (order.equals(FetchOrientation.FETCH_FIRST)) {
-      iter.fetchAbsolute(0)
-    } else if (order.equals(FetchOrientation.FETCH_PRIOR)) {
-      iter.fetchPrior(maxRowsL)
-    } else {
-      iter.fetchNext()
+      if (order.equals(FetchOrientation.FETCH_FIRST)) {
+        iter.fetchAbsolute(0)
+      } else if (order.equals(FetchOrientation.FETCH_PRIOR)) {
+        iter.fetchPrior(maxRowsL)
+      } else {
+        iter.fetchNext()
+      }
+      val maxRows = maxRowsL.toInt
+      val offset = iter.getPosition
+      val rows = iter.take(maxRows).toList
+      log.debug(
+        s"Returning result set with ${rows.length} rows from offsets " +
+          s"[${iter.getFetchStart}, ${iter.getPosition}) with $statementId")
+      RowSetUtils.toTRowSet(offset, rows, dataTypes, getProtocolVersion)
     }
-    val maxRows = maxRowsL.toInt
-    val offset = iter.getPosition
-    val rows = iter.take(maxRows).toList
-    log.debug(s"Returning result set with ${rows.length} rows from offsets " +
-      s"[${iter.getFetchStart}, ${iter.getPosition}) with $statementId")
-    RowSetUtils.toTRowSet(offset, rows, dataTypes, getProtocolVersion)
-  }
 
   def getResultSetSchema: TTableSchema = resultSchema
 
@@ -126,7 +127,7 @@ private[hive] class SparkExecuteStatementOperation(
     setState(OperationState.PENDING)
     logInfo(
       log"Submitting query '${MDC(LogKeys.REDACTED_STATEMENT, redactedStatement)}' with " +
-      log"${MDC(LogKeys.STATEMENT_ID, statementId)}")
+        log"${MDC(LogKeys.STATEMENT_ID, statementId)}")
     HiveThriftServer2.eventManager.onStatementStart(
       statementId,
       parentSession.getSessionHandle.getSessionId.toString,
@@ -137,21 +138,24 @@ private[hive] class SparkExecuteStatementOperation(
 
     if (timeout > 0) {
       timeoutExecutor = Executors.newSingleThreadScheduledExecutor()
-      timeoutExecutor.schedule(new Runnable {
-        override def run(): Unit = {
-          try {
-            timeoutCancel()
-          } catch {
-            case NonFatal(e) =>
-              setOperationException(new HiveSQLException(e))
-              val timeout_ms = timeout * MILLIS_PER_SECOND
-              logError(
-                log"Error cancelling the query after timeout: ${MDC(TIMEOUT, timeout_ms)} ms")
-          } finally {
-            timeoutExecutor.shutdown()
+      timeoutExecutor.schedule(
+        new Runnable {
+          override def run(): Unit = {
+            try {
+              timeoutCancel()
+            } catch {
+              case NonFatal(e) =>
+                setOperationException(new HiveSQLException(e))
+                val timeout_ms = timeout * MILLIS_PER_SECOND
+                logError(
+                  log"Error cancelling the query after timeout: ${MDC(TIMEOUT, timeout_ms)} ms")
+            } finally {
+              timeoutExecutor.shutdown()
+            }
           }
-        }
-      }, timeout, TimeUnit.SECONDS)
+        },
+        timeout,
+        TimeUnit.SECONDS)
     }
 
     if (!runInBackground) {
@@ -182,8 +186,10 @@ private[hive] class SparkExecuteStatementOperation(
           } catch {
             case e: Exception =>
               setOperationException(new HiveSQLException(e))
-              logError(log"Error running hive query as user : " +
-                log"${MDC(USER_NAME, sparkServiceUGI.getShortUserName())}", e)
+              logError(
+                log"Error running hive query as user : " +
+                  log"${MDC(USER_NAME, sparkServiceUGI.getShortUserName())}",
+                e)
           }
         }
       }
@@ -197,13 +203,17 @@ private[hive] class SparkExecuteStatementOperation(
           logError("Error submitting query in background, query rejected", rejected)
           setState(OperationState.ERROR)
           HiveThriftServer2.eventManager.onStatementError(
-            statementId, rejected.getMessage, SparkUtils.exceptionString(rejected))
+            statementId,
+            rejected.getMessage,
+            SparkUtils.exceptionString(rejected))
           throw HiveThriftServerErrors.taskExecutionRejectedError(rejected)
         case NonFatal(e) =>
           logError("Error executing query in background", e)
           setState(OperationState.ERROR)
           HiveThriftServer2.eventManager.onStatementError(
-            statementId, e.getMessage, SparkUtils.exceptionString(e))
+            statementId,
+            e.getMessage,
+            SparkUtils.exceptionString(e))
           throw new HiveSQLException(e)
       }
     }
@@ -215,7 +225,7 @@ private[hive] class SparkExecuteStatementOperation(
         if (getStatus.getState.isTerminal) {
           logInfo(
             log"Query with ${MDC(LogKeys.STATEMENT_ID, statementId)} in terminal state " +
-            log"before it started running")
+              log"before it started running")
           return
         } else {
           logInfo(log"Running query with ${MDC(STATEMENT_ID, statementId)}")
@@ -230,7 +240,8 @@ private[hive] class SparkExecuteStatementOperation(
       sparkContext.setJobGroup(statementId, redactedStatement, forceCancel)
       result = session.sql(statement)
       logDebug(result.queryExecution.toString())
-      HiveThriftServer2.eventManager.onStatementParsed(statementId,
+      HiveThriftServer2.eventManager.onStatementParsed(
+        statementId,
         result.queryExecution.toString())
       iter = if (session.conf.get(SQLConf.THRIFTSERVER_INCREMENTAL_COLLECT.key).toBoolean) {
         new IterableFetchIterator[Row](new Iterable[Row] {
@@ -249,25 +260,29 @@ private[hive] class SparkExecuteStatementOperation(
         // task interrupted, it may have started some spark job, so we need to cancel again to
         // make sure job was cancelled when background thread was interrupted
         if (!sparkContext.isStopped && statementId != null) {
-          sparkContext.cancelJobGroup(statementId,
+          sparkContext.cancelJobGroup(
+            statementId,
             "The corresponding Thriftserver query has failed.")
         }
         val currentState = getStatus().getState()
         if (currentState.isTerminal) {
           // This may happen if the execution was cancelled, and then closed from another thread.
           logWarning(
-            log"Ignore exception in terminal state with ${MDC(STATEMENT_ID, statementId)}", e
-          )
+            log"Ignore exception in terminal state with ${MDC(STATEMENT_ID, statementId)}",
+            e)
         } else {
-          logError(log"Error executing query with ${MDC(STATEMENT_ID, statementId)}, " +
-            log"currentState ${MDC(HIVE_OPERATION_STATE, currentState)}, ", e)
+          logError(
+            log"Error executing query with ${MDC(STATEMENT_ID, statementId)}, " +
+              log"currentState ${MDC(HIVE_OPERATION_STATE, currentState)}, ",
+            e)
           setState(OperationState.ERROR)
           HiveThriftServer2.eventManager.onStatementError(
-            statementId, e.getMessage, SparkUtils.exceptionString(e))
+            statementId,
+            e.getMessage,
+            SparkUtils.exceptionString(e))
           e match {
             case _: HiveSQLException => throw e
-            case _ => throw HiveThriftServerErrors.runningQueryError(
-              e, conf.errorMessageFormat)
+            case _ => throw HiveThriftServerErrors.runningQueryError(e, conf.errorMessageFormat)
           }
         }
     } finally {
@@ -286,7 +301,7 @@ private[hive] class SparkExecuteStatementOperation(
       if (!getStatus.getState.isTerminal) {
         logInfo(
           log"Query with ${MDC(LogKeys.STATEMENT_ID, statementId)} timed out " +
-          log"after ${MDC(LogKeys.TIMEOUT, timeout)} seconds")
+            log"after ${MDC(LogKeys.TIMEOUT, timeout)} seconds")
         setState(OperationState.TIMEDOUT)
         cleanup()
         HiveThriftServer2.eventManager.onStatementTimeout(statementId)
@@ -366,8 +381,9 @@ object SparkExecuteStatementOperation {
           TCLIServiceConstants.PRECISION -> TTypeQualifierValue.i32Value(d.precision),
           TCLIServiceConstants.SCALE -> TTypeQualifierValue.i32Value(d.scale)).asJava
       case _: VarcharType | _: CharType =>
-        Map(TCLIServiceConstants.CHARACTER_MAXIMUM_LENGTH ->
-          TTypeQualifierValue.i32Value(typ.defaultSize)).asJava
+        Map(
+          TCLIServiceConstants.CHARACTER_MAXIMUM_LENGTH ->
+            TTypeQualifierValue.i32Value(typ.defaultSize)).asJava
       case _ => Collections.emptyMap[String, TTypeQualifierValue]()
     }
     ret.setQualifiers(qualifiers)

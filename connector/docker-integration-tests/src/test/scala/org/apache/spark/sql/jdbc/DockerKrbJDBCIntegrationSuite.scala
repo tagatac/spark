@@ -81,12 +81,13 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
   protected def replaceIp(s: String): String = s.replace("__IP_ADDRESS_REPLACE_ME__", dockerIp)
 
   protected def copyExecutableResource(
-      fileName: String, dir: File, processLine: String => String = identity) = {
+      fileName: String,
+      dir: File,
+      processLine: String => String = identity) = {
     val newEntry = new File(dir.getAbsolutePath, fileName)
     newEntry.createNewFile()
     Utils.tryWithResource(
-      new FileInputStream(getClass.getClassLoader.getResource(fileName).getFile)
-    ) { inputStream =>
+      new FileInputStream(getClass.getClassLoader.getResource(fileName).getFile)) { inputStream =>
       val outputStream = new FileOutputStream(newEntry)
       try {
         for (line <- Source.fromInputStream(inputStream).getLines()) {
@@ -115,7 +116,8 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
 
     val query = "SELECT c0 FROM bar"
     // query option to pass on the query string.
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("keytab", keytabFullPath)
       .option("principal", principal)
@@ -132,8 +134,7 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
 
     val query = "SELECT c0 FROM bar"
     // query option in the create table path.
-    sql(
-      s"""
+    sql(s"""
          |CREATE OR REPLACE TEMPORARY VIEW queryOption
          |USING org.apache.spark.sql.jdbc
          |OPTIONS (url '$jdbcUrl', query '$query', keytab '$keytabFullPath', principal '$principal')
@@ -150,8 +151,7 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
     props.setProperty("principal", principal)
 
     val tableName = "write_test"
-    spark.createDataFrame(Seq(("foo", "bar")))
-      .write.jdbc(jdbcUrl, tableName, props)
+    spark.createDataFrame(Seq(("foo", "bar"))).write.jdbc(jdbcUrl, tableName, props)
     val df = spark.read.jdbc(jdbcUrl, tableName, props)
 
     val schema = df.schema
@@ -173,7 +173,8 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
         // The thrown exception is dependent on the actual JDBC driver class.
         intercept[Exception] {
           sys.props(KRB5_CONF_PROP) = dummyKrb5Conf.getAbsolutePath
-          spark.read.format("jdbc")
+          spark.read
+            .format("jdbc")
             .option("url", jdbcUrl)
             .option("keytab", keytabFullPath)
             .option("principal", principal)
@@ -183,7 +184,8 @@ abstract class DockerKrbJDBCIntegrationSuite extends DockerJDBCIntegrationSuite 
         }
 
         sys.props(KRB5_CONF_PROP) = origKrb5Conf
-        val df = spark.read.format("jdbc")
+        val df = spark.read
+          .format("jdbc")
           .option("url", jdbcUrl)
           .option("keytab", keytabFullPath)
           .option("principal", principal)

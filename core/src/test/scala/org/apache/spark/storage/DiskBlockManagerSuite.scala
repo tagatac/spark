@@ -104,9 +104,12 @@ class DiskBlockManagerSuite extends SparkFunSuite {
     testConf.set("spark.shuffle.push.enabled", "true")
     testConf.set(config.Tests.IS_TESTING, true)
     diskBlockManager = new DiskBlockManager(testConf, deleteFilesOnStop = true, isDriver = false)
-    assert(Utils.getConfiguredLocalDirs(testConf).map(
-      rootDir => new File(rootDir, DiskBlockManager.MERGE_DIRECTORY))
-      .filter(mergeDir => mergeDir.exists()).length === 2)
+    assert(
+      Utils
+        .getConfiguredLocalDirs(testConf)
+        .map(rootDir => new File(rootDir, DiskBlockManager.MERGE_DIRECTORY))
+        .filter(mergeDir => mergeDir.exists())
+        .length === 2)
     // mergeDir0 can not be skipped even if it already exists
     assert(mergeDir0.list().length === testConf.get(config.DISKSTORE_SUB_DIRECTORIES))
     // Sub directories get created under mergeDir1
@@ -119,8 +122,8 @@ class DiskBlockManagerSuite extends SparkFunSuite {
     diskBlockManager = new DiskBlockManager(testConf, deleteFilesOnStop = true, isDriver = false)
     diskBlockManager.createDirWithPermission770(testDir)
     assert(testDir.exists && testDir.isDirectory)
-    val permission = PosixFilePermissions.toString(
-      Files.getPosixFilePermissions(Paths.get("target/testDir")))
+    val permission =
+      PosixFilePermissions.toString(Files.getPosixFilePermissions(Paths.get("target/testDir")))
     assert(permission.equals("rwxrwx---"))
     Utils.deleteQuietly(testDir)
   }
@@ -157,8 +160,8 @@ class DiskBlockManagerSuite extends SparkFunSuite {
 
     val oldUmask = getAndSetUmask(posix, "077")
     try {
-      val diskBlockManager = new DiskBlockManager(conf, deleteFilesOnStop = true,
-        isDriver = false)
+      val diskBlockManager =
+        new DiskBlockManager(conf, deleteFilesOnStop = true, isDriver = false)
       val blockId = new TestBlockId("test")
       val newFile = diskBlockManager.getFile(blockId)
       val parentDir = newFile.getParentFile()
@@ -169,8 +172,8 @@ class DiskBlockManagerSuite extends SparkFunSuite {
       assert(parentDir.delete())
 
       conf.set("spark.shuffle.service.removeShuffle", "true")
-      val diskBlockManager2 = new DiskBlockManager(conf, deleteFilesOnStop = true,
-        isDriver = false)
+      val diskBlockManager2 =
+        new DiskBlockManager(conf, deleteFilesOnStop = true, isDriver = false)
       val newFile2 = diskBlockManager2.getFile(blockId)
       val parentDir2 = newFile2.getParentFile()
       assert(parentDir2.exists && parentDir2.isDirectory)

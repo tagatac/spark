@@ -46,8 +46,7 @@ abstract class KafkaSinkSuiteBase extends QueryTest with SharedSparkSession with
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    testUtils = new KafkaTestUtils(
-      withBrokerProps = Map("auto.create.topics.enable" -> "false"))
+    testUtils = new KafkaTestUtils(withBrokerProps = Map("auto.create.topics.enable" -> "false"))
     testUtils.setup()
   }
 
@@ -95,8 +94,7 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
     val writer = createKafkaWriter(
       input.toDF(),
       withTopic = None,
-      withOutputMode = Some(OutputMode.Append))(
-      withSelectExpr = s"'$topic' as topic", "value")
+      withOutputMode = Some(OutputMode.Append))(withSelectExpr = s"'$topic' as topic", "value")
 
     val reader = createKafkaReader(topic)
       .selectExpr("CAST(key as STRING) key", "CAST(value as STRING) value")
@@ -141,8 +139,7 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
     val writer = createKafkaWriter(
       input.toDF(),
       withTopic = Some(topic),
-      withOutputMode = Some(OutputMode.Append()))(
-      withSelectExpr = "'foo' as topic", "value")
+      withOutputMode = Some(OutputMode.Append()))(withSelectExpr = "'foo' as topic", "value")
 
     val reader = createKafkaReader(topic)
       .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
@@ -158,9 +155,13 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
     val topic = newTopic()
     testUtils.createTopic(topic)
 
-    assertWrongSchema(input, Seq("value as key", "value"),
+    assertWrongSchema(
+      input,
+      Seq("value as key", "value"),
       "topic option required when no 'topic' attribute is present")
-    assertWrongSchema(input, Seq(s"'$topic' as topic", "value as key"),
+    assertWrongSchema(
+      input,
+      Seq(s"'$topic' as topic", "value as key"),
       "required attribute 'value' not found")
   }
 
@@ -169,13 +170,21 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
     val topic = newTopic()
     testUtils.createTopic(topic)
 
-    assertWrongSchema(input, Seq("CAST('1' as INT) as topic", "value"),
+    assertWrongSchema(
+      input,
+      Seq("CAST('1' as INT) as topic", "value"),
       "topic must be a(n) string")
-    assertWrongSchema(input, Seq(s"'$topic' as topic", "CAST(value as INT) as value"),
+    assertWrongSchema(
+      input,
+      Seq(s"'$topic' as topic", "CAST(value as INT) as value"),
       "value must be a(n) string or binary")
-    assertWrongSchema(input, Seq(s"'$topic' as topic", "CAST(value as INT) as key", "value"),
+    assertWrongSchema(
+      input,
+      Seq(s"'$topic' as topic", "CAST(value as INT) as key", "value"),
       "key must be a(n) string or binary")
-    assertWrongSchema(input, Seq(s"'$topic' as topic", "value", "value as partition"),
+    assertWrongSchema(
+      input,
+      Seq(s"'$topic' as topic", "value", "value as partition"),
       "partition must be a(n) int")
   }
 
@@ -190,9 +199,13 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
   test("streaming - exception on config serializer") {
     val input = createMemoryStream()
 
-    assertWrongOption(input, Map("kafka.key.serializer" -> "foo"),
+    assertWrongOption(
+      input,
+      Map("kafka.key.serializer" -> "foo"),
       "kafka option 'key.serializer' is not supported")
-    assertWrongOption(input, Map("kafka.value.serializer" -> "foo"),
+    assertWrongOption(
+      input,
+      Map("kafka.value.serializer" -> "foo"),
       "kafka option 'value.serializer' is not supported")
   }
 
@@ -200,8 +213,8 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
       input: DataFrame,
       withTopic: Option[String] = None,
       withOutputMode: Option[OutputMode] = None,
-      withOptions: Map[String, String] = Map[String, String]())
-      (withSelectExpr: String*): StreamingQuery = {
+      withOptions: Map[String, String] = Map[String, String]())(
+      withSelectExpr: String*): StreamingQuery = {
     var stream: DataStreamWriter[Row] = null
     withTempDir { checkpointDir =>
       var df = input.toDF()
@@ -230,35 +243,34 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
       input.addData("1", "2", "3", "4", "5")
       verifyResult(writer)(checkDatasetUnorderly(reader, 1, 2, 3, 4, 5))
       input.addData("6", "7", "8", "9", "10")
-      verifyResult(writer)(checkDatasetUnorderly(reader, 1, 2, 3, 4, 5, 6,
-        7, 8, 9, 10))
+      verifyResult(writer)(checkDatasetUnorderly(reader, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
     } finally {
       writer.stop()
     }
   }
 
-  private def runAndVerifyException[T <: Exception : ClassTag](
+  private def runAndVerifyException[T <: Exception: ClassTag](
       input: MemoryStreamBase[String],
-      expectErrorMsg: String)(
-      writerFn: => StreamingQuery): Unit = {
+      expectErrorMsg: String)(writerFn: => StreamingQuery): Unit = {
     var writer: StreamingQuery = null
-    val ex: Exception = try {
-      intercept[T] {
-        writer = writerFn
-        input.addData("1", "2", "3", "4", "5")
-        input match {
-          case _: MemoryStream[String] => writer.processAllAvailable()
-          case _: ContinuousMemoryStream[String] =>
-            eventually(timeout(streamingTimeout)) {
-              assert(writer.exception.isDefined)
-            }
+    val ex: Exception =
+      try {
+        intercept[T] {
+          writer = writerFn
+          input.addData("1", "2", "3", "4", "5")
+          input match {
+            case _: MemoryStream[String] => writer.processAllAvailable()
+            case _: ContinuousMemoryStream[String] =>
+              eventually(timeout(streamingTimeout)) {
+                assert(writer.exception.isDefined)
+              }
 
-            throw writer.exception.get
+              throw writer.exception.get
+          }
         }
+      } finally {
+        if (writer != null) writer.stop()
       }
-    } finally {
-      if (writer != null) writer.stop()
-    }
     TestUtils.assertExceptionMsg(ex, expectErrorMsg, ignoreCase = true)
   }
 
@@ -268,8 +280,7 @@ abstract class KafkaSinkStreamingSuiteBase extends KafkaSinkSuiteBase {
       expectErrorMsg: String): Unit = {
     // just pick common exception of both micro-batch and continuous cases
     runAndVerifyException[Exception](input, expectErrorMsg) {
-      createKafkaWriter(input.toDF())(
-        withSelectExpr = selectExpr: _*)
+      createKafkaWriter(input.toDF())(withSelectExpr = selectExpr: _*)
     }
   }
 
@@ -346,11 +357,11 @@ class KafkaContinuousSinkSuite extends KafkaSinkStreamingSuiteBase {
 
   test("generic - write big data with small producer buffer") {
     /* This test ensures that we understand the semantics of Kafka when
-    * is comes to blocking on a call to send when the send buffer is full.
-    * This test will configure the smallest possible producer buffer and
-    * indicate that we should block when it is full. Thus, no exception should
-    * be thrown in the case of a full buffer.
-    */
+     * is comes to blocking on a call to send when the send buffer is full.
+     * This test will configure the smallest possible producer buffer and
+     * indicate that we should block when it is full. Thus, no exception should
+     * be thrown in the case of a full buffer.
+     */
     val topic = newTopic()
     testUtils.createTopic(topic, 1)
     val options = new java.util.HashMap[String, Object]
@@ -358,7 +369,9 @@ class KafkaContinuousSinkSuite extends KafkaSinkStreamingSuiteBase {
     options.put("buffer.memory", "16384") // min buffer size
     options.put("block.on.buffer.full", "true")
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[ByteArraySerializer].getName)
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[ByteArraySerializer].getName)
+    options.put(
+      ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+      classOf[ByteArraySerializer].getName)
     val inputSchema = Seq(AttributeReference("value", BinaryType)())
     val data = new Array[Byte](15000) // large value
     val writeTask = new KafkaDataWriter(Some(topic), options, inputSchema)
@@ -383,30 +396,25 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
     val topic = newTopic()
     testUtils.createTopic(topic)
     val data = Seq(
-      Row(topic, "1", Seq(
-        Row("a", "b".getBytes(UTF_8))
-      )),
-      Row(topic, "2", Seq(
-        Row("c", "d".getBytes(UTF_8)),
-        Row("e", "f".getBytes(UTF_8))
-      )),
-      Row(topic, "3", Seq(
-        Row("g", "h".getBytes(UTF_8)),
-        Row("g", "i".getBytes(UTF_8))
-      )),
+      Row(topic, "1", Seq(Row("a", "b".getBytes(UTF_8)))),
+      Row(topic, "2", Seq(Row("c", "d".getBytes(UTF_8)), Row("e", "f".getBytes(UTF_8)))),
+      Row(topic, "3", Seq(Row("g", "h".getBytes(UTF_8)), Row("g", "i".getBytes(UTF_8)))),
       Row(topic, "4", null),
-      Row(topic, "5", Seq(
-        Row("j", "k".getBytes(UTF_8)),
-        Row("j", "l".getBytes(UTF_8)),
-        Row("m", "n".getBytes(UTF_8))
-      ))
-    )
+      Row(
+        topic,
+        "5",
+        Seq(
+          Row("j", "k".getBytes(UTF_8)),
+          Row("j", "l".getBytes(UTF_8)),
+          Row("m", "n".getBytes(UTF_8)))))
 
     val df = spark.createDataFrame(
       spark.sparkContext.parallelize(data),
-      StructType(Seq(StructField("topic", StringType), StructField("value", StringType),
-        StructField("headers", KafkaRecordToRowConverter.headersType)))
-    )
+      StructType(
+        Seq(
+          StructField("topic", StringType),
+          StructField("value", StringType),
+          StructField("headers", KafkaRecordToRowConverter.headersType))))
 
     df.write
       .format("kafka")
@@ -415,24 +423,26 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
       .mode("append")
       .save()
     checkAnswer(
-      createKafkaReader(topic, includeHeaders = true).selectExpr(
-        "CAST(value as STRING) value", "headers"
-      ),
+      createKafkaReader(topic, includeHeaders = true)
+        .selectExpr("CAST(value as STRING) value", "headers"),
       Row("1", Seq(Row("a", "b".getBytes(UTF_8)))) ::
         Row("2", Seq(Row("c", "d".getBytes(UTF_8)), Row("e", "f".getBytes(UTF_8)))) ::
         Row("3", Seq(Row("g", "h".getBytes(UTF_8)), Row("g", "i".getBytes(UTF_8)))) ::
         Row("4", null) ::
-        Row("5", Seq(
-          Row("j", "k".getBytes(UTF_8)),
-          Row("j", "l".getBytes(UTF_8)),
-          Row("m", "n".getBytes(UTF_8)))) ::
-        Nil
-    )
+        Row(
+          "5",
+          Seq(
+            Row("j", "k".getBytes(UTF_8)),
+            Row("j", "l".getBytes(UTF_8)),
+            Row("m", "n".getBytes(UTF_8)))) ::
+        Nil)
   }
 
-  def writeToKafka(df: DataFrame, topic: String, options: Map[String, String] = Map.empty): Unit = {
-    df
-      .write
+  def writeToKafka(
+      df: DataFrame,
+      topic: String,
+      options: Map[String, String] = Map.empty): Unit = {
+    df.write
       .format("kafka")
       .option("kafka.bootstrap.servers", testUtils.brokerAddress)
       .option("topic", topic)
@@ -459,9 +469,8 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
     testUtils.createTopic(topic2, nrPartitions)
     testUtils.createTopic(topic3, nrPartitions)
     testUtils.createTopic(topic4, nrPartitions)
-    val customKafkaPartitionerConf = Map(
-      "kafka.partitioner.class" -> "org.apache.spark.sql.kafka010.TestKafkaPartitioner"
-    )
+    val customKafkaPartitionerConf =
+      Map("kafka.partitioner.class" -> "org.apache.spark.sql.kafka010.TestKafkaPartitioner")
 
     val df = (0 until 5).map(n => (topic1, s"$n", s"$n")).toDF("topic", "key", "value")
 
@@ -498,10 +507,7 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
         .mode("append")
         .save()
     }
-    checkError(
-      exception = ex,
-      condition = "KAFKA_NULL_TOPIC_IN_DATA"
-    )
+    checkError(exception = ex, condition = "KAFKA_NULL_TOPIC_IN_DATA")
   }
 
   protected def testUnsupportedSaveModes(msg: (SaveMode) => Seq[String]): Unit = {
@@ -526,7 +532,8 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
 
   test("SPARK-20496: batch - enforce analyzed plans") {
     val inputEvents =
-      spark.range(1, 1000)
+      spark
+        .range(1, 1000)
         .select(to_json(struct("*")) as Symbol("value"))
 
     val topic = newTopic()
@@ -543,8 +550,7 @@ abstract class KafkaSinkBatchSuiteBase extends KafkaSinkSuiteBase {
 
 class KafkaSinkBatchSuiteV1 extends KafkaSinkBatchSuiteBase {
   override protected def sparkConf: SparkConf =
-    super
-      .sparkConf
+    super.sparkConf
       .set(SQLConf.USE_V1_SOURCE_LIST, "kafka")
 
   test("batch - unsupported save modes") {
@@ -554,8 +560,7 @@ class KafkaSinkBatchSuiteV1 extends KafkaSinkBatchSuiteBase {
 
 class KafkaSinkBatchSuiteV2 extends KafkaSinkBatchSuiteBase {
   override protected def sparkConf: SparkConf =
-    super
-      .sparkConf
+    super.sparkConf
       .set(SQLConf.USE_V1_SOURCE_LIST, "")
 
   test("batch - unsupported save modes") {
@@ -565,11 +570,11 @@ class KafkaSinkBatchSuiteV2 extends KafkaSinkBatchSuiteBase {
 
   test("generic - write big data with small producer buffer") {
     /* This test ensures that we understand the semantics of Kafka when
-    * is comes to blocking on a call to send when the send buffer is full.
-    * This test will configure the smallest possible producer buffer and
-    * indicate that we should block when it is full. Thus, no exception should
-    * be thrown in the case of a full buffer.
-    */
+     * is comes to blocking on a call to send when the send buffer is full.
+     * This test will configure the smallest possible producer buffer and
+     * indicate that we should block when it is full. Thus, no exception should
+     * be thrown in the case of a full buffer.
+     */
     val topic = newTopic()
     testUtils.createTopic(topic, 1)
     val options = new java.util.HashMap[String, Object]
@@ -577,7 +582,9 @@ class KafkaSinkBatchSuiteV2 extends KafkaSinkBatchSuiteBase {
     options.put("buffer.memory", "16384") // min buffer size
     options.put("block.on.buffer.full", "true")
     options.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[ByteArraySerializer].getName)
-    options.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[ByteArraySerializer].getName)
+    options.put(
+      ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+      classOf[ByteArraySerializer].getName)
     val inputSchema = Seq(AttributeReference("value", BinaryType)())
     val data = new Array[Byte](15000) // large value
     val writeTask = new KafkaWriteTask(options, inputSchema, Some(topic))

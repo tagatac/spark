@@ -92,8 +92,10 @@ object ExecutorPodsSnapshot extends Logging {
           } else {
             // Otherwise look for the Spark container and get the exit code if present.
             val sparkContainerExitCode = pod.getStatus.getContainerStatuses.asScala
-              .find(_.getName() == sparkContainerName).flatMap(x => Option(x.getState))
-              .flatMap(x => Option(x.getTerminated)).flatMap(x => Option(x.getExitCode))
+              .find(_.getName() == sparkContainerName)
+              .flatMap(x => Option(x.getState))
+              .flatMap(x => Option(x.getTerminated))
+              .flatMap(x => Option(x.getExitCode))
               .map(_.toInt)
             sparkContainerExitCode match {
               case Some(t) =>
@@ -115,9 +117,10 @@ object ExecutorPodsSnapshot extends Logging {
         case "terminating" =>
           PodTerminating(pod)
         case _ =>
-          logWarning(log"Received unknown phase ${MDC(POD_PHASE, phase)} for executor " +
-            log"pod with name ${MDC(POD_NAME, pod.getMetadata.getName)} in " +
-            log"namespace ${MDC(POD_NAMESPACE, pod.getMetadata.getNamespace)}")
+          logWarning(
+            log"Received unknown phase ${MDC(POD_PHASE, phase)} for executor " +
+              log"pod with name ${MDC(POD_NAME, pod.getMetadata.getName)} in " +
+              log"namespace ${MDC(POD_NAMESPACE, pod.getMetadata.getNamespace)}")
           PodUnknown(pod)
       }
     }
@@ -125,11 +128,11 @@ object ExecutorPodsSnapshot extends Logging {
 
   private def isDeleted(pod: Pod): Boolean = {
     (pod.getMetadata.getDeletionTimestamp != null &&
-      (
-        pod.getStatus == null ||
+    (
+      pod.getStatus == null ||
         pod.getStatus.getPhase == null ||
-          (pod.getStatus.getPhase.toLowerCase(Locale.ROOT) != "terminating" &&
-           pod.getStatus.getPhase.toLowerCase(Locale.ROOT) != "running")
-      ))
+        (pod.getStatus.getPhase.toLowerCase(Locale.ROOT) != "terminating" &&
+          pod.getStatus.getPhase.toLowerCase(Locale.ROOT) != "running")
+    ))
   }
 }

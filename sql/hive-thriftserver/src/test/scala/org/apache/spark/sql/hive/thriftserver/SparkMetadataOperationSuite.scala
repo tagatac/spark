@@ -48,7 +48,7 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
     val dbs = Seq("db1", "db2", "db33", "db44")
     val dbDflts = Seq("default", "global_temp")
     withDatabase(dbs: _*) { statement =>
-      dbs.foreach( db => statement.execute(s"CREATE DATABASE IF NOT EXISTS $db"))
+      dbs.foreach(db => statement.execute(s"CREATE DATABASE IF NOT EXISTS $db"))
       val metaData = statement.getConnection.getMetaData
 
       Seq("", "%", null, ".*", "_*", "_%", ".%") foreach { pattern =>
@@ -67,8 +67,9 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
       checkResult(metaData.getSchemas(null, "db_not_exist"), Seq.empty)
 
       val e = intercept[HiveSQLException](metaData.getSchemas(null, "*"))
-      assert(e.getCause.getMessage ===
-        "Error operating GET_SCHEMAS Dangling meta character '*' near index 0\n*\n^")
+      assert(
+        e.getCause.getMessage ===
+          "Error operating GET_SCHEMAS Dangling meta character '*' near index 0\n*\n^")
     }
   }
 
@@ -88,34 +89,37 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
         "CREATE TABLE table2(key INT, val STRING)",
         "CREATE VIEW view1 AS SELECT * FROM table2",
         "CREATE OR REPLACE GLOBAL TEMPORARY VIEW view_global_temp_1 AS SELECT 1 AS col1",
-        "CREATE OR REPLACE TEMPORARY VIEW view_temp_1 AS SELECT 1 as col1"
-      ).foreach(statement.execute)
+        "CREATE OR REPLACE TEMPORARY VIEW view_temp_1 AS SELECT 1 as col1").foreach(
+        statement.execute)
 
       val metaData = statement.getConnection.getMetaData
 
-      checkResult(metaData.getTables(null, "%", "%", null),
+      checkResult(
+        metaData.getTables(null, "%", "%", null),
         Seq("table1", "table2", "view1", "view_global_temp_1", "view_temp_1"))
 
       checkResult(metaData.getTables(null, "%", "table1", null), Seq("table1"))
 
       checkResult(metaData.getTables(null, "%", "table_not_exist", null), Seq.empty)
 
-      checkResult(metaData.getTables(null, "%", "%", Array("TABLE")),
-        Seq("table1", "table2"))
+      checkResult(metaData.getTables(null, "%", "%", Array("TABLE")), Seq("table1", "table2"))
 
-      checkResult(metaData.getTables(null, "%", "%", Array("VIEW")),
+      checkResult(
+        metaData.getTables(null, "%", "%", Array("VIEW")),
         Seq("view1", "view_global_temp_1", "view_temp_1"))
 
-      checkResult(metaData.getTables(null, "%", "view_global_temp_1", null),
+      checkResult(
+        metaData.getTables(null, "%", "view_global_temp_1", null),
         Seq("view_global_temp_1"))
 
-      checkResult(metaData.getTables(null, "%", "view_temp_1", null),
-        Seq("view_temp_1"))
+      checkResult(metaData.getTables(null, "%", "view_temp_1", null), Seq("view_temp_1"))
 
-      checkResult(metaData.getTables(null, "%", "%", Array("TABLE", "VIEW")),
+      checkResult(
+        metaData.getTables(null, "%", "%", Array("TABLE", "VIEW")),
         Seq("table1", "table2", "view1", "view_global_temp_1", "view_temp_1"))
 
-      checkResult(metaData.getTables(null, "%", "table_not_exist", Array("TABLE", "VIEW")),
+      checkResult(
+        metaData.getTables(null, "%", "table_not_exist", Array("TABLE", "VIEW")),
         Seq.empty)
     }
   }
@@ -123,7 +127,7 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
   test("Spark's own GetColumnsOperation(SparkGetColumnsOperation)") {
     def checkResult(
         rs: ResultSet,
-        columns: Seq[(String, String, String, String, String)]) : Unit = {
+        columns: Seq[(String, String, String, String, String)]): Unit = {
       for (i <- columns.indices) {
         assert(rs.next())
         val col = columns(i)
@@ -143,12 +147,13 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
         "CREATE TABLE table2(key INT, val DECIMAL comment 'Decimal column')",
         "CREATE VIEW view1 AS SELECT key FROM table1",
         "CREATE OR REPLACE GLOBAL TEMPORARY VIEW view_global_temp_1 AS SELECT 2 AS col2",
-        "CREATE OR REPLACE TEMPORARY VIEW view_temp_1 AS SELECT 2 as col2"
-      ).foreach(statement.execute)
+        "CREATE OR REPLACE TEMPORARY VIEW view_temp_1 AS SELECT 2 as col2").foreach(
+        statement.execute)
 
       val metaData = statement.getConnection.getMetaData
 
-      checkResult(metaData.getColumns(null, "%", "%", null),
+      checkResult(
+        metaData.getColumns(null, "%", "%", null),
         Seq(
           ("table1", "key", "4", "INT", "Int column"),
           ("table1", "val", "12", "STRING", "String column"),
@@ -158,30 +163,37 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
           ("view_global_temp_1", "col2", "4", "INT", ""),
           ("view_temp_1", "col2", "4", "INT", "")))
 
-      checkResult(metaData.getColumns(null, "%", "table1", null),
+      checkResult(
+        metaData.getColumns(null, "%", "table1", null),
         Seq(
           ("table1", "key", "4", "INT", "Int column"),
           ("table1", "val", "12", "STRING", "String column")))
 
-      checkResult(metaData.getColumns(null, "%", "table1", "key"),
+      checkResult(
+        metaData.getColumns(null, "%", "table1", "key"),
         Seq(("table1", "key", "4", "INT", "Int column")))
 
-      checkResult(metaData.getColumns(null, "%", "view%", null),
+      checkResult(
+        metaData.getColumns(null, "%", "view%", null),
         Seq(
           ("view1", "key", "4", "INT", "Int column"),
           ("view_global_temp_1", "col2", "4", "INT", ""),
           ("view_temp_1", "col2", "4", "INT", "")))
 
-      checkResult(metaData.getColumns(null, "%", "view_global_temp_1", null),
+      checkResult(
+        metaData.getColumns(null, "%", "view_global_temp_1", null),
         Seq(("view_global_temp_1", "col2", "4", "INT", "")))
 
-      checkResult(metaData.getColumns(null, "%", "view_temp_1", null),
+      checkResult(
+        metaData.getColumns(null, "%", "view_temp_1", null),
         Seq(("view_temp_1", "col2", "4", "INT", "")))
 
-      checkResult(metaData.getColumns(null, "%", "view_temp_1", "col2"),
+      checkResult(
+        metaData.getColumns(null, "%", "view_temp_1", "col2"),
         Seq(("view_temp_1", "col2", "4", "INT", "")))
 
-      checkResult(metaData.getColumns(null, "default", "%", null),
+      checkResult(
+        metaData.getColumns(null, "default", "%", null),
         Seq(
           ("table1", "key", "4", "INT", "Int column"),
           ("table1", "val", "12", "STRING", "String column"),
@@ -217,8 +229,9 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
         assert(rs.next())
         assert(rs.getString("FUNCTION_SCHEM") === "default")
         assert(rs.getString("FUNCTION_NAME") === exprInfo.getName)
-        assert(rs.getString("REMARKS") ===
-          s"Usage: ${exprInfo.getUsage}\nExtended Usage:${exprInfo.getExtended}")
+        assert(
+          rs.getString("REMARKS") ===
+            s"Usage: ${exprInfo.getUsage}\nExtended Usage:${exprInfo.getExtended}")
         assert(rs.getInt("FUNCTION_TYPE") === DatabaseMetaData.functionResultUnknown)
         assert(rs.getString("SPECIFIC_NAME") === exprInfo.getClassName)
       }
@@ -234,7 +247,8 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
       checkResult(metaData.getFunctions(null, "", "overla*"), Seq("overlay"))
       checkResult(metaData.getFunctions(null, null, "does-not-exist*"), Seq.empty)
       checkResult(metaData.getFunctions(null, "default", "overlay"), Seq("overlay"))
-      checkResult(metaData.getFunctions(null, "default", "shift*"),
+      checkResult(
+        metaData.getFunctions(null, "default", "shift*"),
         Seq("shiftleft", "shiftright", "shiftrightunsigned"))
       checkResult(metaData.getFunctions(null, "default", "upPer"), Seq("upper"))
     }
@@ -302,9 +316,26 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
       val rowSet = databaseMetaData.getColumns("", schemaName, tableName, null)
 
       import java.sql.Types._
-      val expectedJavaTypes = Seq(BOOLEAN, TINYINT, SMALLINT, INTEGER, BIGINT, FLOAT, DOUBLE,
-        DECIMAL, DECIMAL, VARCHAR, ARRAY, ARRAY, JAVA_OBJECT, DATE, TIMESTAMP, STRUCT, BINARY,
-        CHAR, VARCHAR)
+      val expectedJavaTypes = Seq(
+        BOOLEAN,
+        TINYINT,
+        SMALLINT,
+        INTEGER,
+        BIGINT,
+        FLOAT,
+        DOUBLE,
+        DECIMAL,
+        DECIMAL,
+        VARCHAR,
+        ARRAY,
+        ARRAY,
+        JAVA_OBJECT,
+        DATE,
+        TIMESTAMP,
+        STRUCT,
+        BINARY,
+        CHAR,
+        VARCHAR)
 
       var pos = 0
 
@@ -595,7 +626,8 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
       assert(metaData.getDriverVersion === HiveVersionInfo.getVersion)
       assert(metaData.getDatabaseMajorVersion === VersionUtils.majorVersion(SPARK_VERSION))
       assert(metaData.getDatabaseMinorVersion === VersionUtils.minorVersion(SPARK_VERSION))
-      assert(metaData.getIdentifierQuoteString === " ",
+      assert(
+        metaData.getIdentifierQuoteString === " ",
         "This method returns a space \" \" if identifier quoting is not supported")
       assert(metaData.getNumericFunctions === "")
       assert(metaData.getStringFunctions === "")
@@ -687,7 +719,8 @@ class SparkMetadataOperationSuite extends HiveThriftServer2TestBase {
     }
   }
 
-  test("SPARK-54350: SparkGetColumnsOperation respects useZeroBasedColumnOrdinalPosition config") {
+  test(
+    "SPARK-54350: SparkGetColumnsOperation respects useZeroBasedColumnOrdinalPosition config") {
     Seq(true, false).foreach { zeroBasedOrdinal =>
       val viewName = "view_column_ordinal_position"
       val ddl = s"CREATE OR REPLACE GLOBAL TEMPORARY VIEW $viewName AS " +

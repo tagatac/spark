@@ -39,9 +39,9 @@ class SparkConnectStatement(conn: SparkConnectConnection) extends Statement {
           conn.spark.interruptOperation(operationId)
         } catch {
           case _: java.net.ConnectException =>
-            // Ignore ConnectExceptions during cleanup as the operation may have already completed
-            // or the server may be unavailable. The important part is marking this statement
-            // as closed to prevent further use.
+          // Ignore ConnectExceptions during cleanup as the operation may have already completed
+          // or the server may be unavailable. The important part is marking this statement
+          // as closed to prevent further use.
         }
         operationId = null
       }

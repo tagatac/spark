@@ -92,7 +92,13 @@ class KubernetesUtilsSuite extends SparkFunSuite with PrivateMethodTester {
         }
 
         def appendFileAndUpload(content: String, delSrc: Boolean, overwrite: Boolean): Unit = {
-          Files.writeString(srcFile.toPath, content, StandardCharsets.UTF_8, CREATE, WRITE, APPEND)
+          Files.writeString(
+            srcFile.toPath,
+            content,
+            StandardCharsets.UTF_8,
+            CREATE,
+            WRITE,
+            APPEND)
           KubernetesUtils.invokePrivate(upload(src, dest, fs, delSrc, overwrite))
         }
 
@@ -131,14 +137,16 @@ class KubernetesUtilsSuite extends SparkFunSuite with PrivateMethodTester {
 
   test("SPARK-38582: verify that envVars is built with kv env as expected") {
     val input = for (i <- 9 to 1 by -1) yield (s"testEnvKey.$i", s"testEnvValue.$i")
-    val expectedEnvVars = (input :+ ("testKeyWithEmptyValue" -> "")).map { case(k, v) =>
+    val expectedEnvVars = (input :+ ("testKeyWithEmptyValue" -> "")).map { case (k, v) =>
       new EnvVarBuilder()
         .withName(k)
-        .withValue(v).build()
+        .withValue(v)
+        .build()
     }
     val outputEnvVars =
-      KubernetesUtils.buildEnvVars(input ++
-        Seq("testKeyWithNullValue" -> null, "testKeyWithEmptyValue" -> ""))
+      KubernetesUtils.buildEnvVars(
+        input ++
+          Seq("testKeyWithNullValue" -> null, "testKeyWithEmptyValue" -> ""))
     assert(outputEnvVars.toSet == expectedEnvVars.toSet)
   }
 
@@ -147,9 +155,10 @@ class KubernetesUtilsSuite extends SparkFunSuite with PrivateMethodTester {
     val expectedEnvVars = input.map { env =>
       new EnvVarBuilder()
         .withName(env._1)
-        .withValueFrom(new EnvVarSourceBuilder()
-          .withNewFieldRef(env._2, env._3)
-          .build())
+        .withValueFrom(
+          new EnvVarSourceBuilder()
+            .withNewFieldRef(env._2, env._3)
+            .build())
         .build()
     }
     val outputEnvVars =

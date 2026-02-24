@@ -23,7 +23,6 @@ import org.apache.spark.SparkConf
 import org.apache.spark.benchmark.{Benchmark, BenchmarkBase}
 import org.apache.spark.internal.config._
 
-
 /**
  * Benchmark for ZStandard codec performance.
  * {{{
@@ -90,15 +89,16 @@ object ZStandardBenchmark extends BenchmarkBase {
         val bytes = outputStream.toByteArray
 
         val condition = if (enablePool) "with" else "without"
-        benchmark.addCase(s"Decompression $N times from level $level $condition buffer pool") { _ =>
-          (1 until N).foreach { _ =>
-            val bais = new ByteArrayInputStream(bytes)
-            val is = new ZStdCompressionCodec(conf).compressedInputStream(bais)
-            for (i <- 1 until numInteger) {
-              is.read()
+        benchmark.addCase(s"Decompression $N times from level $level $condition buffer pool") {
+          _ =>
+            (1 until N).foreach { _ =>
+              val bais = new ByteArrayInputStream(bytes)
+              val is = new ZStdCompressionCodec(conf).compressedInputStream(bais)
+              for (i <- 1 until numInteger) {
+                is.read()
+              }
+              is.close()
             }
-            is.close()
-          }
         }
       }
     }
@@ -110,7 +110,9 @@ object ZStandardBenchmark extends BenchmarkBase {
 
     Seq(3, 9).foreach { level =>
       val benchmark = new Benchmark(
-        s"Parallel Compression at level $level", numberOfLargeObjectToWrite, output = output)
+        s"Parallel Compression at level $level",
+        numberOfLargeObjectToWrite,
+        output = output)
       Seq(0, 1, 2, 4, 8, 16).foreach { workers =>
         val conf = new SparkConf(false)
           .set(IO_COMPRESSION_ZSTD_LEVEL, level)
@@ -134,8 +136,8 @@ object ZStandardBenchmark extends BenchmarkBase {
     val data: Array[Byte] = (1 until 256 * 1024 * 1024).map(_.toByte).toArray
 
     Seq(1, 3, 9).foreach { level =>
-      val benchmark = new Benchmark(
-        s"Compression at level $level", numberOfLargeObjectToWrite, output = output)
+      val benchmark =
+        new Benchmark(s"Compression at level $level", numberOfLargeObjectToWrite, output = output)
       Seq(-1, 1, 3, 5, 7, 9).foreach { strategy =>
         val conf = new SparkConf(false).set(IO_COMPRESSION_ZSTD_LEVEL, level)
         if (strategy >= 0) {

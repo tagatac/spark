@@ -42,13 +42,15 @@ import org.apache.spark.util.VersionUtils.majorVersion
 private[feature] trait IDFBase extends Params with HasInputCol with HasOutputCol {
 
   /**
-   * The minimum number of documents in which a term should appear.
-   * Default: 0
+   * The minimum number of documents in which a term should appear. Default: 0
    * @group param
    */
   final val minDocFreq = new IntParam(
-    this, "minDocFreq", "minimum number of documents in which a term should appear for filtering" +
-      " (>= 0)", ParamValidators.gtEq(0))
+    this,
+    "minDocFreq",
+    "minimum number of documents in which a term should appear for filtering" +
+      " (>= 0)",
+    ParamValidators.gtEq(0))
 
   setDefault(minDocFreq -> 0)
 
@@ -69,7 +71,9 @@ private[feature] trait IDFBase extends Params with HasInputCol with HasOutputCol
  */
 @Since("1.4.0")
 final class IDF @Since("1.4.0") (@Since("1.4.0") override val uid: String)
-  extends Estimator[IDFModel] with IDFBase with DefaultParamsWritable {
+    extends Estimator[IDFModel]
+    with IDFBase
+    with DefaultParamsWritable {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("idf"))
@@ -89,8 +93,8 @@ final class IDF @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   @Since("2.0.0")
   override def fit(dataset: Dataset[_]): IDFModel = {
     transformSchema(dataset.schema, logging = true)
-    val input: RDD[OldVector] = dataset.select($(inputCol)).rdd.map {
-      case Row(v: Vector) => OldVectors.fromML(v)
+    val input: RDD[OldVector] = dataset.select($(inputCol)).rdd.map { case Row(v: Vector) =>
+      OldVectors.fromML(v)
     }
     val idf = new feature.IDF($(minDocFreq)).fit(input)
     copyValues(new IDFModel(uid, idf).setParent(this))
@@ -116,10 +120,10 @@ object IDF extends DefaultParamsReadable[IDF] {
  * Model fitted by [[IDF]].
  */
 @Since("1.4.0")
-class IDFModel private[ml] (
-    @Since("1.4.0") override val uid: String,
-    idfModel: feature.IDFModel)
-  extends Model[IDFModel] with IDFBase with MLWritable {
+class IDFModel private[ml] (@Since("1.4.0") override val uid: String, idfModel: feature.IDFModel)
+    extends Model[IDFModel]
+    with IDFBase
+    with MLWritable {
 
   import IDFModel._
 
@@ -141,8 +145,8 @@ class IDFModel private[ml] (
     val func = { vector: Vector =>
       vector match {
         case SparseVector(size, indices, values) =>
-          val (newIndices, newValues) = feature.IDFModel.transformSparse(idfModel.idf,
-            indices, values)
+          val (newIndices, newValues) =
+            feature.IDFModel.transformSparse(idfModel.idf, indices, values)
           Vectors.sparse(size, newIndices, newValues)
         case DenseVector(values) =>
           val newValues = feature.IDFModel.transformDense(idfModel.idf, values)
@@ -154,7 +158,9 @@ class IDFModel private[ml] (
     }
 
     val transformer = udf(func)
-    dataset.withColumn($(outputCol), transformer(col($(inputCol))),
+    dataset.withColumn(
+      $(outputCol),
+      transformer(col($(inputCol))),
       outputSchema($(outputCol)).metadata)
   }
 
@@ -162,8 +168,7 @@ class IDFModel private[ml] (
   override def transformSchema(schema: StructType): StructType = {
     var outputSchema = validateAndTransformSchema(schema)
     if ($(outputCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateAttributeGroupSize(outputSchema,
-        $(outputCol), idf.size)
+      outputSchema = SchemaUtils.updateAttributeGroupSize(outputSchema, $(outputCol), idf.size)
     }
     outputSchema
   }
@@ -236,14 +241,15 @@ object IDFModel extends MLReadable[IDFModel] {
         val data = ReadWriteUtils.loadObject[Data](dataPath, sparkSession, deserializeData)
         new IDFModel(
           metadata.uid,
-          new feature.IDFModel(OldVectors.fromML(data.idf), data.docFreq, data.numDocs)
-        )
+          new feature.IDFModel(OldVectors.fromML(data.idf), data.docFreq, data.numDocs))
       } else {
         val data = sparkSession.read.parquet(dataPath)
-        val Row(idf: Vector) = MLUtils.convertVectorColumnsToML(data, "idf")
+        val Row(idf: Vector) = MLUtils
+          .convertVectorColumnsToML(data, "idf")
           .select("idf")
           .head()
-        new IDFModel(metadata.uid,
+        new IDFModel(
+          metadata.uid,
           new feature.IDFModel(OldVectors.fromML(idf), new Array[Long](idf.size), 0L))
       }
       metadata.getAndSetParams(model)

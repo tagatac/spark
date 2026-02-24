@@ -24,26 +24,28 @@ import org.apache.spark.internal.LogKeys._
 import org.apache.spark.util.Utils
 
 /**
- * ::DeveloperApi::
- * TopologyMapper provides topology information for a given host
- * @param conf SparkConf to get required properties, if needed
+ * ::DeveloperApi:: TopologyMapper provides topology information for a given host
+ * @param conf
+ *   SparkConf to get required properties, if needed
  */
 @DeveloperApi
 abstract class TopologyMapper(conf: SparkConf) {
+
   /**
    * Gets the topology information given the host name
    *
-   * @param hostname Hostname
-   * @return topology information for the given hostname. One can use a 'topology delimiter'
-   *         to make this topology information nested.
-   *         For example : ‘/myrack/myhost’, where ‘/’ is the topology delimiter,
-   *         ‘myrack’ is the topology identifier, and ‘myhost’ is the individual host.
-   *         This function only returns the topology information without the hostname.
-   *         This information can be used when choosing executors for block replication
-   *         to discern executors from a different rack than a candidate executor, for example.
+   * @param hostname
+   *   Hostname
+   * @return
+   *   topology information for the given hostname. One can use a 'topology delimiter' to make
+   *   this topology information nested. For example : ‘/myrack/myhost’, where ‘/’ is the topology
+   *   delimiter, ‘myrack’ is the topology identifier, and ‘myhost’ is the individual host. This
+   *   function only returns the topology information without the hostname. This information can
+   *   be used when choosing executors for block replication to discern executors from a different
+   *   rack than a candidate executor, for example.
    *
-   *         An implementation can choose to use empty strings or None in case topology info
-   *         is not available. This would imply that all such executors belong to the same rack.
+   * An implementation can choose to use empty strings or None in case topology info is not
+   * available. This would imply that all such executors belong to the same rack.
    */
   def getTopologyForHost(hostname: String): Option[String]
 }
@@ -65,13 +67,16 @@ class DefaultTopologyMapper(conf: SparkConf) extends TopologyMapper(conf) with L
  * `spark.storage.replication.topologyFile`. To use this topology mapper, set the
  * `spark.storage.replication.topologyMapper` property to
  * [[org.apache.spark.storage.FileBasedTopologyMapper]]
- * @param conf SparkConf object
+ * @param conf
+ *   SparkConf object
  */
 @DeveloperApi
 class FileBasedTopologyMapper(conf: SparkConf) extends TopologyMapper(conf) with Logging {
   val topologyFile = conf.get(config.STORAGE_REPLICATION_TOPOLOGY_FILE)
-  require(topologyFile.isDefined, "Please specify topology file via " +
-    "spark.storage.replication.topologyFile for FileBasedTopologyMapper.")
+  require(
+    topologyFile.isDefined,
+    "Please specify topology file via " +
+      "spark.storage.replication.topologyFile for FileBasedTopologyMapper.")
   val topologyMap = Utils.getPropertiesFromFile(topologyFile.get)
 
   override def getTopologyForHost(hostname: String): Option[String] = {
@@ -84,4 +89,3 @@ class FileBasedTopologyMapper(conf: SparkConf) extends TopologyMapper(conf) with
     topology
   }
 }
-

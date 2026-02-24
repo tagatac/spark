@@ -26,16 +26,20 @@ import org.apache.spark.util.SparkStringUtils
 import org.apache.spark.util.Utils.checkAndGetK8sMasterUrl
 
 private[spark] class KubeConfigBackend(var context: String)
-  extends IntegrationTestBackend with Logging {
-  logInfo(s"K8S Integration tests will run against " +
-    s"${if (context != null) s"context ${context}" else "default context"}" +
-    s" from users K8S config file")
+    extends IntegrationTestBackend
+    with Logging {
+  logInfo(
+    s"K8S Integration tests will run against " +
+      s"${if (context != null) s"context ${context}" else "default context"}" +
+      s" from users K8S config file")
 
   private var defaultClient: KubernetesClient = _
 
   override def initialize(): Unit = {
     // Auto-configure K8S client from K8S config file
-    if (Utils.getSystemPropertyOrEnvVar(Config.KUBERNETES_KUBECONFIG_FILE, null: String) == null) {
+    if (Utils.getSystemPropertyOrEnvVar(
+        Config.KUBERNETES_KUBECONFIG_FILE,
+        null: String) == null) {
       // Fabric 8 client will automatically assume a default location in this case
       logWarning("No explicit KUBECONFIG specified, will assume $HOME/.kube/config")
     }
@@ -49,8 +53,9 @@ private[spark] class KubeConfigBackend(var context: String)
       // K8S master URL
       masterUrl = checkAndGetK8sMasterUrl(masterUrl).replaceFirst("k8s://", "")
       if (!config.getMasterUrl.equals(masterUrl)) {
-        logInfo(s"Overriding K8S master URL ${config.getMasterUrl} from K8S config file " +
-          s"with user specified master URL ${masterUrl}")
+        logInfo(
+          s"Overriding K8S master URL ${config.getMasterUrl} from K8S config file " +
+            s"with user specified master URL ${masterUrl}")
         config.setMasterUrl(masterUrl)
       }
     }

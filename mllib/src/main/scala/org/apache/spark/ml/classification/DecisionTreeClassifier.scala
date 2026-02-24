@@ -39,16 +39,18 @@ import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types.StructType
 
 /**
- * Decision tree learning algorithm (http://en.wikipedia.org/wiki/Decision_tree_learning)
- * for classification.
- * It supports both binary and multiclass labels, as well as both continuous and categorical
- * features.
+ * Decision tree learning algorithm (http://en.wikipedia.org/wiki/Decision_tree_learning) for
+ * classification. It supports both binary and multiclass labels, as well as both continuous and
+ * categorical features.
  */
 @Since("1.4.0")
-class DecisionTreeClassifier @Since("1.4.0") (
-    @Since("1.4.0") override val uid: String)
-  extends ProbabilisticClassifier[Vector, DecisionTreeClassifier, DecisionTreeClassificationModel]
-  with DecisionTreeClassifierParams with DefaultParamsWritable {
+class DecisionTreeClassifier @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+    extends ProbabilisticClassifier[
+      Vector,
+      DecisionTreeClassifier,
+      DecisionTreeClassificationModel]
+    with DecisionTreeClassifierParams
+    with DefaultParamsWritable {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("dtc"))
@@ -83,11 +85,9 @@ class DecisionTreeClassifier @Since("1.4.0") (
   def setCacheNodeIds(value: Boolean): this.type = set(cacheNodeIds, value)
 
   /**
-   * Specifies how often to checkpoint the cached node IDs.
-   * E.g. 10 means that the cache will get checkpointed every 10 iterations.
-   * This is only used if cacheNodeIds is true and if the checkpoint directory is set in
-   * [[org.apache.spark.SparkContext]].
-   * Must be at least 1.
+   * Specifies how often to checkpoint the cached node IDs. E.g. 10 means that the cache will get
+   * checkpointed every 10 iterations. This is only used if cacheNodeIds is true and if the
+   * checkpoint directory is set in [[org.apache.spark.SparkContext]]. Must be at least 1.
    * (default = 10)
    * @group setParam
    */
@@ -103,53 +103,82 @@ class DecisionTreeClassifier @Since("1.4.0") (
   def setSeed(value: Long): this.type = set(seed, value)
 
   /**
-   * Sets the value of param [[weightCol]].
-   * If this is not set or empty, we treat all instance weights as 1.0.
-   * Default is not set, so all instances have weight one.
+   * Sets the value of param [[weightCol]]. If this is not set or empty, we treat all instance
+   * weights as 1.0. Default is not set, so all instances have weight one.
    *
    * @group setParam
    */
   @Since("3.0.0")
   def setWeightCol(value: String): this.type = set(weightCol, value)
 
-  override protected def train(
-      dataset: Dataset[_]): DecisionTreeClassificationModel = instrumented { instr =>
-    instr.logPipelineStage(this)
-    instr.logDataset(dataset)
-    val categoricalFeatures = MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
-    val numClasses = getNumClasses(dataset)
+  override protected def train(dataset: Dataset[_]): DecisionTreeClassificationModel =
+    instrumented { instr =>
+      instr.logPipelineStage(this)
+      instr.logDataset(dataset)
+      val categoricalFeatures =
+        MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
+      val numClasses = getNumClasses(dataset)
 
-    if (isDefined(thresholds)) {
-      require($(thresholds).length == numClasses, this.getClass.getSimpleName +
-        ".train() called with non-matching numClasses and thresholds.length." +
-        s" numClasses=$numClasses, but thresholds has length ${$(thresholds).length}")
+      if (isDefined(thresholds)) {
+        require(
+          $(thresholds).length == numClasses,
+          this.getClass.getSimpleName +
+            ".train() called with non-matching numClasses and thresholds.length." +
+            s" numClasses=$numClasses, but thresholds has length ${$(thresholds).length}")
+      }
+
+      val instances = dataset
+        .select(
+          checkClassificationLabels($(labelCol), Some(numClasses)),
+          checkNonNegativeWeights(get(weightCol)),
+          checkNonNanVectors($(featuresCol)))
+        .rdd
+        .map { case Row(l: Double, w: Double, v: Vector) => Instance(l, w, v) }
+        .setName("training instances")
+
+      val strategy = getOldStrategy(categoricalFeatures, numClasses)
+      require(!strategy.bootstrap, "DecisionTreeClassifier does not need bootstrap sampling")
+      instr.logNumClasses(numClasses)
+      instr.logParams(
+        this,
+        labelCol,
+        featuresCol,
+        predictionCol,
+        rawPredictionCol,
+        probabilityCol,
+        leafCol,
+        maxDepth,
+        maxBins,
+        minInstancesPerNode,
+        minInfoGain,
+        maxMemoryInMB,
+        cacheNodeIds,
+        checkpointInterval,
+        impurity,
+        seed,
+        thresholds)
+
+      val trees = RandomForest.run(
+        instances,
+        strategy,
+        numTrees = 1,
+        featureSubsetStrategy = "all",
+        seed = $(seed),
+        instr = Some(instr),
+        parentUID = Some(uid))
+
+      trees.head.asInstanceOf[DecisionTreeClassificationModel]
     }
-
-    val instances = dataset.select(
-      checkClassificationLabels($(labelCol), Some(numClasses)),
-      checkNonNegativeWeights(get(weightCol)),
-      checkNonNanVectors($(featuresCol))
-    ).rdd.map { case Row(l: Double, w: Double, v: Vector) => Instance(l, w, v)
-    }.setName("training instances")
-
-    val strategy = getOldStrategy(categoricalFeatures, numClasses)
-    require(!strategy.bootstrap, "DecisionTreeClassifier does not need bootstrap sampling")
-    instr.logNumClasses(numClasses)
-    instr.logParams(this, labelCol, featuresCol, predictionCol, rawPredictionCol,
-      probabilityCol, leafCol, maxDepth, maxBins, minInstancesPerNode, minInfoGain,
-      maxMemoryInMB, cacheNodeIds, checkpointInterval, impurity, seed, thresholds)
-
-    val trees = RandomForest.run(instances, strategy, numTrees = 1, featureSubsetStrategy = "all",
-      seed = $(seed), instr = Some(instr), parentUID = Some(uid))
-
-    trees.head.asInstanceOf[DecisionTreeClassificationModel]
-  }
 
   /** (private[ml]) Create a Strategy instance to use with the old API. */
   private[ml] def getOldStrategy(
       categoricalFeatures: Map[Int, Int],
       numClasses: Int): OldStrategy = {
-    super.getOldStrategy(categoricalFeatures, numClasses, OldAlgo.Classification, getOldImpurity,
+    super.getOldStrategy(
+      categoricalFeatures,
+      numClasses,
+      OldAlgo.Classification,
+      getOldImpurity,
       subsamplingRate = 1.0)
   }
 
@@ -159,6 +188,7 @@ class DecisionTreeClassifier @Since("1.4.0") (
 
 @Since("1.4.0")
 object DecisionTreeClassifier extends DefaultParamsReadable[DecisionTreeClassifier] {
+
   /** Accessor for supported impurities: entropy, gini */
   @Since("1.4.0")
   final val supportedImpurities: Array[String] = TreeClassifierParams.supportedImpurities
@@ -174,20 +204,25 @@ object DecisionTreeClassifier extends DefaultParamsReadable[DecisionTreeClassifi
  */
 @Since("1.4.0")
 class DecisionTreeClassificationModel private[ml] (
-    @Since("1.4.0")override val uid: String,
-    @Since("1.4.0")override val rootNode: Node,
-    @Since("1.6.0")override val numFeatures: Int,
-    @Since("1.5.0")override val numClasses: Int)
-  extends ProbabilisticClassificationModel[Vector, DecisionTreeClassificationModel]
-  with DecisionTreeModel with DecisionTreeClassifierParams with MLWritable with Serializable {
+    @Since("1.4.0") override val uid: String,
+    @Since("1.4.0") override val rootNode: Node,
+    @Since("1.6.0") override val numFeatures: Int,
+    @Since("1.5.0") override val numClasses: Int)
+    extends ProbabilisticClassificationModel[Vector, DecisionTreeClassificationModel]
+    with DecisionTreeModel
+    with DecisionTreeClassifierParams
+    with MLWritable
+    with Serializable {
 
-  require(rootNode != null,
+  require(
+    rootNode != null,
     "DecisionTreeClassificationModel given null rootNode, but it requires a non-null rootNode.")
 
   /**
    * Construct a decision tree classification model.
    *
-   * @param rootNode  Root node of tree, with other nodes attached.
+   * @param rootNode
+   *   Root node of tree, with other nodes attached.
    */
   private[ml] def this(rootNode: Node, numFeatures: Int, numClasses: Int) =
     this(Identifiable.randomUID("dtc"), rootNode, numFeatures, numClasses)
@@ -216,7 +251,9 @@ class DecisionTreeClassificationModel private[ml] (
     val outputData = super.transform(dataset)
     if ($(leafCol).nonEmpty) {
       val leafUDF = udf { features: Vector => predictLeaf(features) }
-      outputData.withColumn($(leafCol), leafUDF(col($(featuresCol))),
+      outputData.withColumn(
+        $(leafCol),
+        leafUDF(col($(featuresCol))),
         outputSchema($(leafCol)).metadata)
     } else {
       outputData
@@ -234,8 +271,9 @@ class DecisionTreeClassificationModel private[ml] (
         ProbabilisticClassificationModel.normalizeToProbabilitiesInPlace(dv)
         dv
       case sv: SparseVector =>
-        throw new RuntimeException("Unexpected error in DecisionTreeClassificationModel:" +
-          " raw2probabilityInPlace encountered SparseVector")
+        throw new RuntimeException(
+          "Unexpected error in DecisionTreeClassificationModel:" +
+            " raw2probabilityInPlace encountered SparseVector")
     }
   }
 
@@ -254,18 +292,19 @@ class DecisionTreeClassificationModel private[ml] (
   /**
    * Estimate of the importance of each feature.
    *
-   * This generalizes the idea of "Gini" importance to other losses,
-   * following the explanation of Gini importance from "Random Forests" documentation
-   * by Leo Breiman and Adele Cutler, and following the implementation from scikit-learn.
+   * This generalizes the idea of "Gini" importance to other losses, following the explanation of
+   * Gini importance from "Random Forests" documentation by Leo Breiman and Adele Cutler, and
+   * following the implementation from scikit-learn.
    *
    * This feature importance is calculated as follows:
-   *   - importance(feature j) = sum (over nodes which split on feature j) of the gain,
-   *     where gain is scaled by the number of instances passing through node
+   *   - importance(feature j) = sum (over nodes which split on feature j) of the gain, where gain
+   *     is scaled by the number of instances passing through node
    *   - Normalize importances for tree to sum to 1.
    *
-   * @note Feature importance for single decision trees can have high variance due to
-   * correlated predictor variables. Consider using a [[RandomForestClassifier]]
-   * to determine feature importance instead.
+   * @note
+   *   Feature importance for single decision trees can have high variance due to correlated
+   *   predictor variables. Consider using a [[RandomForestClassifier]] to determine feature
+   *   importance instead.
    */
   @Since("2.0.0")
   lazy val featureImportances: Vector = TreeEnsembleModel.featureImportances(this, numFeatures)
@@ -290,26 +329,28 @@ object DecisionTreeClassificationModel extends MLReadable[DecisionTreeClassifica
   @Since("2.0.0")
   override def load(path: String): DecisionTreeClassificationModel = super.load(path)
 
-  private[DecisionTreeClassificationModel]
-  class DecisionTreeClassificationModelWriter(instance: DecisionTreeClassificationModel)
-    extends MLWriter {
+  private[DecisionTreeClassificationModel] class DecisionTreeClassificationModelWriter(
+      instance: DecisionTreeClassificationModel)
+      extends MLWriter {
 
     override protected def saveImpl(path: String): Unit = {
-      val extraMetadata: JObject = Map(
-        "numFeatures" -> instance.numFeatures,
-        "numClasses" -> instance.numClasses)
+      val extraMetadata: JObject =
+        Map("numFeatures" -> instance.numFeatures, "numClasses" -> instance.numClasses)
       DefaultParamsWriter.saveMetadata(instance, path, sparkSession, Some(extraMetadata))
       val (nodeData, _) = NodeData.build(instance.rootNode, 0)
       val dataPath = new Path(path, "data").toString
       val numDataParts = NodeData.inferNumPartitions(instance.numNodes)
       ReadWriteUtils.saveArray(
-        dataPath, nodeData.toArray, sparkSession, NodeData.serializeData, numDataParts
-      )
+        dataPath,
+        nodeData.toArray,
+        sparkSession,
+        NodeData.serializeData,
+        numDataParts)
     }
   }
 
   private class DecisionTreeClassificationModelReader
-    extends MLReader[DecisionTreeClassificationModel] {
+      extends MLReader[DecisionTreeClassificationModel] {
 
     /** Checked against metadata when loading model */
     private val className = classOf[DecisionTreeClassificationModel].getName
@@ -332,7 +373,8 @@ object DecisionTreeClassificationModel extends MLReadable[DecisionTreeClassifica
       parent: DecisionTreeClassifier,
       categoricalFeatures: Map[Int, Int],
       numFeatures: Int = -1): DecisionTreeClassificationModel = {
-    require(oldModel.algo == OldAlgo.Classification,
+    require(
+      oldModel.algo == OldAlgo.Classification,
       s"Cannot convert non-classification DecisionTreeModel (old API) to" +
         s" DecisionTreeClassificationModel (new API).  Algo is: ${oldModel.algo}")
     val rootNode = Node.fromOld(oldModel.topNode, categoricalFeatures)

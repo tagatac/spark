@@ -33,21 +33,30 @@ private[ui] class AllStagesPage(parent: StagesTab) extends WebUIPage("") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
     // For now, pool information is only accessible in live UIs
-    val pools = sc.map(_.getAllPools).getOrElse(Seq.empty[Schedulable]).map { pool =>
-      val uiPool = parent.store.asOption(parent.store.pool(pool.name)).getOrElse(
-        new PoolData(pool.name, Set()))
-      pool -> uiPool
-    }.toMap
+    val pools = sc
+      .map(_.getAllPools)
+      .getOrElse(Seq.empty[Schedulable])
+      .map { pool =>
+        val uiPool = parent.store
+          .asOption(parent.store.pool(pool.name))
+          .getOrElse(new PoolData(pool.name, Set()))
+        pool -> uiPool
+      }
+      .toMap
     val poolTable = new PoolTable(pools, parent)
 
-    val allStatuses = Seq(StageStatus.ACTIVE, StageStatus.PENDING, StageStatus.COMPLETE,
-      StageStatus.SKIPPED, StageStatus.FAILED)
+    val allStatuses = Seq(
+      StageStatus.ACTIVE,
+      StageStatus.PENDING,
+      StageStatus.COMPLETE,
+      StageStatus.SKIPPED,
+      StageStatus.FAILED)
 
     val allStages = parent.store.stageList(null)
     val appSummary = parent.store.appSummary()
 
-    val (summaries, tables) = allStatuses.map(
-      summaryAndTableForStatus(allStages, appSummary, _, request)).unzip
+    val (summaries, tables) =
+      allStatuses.map(summaryAndTableForStatus(allStages, appSummary, _, request)).unzip
 
     val summary: NodeSeq =
       <div>
@@ -57,7 +66,7 @@ private[ui] class AllStagesPage(parent: StagesTab) extends WebUIPage("") {
       </div>
 
     val poolsDescription = if (parent.isFairScheduler) {
-        <span class="collapse-aggregated-poolTable collapse-table"
+      <span class="collapse-aggregated-poolTable collapse-table"
             data-collapse-name="collapse-aggregated-poolTable"
             data-collapse-table="aggregated-poolTable">
           <h4>
@@ -68,9 +77,9 @@ private[ui] class AllStagesPage(parent: StagesTab) extends WebUIPage("") {
         <div class="aggregated-poolTable collapsible-table">
           {poolTable.toNodeSeq(request)}
         </div>
-      } else {
-        Seq.empty[Node]
-      }
+    } else {
+      Seq.empty[Node]
+    }
 
     val content = summary ++ poolsDescription ++ tables.flatten.flatten
 
@@ -95,10 +104,20 @@ private[ui] class AllStagesPage(parent: StagesTab) extends WebUIPage("") {
       val isFailedStage = status == StageStatus.FAILED
 
       val stagesTable =
-        new StageTableBase(parent.store, request, stages, statusName(status), stageTag(status),
-          parent.basePath, subPath, parent.isFairScheduler, killEnabled, isFailedStage)
+        new StageTableBase(
+          parent.store,
+          request,
+          stages,
+          statusName(status),
+          stageTag(status),
+          parent.basePath,
+          subPath,
+          parent.isFairScheduler,
+          killEnabled,
+          isFailedStage)
       val stagesSize = stages.size
-      (Some(summary(appSummary, status, stagesSize)),
+      (
+        Some(summary(appSummary, status, stagesSize)),
         Some(table(appSummary, status, stagesTable, stagesSize)))
     }
   }

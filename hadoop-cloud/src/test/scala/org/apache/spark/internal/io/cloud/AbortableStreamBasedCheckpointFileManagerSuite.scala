@@ -31,7 +31,8 @@ import org.apache.spark.sql.execution.streaming.CheckpointFileManagerTests
 import org.apache.spark.sql.execution.streaming.checkpointing.CheckpointFileManager
 
 class AbortableStreamBasedCheckpointFileManagerSuite
-  extends CheckpointFileManagerTests with Logging {
+    extends CheckpointFileManagerTests
+    with Logging {
 
   override def withTempHadoopPath(p: Path => Unit): Unit = {
     withTempDir { f: File =>
@@ -40,11 +41,12 @@ class AbortableStreamBasedCheckpointFileManagerSuite
     }
   }
 
-  override def checkLeakingCrcFiles(path: Path): Unit = { }
+  override def checkLeakingCrcFiles(path: Path): Unit = {}
 
   override def createManager(path: Path): CheckpointFileManager = {
     val conf = new Configuration()
-    conf.set(s"fs.AbstractFileSystem.${AbortableFileSystem.ABORTABLE_FS_SCHEME}.impl",
+    conf.set(
+      s"fs.AbstractFileSystem.${AbortableFileSystem.ABORTABLE_FS_SCHEME}.impl",
       "org.apache.spark.internal.io.cloud.abortable.AbstractAbortableFileSystem")
     new AbortableStreamBasedCheckpointFileManager(path, conf)
   }
@@ -52,7 +54,8 @@ class AbortableStreamBasedCheckpointFileManagerSuite
 
 @IntegrationTestSuite
 class AwsS3AbortableStreamBasedCheckpointFileManagerSuite
-    extends AbortableStreamBasedCheckpointFileManagerSuite with BeforeAndAfter {
+    extends AbortableStreamBasedCheckpointFileManagerSuite
+    with BeforeAndAfter {
 
   val s3aPath = Properties.envOrNone("S3A_PATH")
 

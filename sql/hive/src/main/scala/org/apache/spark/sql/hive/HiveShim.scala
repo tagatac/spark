@@ -115,14 +115,18 @@ private[hive] object HiveShim {
    *
    * Detail discussion can be found at https://github.com/apache/spark/pull/3640
    *
-   * @param functionClassName UDF class name
-   * @param instance optional UDF instance which contains additional information (for macro)
-   * @param clazz optional class instance to create UDF instance
+   * @param functionClassName
+   *   UDF class name
+   * @param instance
+   *   optional UDF instance which contains additional information (for macro)
+   * @param clazz
+   *   optional class instance to create UDF instance
    */
   private[hive] case class HiveFunctionWrapper(
       var functionClassName: String,
       private var instance: AnyRef = null,
-      private var clazz: Class[_ <: AnyRef] = null) extends java.io.Externalizable {
+      private var clazz: Class[_ <: AnyRef] = null)
+      extends java.io.Externalizable {
 
     // for Serialization
     def this() = this(null)
@@ -186,10 +190,11 @@ private[hive] object HiveShim {
         in.readFully(functionInBytes)
 
         // deserialize the function object via Hive Utilities
-        clazz = Utils.getContextOrSparkClassLoader.loadClass(functionClassName)
+        clazz = Utils.getContextOrSparkClassLoader
+          .loadClass(functionClassName)
           .asInstanceOf[Class[_ <: AnyRef]]
-        instance = deserializePlan[AnyRef](new java.io.ByteArrayInputStream(functionInBytes),
-          clazz)
+        instance =
+          deserializePlan[AnyRef](new java.io.ByteArrayInputStream(functionInBytes), clazz)
       }
     }
 
@@ -198,7 +203,8 @@ private[hive] object HiveShim {
         instance.asInstanceOf[UDFType]
       } else {
         if (clazz == null) {
-          clazz = Utils.getContextOrSparkClassLoader.loadClass(functionClassName)
+          clazz = Utils.getContextOrSparkClassLoader
+            .loadClass(functionClassName)
             .asInstanceOf[Class[_ <: AnyRef]]
         }
         val func = clazz.getConstructor().newInstance().asInstanceOf[UDFType]

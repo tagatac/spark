@@ -28,14 +28,12 @@ import org.apache.spark.internal.LogKeys.{PYTHON_WORKER_MODULE, PYTHON_WORKER_RE
 import org.apache.spark.internal.config.BUFFER_SIZE
 import org.apache.spark.internal.config.Python.{PYTHON_AUTH_SOCKET_TIMEOUT, PYTHON_UNIX_DOMAIN_SOCKET_ENABLED}
 
-
 private[spark] object StreamingPythonRunner {
   def apply(
       func: PythonFunction,
       connectUrl: String,
       sessionId: String,
-      workerModule: String
-  ): StreamingPythonRunner = {
+      workerModule: String): StreamingPythonRunner = {
     new StreamingPythonRunner(func, connectUrl, sessionId, workerModule)
   }
 }
@@ -44,7 +42,8 @@ private[spark] class StreamingPythonRunner(
     func: PythonFunction,
     connectUrl: String,
     sessionId: String,
-    workerModule: String) extends Logging {
+    workerModule: String)
+    extends Logging {
   private val conf = SparkEnv.get.conf
   private val isUnixDomainSock = conf.get(PYTHON_UNIX_DOMAIN_SOCKET_ENABLED)
   protected val bufferSize: Int = conf.get(BUFFER_SIZE)
@@ -57,12 +56,13 @@ private[spark] class StreamingPythonRunner(
   protected val pythonVer: String = func.pythonVer
 
   /**
-   * Initializes the Python worker for streaming functions. Sets up Spark Connect session
-   * to be used with the functions.
+   * Initializes the Python worker for streaming functions. Sets up Spark Connect session to be
+   * used with the functions.
    */
   def init(): (DataOutputStream, DataInputStream) = {
-    logInfo(log"[session: ${MDC(SESSION_ID, sessionId)}] Sending necessary information to the " +
-      log"Python worker")
+    logInfo(
+      log"[session: ${MDC(SESSION_ID, sessionId)}] Sending necessary information to the " +
+        log"Python worker")
     val env = SparkEnv.get
 
     val localdir = env.blockManager.diskBlockManager.localDirs.map(f => f.getPath()).mkString(",")
@@ -96,27 +96,29 @@ private[spark] class StreamingPythonRunner(
       None
     }
 
-    val resFromPython = try {
-      PythonWorkerUtils.writePythonVersion(pythonVer, dataOut)
+    val resFromPython =
+      try {
+        PythonWorkerUtils.writePythonVersion(pythonVer, dataOut)
 
-      // Send sessionId
-      if (!sessionId.isEmpty) {
-        PythonRDD.writeUTF(sessionId, dataOut)
+        // Send sessionId
+        if (!sessionId.isEmpty) {
+          PythonRDD.writeUTF(sessionId, dataOut)
+        }
+
+        // Send the user function to python process
+        PythonWorkerUtils.writePythonFunction(func, dataOut)
+        dataOut.flush()
+
+        logInfo(
+          log"[session: ${MDC(SESSION_ID, sessionId)}] Reading initialization response from " +
+            log"Python runner.")
+        dataIn.readInt()
+      } catch {
+        case e: java.net.SocketTimeoutException =>
+          throw new StreamingPythonRunnerInitializationTimeoutException(e.getMessage)
+        case e: Exception =>
+          throw new StreamingPythonRunnerInitializationCommunicationException(e.getMessage)
       }
-
-      // Send the user function to python process
-      PythonWorkerUtils.writePythonFunction(func, dataOut)
-      dataOut.flush()
-
-      logInfo(log"[session: ${MDC(SESSION_ID, sessionId)}] Reading initialization response from " +
-        log"Python runner.")
-      dataIn.readInt()
-    } catch {
-      case e: java.net.SocketTimeoutException =>
-        throw new StreamingPythonRunnerInitializationTimeoutException(e.getMessage)
-      case e: Exception =>
-        throw new StreamingPythonRunnerInitializationCommunicationException(e.getMessage)
-    }
 
     // Set timeout back to the original timeout
     // Should be infinity by default
@@ -126,35 +128,35 @@ private[spark] class StreamingPythonRunner(
       val errMessage = PythonWorkerUtils.readUTF(dataIn)
       throw new StreamingPythonRunnerInitializationException(resFromPython, errMessage)
     }
-    logInfo(log"[session: ${MDC(SESSION_ID, sessionId)}] Runner initialization succeeded " +
-      log"(returned ${MDC(PYTHON_WORKER_RESPONSE, resFromPython)}).")
+    logInfo(
+      log"[session: ${MDC(SESSION_ID, sessionId)}] Runner initialization succeeded " +
+        log"(returned ${MDC(PYTHON_WORKER_RESPONSE, resFromPython)}).")
 
     (dataOut, dataIn)
   }
 
   class StreamingPythonRunnerInitializationCommunicationException(errMessage: String)
-    extends SparkPythonException(
-      errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_COMMUNICATION_FAILURE",
-      messageParameters = Map("msg" -> errMessage))
+      extends SparkPythonException(
+        errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_COMMUNICATION_FAILURE",
+        messageParameters = Map("msg" -> errMessage))
 
   class StreamingPythonRunnerInitializationTimeoutException(errMessage: String)
-    extends SparkPythonException(
-      errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_TIMEOUT_FAILURE",
-      messageParameters = Map("msg" -> errMessage))
+      extends SparkPythonException(
+        errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_TIMEOUT_FAILURE",
+        messageParameters = Map("msg" -> errMessage))
 
   class StreamingPythonRunnerInitializationException(resFromPython: Int, errMessage: String)
-    extends SparkPythonException(
-      errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_FAILURE",
-      messageParameters = Map(
-        "resFromPython" -> resFromPython.toString,
-        "msg" -> errMessage))
+      extends SparkPythonException(
+        errorClass = "STREAMING_PYTHON_RUNNER_INITIALIZATION_FAILURE",
+        messageParameters = Map("resFromPython" -> resFromPython.toString, "msg" -> errMessage))
 
   /**
    * Stops the Python worker.
    */
   def stop(): Unit = {
-    logInfo(log"[session: ${MDC(SESSION_ID, sessionId)}] Stopping streaming runner," +
-      log" module: ${MDC(PYTHON_WORKER_MODULE, workerModule)}.")
+    logInfo(
+      log"[session: ${MDC(SESSION_ID, sessionId)}] Stopping streaming runner," +
+        log" module: ${MDC(PYTHON_WORKER_MODULE, workerModule)}.")
 
     try {
       pythonWorkerFactory.foreach { factory =>
@@ -171,8 +173,9 @@ private[spark] class StreamingPythonRunner(
 
   /**
    * Returns whether the Python worker has been stopped.
-   * @return Some(true) if the Python worker has been stopped.
-   *         None if either the Python worker or the Python worker factory is not initialized.
+   * @return
+   *   Some(true) if the Python worker has been stopped. None if either the Python worker or the
+   *   Python worker factory is not initialized.
    */
   def isWorkerStopped(): Option[Boolean] = {
     pythonWorkerFactory.flatMap { factory =>

@@ -50,10 +50,10 @@ import org.apache.spark.util.SerializableJobConf
  * TODO: implement the read logic.
  */
 case class HiveFileFormat(fileSinkConf: FileSinkDesc)
-  extends FileFormat
-  with SessionStateHelper
-  with DataSourceRegister
-  with Logging {
+    extends FileFormat
+    with SessionStateHelper
+    with DataSourceRegister
+    with Logging {
 
   def this() = this(null)
 
@@ -135,13 +135,15 @@ class HiveOutputWriter(
     val path: String,
     fileSinkConf: FileSinkDesc,
     jobConf: JobConf,
-    dataSchema: StructType) extends OutputWriter with HiveInspectors {
+    dataSchema: StructType)
+    extends OutputWriter
+    with HiveInspectors {
 
   private def tableDesc = fileSinkConf.getTableInfo
 
   private val serializer = {
-    val serializer = tableDesc.getDeserializerClass.getConstructor().
-      newInstance().asInstanceOf[Serializer]
+    val serializer =
+      tableDesc.getDeserializerClass.getConstructor().newInstance().asInstanceOf[Serializer]
     serializer.initialize(jobConf, tableDesc.getProperties)
     serializer
   }
@@ -156,8 +158,8 @@ class HiveOutputWriter(
 
   /**
    * Since SPARK-30201 ObjectInspectorCopyOption.JAVA change to ObjectInspectorCopyOption.DEFAULT.
-   * The reason is DEFAULT option can convert `UTF8String` to `Text` with bytes and
-   * we can compatible with non UTF-8 code bytes during write.
+   * The reason is DEFAULT option can convert `UTF8String` to `Text` with bytes and we can
+   * compatible with non UTF-8 code bytes during write.
    */
   private val standardOI = ObjectInspectorUtils
     .getStandardObjectInspector(

@@ -57,7 +57,8 @@ private[spark] class NettyBlockTransferService(
     _port: Int,
     numCores: Int,
     driverEndPointRef: RpcEndpointRef = null)
-  extends BlockTransferService with Logging {
+    extends BlockTransferService
+    with Logging {
 
   // TODO: Don't use Java serialization, use a more cross-version compatible serialization format.
   private val serializer = serializerManager.getSerializer(scala.reflect.classTag[Any], false)
@@ -77,7 +78,8 @@ private[spark] class NettyBlockTransferService(
       sslOptions = Some(securityManager.getRpcSSLOptions()))
     if (authEnabled) {
       serverBootstrap = Some(new AuthServerBootstrap(transportConf, securityManager))
-      clientBootstrap = Some(new AuthClientBootstrap(transportConf, conf.getAppId, securityManager))
+      clientBootstrap = Some(
+        new AuthClientBootstrap(transportConf, conf.getAppId, securityManager))
     }
     transportContext = new TransportContext(transportConf, rpcHandler)
     clientFactory = transportContext.createClientFactory(clientBootstrap.toSeq.asJava)
@@ -85,11 +87,16 @@ private[spark] class NettyBlockTransferService(
     appId = conf.getAppId
 
     if (hostName.equals(bindAddress)) {
-      logger.info("Server created on {}:{}",
-        MDC(LogKeys.HOST, hostName), MDC(LogKeys.PORT, server.getPort))
+      logger.info(
+        "Server created on {}:{}",
+        MDC(LogKeys.HOST, hostName),
+        MDC(LogKeys.PORT, server.getPort))
     } else {
-      logger.info("Server created on {} {}:{}", MDC(LogKeys.HOST, hostName),
-        MDC(LogKeys.BIND_ADDRESS, bindAddress), MDC(LogKeys.PORT, server.getPort))
+      logger.info(
+        "Server created on {} {}:{}",
+        MDC(LogKeys.HOST, hostName),
+        MDC(LogKeys.BIND_ADDRESS, bindAddress),
+        MDC(LogKeys.PORT, server.getPort))
     }
   }
 
@@ -104,7 +111,9 @@ private[spark] class NettyBlockTransferService(
   }
 
   override def shuffleMetrics(): MetricSet = {
-    require(server != null && clientFactory != null, "NettyBlockTransferServer is not initialized")
+    require(
+      server != null && clientFactory != null,
+      "NettyBlockTransferServer is not initialized")
 
     new MetricSet {
       val allMetrics = new JHashMap[String, Metric]()
@@ -129,22 +138,31 @@ private[spark] class NettyBlockTransferService(
     try {
       val maxRetries = transportConf.maxIORetries()
       val blockFetchStarter = new RetryingBlockTransferor.BlockTransferStarter {
-        override def createAndStart(blockIds: Array[String],
+        override def createAndStart(
+            blockIds: Array[String],
             listener: BlockTransferListener): Unit = {
-          assert(listener.isInstanceOf[BlockFetchingListener],
+          assert(
+            listener.isInstanceOf[BlockFetchingListener],
             s"Expecting a BlockFetchingListener, but got ${listener.getClass}")
           try {
             val client = clientFactory.createClient(host, port, maxRetries > 0)
-            new OneForOneBlockFetcher(client, appId, execId, blockIds,
-              listener.asInstanceOf[BlockFetchingListener], transportConf, tempFileManager).start()
+            new OneForOneBlockFetcher(
+              client,
+              appId,
+              execId,
+              blockIds,
+              listener.asInstanceOf[BlockFetchingListener],
+              transportConf,
+              tempFileManager).start()
           } catch {
             case e: IOException =>
               Try {
                 driverEndPointRef.askSync[Boolean](IsExecutorAlive(execId))
               } match {
                 case Success(v) if v == false =>
-                  throw ExecutorDeadException(s"The relative remote executor(Id: $execId)," +
-                    " which maintains the block data to fetch is dead.")
+                  throw ExecutorDeadException(
+                    s"The relative remote executor(Id: $execId)," +
+                      " which maintains the block data to fetch is dead.")
                 case _ => throw e
               }
           }
@@ -189,7 +207,8 @@ private[spark] class NettyBlockTransferService(
     val callback = new RpcResponseCallback {
       override def onSuccess(response: ByteBuffer): Unit = {
         if (logger.isTraceEnabled) {
-          logger.trace(s"Successfully uploaded block $blockId${if (asStream) " as stream" else ""}")
+          logger.trace(
+            s"Successfully uploaded block $blockId${if (asStream) " as stream" else ""}")
         }
         result.success((): Unit)
       }
@@ -210,7 +229,8 @@ private[spark] class NettyBlockTransferService(
       // Convert or copy nio buffer into array in order to serialize it.
       val array = JavaUtils.bufferToArray(blockData.nioByteBuffer())
 
-      client.sendRpc(new UploadBlock(appId, execId, blockId.name, metadata, array).toByteBuffer,
+      client.sendRpc(
+        new UploadBlock(appId, execId, blockId.name, metadata, array).toByteBuffer,
         callback)
     }
 

@@ -23,11 +23,12 @@ import java.nio.file.Files
 /**
  * A framework for running the query tests that are listed as a set of text files.
  *
- * TestSuites that derive from this class must provide a map of testCaseName to testCaseFiles
- * that should be included. Additionally, there is support for including and excluding
- * tests as development progresses.
+ * TestSuites that derive from this class must provide a map of testCaseName to testCaseFiles that
+ * should be included. Additionally, there is support for including and excluding tests as
+ * development progresses.
  */
 abstract class HiveQueryFileTest extends HiveComparisonTest {
+
   /** A list of tests deemed out of scope and thus completely disregarded */
   def excludeList: Seq[String] = Nil
 
@@ -41,39 +42,40 @@ abstract class HiveQueryFileTest extends HiveComparisonTest {
 
   val runAll: Boolean =
     !(System.getProperty("spark.hive.alltests") == null) ||
-    runOnlyDirectories.nonEmpty ||
-    skipDirectories.nonEmpty
+      runOnlyDirectories.nonEmpty ||
+      skipDirectories.nonEmpty
 
   val deprecatedIncludeListProperty: String = "spark.hive.whitelist"
   val includeListProperty: String = "spark.hive.includelist"
   if (System.getProperty(deprecatedIncludeListProperty) != null) {
-    logWarning(s"System property `$deprecatedIncludeListProperty` is deprecated; please update " +
+    logWarning(
+      s"System property `$deprecatedIncludeListProperty` is deprecated; please update " +
         s"to use new property: $includeListProperty")
   }
   // Allow the includeList to be overridden by a system property
   val realIncludeList: Seq[String] =
     Option(System.getProperty(includeListProperty))
-        .orElse(Option(System.getProperty(deprecatedIncludeListProperty)))
-        .map(_.split(",").toSeq)
-        .getOrElse(includeList)
+      .orElse(Option(System.getProperty(deprecatedIncludeListProperty)))
+      .map(_.split(",").toSeq)
+      .getOrElse(includeList)
 
   // Go through all the test cases and add them to scala test.
-  testCases.sorted.foreach {
-    case (testCaseName, testCaseFile) =>
-      if (excludeList.map(_.r.pattern.matcher(testCaseName).matches()).reduceLeft(_||_)) {
-        logDebug(s"Excluded test skipped $testCaseName")
-      } else if (
-        realIncludeList.map(_.r.pattern.matcher(testCaseName).matches()).reduceLeft(_||_) ||
-        runAll) {
-        // Build a test case and submit it to scala test framework...
-        val queriesString = Files.readString(testCaseFile.toPath)
-        createQueryTest(testCaseName, queriesString, reset = true, tryWithoutResettingFirst = true)
-      } else {
-        // Only output warnings for the built in includeList as this clutters the output when the
-        // user is trying to execute a single test from the commandline.
-        if (System.getProperty(includeListProperty) == null && !runAll) {
-          ignore(testCaseName) {}
-        }
+  testCases.sorted.foreach { case (testCaseName, testCaseFile) =>
+    if (excludeList.map(_.r.pattern.matcher(testCaseName).matches()).reduceLeft(_ || _)) {
+      logDebug(s"Excluded test skipped $testCaseName")
+    } else if (realIncludeList
+        .map(_.r.pattern.matcher(testCaseName).matches())
+        .reduceLeft(_ || _) ||
+      runAll) {
+      // Build a test case and submit it to scala test framework...
+      val queriesString = Files.readString(testCaseFile.toPath)
+      createQueryTest(testCaseName, queriesString, reset = true, tryWithoutResettingFirst = true)
+    } else {
+      // Only output warnings for the built in includeList as this clutters the output when the
+      // user is trying to execute a single test from the commandline.
+      if (System.getProperty(includeListProperty) == null && !runAll) {
+        ignore(testCaseName) {}
       }
+    }
   }
 }

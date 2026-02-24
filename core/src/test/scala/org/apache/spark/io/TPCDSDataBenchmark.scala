@@ -22,23 +22,21 @@ import java.nio.file.{Files, Paths}
 import org.apache.spark.benchmark.BenchmarkBase
 
 /**
- * TPC-DS data preparation:
- * <p>
- * 1. Follow https://github.com/gregrahn/tpcds-kit.git to set up tpcds-kit
- * <p>
- * 2. Create a folder and export environment variable SPARK_TPCDS_DATA_TEXT
- * {{{
+ * TPC-DS data preparation: <p>
+ *   1. Follow https://github.com/gregrahn/tpcds-kit.git to set up tpcds-kit <p>
+ *   2. Create a folder and export environment variable SPARK_TPCDS_DATA_TEXT
+ *      {{{
  * mkdir -p /path/of/tpcds-sf1-text
  * export SPARK_TPCDS_DATA_TEXT=/path/of/tpcds-sf1-text
- * }}}
- * <p>
- * 3. Generate TPC-DS (SF1) text data under SPARK_TPCDS_DATA_TEXT
- * {{{
+ *      }}}
+ *      <p>
+ *   3. Generate TPC-DS (SF1) text data under SPARK_TPCDS_DATA_TEXT
+ *      {{{
  * tpcds-kit/tools/dsdgen \
  *   -DISTRIBUTIONS tpcds-kit/tools/tpcds.idx \
  *   -SCALE 1 \
  *   -DIR $SPARK_TPCDS_DATA_TEXT
- * }}}
+ *      }}}
  */
 abstract class TPCDSDataBenchmark extends BenchmarkBase {
 
@@ -51,8 +49,10 @@ abstract class TPCDSDataBenchmark extends BenchmarkBase {
     assert(tpcDsDataDir.nonEmpty, "Can not find env var SPARK_TPCDS_DATA_TEXT")
 
     val catalogSalesDatPath = Paths.get(tpcDsDataDir.get, "catalog_sales.dat")
-    assert(Files.exists(catalogSalesDatPath), s"File $catalogSalesDatPath does not exists, " +
-      s"please follow instruction to generate the TPC-DS (SF1) text data first.")
+    assert(
+      Files.exists(catalogSalesDatPath),
+      s"File $catalogSalesDatPath does not exists, " +
+        s"please follow instruction to generate the TPC-DS (SF1) text data first.")
 
     // the size of TPCDS catalog_sales.dat (SF1) is about 283M
     data = Files.readAllBytes(catalogSalesDatPath)

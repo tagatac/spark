@@ -32,16 +32,17 @@ import org.apache.spark.sql.types.StringType
 
 /**
  * Analysis rule that resolves and executes EXECUTE IMMEDIATE statements during analysis,
- * replacing them with the results, similar to how CALL statements work.
- * This rule combines resolution and execution in a single pass.
+ * replacing them with the results, similar to how CALL statements work. This rule combines
+ * resolution and execution in a single pass.
  */
 case class ResolveExecuteImmediate(sparkSession: SparkSession, catalogManager: CatalogManager)
-  extends Rule[LogicalPlan] {
+    extends Rule[LogicalPlan] {
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
     plan.resolveOperatorsWithPruning(_.containsPattern(EXECUTE_IMMEDIATE), ruleId) {
       case node @ UnresolvedExecuteImmediate(sqlStmtStr, args, targetVariables) =>
-        if (sqlStmtStr.resolved && targetVariables.forall(_.resolved) && args.forall(_.resolved)) {
+        if (sqlStmtStr.resolved && targetVariables.forall(_.resolved) && args.forall(
+            _.resolved)) {
           // All resolved - execute immediately and handle INTO clause if present
           if (targetVariables.nonEmpty) {
             // EXECUTE IMMEDIATE ... INTO should generate SetVariable plan with eagerly executed
@@ -93,8 +94,7 @@ case class ResolveExecuteImmediate(sparkSession: SparkSession, catalogManager: C
       objectName = None, // No named object for EXECUTE IMMEDIATE, unlike views
       sqlText = Some(sqlString),
       startIndex = Some(0),
-      stopIndex = Some(sqlString.length - 1)
-    )
+      stopIndex = Some(sqlString.length - 1))
 
     // Execute the query recursively with isolated local variable context and EXECUTE IMMEDIATE
     // origin. The isolation must cover parsing, analysis, and execution phases.
@@ -109,7 +109,8 @@ case class ResolveExecuteImmediate(sparkSession: SparkSession, catalogManager: C
           // For parameterized queries, use shared parameter binding utility
           val (paramValues, paramNames) = ParameterBindingUtils.buildUnifiedParameters(args)
 
-          sparkSession.asInstanceOf[ClassicSparkSession]
+          sparkSession
+            .asInstanceOf[ClassicSparkSession]
             .sql(sqlString, paramValues, paramNames)
         }
 
@@ -185,10 +186,9 @@ case class ResolveExecuteImmediate(sparkSession: SparkSession, catalogManager: C
   }
 
   /**
-   * Temporarily isolates the SQL scripting context during EXECUTE IMMEDIATE execution.
-   * This makes withinSqlScript() return false, ensuring that statements within EXECUTE IMMEDIATE
-   * are not affected by the outer SQL script context (e.g., local variables, script-specific
-   * errors).
+   * Temporarily isolates the SQL scripting context during EXECUTE IMMEDIATE execution. This makes
+   * withinSqlScript() return false, ensuring that statements within EXECUTE IMMEDIATE are not
+   * affected by the outer SQL script context (e.g., local variables, script-specific errors).
    */
   private def withIsolatedLocalVariableContext[A](f: => A): A = {
     // Completely clear the SQL scripting context to make withinSqlScript() return false

@@ -109,8 +109,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     }
     stageData.rddIds.foreach(id => stageDataBuilder.addRddIds(id.toLong))
     stageData.accumulatorUpdates.foreach { update =>
-      stageDataBuilder.addAccumulatorUpdates(
-        AccumulableInfoSerializer.serialize(update))
+      stageDataBuilder.addAccumulatorUpdates(AccumulableInfoSerializer.serialize(update))
     }
     stageData.tasks.foreach { t =>
       t.foreach { entry =>
@@ -119,7 +118,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     }
     stageData.executorSummary.foreach { es =>
       es.foreach { entry =>
-        stageDataBuilder.putExecutorSummary(entry._1,
+        stageDataBuilder.putExecutorSummary(
+          entry._1,
           ExecutorStageSummarySerializer.serialize(entry._2))
       }
     }
@@ -163,8 +163,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       taskDataBuilder.setDuration(d)
     }
     t.accumulatorUpdates.foreach { update =>
-      taskDataBuilder.addAccumulatorUpdates(
-        AccumulableInfoSerializer.serialize(update))
+      taskDataBuilder.addAccumulatorUpdates(AccumulableInfoSerializer.serialize(update))
     }
     t.errorMessage.foreach { em =>
       taskDataBuilder.setErrorMessage(em)
@@ -199,14 +198,16 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
   }
 
   private def serializeInputMetrics(im: InputMetrics): StoreTypes.InputMetrics = {
-    StoreTypes.InputMetrics.newBuilder()
+    StoreTypes.InputMetrics
+      .newBuilder()
       .setBytesRead(im.bytesRead)
       .setRecordsRead(im.recordsRead)
       .build()
   }
 
   private def serializeOutputMetrics(om: OutputMetrics): StoreTypes.OutputMetrics = {
-    StoreTypes.OutputMetrics.newBuilder()
+    StoreTypes.OutputMetrics
+      .newBuilder()
       .setBytesWritten(om.bytesWritten)
       .setRecordsWritten(om.recordsWritten)
       .build()
@@ -214,7 +215,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
 
   private def serializeShuffleReadMetrics(
       srm: ShuffleReadMetrics): StoreTypes.ShuffleReadMetrics = {
-    StoreTypes.ShuffleReadMetrics.newBuilder()
+    StoreTypes.ShuffleReadMetrics
+      .newBuilder()
       .setRemoteBlocksFetched(srm.remoteBlocksFetched)
       .setLocalBlocksFetched(srm.localBlocksFetched)
       .setFetchWaitTime(srm.fetchWaitTime)
@@ -229,7 +231,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
 
   private def serializeShufflePushReadMetrics(
       sprm: ShufflePushReadMetrics): StoreTypes.ShufflePushReadMetrics = {
-    StoreTypes.ShufflePushReadMetrics.newBuilder()
+    StoreTypes.ShufflePushReadMetrics
+      .newBuilder()
       .setCorruptMergedBlockChunks(sprm.corruptMergedBlockChunks)
       .setMergedFetchFallbackCount(sprm.mergedFetchFallbackCount)
       .setRemoteMergedBlocksFetched(sprm.remoteMergedBlocksFetched)
@@ -244,7 +247,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
 
   private def serializeShuffleWriteMetrics(
       swm: ShuffleWriteMetrics): StoreTypes.ShuffleWriteMetrics = {
-    StoreTypes.ShuffleWriteMetrics.newBuilder()
+    StoreTypes.ShuffleWriteMetrics
+      .newBuilder()
       .setBytesWritten(swm.bytesWritten)
       .setWriteTime(swm.writeTime)
       .setRecordsWritten(swm.recordsWritten)
@@ -253,7 +257,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
 
   private def serializeSpeculationStageSummary(
       sss: SpeculationStageSummary): StoreTypes.SpeculationStageSummary = {
-    StoreTypes.SpeculationStageSummary.newBuilder()
+    StoreTypes.SpeculationStageSummary
+      .newBuilder()
       .setNumTasks(sss.numTasks)
       .setNumActiveTasks(sss.numActiveTasks)
       .setNumCompletedTasks(sss.numCompletedTasks)
@@ -321,7 +326,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
   }
 
   private def serializeShufflePushReadMetricDistributions(
-      sprmd: ShufflePushReadMetricDistributions): StoreTypes.ShufflePushReadMetricDistributions = {
+      sprmd: ShufflePushReadMetricDistributions)
+      : StoreTypes.ShufflePushReadMetricDistributions = {
     val builder = StoreTypes.ShufflePushReadMetricDistributions.newBuilder()
     sprmd.corruptMergedBlockChunks.foreach(cmbc => builder.addCorruptMergedBlockChunks(cmbc))
     sprmd.mergedFetchFallbackCount.foreach(mffc => builder.addMergedFetchFallbackCount(mffc))
@@ -370,8 +376,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       epmd: ExecutorPeakMetricsDistributions): StoreTypes.ExecutorPeakMetricsDistributions = {
     val builder = StoreTypes.ExecutorPeakMetricsDistributions.newBuilder()
     epmd.quantiles.foreach(q => builder.addQuantiles(q))
-    epmd.executorMetrics.foreach(em => builder.addExecutorMetrics(
-      ExecutorMetricsSerializer.serialize(em)))
+    epmd.executorMetrics.foreach(em =>
+      builder.addExecutorMetrics(ExecutorMetricsSerializer.serialize(em)))
     builder.build()
   }
 
@@ -381,8 +387,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     new StageDataWrapper(
       info = info,
       jobIds = binary.getJobIdsList.asScala.map(_.toInt).toSet,
-      locality = binary.getLocalityMap.asScala.toMap.transform((_, v) => v.toLong)
-    )
+      locality = binary.getLocalityMap.asScala.toMap.transform((_, v) => v.toLong))
   }
 
   private def deserializeStageData(binary: StoreTypes.StageData): StageData = {
@@ -390,31 +395,41 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     val submissionTime =
       getOptional(binary.hasSubmissionTime, () => new Date(binary.getSubmissionTime))
     val firstTaskLaunchedTime =
-      getOptional(binary.hasFirstTaskLaunchedTime, () => new Date(binary.getFirstTaskLaunchedTime))
+      getOptional(
+        binary.hasFirstTaskLaunchedTime,
+        () => new Date(binary.getFirstTaskLaunchedTime))
     val completionTime =
       getOptional(binary.hasCompletionTime, () => new Date(binary.getCompletionTime))
     val failureReason = getOptional(binary.hasFailureReason, binary.getFailureReason)
     val description = getOptional(binary.hasDescription, binary.getDescription)
-    val accumulatorUpdates = AccumulableInfoSerializer.deserialize(binary.getAccumulatorUpdatesList)
+    val accumulatorUpdates =
+      AccumulableInfoSerializer.deserialize(binary.getAccumulatorUpdatesList)
     val tasks = if (isNotEmpty(binary.getTasksMap)) {
-      Some(binary.getTasksMap.asScala.map(
-        entry => (entry._1.toLong, deserializeTaskData(entry._2))).toMap)
+      Some(
+        binary.getTasksMap.asScala
+          .map(entry => (entry._1.toLong, deserializeTaskData(entry._2)))
+          .toMap)
     } else None
     val executorSummary = if (isNotEmpty(binary.getExecutorSummaryMap)) {
-      Some(binary.getExecutorSummaryMap.asScala.toMap
-        .transform((_, v) => ExecutorStageSummarySerializer.deserialize(v)))
+      Some(
+        binary.getExecutorSummaryMap.asScala.toMap
+          .transform((_, v) => ExecutorStageSummarySerializer.deserialize(v)))
     } else None
     val speculationSummary =
-      getOptional(binary.hasSpeculationSummary,
+      getOptional(
+        binary.hasSpeculationSummary,
         () => deserializeSpeculationStageSummary(binary.getSpeculationSummary))
     val peakExecutorMetrics =
-      getOptional(binary.hasPeakExecutorMetrics,
+      getOptional(
+        binary.hasPeakExecutorMetrics,
         () => ExecutorMetricsSerializer.deserialize(binary.getPeakExecutorMetrics))
     val taskMetricsDistributions =
-      getOptional(binary.hasTaskMetricsDistributions,
+      getOptional(
+        binary.hasTaskMetricsDistributions,
         () => deserializeTaskMetricDistributions(binary.getTaskMetricsDistributions))
     val executorMetricsDistributions =
-      getOptional(binary.hasExecutorMetricsDistributions,
+      getOptional(
+        binary.hasExecutorMetricsDistributions,
         () => deserializeExecutorMetricsDistributions(binary.getExecutorMetricsDistributions))
     new StageData(
       status = status,
@@ -481,8 +496,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       taskMetricsDistributions = taskMetricsDistributions,
       executorMetricsDistributions = executorMetricsDistributions,
       isShufflePushEnabled = binary.getIsShufflePushEnabled,
-      shuffleMergersCount = binary.getShuffleMergersCount
-    )
+      shuffleMergersCount = binary.getShuffleMergersCount)
   }
 
   private def deserializeSpeculationStageSummary(
@@ -492,8 +506,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       binary.getNumActiveTasks,
       binary.getNumCompletedTasks,
       binary.getNumFailedTasks,
-      binary.getNumKilledTasks
-    )
+      binary.getNumKilledTasks)
   }
 
   private def deserializeTaskMetricDistributions(
@@ -513,31 +526,30 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
         binary.getResultSerializationTimeList.asScala.map(_.toDouble).toIndexedSeq,
       gettingResultTime = binary.getGettingResultTimeList.asScala.map(_.toDouble).toIndexedSeq,
       schedulerDelay = binary.getSchedulerDelayList.asScala.map(_.toDouble).toIndexedSeq,
-      peakExecutionMemory = binary.getPeakExecutionMemoryList.asScala.map(_.toDouble).toIndexedSeq,
+      peakExecutionMemory =
+        binary.getPeakExecutionMemoryList.asScala.map(_.toDouble).toIndexedSeq,
       memoryBytesSpilled = binary.getMemoryBytesSpilledList.asScala.map(_.toDouble).toIndexedSeq,
       diskBytesSpilled = binary.getDiskBytesSpilledList.asScala.map(_.toDouble).toIndexedSeq,
       inputMetrics = deserializeInputMetricDistributions(binary.getInputMetrics),
       outputMetrics = deserializeOutputMetricDistributions(binary.getOutputMetrics),
-      shuffleReadMetrics = deserializeShuffleReadMetricDistributions(binary.getShuffleReadMetrics),
-      shuffleWriteMetrics =
-        deserializeShuffleWriteMetricDistributions(binary.getShuffleWriteMetrics)
-    )
+      shuffleReadMetrics = deserializeShuffleReadMetricDistributions(
+        binary.getShuffleReadMetrics),
+      shuffleWriteMetrics = deserializeShuffleWriteMetricDistributions(
+        binary.getShuffleWriteMetrics))
   }
 
   private def deserializeInputMetricDistributions(
       binary: StoreTypes.InputMetricDistributions): InputMetricDistributions = {
     new InputMetricDistributions(
       bytesRead = binary.getBytesReadList.asScala.map(_.toDouble).toIndexedSeq,
-      recordsRead = binary.getRecordsReadList.asScala.map(_.toDouble).toIndexedSeq
-    )
+      recordsRead = binary.getRecordsReadList.asScala.map(_.toDouble).toIndexedSeq)
   }
 
   private def deserializeOutputMetricDistributions(
       binary: StoreTypes.OutputMetricDistributions): OutputMetricDistributions = {
     new OutputMetricDistributions(
       bytesWritten = binary.getBytesWrittenList.asScala.map(_.toDouble).toIndexedSeq,
-      recordsWritten = binary.getRecordsWrittenList.asScala.map(_.toDouble).toIndexedSeq
-    )
+      recordsWritten = binary.getRecordsWrittenList.asScala.map(_.toDouble).toIndexedSeq)
   }
 
   private def deserializeShuffleReadMetricDistributions(
@@ -545,7 +557,8 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     new ShuffleReadMetricDistributions(
       readBytes = binary.getReadBytesList.asScala.map(_.toDouble).toIndexedSeq,
       readRecords = binary.getReadRecordsList.asScala.map(_.toDouble).toIndexedSeq,
-      remoteBlocksFetched = binary.getRemoteBlocksFetchedList.asScala.map(_.toDouble).toIndexedSeq,
+      remoteBlocksFetched =
+        binary.getRemoteBlocksFetchedList.asScala.map(_.toDouble).toIndexedSeq,
       localBlocksFetched = binary.getLocalBlocksFetchedList.asScala.map(_.toDouble).toIndexedSeq,
       fetchWaitTime = binary.getFetchWaitTimeList.asScala.map(_.toDouble).toIndexedSeq,
       remoteBytesRead = binary.getRemoteBytesReadList.asScala.map(_.toDouble).toIndexedSeq,
@@ -553,13 +566,13 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
         binary.getRemoteBytesReadToDiskList.asScala.map(_.toDouble).toIndexedSeq,
       totalBlocksFetched = binary.getTotalBlocksFetchedList.asScala.map(_.toDouble).toIndexedSeq,
       remoteReqsDuration = binary.getRemoteReqsDurationList.asScala.map(_.toDouble).toIndexedSeq,
-      shufflePushReadMetricsDist =
-        deserializeShufflePushReadMetricsDistributions(binary.getShufflePushReadMetricsDist)
-    )
+      shufflePushReadMetricsDist = deserializeShufflePushReadMetricsDistributions(
+        binary.getShufflePushReadMetricsDist))
   }
 
   private def deserializeShufflePushReadMetricsDistributions(
-      binary: StoreTypes.ShufflePushReadMetricDistributions): ShufflePushReadMetricDistributions = {
+      binary: StoreTypes.ShufflePushReadMetricDistributions)
+      : ShufflePushReadMetricDistributions = {
     new ShufflePushReadMetricDistributions(
       corruptMergedBlockChunks =
         binary.getCorruptMergedBlockChunksList.asScala.map(_.toDouble).toIndexedSeq,
@@ -578,8 +591,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       localMergedBytesRead =
         binary.getLocalMergedBytesReadList.asScala.map(_.toDouble).toIndexedSeq,
       remoteMergedReqsDuration =
-        binary.getRemoteMergedReqsDurationList.asScala.map(_.toDouble).toIndexedSeq
-    )
+        binary.getRemoteMergedReqsDurationList.asScala.map(_.toDouble).toIndexedSeq)
   }
 
   private def deserializeShuffleWriteMetricDistributions(
@@ -587,8 +599,7 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
     new ShuffleWriteMetricDistributions(
       writeBytes = binary.getWriteBytesList.asScala.map(_.toDouble).toIndexedSeq,
       writeRecords = binary.getWriteRecordsList.asScala.map(_.toDouble).toIndexedSeq,
-      writeTime = binary.getWriteTimeList.asScala.map(_.toDouble).toIndexedSeq
-    )
+      writeTime = binary.getWriteTimeList.asScala.map(_.toDouble).toIndexedSeq)
   }
 
   private def deserializeExecutorMetricsDistributions(
@@ -606,29 +617,31 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       shuffleRead = binary.getShuffleReadList.asScala.map(_.toDouble).toIndexedSeq,
       shuffleReadRecords = binary.getShuffleReadRecordsList.asScala.map(_.toDouble).toIndexedSeq,
       shuffleWrite = binary.getShuffleWriteList.asScala.map(_.toDouble).toIndexedSeq,
-      shuffleWriteRecords = binary.getShuffleWriteRecordsList.asScala.map(_.toDouble).toIndexedSeq,
+      shuffleWriteRecords =
+        binary.getShuffleWriteRecordsList.asScala.map(_.toDouble).toIndexedSeq,
       memoryBytesSpilled = binary.getMemoryBytesSpilledList.asScala.map(_.toDouble).toIndexedSeq,
       diskBytesSpilled = binary.getDiskBytesSpilledList.asScala.map(_.toDouble).toIndexedSeq,
-      peakMemoryMetrics = deserializeExecutorPeakMetricsDistributions(binary.getPeakMemoryMetrics)
-    )
+      peakMemoryMetrics = deserializeExecutorPeakMetricsDistributions(
+        binary.getPeakMemoryMetrics))
   }
 
   private def deserializeExecutorPeakMetricsDistributions(
       binary: StoreTypes.ExecutorPeakMetricsDistributions): ExecutorPeakMetricsDistributions = {
     new ExecutorPeakMetricsDistributions(
       quantiles = binary.getQuantilesList.asScala.map(_.toDouble).toIndexedSeq,
-      executorMetrics = binary.getExecutorMetricsList.asScala.map(
-        ExecutorMetricsSerializer.deserialize).toIndexedSeq
-    )
+      executorMetrics = binary.getExecutorMetricsList.asScala
+        .map(ExecutorMetricsSerializer.deserialize)
+        .toIndexedSeq)
   }
 
   private def deserializeTaskData(binary: StoreTypes.TaskData): TaskData = {
-    val resultFetchStart = getOptional(binary.hasResultFetchStart,
-      () => new Date(binary.getResultFetchStart))
+    val resultFetchStart =
+      getOptional(binary.hasResultFetchStart, () => new Date(binary.getResultFetchStart))
     val duration = getOptional(binary.hasDuration, () => binary.getDuration)
-    val accumulatorUpdates = AccumulableInfoSerializer.deserialize(binary.getAccumulatorUpdatesList)
-    val taskMetrics = getOptional(binary.hasTaskMetrics,
-      () => deserializeTaskMetrics(binary.getTaskMetrics))
+    val accumulatorUpdates =
+      AccumulableInfoSerializer.deserialize(binary.getAccumulatorUpdatesList)
+    val taskMetrics =
+      getOptional(binary.hasTaskMetrics, () => deserializeTaskMetrics(binary.getTaskMetrics))
     new TaskData(
       taskId = binary.getTaskId,
       index = binary.getIndex,
@@ -702,15 +715,11 @@ private[protobuf] class StageDataWrapperSerializer extends ProtobufSerDe[StageDa
       binary.getLocalMergedChunksFetched,
       binary.getRemoteMergedBytesRead,
       binary.getLocalMergedBytesRead,
-      binary.getRemoteMergedReqsDuration
-    )
+      binary.getRemoteMergedReqsDuration)
   }
 
   private def deserializeShuffleWriteMetrics(
       binary: StoreTypes.ShuffleWriteMetrics): ShuffleWriteMetrics = {
-    new ShuffleWriteMetrics(
-      binary.getBytesWritten,
-      binary.getWriteTime,
-      binary.getRecordsWritten)
+    new ShuffleWriteMetrics(binary.getBytesWritten, binary.getWriteTime, binary.getRecordsWritten)
   }
 }

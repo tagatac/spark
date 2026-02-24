@@ -57,8 +57,7 @@ private[spark] class SerializerManager(
       ClassTag.Int,
       ClassTag.Long,
       ClassTag.Null,
-      ClassTag.Short
-    )
+      ClassTag.Short)
     val arrayClassTags = primitiveClassTags.map(_.wrap)
     primitiveClassTags ++ arrayClassTags
   }
@@ -173,13 +172,12 @@ private[spark] class SerializerManager(
       values: Iterator[T]): Unit = {
     val byteStream = new BufferedOutputStream(outputStream)
     blockSerializationStream[T](blockId, byteStream)(implicitly[ClassTag[T]])
-      .writeAll(values).close()
+      .writeAll(values)
+      .close()
   }
 
   /** Serializes into a chunked byte buffer. */
-  def dataSerialize[T: ClassTag](
-      blockId: BlockId,
-      values: Iterator[T]): ChunkedByteBuffer = {
+  def dataSerialize[T: ClassTag](blockId: BlockId, values: Iterator[T]): ChunkedByteBuffer = {
     dataSerializeWithExplicitClassTag(blockId, values, implicitly[ClassTag[T]])
   }
 
@@ -197,26 +195,23 @@ private[spark] class SerializerManager(
   }
 
   /**
-   * Deserializes an InputStream into an iterator of values and disposes of it when the end of
-   * the iterator is reached.
+   * Deserializes an InputStream into an iterator of values and disposes of it when the end of the
+   * iterator is reached.
    */
-  def dataDeserializeStream[T](
-      blockId: BlockId,
-      inputStream: InputStream)
-      (classTag: ClassTag[T]): Iterator[T] = {
+  def dataDeserializeStream[T](blockId: BlockId, inputStream: InputStream)(
+      classTag: ClassTag[T]): Iterator[T] = {
     val stream = new BufferedInputStream(inputStream)
     val autoPick = !blockId.isInstanceOf[StreamBlockId]
     getSerializer(classTag, autoPick)
       .newInstance()
       .deserializeStream(wrapForCompression(blockId, stream))
-      .asIterator.asInstanceOf[Iterator[T]]
+      .asIterator
+      .asInstanceOf[Iterator[T]]
   }
 
   /** Generate a `SerializationStream` for a block. */
-  private[spark] def blockSerializationStream[T](
-      blockId: BlockId,
-      outputStream: OutputStream)
-      (classTag: ClassTag[T]): SerializationStream = {
+  private[spark] def blockSerializationStream[T](blockId: BlockId, outputStream: OutputStream)(
+      classTag: ClassTag[T]): SerializationStream = {
     val autoPick = !blockId.isInstanceOf[StreamBlockId]
     val ser = getSerializer(classTag, autoPick).newInstance()
     ser.serializeStream(wrapForCompression(blockId, outputStream))

@@ -35,7 +35,8 @@ import org.apache.spark.security.HadoopDelegationTokenProvider
 import org.apache.spark.util.Utils
 
 private[deploy] class HadoopFSDelegationTokenProvider
-    extends HadoopDelegationTokenProvider with Logging {
+    extends HadoopDelegationTokenProvider
+    with Logging {
 
   // This tokenRenewalInterval will be set in the first call to obtainDelegationTokens.
   // If None, no token renewer is specified or no token can be renewed,
@@ -51,11 +52,15 @@ private[deploy] class HadoopFSDelegationTokenProvider
     try {
       val fileSystems = HadoopFSDelegationTokenProvider.hadoopFSsToAccess(sparkConf, hadoopConf)
       // The hosts on which the file systems to be excluded from token renewal
-      val fsToExclude = sparkConf.get(YARN_KERBEROS_FILESYSTEM_RENEWAL_EXCLUDE)
+      val fsToExclude = sparkConf
+        .get(YARN_KERBEROS_FILESYSTEM_RENEWAL_EXCLUDE)
         .map(new Path(_).getFileSystem(hadoopConf).getUri.getHost)
         .toSet
-      val fetchCreds = fetchDelegationTokens(getTokenRenewer(sparkConf, hadoopConf), fileSystems,
-        creds, fsToExclude)
+      val fetchCreds = fetchDelegationTokens(
+        getTokenRenewer(sparkConf, hadoopConf),
+        fileSystems,
+        creds,
+        fsToExclude)
 
       // Get the token renewal interval if it is not set. It will only be called once.
       if (tokenRenewalInterval == null) {
@@ -117,11 +122,13 @@ private[deploy] class HadoopFSDelegationTokenProvider
     filesystems.foreach { fs =>
       if (fsToExclude.contains(fs.getUri.getHost)) {
         // YARN RM skips renewing token with empty renewer
-        logInfo(log"getting token for: ${MDC(FILE_SYSTEM, fs)} with empty renewer to skip renewal")
+        logInfo(
+          log"getting token for: ${MDC(FILE_SYSTEM, fs)} with empty renewer to skip renewal")
         Utils.tryLogNonFatalError { fs.addDelegationTokens("", creds) }
       } else {
-        logInfo(log"getting token for: ${MDC(FILE_SYSTEM, fs)} with" +
-          log" renewer ${MDC(TOKEN_RENEWER, renewer)}")
+        logInfo(
+          log"getting token for: ${MDC(FILE_SYSTEM, fs)} with" +
+            log" renewer ${MDC(TOKEN_RENEWER, renewer)}")
         Utils.tryLogNonFatalError { fs.addDelegationTokens(renewer, creds) }
       }
     }
@@ -140,22 +147,26 @@ private[deploy] class HadoopFSDelegationTokenProvider
     val creds = new Credentials()
     fetchDelegationTokens(renewer, filesystems, creds, Set.empty)
 
-    val renewIntervals = creds.getAllTokens.asScala.filter {
-      _.decodeIdentifier().isInstanceOf[AbstractDelegationTokenIdentifier]
-    }.flatMap { token =>
-      Try {
-        val newExpiration = token.renew(hadoopConf)
-        val identifier = token.decodeIdentifier().asInstanceOf[AbstractDelegationTokenIdentifier]
-        val tokenKind = token.getKind.toString
-        val interval = newExpiration - getIssueDate(tokenKind, identifier)
-        logInfo(log"Renewal interval is ${MDC(TOTAL_TIME, interval)} for" +
-          log" token ${MDC(TOKEN_KIND, tokenKind)}")
-        // The token here is only used to obtain renewal intervals. We should cancel it in
-        // a timely manner to avoid causing additional pressure on the server.
-        token.cancel(hadoopConf)
-        interval
-      }.toOption
-    }
+    val renewIntervals = creds.getAllTokens.asScala
+      .filter {
+        _.decodeIdentifier().isInstanceOf[AbstractDelegationTokenIdentifier]
+      }
+      .flatMap { token =>
+        Try {
+          val newExpiration = token.renew(hadoopConf)
+          val identifier =
+            token.decodeIdentifier().asInstanceOf[AbstractDelegationTokenIdentifier]
+          val tokenKind = token.getKind.toString
+          val interval = newExpiration - getIssueDate(tokenKind, identifier)
+          logInfo(
+            log"Renewal interval is ${MDC(TOTAL_TIME, interval)} for" +
+              log" token ${MDC(TOKEN_KIND, tokenKind)}")
+          // The token here is only used to obtain renewal intervals. We should cancel it in
+          // a timely manner to avoid causing additional pressure on the server.
+          token.cancel(hadoopConf)
+          interval
+        }.toOption
+      }
     if (renewIntervals.isEmpty) None else Some(renewIntervals.min)
   }
 
@@ -173,24 +184,24 @@ private[deploy] class HadoopFSDelegationTokenProvider
     } else if (issueDate > 0L) {
       issueDate
     } else {
-      logWarning(log"Token ${MDC(TOKEN_KIND, kind)} has not set up issue date properly " +
-        log"(provided: ${MDC(ISSUE_DATE, issueDate)}). " +
-        log"Using current timestamp (${MDC(CURRENT_TIME, now)} as issue date instead. " +
-        log"Consult token implementor to fix the behavior.")
+      logWarning(
+        log"Token ${MDC(TOKEN_KIND, kind)} has not set up issue date properly " +
+          log"(provided: ${MDC(ISSUE_DATE, issueDate)}). " +
+          log"Using current timestamp (${MDC(CURRENT_TIME, now)} as issue date instead. " +
+          log"Consult token implementor to fix the behavior.")
       now
     }
   }
 }
 
 private[deploy] object HadoopFSDelegationTokenProvider {
-  def hadoopFSsToAccess(
-      sparkConf: SparkConf,
-      hadoopConf: Configuration): Set[FileSystem] = {
+  def hadoopFSsToAccess(sparkConf: SparkConf, hadoopConf: Configuration): Set[FileSystem] = {
     // scalastyle:off FileSystemGet
     val defaultFS = FileSystem.get(hadoopConf)
     // scalastyle:on FileSystemGet
 
-    val filesystemsToAccess = sparkConf.get(KERBEROS_FILESYSTEMS_TO_ACCESS)
+    val filesystemsToAccess = sparkConf
+      .get(KERBEROS_FILESYSTEMS_TO_ACCESS)
       .map(new Path(_).getFileSystem(hadoopConf))
       .toSet
 

@@ -52,7 +52,7 @@ import org.apache.spark.util.ArrayImplicits._
  * A Spark split class that wraps around a Hadoop InputSplit.
  */
 private[spark] class HadoopPartition(rddId: Int, override val index: Int, s: InputSplit)
-  extends Partition {
+    extends Partition {
 
   val inputSplit = new SerializableWritable[InputSplit](s)
 
@@ -61,15 +61,18 @@ private[spark] class HadoopPartition(rddId: Int, override val index: Int, s: Inp
   override def equals(other: Any): Boolean = super.equals(other)
 
   /**
-   * Get any environment variables that should be added to the users environment when running pipes
-   * @return a Map with the environment variables and corresponding values, it could be empty
+   * Get any environment variables that should be added to the users environment when running
+   * pipes
+   * @return
+   *   a Map with the environment variables and corresponding values, it could be empty
    */
   def getPipeEnvVars(): Map[String, String] = {
     val envVars: Map[String, String] = inputSplit.value match {
       case is: FileSplit =>
         // map_input_file is deprecated in favor of mapreduce_map_input_file but set both
         // since it's not removed yet
-        Map("map_input_file" -> is.getPath().toString(),
+        Map(
+          "map_input_file" -> is.getPath().toString(),
           "mapreduce_map_input_file" -> is.getPath().toString())
       case _ =>
         Map()
@@ -79,25 +82,34 @@ private[spark] class HadoopPartition(rddId: Int, override val index: Int, s: Inp
 }
 
 /**
- * :: DeveloperApi ::
- * An RDD that provides core functionality for reading data stored in Hadoop (e.g., files in HDFS,
- * sources in HBase, or S3), using the older MapReduce API (`org.apache.hadoop.mapred`).
+ * :: DeveloperApi :: An RDD that provides core functionality for reading data stored in Hadoop
+ * (e.g., files in HDFS, sources in HBase, or S3), using the older MapReduce API
+ * (`org.apache.hadoop.mapred`).
  *
- * @param sc The SparkContext to associate the RDD with.
- * @param broadcastedConf A general Hadoop Configuration, or a subclass of it. If the enclosed
- *   variable references an instance of JobConf, then that JobConf will be used for the Hadoop job.
- *   Otherwise, a new JobConf will be created on each executor using the enclosed Configuration.
- * @param initLocalJobConfFuncOpt Optional closure used to initialize any JobConf that HadoopRDD
- *     creates.
- * @param inputFormatClass Storage format of the data to be read.
- * @param keyClass Class of the key associated with the inputFormatClass.
- * @param valueClass Class of the value associated with the inputFormatClass.
- * @param minPartitions Minimum number of HadoopRDD partitions (Hadoop Splits) to generate.
- * @param ignoreCorruptFiles Whether to ignore corrupt files.
- * @param ignoreMissingFiles Whether to ignore missing files.
+ * @param sc
+ *   The SparkContext to associate the RDD with.
+ * @param broadcastedConf
+ *   A general Hadoop Configuration, or a subclass of it. If the enclosed variable references an
+ *   instance of JobConf, then that JobConf will be used for the Hadoop job. Otherwise, a new
+ *   JobConf will be created on each executor using the enclosed Configuration.
+ * @param initLocalJobConfFuncOpt
+ *   Optional closure used to initialize any JobConf that HadoopRDD creates.
+ * @param inputFormatClass
+ *   Storage format of the data to be read.
+ * @param keyClass
+ *   Class of the key associated with the inputFormatClass.
+ * @param valueClass
+ *   Class of the value associated with the inputFormatClass.
+ * @param minPartitions
+ *   Minimum number of HadoopRDD partitions (Hadoop Splits) to generate.
+ * @param ignoreCorruptFiles
+ *   Whether to ignore corrupt files.
+ * @param ignoreMissingFiles
+ *   Whether to ignore missing files.
  *
- * @note Instantiating this class directly is not recommended, please use
- * `org.apache.spark.SparkContext.hadoopRDD()`
+ * @note
+ *   Instantiating this class directly is not recommended, please use
+ *   `org.apache.spark.SparkContext.hadoopRDD()`
  */
 @DeveloperApi
 class HadoopRDD[K, V](
@@ -110,7 +122,8 @@ class HadoopRDD[K, V](
     minPartitions: Int,
     ignoreCorruptFiles: Boolean,
     ignoreMissingFiles: Boolean)
-  extends RDD[(K, V)](sc, Nil) with Logging {
+    extends RDD[(K, V)](sc, Nil)
+    with Logging {
 
   if (initLocalJobConfFuncOpt.isDefined) {
     sparkContext.clean(initLocalJobConfFuncOpt.get)
@@ -133,8 +146,7 @@ class HadoopRDD[K, V](
       valueClass,
       minPartitions,
       ignoreCorruptFiles = sc.conf.get(IGNORE_CORRUPT_FILES),
-      ignoreMissingFiles = sc.conf.get(IGNORE_MISSING_FILES)
-    )
+      ignoreMissingFiles = sc.conf.get(IGNORE_MISSING_FILES))
   }
 
   def this(
@@ -215,11 +227,12 @@ class HadoopRDD[K, V](
   }
 
   protected def getInputFormat(conf: JobConf): InputFormat[K, V] = try {
-    ReflectionUtils.newInstance(inputFormatClass.asInstanceOf[Class[_]], conf)
+    ReflectionUtils
+      .newInstance(inputFormatClass.asInstanceOf[Class[_]], conf)
       .asInstanceOf[InputFormat[K, V]]
   } catch {
     case r: RuntimeException
-      if r.getCause != null && r.getCause.isInstanceOf[InstantiationException] =>
+        if r.getCause != null && r.getCause.isInstanceOf[InstantiationException] =>
       throw new RuntimeException(s"Failed to instantiate ${inputFormatClass.getName}", r.getCause)
   }
 
@@ -240,13 +253,15 @@ class HadoopRDD[K, V](
         if (fileSplit.getLength > conf.get(IO_WARNING_LARGEFILETHRESHOLD)) {
           val codecFactory = new CompressionCodecFactory(jobConf)
           if (Utils.isFileSplittable(path, codecFactory)) {
-            logWarning(log"Loading one large file ${MDC(PATH, path.toString)} " +
-              log"with only one partition, " +
-              log"we can increase partition numbers for improving performance.")
+            logWarning(
+              log"Loading one large file ${MDC(PATH, path.toString)} " +
+                log"with only one partition, " +
+                log"we can increase partition numbers for improving performance.")
           } else {
-            logWarning(log"Loading one large unsplittable file ${MDC(PATH, path.toString)} " +
-              log"with only one " +
-              log"partition, because the file is compressed by unsplittable compression codec.")
+            logWarning(
+              log"Loading one large unsplittable file ${MDC(PATH, path.toString)} " +
+                log"with only one " +
+                log"partition, because the file is compressed by unsplittable compression codec.")
           }
         }
       }
@@ -257,8 +272,10 @@ class HadoopRDD[K, V](
       array
     } catch {
       case e: InvalidInputException if ignoreMissingFiles =>
-        logWarning(log"${MDC(PATH, jobConf.get(FileInputFormat.INPUT_DIR))} " +
-          log"doesn't exist and no partitions returned from this path.", e)
+        logWarning(
+          log"${MDC(PATH, jobConf.get(FileInputFormat.INPUT_DIR))} " +
+            log"doesn't exist and no partitions returned from this path.",
+          e)
         Array.empty[Partition]
       case e: IOException if e.getMessage.startsWith("Not a file:") =>
         val path = e.getMessage.split(":").map(_.trim).apply(2)
@@ -266,12 +283,15 @@ class HadoopRDD[K, V](
     }
   }
 
-  override def compute(theSplit: Partition, context: TaskContext): InterruptibleIterator[(K, V)] = {
+  override def compute(
+      theSplit: Partition,
+      context: TaskContext): InterruptibleIterator[(K, V)] = {
     val iter = new NextIterator[(K, V)] {
 
       private val split = theSplit.asInstanceOf[HadoopPartition]
-      logInfo(log"Task (TID ${MDC(TASK_ID, context.taskAttemptId())}) input split: " +
-        log"${MDC(INPUT_SPLIT, split.inputSplit)}")
+      logInfo(
+        log"Task (TID ${MDC(TASK_ID, context.taskAttemptId())}) input split: " +
+          log"${MDC(INPUT_SPLIT, split.inputSplit)}")
       private val jobConf = getJobConf()
 
       private val inputMetrics = context.taskMetrics().inputMetrics
@@ -307,7 +327,10 @@ class HadoopRDD[K, V](
       private val inputFormat = getInputFormat(jobConf)
       HadoopRDD.addLocalConfiguration(
         HadoopRDD.DATE_TIME_FORMATTER.format(createTime.toInstant),
-        context.stageId(), theSplit.index, context.attemptNumber(), jobConf)
+        context.stageId(),
+        theSplit.index,
+        context.attemptNumber(),
+        jobConf)
 
       reader =
         try {
@@ -319,10 +342,12 @@ class HadoopRDD[K, V](
             null
           // Throw FileNotFoundException even if `ignoreCorruptFiles` is true
           case e: FileNotFoundException if !ignoreMissingFiles => throw e
-          case e @ (_ : AccessControlException | _ : BlockMissingException) => throw e
+          case e @ (_: AccessControlException | _: BlockMissingException) => throw e
           case e: IOException if ignoreCorruptFiles =>
-            logWarning(log"Skipped the rest content in the corrupted file: " +
-              log"${MDC(PATH, split.inputSplit)}", e)
+            logWarning(
+              log"Skipped the rest content in the corrupted file: " +
+                log"${MDC(PATH, split.inputSplit)}",
+              e)
             finished = true
             null
         }
@@ -346,10 +371,12 @@ class HadoopRDD[K, V](
             finished = true
           // Throw FileNotFoundException even if `ignoreCorruptFiles` is true
           case e: FileNotFoundException if !ignoreMissingFiles => throw e
-          case e @ (_ : AccessControlException | _ : BlockMissingException) => throw e
+          case e @ (_: AccessControlException | _: BlockMissingException) => throw e
           case e: IOException if ignoreCorruptFiles =>
-            logWarning(log"Skipped the rest content in the corrupted file: " +
-              log"${MDC(PATH, split.inputSplit)}", e)
+            logWarning(
+              log"Skipped the rest content in the corrupted file: " +
+                log"${MDC(PATH, split.inputSplit)}",
+              e)
             finished = true
         }
         if (!finished) {
@@ -377,7 +404,7 @@ class HadoopRDD[K, V](
           if (getBytesReadCallback.isDefined) {
             updateBytesRead()
           } else if (split.inputSplit.value.isInstanceOf[FileSplit] ||
-                     split.inputSplit.value.isInstanceOf[CombineFileSplit]) {
+            split.inputSplit.value.isInstanceOf[CombineFileSplit]) {
             // If we can't get the bytes read from the FS stats, fall back to the split size,
             // which may be inaccurate.
             try {
@@ -393,7 +420,9 @@ class HadoopRDD[K, V](
     new InterruptibleIterator[(K, V)](context, iter)
   }
 
-  /** Maps over a partition, providing the InputSplit that was used as the base of the partition. */
+  /**
+   * Maps over a partition, providing the InputSplit that was used as the base of the partition.
+   */
   @DeveloperApi
   def mapPartitionsWithInputSplit[U: ClassTag](
       f: (InputSplit, Iterator[(K, V)]) => Iterator[U],
@@ -428,9 +457,10 @@ class HadoopRDD[K, V](
 }
 
 private[spark] object HadoopRDD extends Logging {
+
   /**
-   * Configuration's constructor is not threadsafe (see SPARK-1097 and HADOOP-10456).
-   * Therefore, we synchronize on this lock before calling new JobConf() or new Configuration().
+   * Configuration's constructor is not threadsafe (see SPARK-1097 and HADOOP-10456). Therefore,
+   * we synchronize on this lock before calling new JobConf() or new Configuration().
    */
   val CONFIGURATION_INSTANTIATION_LOCK = new Object()
 
@@ -440,8 +470,8 @@ private[spark] object HadoopRDD extends Logging {
       .withZone(ZoneId.systemDefault())
 
   /**
-   * The three methods below are helpers for accessing the local map, a property of the SparkEnv of
-   * the local process.
+   * The three methods below are helpers for accessing the local map, a property of the SparkEnv
+   * of the local process.
    */
   def getCachedMetadata(key: String): AnyRef = SparkEnv.get.hadoopJobMetadata.get(key)
 
@@ -449,8 +479,12 @@ private[spark] object HadoopRDD extends Logging {
     SparkEnv.get.hadoopJobMetadata.put(key, value)
 
   /** Add Hadoop configuration specific to a single partition and attempt. */
-  def addLocalConfiguration(jobTrackerId: String, jobId: Int, splitId: Int, attemptId: Int,
-                            conf: JobConf): Unit = {
+  def addLocalConfiguration(
+      jobTrackerId: String,
+      jobId: Int,
+      splitId: Int,
+      attemptId: Int,
+      conf: JobConf): Unit = {
     val jobID = new JobID(jobTrackerId, jobId)
     val taId = new TaskAttemptID(new TaskID(jobID, TaskType.MAP, splitId), attemptId)
 
@@ -462,14 +496,14 @@ private[spark] object HadoopRDD extends Logging {
   }
 
   /**
-   * Analogous to [[org.apache.spark.rdd.MapPartitionsRDD]], but passes in an InputSplit to
-   * the given function rather than the index of the partition.
+   * Analogous to [[org.apache.spark.rdd.MapPartitionsRDD]], but passes in an InputSplit to the
+   * given function rather than the index of the partition.
    */
   private[spark] class HadoopMapPartitionsWithSplitRDD[U: ClassTag, T: ClassTag](
       prev: RDD[T],
       f: (InputSplit, Iterator[T]) => Iterator[U],
       preservesPartitioning: Boolean = false)
-    extends RDD[U](prev) {
+      extends RDD[U](prev) {
 
     override val partitioner = if (preservesPartitioning) firstParent[T].partitioner else None
 
@@ -483,7 +517,7 @@ private[spark] object HadoopRDD extends Logging {
   }
 
   private[spark] def convertSplitLocationInfo(
-       infos: Array[SplitLocationInfo]): Option[Seq[String]] = {
+      infos: Array[SplitLocationInfo]): Option[Seq[String]] = {
     Option(infos).map(_.flatMap { loc =>
       val locationStr = loc.getLocation
       if (locationStr != null && locationStr != "localhost") {

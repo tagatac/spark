@@ -27,14 +27,10 @@ import org.apache.spark.sql.test.SQLTestUtils
 case class FunctionResult(f1: String, f2: String)
 
 /**
- * A test suite for UDF related functionalities. Because Hive metastore is
- * case insensitive, database names and function names have both upper case
- * letters and lower case letters.
+ * A test suite for UDF related functionalities. Because Hive metastore is case insensitive,
+ * database names and function names have both upper case letters and lower case letters.
  */
-class UDFSuite
-  extends QueryTest
-  with SQLTestUtils
-  with TestHiveSingleton {
+class UDFSuite extends QueryTest with SQLTestUtils with TestHiveSingleton {
 
   import spark.implicits._
 
@@ -78,10 +74,7 @@ class UDFSuite
         sql(s"CREATE TEMPORARY FUNCTION default.$functionName AS '$functionClass'")
       }
       sql(s"CREATE TEMPORARY FUNCTION $functionName AS '$functionClass'")
-      checkAnswer(
-        sql(s"SELECT $functionNameLower(value) from $testTableName"),
-        expectedDF
-      )
+      checkAnswer(sql(s"SELECT $functionNameLower(value) from $testTableName"), expectedDF)
       intercept[ParseException] {
         sql(s"DROP TEMPORARY FUNCTION default.$functionName")
       }
@@ -93,14 +86,11 @@ class UDFSuite
       sql(s"CREATE FUNCTION $functionName AS '$functionClass'")
       checkAnswer(
         sql("SHOW functions like '.*upper'"),
-        Row(s"$SESSION_CATALOG_NAME.default.$functionNameLower")
-      )
-      checkAnswer(
-        sql(s"SELECT $functionName(value) from $testTableName"),
-        expectedDF
-      )
+        Row(s"$SESSION_CATALOG_NAME.default.$functionNameLower"))
+      checkAnswer(sql(s"SELECT $functionName(value) from $testTableName"), expectedDF)
       assert(
-        sql("SHOW functions").collect()
+        sql("SHOW functions")
+          .collect()
           .map(_.getString(0))
           .contains(s"$SESSION_CATALOG_NAME.default.$functionNameLower"))
     }
@@ -116,23 +106,14 @@ class UDFSuite
       //  sql(s"SELECT default.myuPPer(value) from $testTableName"),
       //  expectedDF
       // )
-      checkAnswer(
-        sql(s"SELECT $functionName(value) from $testTableName"),
-        expectedDF
-      )
-      checkAnswer(
-        sql(s"SELECT default.$functionName(value) from $testTableName"),
-        expectedDF
-      )
+      checkAnswer(sql(s"SELECT $functionName(value) from $testTableName"), expectedDF)
+      checkAnswer(sql(s"SELECT default.$functionName(value) from $testTableName"), expectedDF)
     }
 
     // For this block, drop function command uses default.functionName as the function name.
     withUserDefinedFunction(s"DEfault.$functionNameLower" -> false) {
       sql(s"CREATE FUNCTION dEFault.$functionName AS '$functionClass'")
-      checkAnswer(
-        sql(s"SELECT $functionNameUpper(value) from $testTableName"),
-        expectedDF
-      )
+      checkAnswer(sql(s"SELECT $functionNameUpper(value) from $testTableName"), expectedDF)
     }
   }
 
@@ -141,29 +122,19 @@ class UDFSuite
     withTempDatabase { dbName =>
       withUserDefinedFunction(functionName -> false) {
         sql(s"CREATE FUNCTION $dbName.$functionName AS '$functionClass'")
-        checkAnswer(
-          sql(s"SELECT $dbName.$functionName(value) from $testTableName"),
-          expectedDF
-        )
+        checkAnswer(sql(s"SELECT $dbName.$functionName(value) from $testTableName"), expectedDF)
 
         checkAnswer(
           sql(s"SHOW FUNCTIONS like $dbName.$functionNameUpper"),
-          Row(s"$SESSION_CATALOG_NAME.$dbName.$functionNameLower")
-        )
+          Row(s"$SESSION_CATALOG_NAME.$dbName.$functionNameLower"))
 
         sql(s"USE $dbName")
 
-        checkAnswer(
-          sql(s"SELECT $functionName(value) from $testTableName"),
-          expectedDF
-        )
+        checkAnswer(sql(s"SELECT $functionName(value) from $testTableName"), expectedDF)
 
         sql(s"USE default")
 
-        checkAnswer(
-          sql(s"SELECT $dbName.$functionName(value) from $testTableName"),
-          expectedDF
-        )
+        checkAnswer(sql(s"SELECT $dbName.$functionName(value) from $testTableName"), expectedDF)
 
         sql(s"USE $dbName")
       }
@@ -173,29 +144,25 @@ class UDFSuite
       // For this block, drop function command uses default.functionName as the function name.
       withUserDefinedFunction(s"$dbName.$functionNameUpper" -> false) {
         sql(s"CREATE FUNCTION $dbName.$functionName AS '$functionClass'")
-        checkAnswer(
-          sql(s"SELECT $dbName.$functionName(value) from $testTableName"),
-          expectedDF
-        )
+        checkAnswer(sql(s"SELECT $dbName.$functionName(value) from $testTableName"), expectedDF)
 
         sql(s"USE $dbName")
 
         assert(
-          sql("SHOW functions").collect()
+          sql("SHOW functions")
+            .collect()
             .map(_.getString(0))
             .contains(s"$SESSION_CATALOG_NAME.$dbName.$functionNameLower"))
-        checkAnswer(
-          sql(s"SELECT $functionNameLower(value) from $testTableName"),
-          expectedDF
-         )
+        checkAnswer(sql(s"SELECT $functionNameLower(value) from $testTableName"), expectedDF)
 
         sql(s"USE default")
       }
     }
   }
 
-  test("SPARK-21318: The correct exception message should be thrown " +
-    "if a UDF/UDAF has already been registered") {
+  test(
+    "SPARK-21318: The correct exception message should be thrown " +
+      "if a UDF/UDAF has already been registered") {
     val functionName = "empty"
     val functionClass = classOf[org.apache.spark.sql.hive.execution.UDAFEmpty].getCanonicalName
 

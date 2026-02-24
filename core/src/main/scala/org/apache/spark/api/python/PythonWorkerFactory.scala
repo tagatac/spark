@@ -77,15 +77,19 @@ private[spark] class PythonWorkerFactory(
     daemonModule: String,
     envVars: Map[String, String],
     val useDaemonEnabled: Boolean)
-  extends Logging { self =>
+    extends Logging { self =>
 
   def this(
       pythonExec: String,
       workerModule: String,
       envVars: Map[String, String],
       useDaemonEnabled: Boolean) =
-    this(pythonExec, workerModule, PythonWorkerFactory.defaultDaemonModule,
-      envVars, useDaemonEnabled)
+    this(
+      pythonExec,
+      workerModule,
+      PythonWorkerFactory.defaultDaemonModule,
+      envVars,
+      useDaemonEnabled)
 
   import PythonWorkerFactory._
 
@@ -144,8 +148,9 @@ private[spark] class PythonWorkerFactory(
               }
             }
           }
-          logWarning(log"Worker ${MDC(WORKER, worker)} " +
-            log"process from idle queue is dead, discarding.")
+          logWarning(
+            log"Worker ${MDC(WORKER, worker)} " +
+              log"process from idle queue is dead, discarding.")
           stopWorker(worker)
         }
       }
@@ -157,8 +162,8 @@ private[spark] class PythonWorkerFactory(
 
   /**
    * Connect to a worker launched through pyspark/daemon.py (by default), which forks python
-   * processes itself to avoid the high cost of forking from Java. This currently only works
-   * on UNIX-based systems.
+   * processes itself to avoid the high cost of forking from Java. This currently only works on
+   * UNIX-based systems.
    */
   private def createThroughDaemon(): (PythonWorker, Option[ProcessHandle]) = {
 
@@ -176,8 +181,7 @@ private[spark] class PythonWorkerFactory(
         socketChannel.register(serverSelector, SelectionKey.OP_READ)
         if (serverSelector.select(timeOutMs) == 0) {
           throw new SocketTimeoutException(
-            s"Timed out while waiting for the Python worker to connect back after $timeOutMs ms"
-          )
+            s"Timed out while waiting for the Python worker to connect back after $timeOutMs ms")
         }
       } finally {
         serverSelector.close()
@@ -189,9 +193,9 @@ private[spark] class PythonWorkerFactory(
       if (pid < 0) {
         throw new IllegalStateException("Python daemon failed to launch worker with code " + pid)
       }
-      val processHandle = ProcessHandle.of(pid).orElseThrow(
-        () => new IllegalStateException("Python daemon failed to launch worker.")
-      )
+      val processHandle = ProcessHandle
+        .of(pid)
+        .orElseThrow(() => new IllegalStateException("Python daemon failed to launch worker."))
       authHelper.authToServer(socketChannel)
       socketChannel.configureBlocking(false)
       val worker = PythonWorker(socketChannel)
@@ -229,9 +233,7 @@ private[spark] class PythonWorkerFactory(
   private[spark] def createSimpleWorker(
       blockingMode: Boolean): (PythonWorker, Option[ProcessHandle]) = {
     var serverSocketChannel: ServerSocketChannel = null
-    lazy val sockPath = new File(
-      authHelper.sockDir,
-      s".${UUID.randomUUID()}.sock")
+    lazy val sockPath = new File(authHelper.sockDir, s".${UUID.randomUUID()}.sock")
     try {
       if (isUnixDomainSock) {
         serverSocketChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
@@ -259,8 +261,9 @@ private[spark] class PythonWorkerFactory(
         workerEnv.put("PYTHON_WORKER_FACTORY_SOCK_PATH", sockPath.getPath)
         workerEnv.put("PYTHON_UNIX_DOMAIN_ENABLED", "True")
       } else {
-        workerEnv.put("PYTHON_WORKER_FACTORY_PORT", serverSocketChannel.socket().getLocalPort
-          .toString)
+        workerEnv.put(
+          "PYTHON_WORKER_FACTORY_PORT",
+          serverSocketChannel.socket().getLocalPort.toString)
         workerEnv.put("PYTHON_WORKER_FACTORY_SECRET", authHelper.secret)
       }
       if (Utils.preferIPv6) {
@@ -331,9 +334,7 @@ private[spark] class PythonWorkerFactory(
         workerEnv.putAll(envVars.asJava)
         workerEnv.put("PYTHONPATH", pythonPath)
         if (isUnixDomainSock) {
-          workerEnv.put(
-            "PYTHON_WORKER_FACTORY_SOCK_DIR",
-            authHelper.sockDir)
+          workerEnv.put("PYTHON_WORKER_FACTORY_SOCK_DIR", authHelper.sockDir)
           workerEnv.put("PYTHON_UNIX_DOMAIN_ENABLED", "True")
         } else {
           workerEnv.put("PYTHON_WORKER_FACTORY_SECRET", authHelper.secret)
@@ -354,11 +355,11 @@ private[spark] class PythonWorkerFactory(
           }
         } catch {
           case _: EOFException if daemon.isAlive =>
-            throw SparkCoreErrors.eofExceptionWhileReadPortNumberError(
-              daemonModule)
+            throw SparkCoreErrors.eofExceptionWhileReadPortNumberError(daemonModule)
           case _: EOFException =>
-            throw SparkCoreErrors.
-              eofExceptionWhileReadPortNumberError(daemonModule, Some(daemon.exitValue))
+            throw SparkCoreErrors.eofExceptionWhileReadPortNumberError(
+              daemonModule,
+              Some(daemon.exitValue))
         }
 
         // test that the returned port number is within a valid range.
@@ -425,8 +426,10 @@ private[spark] class PythonWorkerFactory(
    */
   private def redirectStreamsToStderr(stdout: InputStream, stderr: InputStream): Unit = {
     try {
-      new RedirectThread(workerLogCapture.map(_.wrapInputStream(stdout)).getOrElse(stdout),
-        System.err, "stdout reader for " + pythonExec).start()
+      new RedirectThread(
+        workerLogCapture.map(_.wrapInputStream(stdout)).getOrElse(stdout),
+        System.err,
+        "stdout reader for " + pythonExec).start()
       new RedirectThread(stderr, System.err, "stderr reader for " + pythonExec).start()
     } catch {
       case e: Exception =>
@@ -542,7 +545,7 @@ private[spark] class PythonWorkerFactory(
 
 private[spark] object PythonWorkerFactory {
   val PROCESS_WAIT_TIMEOUT_MS = 10000
-  val IDLE_WORKER_TIMEOUT_NS = TimeUnit.MINUTES.toNanos(1)  // kill idle workers after 1 minute
+  val IDLE_WORKER_TIMEOUT_NS = TimeUnit.MINUTES.toNanos(1) // kill idle workers after 1 minute
 
   private[spark] val defaultDaemonModule = "pyspark.daemon"
 }

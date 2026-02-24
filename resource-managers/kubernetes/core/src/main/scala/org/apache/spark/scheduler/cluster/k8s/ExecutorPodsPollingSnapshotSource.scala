@@ -43,7 +43,8 @@ class ExecutorPodsPollingSnapshotSource(
     conf: SparkConf,
     kubernetesClient: KubernetesClient,
     snapshotsStore: ExecutorPodsSnapshotsStore,
-    pollingExecutor: ScheduledExecutorService) extends Logging {
+    pollingExecutor: ScheduledExecutorService)
+    extends Logging {
 
   private val pollingInterval = conf.get(KUBERNETES_EXECUTOR_API_POLLING_INTERVAL)
   private val pollingEnabled = conf.get(KUBERNETES_EXECUTOR_ENABLE_API_POLLING)
@@ -56,7 +57,10 @@ class ExecutorPodsPollingSnapshotSource(
       require(pollingFuture == null, "Cannot start polling more than once.")
       logDebug(s"Starting to check for executor pod state every $pollingInterval ms.")
       pollingFuture = pollingExecutor.scheduleWithFixedDelay(
-        new PollRunnable(applicationId), pollingInterval, pollingInterval, TimeUnit.MILLISECONDS)
+        new PollRunnable(applicationId),
+        pollingInterval,
+        pollingInterval,
+        TimeUnit.MILLISECONDS)
     }
   }
 

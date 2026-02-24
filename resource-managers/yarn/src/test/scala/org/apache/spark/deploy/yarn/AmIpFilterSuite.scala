@@ -48,7 +48,7 @@ class AmIpFilterSuite extends SparkFunSuite {
     override def getProxyAddresses: util.Set[String] = Set(proxyHost).asJava
   }
 
-  class DummyFilterConfig (val map: util.Map[String, String]) extends FilterConfig {
+  class DummyFilterConfig(val map: util.Map[String, String]) extends FilterConfig {
     override def getFilterName: String = "dummy"
 
     override def getInitParameter(arg0: String): String = map.get(arg0)
@@ -202,7 +202,6 @@ class AmIpFilterSuite extends SparkFunSuite {
       testFilter.doFilter(failRequest, response, chain)
     }
     assert(ProxyUtils.E_HTTP_HTTPS_ONLY === throws.getMessage)
-
 
     // request with HttpServletRequest
     val request = mock(classOf[HttpServletRequest])

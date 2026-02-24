@@ -37,19 +37,22 @@ private[spark] class KubernetesTestComponents(val kubernetesClient: KubernetesCl
 
   val namespaceOption = Option(System.getProperty(CONFIG_KEY_KUBE_NAMESPACE))
   val hasUserSpecifiedNamespace = namespaceOption.isDefined
-  val namespace = namespaceOption.getOrElse("spark-" +
-    UUID.randomUUID().toString.replaceAll("-", ""))
+  val namespace = namespaceOption.getOrElse(
+    "spark-" +
+      UUID.randomUUID().toString.replaceAll("-", ""))
   val serviceAccountName =
     Option(System.getProperty(CONFIG_KEY_KUBE_SVC_ACCOUNT))
       .getOrElse("default")
   val clientConfig = kubernetesClient.getConfiguration
 
   def createNamespace(): Unit = {
-    kubernetesClient.namespaces.resource(new NamespaceBuilder()
-      .withNewMetadata()
-      .withName(namespace)
-      .endMetadata()
-      .build())
+    kubernetesClient.namespaces
+      .resource(
+        new NamespaceBuilder()
+          .withNewMetadata()
+          .withName(namespace)
+          .endMetadata()
+          .build())
       .create()
   }
 
@@ -96,7 +99,8 @@ private[spark] class SparkAppConf {
 
   override def toString: String = map.toString
 
-  def toStringArray: Iterable[String] = map.toList.flatMap(t => List("--conf", s"${t._1}=${t._2}"))
+  def toStringArray: Iterable[String] =
+    map.toList.flatMap(t => List("--conf", s"${t._1}=${t._2}"))
 
   def toSparkConf: SparkConf = new SparkConf().setAll(map)
 }
@@ -118,14 +122,21 @@ private[spark] object SparkAppLauncher extends Logging {
     val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
     val preCommandLine = if (isJVM) {
-      mutable.ArrayBuffer(sparkSubmitExecutable.toFile.getAbsolutePath,
-      "--deploy-mode", "cluster",
-      "--class", appArguments.mainClass,
-      "--master", appConf.get("spark.master"))
+      mutable.ArrayBuffer(
+        sparkSubmitExecutable.toFile.getAbsolutePath,
+        "--deploy-mode",
+        "cluster",
+        "--class",
+        appArguments.mainClass,
+        "--master",
+        appConf.get("spark.master"))
     } else {
-      mutable.ArrayBuffer(sparkSubmitExecutable.toFile.getAbsolutePath,
-        "--deploy-mode", "cluster",
-        "--master", appConf.get("spark.master"))
+      mutable.ArrayBuffer(
+        sparkSubmitExecutable.toFile.getAbsolutePath,
+        "--deploy-mode",
+        "cluster",
+        "--master",
+        appConf.get("spark.master"))
     }
     val commandLine =
       pyFiles.map(s => preCommandLine ++ Array("--py-files", s)).getOrElse(preCommandLine) ++

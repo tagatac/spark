@@ -61,12 +61,16 @@ abstract class PodBuilderSuite extends SparkFunSuite {
 
   test("SPARK-36059: set custom scheduler") {
     val client = mockKubernetesClient()
-    val conf1 = baseConf.clone().set(templateFileConf.key, "template-file.yaml")
+    val conf1 = baseConf
+      .clone()
+      .set(templateFileConf.key, "template-file.yaml")
       .set(Config.KUBERNETES_SCHEDULER_NAME.key, "custom")
     val pod1 = buildPod(conf1, client)
     assert(pod1.pod.getSpec.getSchedulerName === "custom")
 
-    val conf2 = baseConf.clone().set(templateFileConf.key, "template-file.yaml")
+    val conf2 = baseConf
+      .clone()
+      .set(templateFileConf.key, "template-file.yaml")
       .set(Config.KUBERNETES_SCHEDULER_NAME.key, "custom")
       .set(roleSpecificSchedulerNameConf.key, "rolescheduler")
     val pod2 = buildPod(conf2, client)
@@ -82,10 +86,12 @@ abstract class PodBuilderSuite extends SparkFunSuite {
 
   test("configure a custom test step") {
     val client = mockKubernetesClient()
-    val sparkConf = baseConf.clone()
-      .set(userFeatureStepsConf.key,
+    val sparkConf = baseConf
+      .clone()
+      .set(
+        userFeatureStepsConf.key,
         "org.apache.spark.deploy.k8s.TestStepTwo," +
-        "org.apache.spark.deploy.k8s.TestStep")
+          "org.apache.spark.deploy.k8s.TestStep")
       .set(templateFileConf.key, "template-file.yaml")
     val pod = buildPod(sparkConf, client)
     verifyPod(pod)
@@ -95,12 +101,13 @@ abstract class PodBuilderSuite extends SparkFunSuite {
 
   test("SPARK-52830: exclude a feature step") {
     val client = mockKubernetesClient()
-    val sparkConf = baseConf.clone()
-      .set(excludedFeatureStepsConf.key,
-        "org.apache.spark.deploy.k8s.TestStepTwo")
-      .set(userFeatureStepsConf.key,
+    val sparkConf = baseConf
+      .clone()
+      .set(excludedFeatureStepsConf.key, "org.apache.spark.deploy.k8s.TestStepTwo")
+      .set(
+        userFeatureStepsConf.key,
         "org.apache.spark.deploy.k8s.TestStepTwo," +
-        "org.apache.spark.deploy.k8s.TestStep")
+          "org.apache.spark.deploy.k8s.TestStep")
       .set(templateFileConf.key, "template-file.yaml")
     val pod = buildPod(sparkConf, client)
     verifyPod(pod)
@@ -110,9 +117,9 @@ abstract class PodBuilderSuite extends SparkFunSuite {
 
   test("SPARK-37145: configure a custom test step with base config") {
     val client = mockKubernetesClient()
-    val sparkConf = baseConf.clone()
-      .set(userFeatureStepsConf.key,
-          "org.apache.spark.deploy.k8s.TestStepWithConf")
+    val sparkConf = baseConf
+      .clone()
+      .set(userFeatureStepsConf.key, "org.apache.spark.deploy.k8s.TestStepWithConf")
       .set(templateFileConf.key, "template-file.yaml")
       .set("test-features-key", "test-features-value")
     val pod = buildPod(sparkConf, client)
@@ -125,7 +132,8 @@ abstract class PodBuilderSuite extends SparkFunSuite {
   test("SPARK-37145: configure a custom test step with driver or executor config") {
     val client = mockKubernetesClient()
     val (featureSteps, annotation) = userFeatureStepWithExpectedAnnotation
-    val sparkConf = baseConf.clone()
+    val sparkConf = baseConf
+      .clone()
       .set(templateFileConf.key, "template-file.yaml")
       .set(userFeatureStepsConf.key, featureSteps)
       .set(TEST_ANNOTATION_KEY, annotation)
@@ -138,7 +146,8 @@ abstract class PodBuilderSuite extends SparkFunSuite {
 
   test("SPARK-37145: configure a custom test step with wrong type config") {
     val client = mockKubernetesClient()
-    val sparkConf = baseConf.clone()
+    val sparkConf = baseConf
+      .clone()
       .set(templateFileConf.key, "template-file.yaml")
       .set(userFeatureStepsConf.key, wrongTypeFeatureStep)
     val e = intercept[SparkException] {
@@ -150,7 +159,8 @@ abstract class PodBuilderSuite extends SparkFunSuite {
   test("SPARK-37145: configure a custom test step with wrong name") {
     val client = mockKubernetesClient()
     val featureSteps = "unknow.class"
-    val sparkConf = baseConf.clone()
+    val sparkConf = baseConf
+      .clone()
       .set(templateFileConf.key, "template-file.yaml")
       .set(userFeatureStepsConf.key, featureSteps)
     val e = intercept[ClassNotFoundException] {
@@ -219,64 +229,62 @@ abstract class PodBuilderSuite extends SparkFunSuite {
   private def podWithSupportedFeatures(): Pod = {
     new PodBuilder()
       .withNewMetadata()
-        .addToLabels("test-label-key", "test-label-value")
-        .addToAnnotations("test-annotation-key", "test-annotation-value")
-        .withNamespace("namespace")
-        .addNewOwnerReference()
-          .withController(true)
-          .withName("owner-reference")
-          .endOwnerReference()
-        .endMetadata()
+      .addToLabels("test-label-key", "test-label-value")
+      .addToAnnotations("test-annotation-key", "test-annotation-value")
+      .withNamespace("namespace")
+      .addNewOwnerReference()
+      .withController(true)
+      .withName("owner-reference")
+      .endOwnerReference()
+      .endMetadata()
       .withNewSpec()
-        .withDnsPolicy("dns-policy")
-        .withHostAliases(new HostAliasBuilder().withHostnames("hostname").build())
-        .withImagePullSecrets(
-          new LocalObjectReferenceBuilder().withName("local-reference").build())
-        .withInitContainers(new ContainerBuilder().withName("init-container").build())
-        .withNodeName("node-name")
-        .withNodeSelector(Map("node-selector-key" -> "node-selector-value").asJava)
-        .withSchedulerName("scheduler")
-        .withNewSecurityContext()
-          .withRunAsUser(1000L)
-          .endSecurityContext()
-        .withServiceAccount("service-account")
-        .withSubdomain("subdomain")
-        .withTolerations(new TolerationBuilder()
-          .withKey("toleration-key")
-          .withOperator("Equal")
-          .withEffect("NoSchedule")
-          .build())
-        .addNewVolume()
-          .withNewHostPath()
-          .withPath("/test")
-          .endHostPath()
-          .withName("test-volume")
-          .endVolume()
-        .addNewContainer()
-          .withArgs("arg")
-          .withCommand("command")
-          .addNewEnv()
-            .withName("env-key")
-            .withValue("env-value")
-            .endEnv()
-          .withImagePullPolicy("Always")
-          .withName("executor-container")
-          .withNewResources()
-            .withLimits(Map("gpu" -> new Quantity("1")).asJava)
-            .endResources()
-          .withNewSecurityContext()
-            .withRunAsNonRoot(true)
-            .endSecurityContext()
-          .withStdin(true)
-          .withTerminationMessagePath("termination-message-path")
-          .withTerminationMessagePolicy("termination-message-policy")
-          .addToVolumeMounts(
-            new VolumeMountBuilder()
-              .withName("test-volume")
-              .withMountPath("/test")
-              .build())
-          .endContainer()
-        .endSpec()
+      .withDnsPolicy("dns-policy")
+      .withHostAliases(new HostAliasBuilder().withHostnames("hostname").build())
+      .withImagePullSecrets(new LocalObjectReferenceBuilder().withName("local-reference").build())
+      .withInitContainers(new ContainerBuilder().withName("init-container").build())
+      .withNodeName("node-name")
+      .withNodeSelector(Map("node-selector-key" -> "node-selector-value").asJava)
+      .withSchedulerName("scheduler")
+      .withNewSecurityContext()
+      .withRunAsUser(1000L)
+      .endSecurityContext()
+      .withServiceAccount("service-account")
+      .withSubdomain("subdomain")
+      .withTolerations(new TolerationBuilder()
+        .withKey("toleration-key")
+        .withOperator("Equal")
+        .withEffect("NoSchedule")
+        .build())
+      .addNewVolume()
+      .withNewHostPath()
+      .withPath("/test")
+      .endHostPath()
+      .withName("test-volume")
+      .endVolume()
+      .addNewContainer()
+      .withArgs("arg")
+      .withCommand("command")
+      .addNewEnv()
+      .withName("env-key")
+      .withValue("env-value")
+      .endEnv()
+      .withImagePullPolicy("Always")
+      .withName("executor-container")
+      .withNewResources()
+      .withLimits(Map("gpu" -> new Quantity("1")).asJava)
+      .endResources()
+      .withNewSecurityContext()
+      .withRunAsNonRoot(true)
+      .endSecurityContext()
+      .withStdin(true)
+      .withTerminationMessagePath("termination-message-path")
+      .withTerminationMessagePolicy("termination-message-policy")
+      .addToVolumeMounts(new VolumeMountBuilder()
+        .withName("test-volume")
+        .withMountPath("/test")
+        .build())
+      .endContainer()
+      .endSpec()
       .build()
   }
 
@@ -291,21 +299,21 @@ class TestStep extends KubernetesFeatureConfigStep {
   override def configurePod(pod: SparkPod): SparkPod = {
     val localDirVolumes = Seq(new VolumeBuilder().withName("so_long").build())
     val localDirVolumeMounts = Seq(
-      new VolumeMountBuilder().withName("so_long")
+      new VolumeMountBuilder()
+        .withName("so_long")
         .withMountPath("and_thanks_for_all_the_fish")
-        .build()
-    )
+        .build())
 
     val podWithLocalDirVolumes = new PodBuilder(pod.pod)
       .editSpec()
-        .addToVolumes(localDirVolumes: _*)
-        .endSpec()
+      .addToVolumes(localDirVolumes: _*)
+      .endSpec()
       .build()
     val containerWithLocalDirVolumeMounts = new ContainerBuilder(pod.container)
       .addNewEnv()
-        .withName("CUSTOM_SPARK_LOCAL_DIRS")
-        .withValue("fishyfishyfishy")
-        .endEnv()
+      .withName("CUSTOM_SPARK_LOCAL_DIRS")
+      .withValue("fishyfishyfishy")
+      .endEnv()
       .addToVolumeMounts(localDirVolumeMounts: _*)
       .build()
     SparkPod(podWithLocalDirVolumes, containerWithLocalDirVolumeMounts)
@@ -321,21 +329,21 @@ class TestStepTwo extends KubernetesFeatureConfigStep {
   override def configurePod(pod: SparkPod): SparkPod = {
     val localDirVolumes = Seq(new VolumeBuilder().withName("so_long_two").build())
     val localDirVolumeMounts = Seq(
-      new VolumeMountBuilder().withName("so_long_two")
+      new VolumeMountBuilder()
+        .withName("so_long_two")
         .withMountPath("and_thanks_for_all_the_fish_eh")
-        .build()
-    )
+        .build())
 
     val podWithLocalDirVolumes = new PodBuilder(pod.pod)
       .editSpec()
-        .addToVolumes(localDirVolumes: _*)
-        .endSpec()
+      .addToVolumes(localDirVolumes: _*)
+      .endSpec()
       .build()
     val containerWithLocalDirVolumeMounts = new ContainerBuilder(pod.container)
       .addNewEnv()
-        .withName("CUSTOM_SPARK_LOCAL_DIRS_TWO")
-        .withValue("fishyfishyfishyTWO")
-        .endEnv()
+      .withName("CUSTOM_SPARK_LOCAL_DIRS_TWO")
+      .withValue("fishyfishyfishyTWO")
+      .endEnv()
       .addToVolumeMounts(localDirVolumeMounts: _*)
       .build()
     SparkPod(podWithLocalDirVolumes, containerWithLocalDirVolumeMounts)
@@ -345,8 +353,9 @@ class TestStepTwo extends KubernetesFeatureConfigStep {
 /**
  * A test user feature step would be used in driver and executor.
  */
-class TestStepWithConf extends KubernetesDriverCustomFeatureConfigStep
-  with KubernetesExecutorCustomFeatureConfigStep {
+class TestStepWithConf
+    extends KubernetesDriverCustomFeatureConfigStep
+    with KubernetesExecutorCustomFeatureConfigStep {
   import io.fabric8.kubernetes.api.model._
 
   private var kubernetesConf: KubernetesConf = _
@@ -362,7 +371,7 @@ class TestStepWithConf extends KubernetesDriverCustomFeatureConfigStep
   override def configurePod(pod: SparkPod): SparkPod = {
     val k8sPodBuilder = new PodBuilder(pod.pod)
       .editOrNewMetadata()
-        .addToAnnotations("test-features-key", kubernetesConf.get("test-features-key"))
+      .addToAnnotations("test-features-key", kubernetesConf.get("test-features-key"))
       .endMetadata()
     val k8sPod = k8sPodBuilder.build()
     SparkPod(k8sPod, pod.container)

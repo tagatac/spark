@@ -28,8 +28,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.internal.LogKeys.{CLUSTER_ID, SERVICE_NAME}
 import org.apache.spark.security.HadoopDelegationTokenProvider
 
-class KafkaDelegationTokenProvider
-  extends HadoopDelegationTokenProvider with Logging {
+class KafkaDelegationTokenProvider extends HadoopDelegationTokenProvider with Logging {
 
   override def serviceName: String = "kafka"
 
@@ -55,10 +54,12 @@ class KafkaDelegationTokenProvider
           }
         } catch {
           case NonFatal(e) =>
-            logWarning(log"Failed to get token from service: ${MDC(SERVICE_NAME, serviceName)} " +
-              log"on cluster: ${MDC(CLUSTER_ID, clusterConf.identifier)}. If " +
-              log"${MDC(SERVICE_NAME, serviceName)} is not used, please set " +
-              log"spark.security.credentials.${MDC(SERVICE_NAME, serviceName)}.enabled to false", e)
+            logWarning(
+              log"Failed to get token from service: ${MDC(SERVICE_NAME, serviceName)} " +
+                log"on cluster: ${MDC(CLUSTER_ID, clusterConf.identifier)}. If " +
+                log"${MDC(SERVICE_NAME, serviceName)} is not used, please set " +
+                log"spark.security.credentials.${MDC(SERVICE_NAME, serviceName)}.enabled to false",
+              e)
         }
       }
     } catch {

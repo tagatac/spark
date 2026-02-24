@@ -21,24 +21,24 @@ import javax.annotation.concurrent.GuardedBy
 
 /**
  * A special Thread that provides "runUninterruptibly" to allow running codes without being
- * interrupted by `Thread.interrupt()`. If `Thread.interrupt()` is called during runUninterruptibly
- * is running, it won't set the interrupted status. Instead, setting the interrupted status will be
- * deferred until it's returning from "runUninterruptibly".
+ * interrupted by `Thread.interrupt()`. If `Thread.interrupt()` is called during
+ * runUninterruptibly is running, it won't set the interrupted status. Instead, setting the
+ * interrupted status will be deferred until it's returning from "runUninterruptibly".
  *
  * Note: "runUninterruptibly" should be called only in `this` thread.
  */
-private[spark] class UninterruptibleThread(
-    target: Runnable,
-    name: String) extends Thread(target, name) {
+private[spark] class UninterruptibleThread(target: Runnable, name: String)
+    extends Thread(target, name) {
 
   def this(name: String) = {
     this(null, name)
   }
 
   private class UninterruptibleLock {
+
     /**
-     * Indicates if `this`  thread are in the uninterruptible status. If so, interrupting
-     * "this" will be deferred until `this`  enters into the interruptible status.
+     * Indicates if `this` thread are in the uninterruptible status. If so, interrupting "this"
+     * will be deferred until `this` enters into the interruptible status.
      */
     @GuardedBy("uninterruptibleLock")
     private var uninterruptible = false
@@ -83,8 +83,8 @@ private[spark] class UninterruptibleThread(
     }
 
     /**
-     * Set [[uninterruptible]] back to false and call [[java.lang.Thread.interrupt()]] to
-     * recover interrupt state if necessary
+     * Set [[uninterruptible]] back to false and call [[java.lang.Thread.interrupt()]] to recover
+     * interrupt state if necessary
      */
     def recoverInterrupt(): Unit = synchronized {
       uninterruptible = false
@@ -97,8 +97,9 @@ private[spark] class UninterruptibleThread(
 
     /**
      * Is it safe to call [[java.lang.Thread.interrupt()]] and interrupt the current thread
-     * @return true when there is no concurrent [[runUninterruptibly()]] call ([[uninterruptible]]
-     *         is true) and no concurrent [[interrupt()]] call, otherwise false
+     * @return
+     *   true when there is no concurrent [[runUninterruptibly()]] call ([[uninterruptible]] is
+     *   true) and no concurrent [[interrupt()]] call, otherwise false
      */
     def isInterruptible: Boolean = synchronized {
       shouldInterruptThread = uninterruptible
@@ -131,8 +132,9 @@ private[spark] class UninterruptibleThread(
    */
   def runUninterruptibly[T](f: => T): T = {
     if (Thread.currentThread() != this) {
-      throw new IllegalStateException(s"Call runUninterruptibly in a wrong thread. " +
-        s"Expected: $this but was ${Thread.currentThread()}")
+      throw new IllegalStateException(
+        s"Call runUninterruptibly in a wrong thread. " +
+          s"Expected: $this but was ${Thread.currentThread()}")
     }
 
     if (uninterruptibleLock.getAndSetUninterruptible(true)) {

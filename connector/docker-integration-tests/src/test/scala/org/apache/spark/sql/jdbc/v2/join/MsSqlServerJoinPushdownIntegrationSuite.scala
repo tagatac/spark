@@ -34,7 +34,7 @@ import org.apache.spark.tags.DockerTest
  */
 @DockerTest
 class MsSqlServerJoinPushdownIntegrationSuite
-  extends DockerJDBCIntegrationSuite
+    extends DockerJDBCIntegrationSuite
     with JDBCV2JoinPushdownIntegrationSuiteBase {
   override val db = new MsSQLServerDatabaseOnDocker
 

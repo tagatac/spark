@@ -22,8 +22,8 @@ import java.util.UUID
 /**
  * Thread-local storage for CSP nonce values.
  *
- * A nonce is generated per request in [[HttpSecurityFilter]] and used by UI pages
- * to mark inline scripts and styles as trusted.
+ * A nonce is generated per request in [[HttpSecurityFilter]] and used by UI pages to mark inline
+ * scripts and styles as trusted.
  */
 private[spark] object CspNonce {
 

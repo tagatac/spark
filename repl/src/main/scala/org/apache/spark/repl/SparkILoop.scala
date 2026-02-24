@@ -29,15 +29,15 @@ import scala.util.Properties.{javaVersion, javaVmName, versionString}
 // scalastyle:on println
 
 /**
- *  A Spark-specific interactive shell.
+ * A Spark-specific interactive shell.
  */
 class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
-  extends ILoop(config, in0, out) {
-  def this(in0: BufferedReader, out: PrintWriter) = this(
-    ShellConfig(new GenericRunnerSettings(_ => ())), in0, out)
+    extends ILoop(config, in0, out) {
+  def this(in0: BufferedReader, out: PrintWriter) =
+    this(ShellConfig(new GenericRunnerSettings(_ => ())), in0, out)
 
-  def this(settings: Settings) = this(ShellConfig(settings), null,
-    new PrintWriter(Console.out, true))
+  def this(settings: Settings) =
+    this(ShellConfig(settings), null, new PrintWriter(Console.out, true))
 
   def this() = this(new GenericRunnerSettings(_ => ()))
 
@@ -75,8 +75,7 @@ class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
     "import org.apache.spark.sql.functions._",
     "import org.apache.spark.util.LogUtils.SPARK_LOG_SCHEMA",
     "import java.net._",
-    "import java.nio.file._"
-  )
+    "import java.nio.file._")
 
   override protected def internalReplAutorunCode(): Seq[String] =
     initializationCommands
@@ -90,8 +89,7 @@ class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
     } else {
       throw new RuntimeException(
         s"Scala $versionString interpreter encountered " +
-          "errors during initialization"
-      )
+          "errors during initialization")
     }
   }
 
@@ -105,11 +103,7 @@ class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
    /___/ .__/\_,_/_/ /_/\_\   version %s
       /_/
          """.format(SPARK_VERSION))
-    val welcomeMsg = "Using Scala %s (%s, Java %s)".format(
-      versionString,
-      javaVmName,
-      javaVersion
-    )
+    val welcomeMsg = "Using Scala %s (%s, Java %s)".format(versionString, javaVmName, javaVersion)
     echo(welcomeMsg)
     echo("Type in expressions to have them evaluated.")
     echo("Type :help for more information.")
@@ -121,9 +115,7 @@ class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
   override def resetCommand(line: String): Unit = {
     super.resetCommand(line)
     initializeSpark()
-    echo(
-      "Note that after :reset, state of SparkSession and SparkContext is unchanged."
-    )
+    echo("Note that after :reset, state of SparkSession and SparkContext is unchanged.")
   }
 
   override def replay(): Unit = {
@@ -135,8 +127,7 @@ class SparkILoop(config: ShellConfig, in0: BufferedReader, out: PrintWriter)
 object SparkILoop {
 
   /**
-   * Creates an interpreter loop with default settings and feeds
-   * the given code to it as input.
+   * Creates an interpreter loop with default settings and feeds the given code to it as input.
    */
   def run(code: String, sets: Settings = new Settings): String = {
     import java.io.{BufferedReader, StringReader, OutputStreamWriter}

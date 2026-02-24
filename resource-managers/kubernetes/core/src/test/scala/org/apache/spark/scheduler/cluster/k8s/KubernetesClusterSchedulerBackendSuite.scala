@@ -161,7 +161,8 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
   }
 
   test("Stop all components") {
-    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)).thenReturn(labeledPods)
+    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID))
+      .thenReturn(labeledPods)
     when(labeledPods.withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)).thenReturn(labeledPods)
     when(configMapsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID))
       .thenReturn(labeledConfigMaps)
@@ -193,14 +194,16 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     schedulerBackendUnderTest.start()
 
     when(podsWithNamespace.withField(any(), any())).thenReturn(labeledPods)
-    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)).thenReturn(labeledPods)
+    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID))
+      .thenReturn(labeledPods)
     when(labeledPods.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)).thenReturn(labeledPods)
     when(labeledPods.withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)).thenReturn(labeledPods)
     when(labeledPods.withLabelIn(SPARK_EXECUTOR_ID_LABEL, "1", "2")).thenReturn(labeledPods)
     val pod1op = mock(classOf[PodResource])
     val pod2op = mock(classOf[PodResource])
     when(labeledPods.resources()).thenReturn(Arrays.asList[PodResource]().stream)
-    schedulerExecutorService.tick(sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
+    schedulerExecutorService.tick(
+      sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
       TimeUnit.MILLISECONDS)
     verify(labeledPods, never()).delete()
 
@@ -210,7 +213,8 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     verify(labeledPods, never()).delete()
     verify(pod1op, never()).patch(any(classOf[PatchContext]), any(classOf[Pod]))
     verify(pod2op, never()).patch(any(classOf[PatchContext]), any(classOf[Pod]))
-    schedulerExecutorService.tick(sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
+    schedulerExecutorService.tick(
+      sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
       TimeUnit.MILLISECONDS)
     verify(labeledPods, never()).delete()
     verify(pod1op, never()).patch(any(classOf[PatchContext]), any(classOf[Pod]))
@@ -229,7 +233,8 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     verify(pod1op).patch(any(classOf[PatchContext]), any(classOf[Pod]))
     verify(pod2op, never()).patch(any(classOf[PatchContext]), any(classOf[Pod]))
     verify(labeledPods, never()).delete()
-    schedulerExecutorService.tick(sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
+    schedulerExecutorService.tick(
+      sparkConf.get(KUBERNETES_DYN_ALLOC_KILL_GRACE_PERIOD) * 2,
       TimeUnit.MILLISECONDS)
     verify(labeledPods).delete()
   }
@@ -239,7 +244,8 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     schedulerBackendUnderTest.start()
 
     when(podsWithNamespace.withField(any(), any())).thenReturn(labeledPods)
-    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)).thenReturn(labeledPods)
+    when(podsWithNamespace.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID))
+      .thenReturn(labeledPods)
     when(labeledPods.withLabel(SPARK_APP_ID_LABEL, TEST_SPARK_APP_ID)).thenReturn(labeledPods)
     when(labeledPods.withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)).thenReturn(labeledPods)
     when(labeledPods.withLabelIn(SPARK_EXECUTOR_ID_LABEL, "3")).thenReturn(labeledPods)
@@ -247,9 +253,9 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     val podResource = mock(classOf[PodResource])
     val basePod = new PodBuilder()
       .withNewMetadata()
-        .withName("exec-3")
-        .withNamespace("default")
-        .endMetadata()
+      .withName("exec-3")
+      .withNamespace("default")
+      .endMetadata()
       .build()
 
     val patchCaptor = ArgumentCaptor.forClass(classOf[Pod])
@@ -258,8 +264,7 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     when(labeledPods.resources())
       .thenAnswer(_ => java.util.stream.Stream.of[PodResource](podResource))
 
-    val method = classOf[KubernetesClusterSchedulerBackend]
-      .getDeclaredMethods
+    val method = classOf[KubernetesClusterSchedulerBackend].getDeclaredMethods
       .find(_.getName == "annotateExecutorDeletionCost")
       .get
     method.setAccessible(true)
@@ -269,9 +274,11 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
     verify(podResource, atLeastOnce()).patch(any(), patchCaptor.capture())
     val appliedPods = patchCaptor.getAllValues.asScala
     val annotated = appliedPods
-      .find(_.getMetadata.getAnnotations.asScala
-        .contains("controller.kubernetes.io/pod-deletion-cost"))
-    assert(annotated.isDefined,
+      .find(
+        _.getMetadata.getAnnotations.asScala
+          .contains("controller.kubernetes.io/pod-deletion-cost"))
+    assert(
+      annotated.isDefined,
       s"expected controller.kubernetes.io/pod-deletion-cost annotation, got annotations " +
         s"${appliedPods.map(_.getMetadata.getAnnotations).asJava}")
     val annotations = annotated.get.getMetadata.getAnnotations.asScala
@@ -292,8 +299,9 @@ class KubernetesClusterSchedulerBackendSuite extends SparkFunSuite with BeforeAn
   test("SPARK-34469: Ignore RegisterExecutor when SparkContext is stopped") {
     when(sc.isStopped).thenReturn(true)
     val endpoint = schedulerBackendUnderTest.createDriverEndpoint()
-    endpoint.receiveAndReply(null).apply(
-      RegisterExecutor("1", null, "host1", 1, Map.empty, Map.empty, Map.empty, 0))
+    endpoint
+      .receiveAndReply(null)
+      .apply(RegisterExecutor("1", null, "host1", 1, Map.empty, Map.empty, Map.empty, 0))
   }
 
   test("Dynamically fetch an executor ID") {

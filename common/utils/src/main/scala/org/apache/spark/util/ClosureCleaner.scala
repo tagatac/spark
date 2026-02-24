@@ -49,11 +49,11 @@ private[spark] object ClosureCleaner extends Logging {
     }
   }
 
-  private[util] def isAmmoniteCommandOrHelper(clazz: Class[_]): Boolean = clazz.getName.matches(
-    """^ammonite\.\$sess\.cmd[0-9]*(\$Helper\$?)?""")
+  private[util] def isAmmoniteCommandOrHelper(clazz: Class[_]): Boolean =
+    clazz.getName.matches("""^ammonite\.\$sess\.cmd[0-9]*(\$Helper\$?)?""")
 
-  private[util] def isDefinedInAmmonite(clazz: Class[_]): Boolean = clazz.getName.matches(
-    """^ammonite\.\$sess\.cmd[0-9]*.*""")
+  private[util] def isDefinedInAmmonite(clazz: Class[_]): Boolean =
+    clazz.getName.matches("""^ammonite\.\$sess\.cmd[0-9]*.*""")
 
   // Check whether a class represents a Scala closure
   private def isClosure(cls: Class[_]): Boolean = {
@@ -76,12 +76,16 @@ private[spark] object ClosureCleaner extends Logging {
           val recurRet = getOuterClassesAndObjects(outer)
           return (f.getType :: recurRet._1, outer :: recurRet._2)
         } else {
-          return (f.getType :: Nil, outer :: Nil) // Stop at the first $outer that is not a closure
+          return (
+            f.getType :: Nil,
+            outer :: Nil
+          ) // Stop at the first $outer that is not a closure
         }
       }
     }
     (Nil, Nil)
   }
+
   /**
    * Return a list of classes that represent closures enclosed in the given closure object.
    */
@@ -153,31 +157,25 @@ private[spark] object ClosureCleaner extends Logging {
   /**
    * Helper method to clean the given closure in place.
    *
-   * The mechanism is to traverse the hierarchy of enclosing closures and null out any
-   * references along the way that are not actually used by the starting closure, but are
-   * nevertheless included in the compiled anonymous classes. Note that it is unsafe to
-   * simply mutate the enclosing closures in place, as other code paths may depend on them.
-   * Instead, we clone each enclosing closure and set the parent pointers accordingly.
+   * The mechanism is to traverse the hierarchy of enclosing closures and null out any references
+   * along the way that are not actually used by the starting closure, but are nevertheless
+   * included in the compiled anonymous classes. Note that it is unsafe to simply mutate the
+   * enclosing closures in place, as other code paths may depend on them. Instead, we clone each
+   * enclosing closure and set the parent pointers accordingly.
    *
-   * By default, closures are cleaned transitively. This means we detect whether enclosing
-   * objects are actually referenced by the starting one, either directly or transitively,
-   * and, if not, sever these closures from the hierarchy. In other words, in addition to
-   * nulling out unused field references, we also null out any parent pointers that refer
-   * to enclosing objects not actually needed by the starting closure. We determine
-   * transitivity by tracing through the tree of all methods ultimately invoked by the
-   * inner closure and record all the fields referenced in the process.
+   * By default, closures are cleaned transitively. This means we detect whether enclosing objects
+   * are actually referenced by the starting one, either directly or transitively, and, if not,
+   * sever these closures from the hierarchy. In other words, in addition to nulling out unused
+   * field references, we also null out any parent pointers that refer to enclosing objects not
+   * actually needed by the starting closure. We determine transitivity by tracing through the
+   * tree of all methods ultimately invoked by the inner closure and record all the fields
+   * referenced in the process.
    *
    * For instance, transitive cleaning is necessary in the following scenario:
    *
-   *   class SomethingNotSerializable {
-   *     def someValue = 1
-   *     def scope(name: String)(body: => Unit) = body
-   *     def someMethod(): Unit = scope("one") {
-   *       def x = someValue
-   *       def y = 2
-   *       scope("two") { println(y + 1) }
-   *     }
-   *   }
+   * class SomethingNotSerializable { def someValue = 1 def scope(name: String)(body: => Unit) =
+   * body def someMethod(): Unit = scope("one") { def x = someValue def y = 2 scope("two") {
+   * println(y + 1) } } }
    *
    * In this example, scope "two" is not serializable because it references scope "one", which
    * references SomethingNotSerializable. Note that, however, the body of scope "two" does not
@@ -185,10 +183,12 @@ private[spark] object ClosureCleaner extends Logging {
    * pointer of a cloned scope "one" and set it the parent of scope "two", such that scope "two"
    * no longer references SomethingNotSerializable transitively.
    *
-   * @param func              the starting closure to clean
-   * @param cleanTransitively whether to clean enclosing closures transitively
-   * @param accessedFields    a map from a class to a set of its fields that are accessed by
-   *                          the starting closure
+   * @param func
+   *   the starting closure to clean
+   * @param cleanTransitively
+   *   whether to clean enclosing closures transitively
+   * @param accessedFields
+   *   a map from a class to a set of its fields that are accessed by the starting closure
    */
   private[spark] def clean(
       func: AnyRef,
@@ -265,10 +265,12 @@ private[spark] object ClosureCleaner extends Logging {
   /**
    * Cleans non-indylambda closure in place
    *
-   * @param func              the starting closure to clean
-   * @param cleanTransitively whether to clean enclosing closures transitively
-   * @param accessedFields    a map from a class to a set of its fields that are accessed by
-   *                          the starting closure
+   * @param func
+   *   the starting closure to clean
+   * @param cleanTransitively
+   *   whether to clean enclosing closures transitively
+   * @param accessedFields
+   *   a map from a class to a set of its fields that are accessed by the starting closure
    */
   private def cleanNonIndyLambdaClosure(
       func: AnyRef,
@@ -334,15 +336,17 @@ private[spark] object ClosureCleaner extends Logging {
         // SPARK-14558: if the outermost object is a REPL line object, we should clone
         // and clean it as it may carry a lot of unnecessary information,
         // e.g. hadoop conf, spark conf, etc.
-        logDebug(s" + outermost object is a REPL line object, so we clone it:" +
-          s" ${outermostClass}")
+        logDebug(
+          s" + outermost object is a REPL line object, so we clone it:" +
+            s" ${outermostClass}")
       } else {
         // The closure is ultimately nested inside a class; keep the object of that
         // class without cloning it since we don't want to clone the user's objects.
         // Note that we still need to keep around the outermost object itself because
         // we need it to clone its child closure later (see below).
-        logDebug(s" + outermost object is not a closure or REPL line object," +
-          s" so do not clone it: ${outermostClass}")
+        logDebug(
+          s" + outermost object is not a closure or REPL line object," +
+            s" so do not clone it: ${outermostClass}")
         parent = outermostObject // e.g. SparkContext
         outerPairs = outerPairs.tail
       }
@@ -390,10 +394,14 @@ private[spark] object ClosureCleaner extends Logging {
 
   /**
    * Null out fields of enclosing class which are not actually accessed by a closure
-   * @param func the starting closure to clean
-   * @param lambdaProxy starting closure proxy
-   * @param outerThis lambda enclosing class
-   * @param cleanTransitively whether to clean enclosing closures transitively
+   * @param func
+   *   the starting closure to clean
+   * @param lambdaProxy
+   *   starting closure proxy
+   * @param outerThis
+   *   lambda enclosing class
+   * @param cleanTransitively
+   *   whether to clean enclosing closures transitively
    */
   private def cleanupScalaReplClosure(
       func: AnyRef,
@@ -419,8 +427,8 @@ private[spark] object ClosureCleaner extends Logging {
     if (accessedFields(capturingClass).size < capturingClass.getDeclaredFields.length) {
       // clone and clean the enclosing `this` only when there are fields to null out
       logDebug(s" + cloning instance of REPL class ${capturingClass.getName}")
-      val clonedOuterThis = cloneAndSetFields(
-        parent = null, outerThis, capturingClass, accessedFields)
+      val clonedOuterThis =
+        cloneAndSetFields(parent = null, outerThis, capturingClass, accessedFields)
 
       val outerField = func.getClass.getDeclaredField("arg$1")
       // SPARK-37072: When Java 17 is used and `outerField` is read-only,
@@ -431,30 +439,33 @@ private[spark] object ClosureCleaner extends Logging {
     }
   }
 
-
   /**
-   * Cleans up Ammonite closures and nulls out fields captured from cmd & cmd$Helper objects
-   * but not actually accessed by the closure. To achieve this, it does:
-   * 1. Identify all accessed Ammonite cmd & cmd$Helper objects
-   * 2. Clone all accessed cmdX objects
-   * 3. Clone all accessed cmdX$Helper objects and set their $outer field to the cmdX clone
-   * 4. Iterate over these clones and set all other accessed fields to
-   *   - a clone, if the field refers to an Ammonite object
-   *   - a previous value otherwise
-   * 5. In case if capturing object is an inner class of Ammonite cmd$Helper object, clone & update
-   * this capturing object as well
+   * Cleans up Ammonite closures and nulls out fields captured from cmd & cmd$Helper objects but
+   * not actually accessed by the closure. To achieve this, it does:
+   *   1. Identify all accessed Ammonite cmd & cmd$Helper objects
+   *   2. Clone all accessed cmdX objects
+   *   3. Clone all accessed cmdX$Helper objects and set their $outer field to the cmdX clone
+   *   4. Iterate over these clones and set all other accessed fields to
+   *      - a clone, if the field refers to an Ammonite object
+   *      - a previous value otherwise
+   *   5. In case if capturing object is an inner class of Ammonite cmd$Helper object, clone &
+   *      update this capturing object as well
    *
    * As a result:
    *   - For all accessed cmdX objects all their references to cmdY$Helper objects are
    * either nulled out or updated to cmdY clone
    *   - For cmdX$Helper objects it means that variables defined in this command are
    * nulled out if not accessed
-   * - lambda enclosing class is cleaned up as it's done for normal Scala closures
+   *   - lambda enclosing class is cleaned up as it's done for normal Scala closures
    *
-   * @param func              the starting closure to clean
-   * @param lambdaProxy       starting closure proxy
-   * @param outerThis         lambda enclosing class
-   * @param cleanTransitively whether to clean enclosing closures transitively
+   * @param func
+   *   the starting closure to clean
+   * @param lambdaProxy
+   *   starting closure proxy
+   * @param outerThis
+   *   lambda enclosing class
+   * @param cleanTransitively
+   *   whether to clean enclosing closures transitively
    */
   private def cleanupAmmoniteReplClosure(
       func: AnyRef,
@@ -493,8 +504,9 @@ private[spark] object ClosureCleaner extends Logging {
       ammCmdInstances,
       cleanTransitively)
 
-    logTrace(s" + command fields accessed by starting closure: " +
-      s"${accessedAmmCmdFields.size} classes")
+    logTrace(
+      s" + command fields accessed by starting closure: " +
+        s"${accessedAmmCmdFields.size} classes")
     accessedAmmCmdFields.foreach { f => logTrace("     " + f) }
 
     val cmdClones = Map[Class[_], AnyRef]()
@@ -503,7 +515,7 @@ private[spark] object ClosureCleaner extends Logging {
       cmdClones(cmdClass) = instantiateClass(cmdClass, enclosingObject = null)
     }
     for ((cmdHelperClass, cmdHelperInstance) <- ammCmdInstances
-         if cmdHelperClass.getName.contains("Helper")) {
+      if cmdHelperClass.getName.contains("Helper")) {
       val cmdHelperOuter = cmdHelperClass.getDeclaredFields
         .find(_.getName == "$outer")
         .map { field =>
@@ -512,8 +524,7 @@ private[spark] object ClosureCleaner extends Logging {
         }
       val outerClone = cmdHelperOuter.flatMap(o => cmdClones.get(o.getClass)).orNull
       logDebug(s" + Cloning instance of Ammonite command helper class ${cmdHelperClass.getName}")
-      cmdClones(cmdHelperClass) =
-        instantiateClass(cmdHelperClass, enclosingObject = outerClone)
+      cmdClones(cmdHelperClass) = instantiateClass(cmdHelperClass, enclosingObject = outerClone)
     }
 
     // set accessed fields
@@ -521,13 +532,14 @@ private[spark] object ClosureCleaner extends Logging {
       val cmdClass = cmdClone.getClass
       val accessedFields = accessedAmmCmdFields(cmdClass)
       for (field <- cmdClone.getClass.getDeclaredFields
-           // outer fields were initialized during clone construction
-           if accessedFields.contains(field.getName) && field.getName != "$outer") {
+        // outer fields were initialized during clone construction
+        if accessedFields.contains(field.getName) && field.getName != "$outer") {
         // get command clone if exists, otherwise use an original field value
-        val value = cmdClones.getOrElse(field.getType, {
-          field.setAccessible(true)
-          field.get(ammCmdInstances(cmdClass))
-        })
+        val value = cmdClones.getOrElse(
+          field.getType, {
+            field.setAccessible(true)
+            field.get(ammCmdInstances(cmdClass))
+          })
         setFieldAndIgnoreModifiers(cmdClone, field, value)
       }
     }
@@ -573,7 +585,8 @@ private[spark] object ClosureCleaner extends Logging {
       val methodGetDeclaredFields0 = classOf[Class[_]]
         .getDeclaredMethod("getDeclaredFields0", classOf[Boolean])
       methodGetDeclaredFields0.setAccessible(true)
-      val fields = methodGetDeclaredFields0.invoke(classOf[Field], false.asInstanceOf[Object])
+      val fields = methodGetDeclaredFields0
+        .invoke(classOf[Field], false.asInstanceOf[Object])
         .asInstanceOf[Array[Field]]
       val modifiersFieldOption = fields.find(field => "modifiers".equals(field.getName))
       require(modifiersFieldOption.isDefined)
@@ -607,12 +620,12 @@ private[spark] object IndylambdaScalaClosures extends Logging {
     "Ljava/lang/invoke/CallSite;"
 
   /**
-   * Check if the given reference is a indylambda style Scala closure.
-   * If so (e.g. for Scala 2.12+ closures), return a non-empty serialization proxy
-   * (SerializedLambda) of the closure;
+   * Check if the given reference is a indylambda style Scala closure. If so (e.g. for Scala 2.12+
+   * closures), return a non-empty serialization proxy (SerializedLambda) of the closure;
    * otherwise (e.g. for Scala 2.11 closures) return None.
    *
-   * @param maybeClosure the closure to check.
+   * @param maybeClosure
+   *   the closure to check.
    */
   def getSerializationProxy(maybeClosure: AnyRef): Option[SerializedLambda] = {
     def isClosureCandidate(cls: Class[_]): Boolean = {
@@ -643,7 +656,7 @@ private[spark] object IndylambdaScalaClosures extends Logging {
 
   def isIndylambdaScalaClosure(lambdaProxy: SerializedLambda): Boolean = {
     lambdaProxy.getImplMethodKind == MethodHandleInfo.REF_invokeStatic &&
-      lambdaProxy.getImplMethodName.contains("$anonfun$")
+    lambdaProxy.getImplMethodName.contains("$anonfun$")
   }
 
   def inspect(closure: AnyRef): SerializedLambda = {
@@ -653,56 +666,59 @@ private[spark] object IndylambdaScalaClosures extends Logging {
   }
 
   /**
-   * Check if the handle represents the LambdaMetafactory that indylambda Scala closures
-   * use for creating the lambda class and getting a closure instance.
+   * Check if the handle represents the LambdaMetafactory that indylambda Scala closures use for
+   * creating the lambda class and getting a closure instance.
    */
   def isLambdaMetafactory(bsmHandle: Handle): Boolean = {
     bsmHandle.getOwner == LambdaMetafactoryClassName &&
-      bsmHandle.getName == LambdaMetafactoryMethodName &&
-      bsmHandle.getDesc == LambdaMetafactoryMethodDesc
+    bsmHandle.getName == LambdaMetafactoryMethodName &&
+    bsmHandle.getDesc == LambdaMetafactoryMethodDesc
   }
 
   /**
    * Check if the handle represents a target method that is:
-   * - a STATIC method that implements a Scala lambda body in the indylambda style
-   * - captures the enclosing `this`, i.e. the first argument is a reference to the same type as
-   *   the owning class.
-   * Returns true if both criteria above are met.
+   *   - a STATIC method that implements a Scala lambda body in the indylambda style
+   *   - captures the enclosing `this`, i.e. the first argument is a reference to the same type as
+   *     the owning class. Returns true if both criteria above are met.
    */
   def isLambdaBodyCapturingOuter(handle: Handle, ownerInternalName: String): Boolean = {
     handle.getTag == Opcodes.H_INVOKESTATIC &&
-      handle.getName.contains("$anonfun$") &&
-      handle.getOwner == ownerInternalName &&
-      handle.getDesc.startsWith(s"(L$ownerInternalName;")
+    handle.getName.contains("$anonfun$") &&
+    handle.getOwner == ownerInternalName &&
+    handle.getDesc.startsWith(s"(L$ownerInternalName;")
   }
 
   /**
    * Check if the callee of a call site is a inner class constructor.
-   * - A constructor has to be invoked via INVOKESPECIAL
-   * - A constructor's internal name is "&lt;init&gt;" and the return type is "V" (void)
-   * - An inner class' first argument in the signature has to be a reference to the
-   *   enclosing "this", aka `$outer` in Scala.
+   *   - A constructor has to be invoked via INVOKESPECIAL
+   *   - A constructor's internal name is "&lt;init&gt;" and the return type is "V" (void)
+   *   - An inner class' first argument in the signature has to be a reference to the enclosing
+   *     "this", aka `$outer` in Scala.
    */
   def isInnerClassCtorCapturingOuter(
-      op: Int, owner: String, name: String, desc: String, callerInternalName: String): Boolean = {
+      op: Int,
+      owner: String,
+      name: String,
+      desc: String,
+      callerInternalName: String): Boolean = {
     op == Opcodes.INVOKESPECIAL && name == "<init>" && desc.startsWith(s"(L$callerInternalName;")
   }
 
   /**
-   * Scans an indylambda Scala closure, along with its lexically nested closures, and populate
-   * the accessed fields info on which fields on the outer object are accessed.
+   * Scans an indylambda Scala closure, along with its lexically nested closures, and populate the
+   * accessed fields info on which fields on the outer object are accessed.
    *
    * This is equivalent to getInnerClosureClasses() + InnerClosureFinder + FieldAccessFinder fused
    * into one for processing indylambda closures. The traversal order along the call graph is the
    * same for all three combined, so they can be fused together easily while maintaining the same
    * ordering as the existing implementation.
    *
-   * It also visits transitively Ammonite cmd and cmd%Helper objects it encounters
-   * and populates accessed fields for them to be able to clean up these as well
+   * It also visits transitively Ammonite cmd and cmd%Helper objects it encounters and populates
+   * accessed fields for them to be able to clean up these as well
    *
-   * Precondition: this function expects the `accessedFields` to be populated with all known
-   *               outer classes and their super classes to be in the map as keys, e.g.
-   *               initializing via ClosureCleaner.initAccessedFields.
+   * Precondition: this function expects the `accessedFields` to be populated with all known outer
+   * classes and their super classes to be in the map as keys, e.g. initializing via
+   * ClosureCleaner.initAccessedFields.
    */
   // scalastyle:off line.size.limit
   // Example: run the following code snippet in a Spark Shell w/ Scala 2.12+:
@@ -778,36 +794,37 @@ private[spark] object IndylambdaScalaClosures extends Logging {
     val classInfoByInternalName = Map.empty[String, (Class[_], ClassNode)]
     val methodNodeById = Map.empty[MethodIdentifier[_], MethodNode]
     def getOrUpdateClassInfo(classInternalName: String): (Class[_], ClassNode) = {
-      val classInfo = classInfoByInternalName.getOrElseUpdate(classInternalName, {
-        val classExternalName = classInternalName.replace('/', '.')
-        // scalastyle:off classforname
-        val clazz = Class.forName(classExternalName, false, lambdaClassLoader)
-        // scalastyle:on classforname
+      val classInfo = classInfoByInternalName.getOrElseUpdate(
+        classInternalName, {
+          val classExternalName = classInternalName.replace('/', '.')
+          // scalastyle:off classforname
+          val clazz = Class.forName(classExternalName, false, lambdaClassLoader)
+          // scalastyle:on classforname
 
-        def getClassNode(clazz: Class[_]): ClassNode = {
-          val classNode = new ClassNode()
-          val classReader = ClosureCleaner.getClassReader(clazz)
-          classReader.accept(classNode, 0)
-          classNode
-        }
-
-        var curClazz = clazz
-        // we need to add superclass methods as well
-        // e.g. consider the following closure:
-        // object Enclosing {
-        //   val closure = () => getClass.getName
-        // }
-        // To scan this closure properly, we need to add Object.getClass method
-        // to methodNodeById map
-        while (curClazz != null) {
-          for (m <- getClassNode(curClazz).methods.asScala) {
-            methodNodeById(MethodIdentifier(clazz, m.name, m.desc)) = m
+          def getClassNode(clazz: Class[_]): ClassNode = {
+            val classNode = new ClassNode()
+            val classReader = ClosureCleaner.getClassReader(clazz)
+            classReader.accept(classNode, 0)
+            classNode
           }
-          curClazz = curClazz.getSuperclass
-        }
 
-        (clazz, getClassNode(clazz))
-      })
+          var curClazz = clazz
+          // we need to add superclass methods as well
+          // e.g. consider the following closure:
+          // object Enclosing {
+          //   val closure = () => getClass.getName
+          // }
+          // To scan this closure properly, we need to add Object.getClass method
+          // to methodNodeById map
+          while (curClazz != null) {
+            for (m <- getClassNode(curClazz).methods.asScala) {
+              methodNodeById(MethodIdentifier(clazz, m.name, m.desc)) = m
+            }
+            curClazz = curClazz.getSuperclass
+          }
+
+          (clazz, getClassNode(clazz))
+        })
       classInfo
     }
 
@@ -815,7 +832,9 @@ private[spark] object IndylambdaScalaClosures extends Logging {
     val (implClass, _) = getOrUpdateClassInfo(implClassInternalName)
 
     val implMethodId = MethodIdentifier(
-      implClass, lambdaProxy.getImplMethodName, lambdaProxy.getImplMethodSignature)
+      implClass,
+      lambdaProxy.getImplMethodName,
+      lambdaProxy.getImplMethodSignature)
 
     // The set internal names of classes that we would consider following the calls into.
     // Candidates are: known outer class which happens to be the starting closure's impl class,
@@ -858,7 +877,7 @@ private[spark] object IndylambdaScalaClosures extends Logging {
       currentInstance.foreach { cmdInstance =>
         // track only cmdX and cmdX$Helper objects generated by Ammonite
         for (otherCmdField <- cmdInstance.getClass.getDeclaredFields
-             if ClosureCleaner.isAmmoniteCommandOrHelper(otherCmdField.getType)) {
+          if ClosureCleaner.isAmmoniteCommandOrHelper(otherCmdField.getType)) {
           otherCmdField.setAccessible(true)
           val otherCmdHelperRef = otherCmdField.get(cmdInstance)
           val otherCmdClass = otherCmdField.getType
@@ -902,7 +921,11 @@ private[spark] object IndylambdaScalaClosures extends Logging {
         }
 
         override def visitMethodInsn(
-            op: Int, owner: String, name: String, desc: String, itf: Boolean): Unit = {
+            op: Int,
+            owner: String,
+            name: String,
+            desc: String,
+            itf: Boolean): Unit = {
           val ownerExternalName = owner.replace('/', '.')
           if (owner == currentClassInternalName) {
             logTrace(s"    found intra class call to $ownerExternalName.$name$desc")
@@ -913,7 +936,11 @@ private[spark] object IndylambdaScalaClosures extends Logging {
             val classInfo = getOrUpdateClassInfo(owner)
             pushIfNotVisited(MethodIdentifier(classInfo._1, name, desc))
           } else if (isInnerClassCtorCapturingOuter(
-              op, owner, name, desc, currentClassInternalName)) {
+              op,
+              owner,
+              name,
+              desc,
+              currentClassInternalName)) {
             // Discover inner classes.
             // This this the InnerClassFinder equivalent for inner classes, which still use the
             // `$outer` chain. So this is NOT controlled by the `findTransitively` flag.
@@ -940,7 +967,10 @@ private[spark] object IndylambdaScalaClosures extends Logging {
         // Find the lexically nested closures
         // This is the InnerClosureFinder equivalent for indylambda nested closures
         override def visitInvokeDynamicInsn(
-            name: String, desc: String, bsmHandle: Handle, bsmArgs: Object*): Unit = {
+            name: String,
+            desc: String,
+            bsmHandle: Handle,
+            bsmArgs: Object*): Unit = {
           logTrace(s"    invokedynamic: $name$desc, bsmHandle=$bsmHandle, bsmArgs=$bsmArgs")
 
           // fast check: we only care about Scala lambda creation
@@ -966,12 +996,16 @@ private[spark] object IndylambdaScalaClosures extends Logging {
 }
 
 private[spark] class ReturnStatementInClosureException
-  extends SparkException("Return statements aren't allowed in Spark closures")
+    extends SparkException("Return statements aren't allowed in Spark closures")
 
 private class ReturnStatementFinder(targetMethodName: Option[String] = None)
-  extends ClassVisitor(Opcodes.ASM9) {
-  override def visitMethod(access: Int, name: String, desc: String,
-      sig: String, exceptions: Array[String]): MethodVisitor = {
+    extends ClassVisitor(Opcodes.ASM9) {
+  override def visitMethod(
+      access: Int,
+      name: String,
+      desc: String,
+      sig: String,
+      exceptions: Array[String]): MethodVisitor = {
 
     // $anonfun$ covers indylambda closures
     if (name.contains("apply") || name.contains("$anonfun$")) {
@@ -986,7 +1020,7 @@ private class ReturnStatementFinder(targetMethodName: Option[String] = None)
       new MethodVisitor(Opcodes.ASM9) {
         override def visitTypeInsn(op: Int, tp: String): Unit = {
           if (op == Opcodes.NEW && tp.contains("scala/runtime/NonLocalReturnControl") &&
-              isTargetMethod) {
+            isTargetMethod) {
             throw new ReturnStatementInClosureException
           }
         }
@@ -1003,20 +1037,24 @@ private case class MethodIdentifier[T](cls: Class[T], name: String, desc: String
 /**
  * Find the fields accessed by a given class.
  *
- * The resulting fields are stored in the mutable map passed in through the constructor.
- * This map is assumed to have its keys already populated with the classes of interest.
+ * The resulting fields are stored in the mutable map passed in through the constructor. This map
+ * is assumed to have its keys already populated with the classes of interest.
  *
- * @param fields the mutable map that stores the fields to return
- * @param findTransitively if true, find fields indirectly referenced through method calls
- * @param specificMethod if not empty, visit only this specific method
- * @param visitedMethods a set of visited methods to avoid cycles
+ * @param fields
+ *   the mutable map that stores the fields to return
+ * @param findTransitively
+ *   if true, find fields indirectly referenced through method calls
+ * @param specificMethod
+ *   if not empty, visit only this specific method
+ * @param visitedMethods
+ *   a set of visited methods to avoid cycles
  */
 private[util] class FieldAccessFinder(
     fields: Map[Class[_], Set[String]],
     findTransitively: Boolean,
     specificMethod: Option[MethodIdentifier[_]] = None,
     visitedMethods: Set[MethodIdentifier[_]] = Set.empty)
-  extends ClassVisitor(Opcodes.ASM9) {
+    extends ClassVisitor(Opcodes.ASM9) {
 
   override def visitMethod(
       access: Int,
@@ -1027,7 +1065,7 @@ private[util] class FieldAccessFinder(
 
     // If we are told to visit only a certain method and this is not the one, ignore it
     if (specificMethod.isDefined &&
-        (specificMethod.get.name != name || specificMethod.get.desc != desc)) {
+      (specificMethod.get.name != name || specificMethod.get.desc != desc)) {
       return null
     }
 
@@ -1041,7 +1079,11 @@ private[util] class FieldAccessFinder(
       }
 
       override def visitMethodInsn(
-          op: Int, owner: String, name: String, desc: String, itf: Boolean): Unit = {
+          op: Int,
+          owner: String,
+          name: String,
+          desc: String,
+          itf: Boolean): Unit = {
         for (cl <- fields.keys if cl.getName == owner.replace('/', '.')) {
           // Check for calls a getter method for a variable in an interpreter wrapper object.
           // This means that the corresponding field will be accessed, so we should save it.
@@ -1059,8 +1101,11 @@ private[util] class FieldAccessFinder(
               assert(currentClass != null, "The outer class can't be null.")
 
               while (currentClass != null) {
-                ClosureCleaner.getClassReader(currentClass).accept(
-                  new FieldAccessFinder(fields, findTransitively, Some(m), visitedMethods), 0)
+                ClosureCleaner
+                  .getClassReader(currentClass)
+                  .accept(
+                    new FieldAccessFinder(fields, findTransitively, Some(m), visitedMethods),
+                    0)
                 currentClass = currentClass.getSuperclass()
               }
             }
@@ -1079,20 +1124,33 @@ private class InnerClosureFinder(output: Set[Class[_]]) extends ClassVisitor(Opc
   //   val closure2 = () => { (1 to 5).map(closure1) }
   // The second closure technically has two inner closures, but this finder only finds one
 
-  override def visit(version: Int, access: Int, name: String, sig: String,
-      superName: String, interfaces: Array[String]): Unit = {
+  override def visit(
+      version: Int,
+      access: Int,
+      name: String,
+      sig: String,
+      superName: String,
+      interfaces: Array[String]): Unit = {
     myName = name
   }
 
-  override def visitMethod(access: Int, name: String, desc: String,
-      sig: String, exceptions: Array[String]): MethodVisitor = {
+  override def visitMethod(
+      access: Int,
+      name: String,
+      desc: String,
+      sig: String,
+      exceptions: Array[String]): MethodVisitor = {
     new MethodVisitor(Opcodes.ASM9) {
       override def visitMethodInsn(
-          op: Int, owner: String, name: String, desc: String, itf: Boolean): Unit = {
+          op: Int,
+          owner: String,
+          name: String,
+          desc: String,
+          itf: Boolean): Unit = {
         val argTypes = Type.getArgumentTypes(desc)
         if (op == Opcodes.INVOKESPECIAL && name == "<init>" && argTypes.length > 0
-            && argTypes(0).toString.startsWith("L") // is it an object?
-            && argTypes(0).getInternalName == myName) {
+          && argTypes(0).toString.startsWith("L") // is it an object?
+          && argTypes(0).getInternalName == myName) {
           output += SparkClassUtils.classForName(
             owner.replace('/', '.'),
             initialize = false,

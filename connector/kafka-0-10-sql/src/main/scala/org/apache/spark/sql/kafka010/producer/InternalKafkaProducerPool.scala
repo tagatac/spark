@@ -40,12 +40,15 @@ import org.apache.spark.util.{Clock, ShutdownHookManager, SystemClock, ThreadUti
 private[producer] class InternalKafkaProducerPool(
     executorService: ScheduledExecutorService,
     val clock: Clock,
-    conf: SparkConf) extends Logging {
+    conf: SparkConf)
+    extends Logging {
   import InternalKafkaProducerPool._
 
   def this(sparkConf: SparkConf) = {
-    this(ThreadUtils.newDaemonSingleThreadScheduledExecutor(
-      "kafka-producer-cache-evictor"), new SystemClock, sparkConf)
+    this(
+      ThreadUtils.newDaemonSingleThreadScheduledExecutor("kafka-producer-cache-evictor"),
+      new SystemClock,
+      sparkConf)
   }
 
   /** exposed for testing */
@@ -57,9 +60,13 @@ private[producer] class InternalKafkaProducerPool(
   private def startEvictorThread(): Option[ScheduledFuture[_]] = {
     val evictorThreadRunIntervalMillis = conf.get(PRODUCER_CACHE_EVICTOR_THREAD_RUN_INTERVAL)
     if (evictorThreadRunIntervalMillis > 0) {
-      val future = executorService.scheduleAtFixedRate(() => {
-        Utils.tryLogNonFatalError(evictExpired())
-      }, 0, evictorThreadRunIntervalMillis, TimeUnit.MILLISECONDS)
+      val future = executorService.scheduleAtFixedRate(
+        () => {
+          Utils.tryLogNonFatalError(evictExpired())
+        },
+        0,
+        evictorThreadRunIntervalMillis,
+        TimeUnit.MILLISECONDS)
       Some(future)
     } else {
       None
@@ -80,12 +87,14 @@ private[producer] class InternalKafkaProducerPool(
         .build()
     val paramsSeq: Seq[(String, Object)] = paramsToSeq(updatedKafkaProducerConfiguration)
     synchronized {
-      val entry = cache.getOrElseUpdate(paramsSeq, {
-        val producer = createKafkaProducer(paramsSeq)
-        val cachedProducer = new CachedKafkaProducer(paramsSeq, producer)
-        new CachedProducerEntry(cachedProducer,
-          TimeUnit.MILLISECONDS.toNanos(cacheExpireTimeoutMillis))
-      })
+      val entry = cache.getOrElseUpdate(
+        paramsSeq, {
+          val producer = createKafkaProducer(paramsSeq)
+          val cachedProducer = new CachedKafkaProducer(paramsSeq, producer)
+          new CachedProducerEntry(
+            cachedProducer,
+            TimeUnit.MILLISECONDS.toNanos(cacheExpireTimeoutMillis))
+        })
       entry.handleBorrowed()
       entry.producer
     }
@@ -97,8 +106,9 @@ private[producer] class InternalKafkaProducerPool(
         case Some(entry) if entry.producer.id == producer.id =>
           entry.handleReturned(clock.nanoTime())
         case _ =>
-          logWarning(log"Released producer ${MDC(PRODUCER_ID, producer.id)} is not " +
-            log"a member of the cache. Closing.")
+          logWarning(
+            log"Released producer ${MDC(PRODUCER_ID, producer.id)} is not " +
+              log"a member of the cache. Closing.")
           producer.close()
       }
     }
@@ -165,8 +175,8 @@ private[kafka010] object InternalKafkaProducerPool extends Logging {
   }
 
   /**
-   * This class is used as metadata of producer pool, and shouldn't be exposed to the public.
-   * This class assumes thread-safety is guaranteed by the caller.
+   * This class is used as metadata of producer pool, and shouldn't be exposed to the public. This
+   * class assumes thread-safety is guaranteed by the caller.
    */
   private[producer] class CachedProducerEntry(
       val producer: CachedKafkaProducer,
@@ -184,8 +194,10 @@ private[kafka010] object InternalKafkaProducerPool extends Logging {
     }
 
     def handleReturned(curTimeNs: Long): Unit = {
-      require(_refCount > 0, "Reference count shouldn't become negative. Returning same producer " +
-        "multiple times would occur this bug. Check the logic around returning producer.")
+      require(
+        _refCount > 0,
+        "Reference count shouldn't become negative. Returning same producer " +
+          "multiple times would occur this bug. Check the logic around returning producer.")
 
       _refCount -= 1
       if (_refCount == 0) {

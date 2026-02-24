@@ -33,7 +33,7 @@ import org.apache.spark.util.ArrayImplicits._
  * directory - on the driver pod.
  */
 private[spark] class HadoopConfDriverFeatureStep(conf: KubernetesConf)
-  extends KubernetesFeatureConfigStep {
+    extends KubernetesFeatureConfigStep {
 
   private val confDir = Option(conf.sparkConf.getenv(ENV_HADOOP_CONF_DIR))
   private val existingConfMap = conf.get(KUBERNETES_HADOOP_CONF_CONFIG_MAP)
@@ -42,7 +42,7 @@ private[spark] class HadoopConfDriverFeatureStep(conf: KubernetesConf)
     confDir,
     existingConfMap,
     "Do not specify both the `HADOOP_CONF_DIR` in your ENV and the ConfigMap " +
-    "as the creation of an additional ConfigMap, when one is already specified is extraneous")
+      "as the creation of an additional ConfigMap, when one is already specified is extraneous")
 
   private lazy val confFiles: Seq[File] = {
     val dir = new File(confDir.get)
@@ -58,49 +58,50 @@ private[spark] class HadoopConfDriverFeatureStep(conf: KubernetesConf)
   private def hasHadoopConf: Boolean = confDir.isDefined || existingConfMap.isDefined
 
   override def configurePod(original: SparkPod): SparkPod = {
-    original.transform { case pod if hasHadoopConf =>
-      val confVolume = if (confDir.isDefined) {
-        val keyPaths = confFiles.map { file =>
-          new KeyToPathBuilder()
-            .withKey(file.getName())
-            .withPath(file.getName())
-            .build()
-        }
-        new VolumeBuilder()
-          .withName(HADOOP_CONF_VOLUME)
-          .withNewConfigMap()
+    original.transform {
+      case pod if hasHadoopConf =>
+        val confVolume = if (confDir.isDefined) {
+          val keyPaths = confFiles.map { file =>
+            new KeyToPathBuilder()
+              .withKey(file.getName())
+              .withPath(file.getName())
+              .build()
+          }
+          new VolumeBuilder()
+            .withName(HADOOP_CONF_VOLUME)
+            .withNewConfigMap()
             .withName(newConfigMapName)
             .withItems(keyPaths.asJava)
             .endConfigMap()
-          .build()
-      } else {
-        new VolumeBuilder()
-          .withName(HADOOP_CONF_VOLUME)
-          .withNewConfigMap()
+            .build()
+        } else {
+          new VolumeBuilder()
+            .withName(HADOOP_CONF_VOLUME)
+            .withNewConfigMap()
             .withName(existingConfMap.get)
             .endConfigMap()
-          .build()
-      }
+            .build()
+        }
 
-      val podWithConf = new PodBuilder(pod.pod)
-        .editSpec()
+        val podWithConf = new PodBuilder(pod.pod)
+          .editSpec()
           .addNewVolumeLike(confVolume)
-            .endVolume()
+          .endVolume()
           .endSpec()
           .build()
 
-      val containerWithMount = new ContainerBuilder(pod.container)
-        .addNewVolumeMount()
+        val containerWithMount = new ContainerBuilder(pod.container)
+          .addNewVolumeMount()
           .withName(HADOOP_CONF_VOLUME)
           .withMountPath(HADOOP_CONF_DIR_PATH)
           .endVolumeMount()
-        .addNewEnv()
+          .addNewEnv()
           .withName(ENV_HADOOP_CONF_DIR)
           .withValue(HADOOP_CONF_DIR_PATH)
           .endEnv()
-        .build()
+          .build()
 
-      SparkPod(podWithConf, containerWithMount)
+        SparkPod(podWithConf, containerWithMount)
     }
   }
 
@@ -114,17 +115,21 @@ private[spark] class HadoopConfDriverFeatureStep(conf: KubernetesConf)
 
   override def getAdditionalKubernetesResources(): Seq[HasMetadata] = {
     if (confDir.isDefined) {
-      val fileMap = confFiles.map { file =>
-        (file.getName(), Files.readString(file.toPath))
-      }.toMap.asJava
+      val fileMap = confFiles
+        .map { file =>
+          (file.getName(), Files.readString(file.toPath))
+        }
+        .toMap
+        .asJava
 
-      Seq(new ConfigMapBuilder()
-        .withNewMetadata()
+      Seq(
+        new ConfigMapBuilder()
+          .withNewMetadata()
           .withName(newConfigMapName)
           .endMetadata()
-        .withImmutable(true)
-        .addToData(fileMap)
-        .build())
+          .withImmutable(true)
+          .addToData(fileMap)
+          .build())
     } else {
       Nil
     }

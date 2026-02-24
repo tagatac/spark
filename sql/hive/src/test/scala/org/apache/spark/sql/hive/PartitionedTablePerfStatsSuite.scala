@@ -27,14 +27,13 @@ import org.apache.spark.sql.hive.test.TestHiveSingleton
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SQLTestUtils
 
-class PartitionedTablePerfStatsSuite
-  extends QueryTest with TestHiveSingleton with SQLTestUtils {
+class PartitionedTablePerfStatsSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     // Hive operation counters are doubled in dual-analyzer mode.
-    hiveContext.sparkSession.conf.set(
-      SQLConf.ANALYZER_DUAL_RUN_LEGACY_AND_SINGLE_PASS_RESOLVER.key, "false")
+    hiveContext.sparkSession.conf
+      .set(SQLConf.ANALYZER_DUAL_RUN_LEGACY_AND_SINGLE_PASS_RESOLVER.key, "false")
     FileStatusCache.resetForTesting()
   }
 
@@ -63,8 +62,14 @@ class PartitionedTablePerfStatsSuite
   }
 
   private def setupPartitionedHiveTable(
-      tableName: String, dir: File, scale: Int, repair: Boolean = true): Unit = {
-    spark.range(scale).selectExpr("id as fieldOne", "id as partCol1", "id as partCol2").write
+      tableName: String,
+      dir: File,
+      scale: Int,
+      repair: Boolean = true): Unit = {
+    spark
+      .range(scale)
+      .selectExpr("id as fieldOne", "id as partCol1", "id as partCol2")
+      .write
       .partitionBy("partCol1", "partCol2")
       .mode("overwrite")
       .parquet(dir.getAbsolutePath)
@@ -84,8 +89,14 @@ class PartitionedTablePerfStatsSuite
   }
 
   private def setupPartitionedDatasourceTable(
-      tableName: String, dir: File, scale: Int, repair: Boolean = true): Unit = {
-    spark.range(scale).selectExpr("id as fieldOne", "id as partCol1", "id as partCol2").write
+      tableName: String,
+      dir: File,
+      scale: Int,
+      repair: Boolean = true): Unit = {
+    spark
+      .range(scale)
+      .selectExpr("id as fieldOne", "id as partCol1", "id as partCol2")
+      .write
       .partitionBy("partCol1", "partCol2")
       .mode("overwrite")
       .parquet(dir.getAbsolutePath)
@@ -107,11 +118,11 @@ class PartitionedTablePerfStatsSuite
         spec.setupTable("test", dir)
         val df = spark.sql("select * from test")
         assert(df.count() == 5)
-        assert(df.inputFiles.length == 5)  // unpruned
+        assert(df.inputFiles.length == 5) // unpruned
 
         val df2 = spark.sql("select * from test where partCol1 = 3 or partCol2 = 4")
         assert(df2.count() == 2)
-        assert(df2.inputFiles.length == 2)  // pruned, so we have less files
+        assert(df2.inputFiles.length == 2) // pruned, so we have less files
 
         val df3 = spark.sql("select * from test where PARTCOL1 = 3 or partcol2 = 4")
         assert(df3.count() == 2)
@@ -130,8 +141,8 @@ class PartitionedTablePerfStatsSuite
 
   genericTest("lazy partition pruning reads only necessary partition data") { spec =>
     withSQLConf(
-        SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
-        SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "0") {
+      SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
+      SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "0") {
       withTable("test") {
         withTempDir { dir =>
           spec.setupTable("test", dir)
@@ -171,8 +182,8 @@ class PartitionedTablePerfStatsSuite
 
   genericTest("lazy partition pruning with file status caching enabled") { spec =>
     withSQLConf(
-        SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
-        SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "9999999") {
+      SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
+      SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "9999999") {
       withTable("test") {
         withTempDir { dir =>
           spec.setupTable("test", dir)
@@ -212,8 +223,8 @@ class PartitionedTablePerfStatsSuite
 
   genericTest("file status caching respects refresh table and refreshByPath") { spec =>
     withSQLConf(
-        SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
-        SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "9999999") {
+      SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
+      SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "9999999") {
       withTable("test") {
         withTempDir { dir =>
           spec.setupTable("test", dir)
@@ -241,8 +252,8 @@ class PartitionedTablePerfStatsSuite
 
   genericTest("file status cache respects size limit") { spec =>
     withSQLConf(
-        SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
-        SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "1" /* 1 byte */) {
+      SQLConf.HIVE_MANAGE_FILESOURCE_PARTITIONS.key -> "true",
+      SQLConf.HIVE_FILESOURCE_PARTITION_FILE_CACHE_SIZE.key -> "1" /* 1 byte */ ) {
       withTable("test") {
         withTempDir { dir =>
           spec.setupTable("test", dir)
@@ -413,7 +424,8 @@ class PartitionedTablePerfStatsSuite
     }
   }
 
-  test("resolveRelation for a FileFormat DataSource without userSchema scan filesystem only once") {
+  test(
+    "resolveRelation for a FileFormat DataSource without userSchema scan filesystem only once") {
     withTempDir { dir =>
       import spark.implicits._
       Seq(1).toDF("a").write.mode("overwrite").save(dir.getAbsolutePath)

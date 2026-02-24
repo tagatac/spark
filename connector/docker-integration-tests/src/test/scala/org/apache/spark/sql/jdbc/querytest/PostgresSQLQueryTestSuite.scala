@@ -23,13 +23,14 @@ import org.apache.spark.sql.jdbc.PostgresDatabaseOnDocker
 import org.apache.spark.tags.DockerTest
 
 /**
- * READ THIS IF YOU ADDED A NEW SQL TEST AND THIS SUITE IS FAILING:
- * Your new SQL test is automatically opted into this suite. It is likely failing because it is not
- * compatible with the default Postgres. You have two options:
- * 1. (Recommended) Modify your queries to be compatible with both systems. This is recommended
- *    because it will run your queries against postgres, providing higher correctness testing
- *    confidence, and you won't have to manually verify the golden files generated with your test.
- * 2. Add this line to your .sql file: --ONLY_IF spark
+ * READ THIS IF YOU ADDED A NEW SQL TEST AND THIS SUITE IS FAILING: Your new SQL test is
+ * automatically opted into this suite. It is likely failing because it is not compatible with the
+ * default Postgres. You have two options:
+ *   1. (Recommended) Modify your queries to be compatible with both systems. This is recommended
+ *      because it will run your queries against postgres, providing higher correctness testing
+ *      confidence, and you won't have to manually verify the golden files generated with your
+ *      test.
+ *   2. Add this line to your .sql file: --ONLY_IF spark
  *
  * Note: To run this test suite for a specific version (e.g., postgres:18.2-alpine):
  * {{{
@@ -48,16 +49,17 @@ class PostgresSQLQueryTestSuite extends CrossDbmsQueryTestSuite {
   override val db = new PostgresDatabaseOnDocker
 
   override def dataPreparation(conn: Connection): Unit = {
-    conn.prepareStatement(
-      // Custom function `double` to imitate Spark's function, so that more tests are covered.
-      """
+    conn
+      .prepareStatement(
+        // Custom function `double` to imitate Spark's function, so that more tests are covered.
+        """
         |CREATE OR REPLACE FUNCTION double(numeric_value numeric) RETURNS double precision
         |    AS 'select CAST($1 AS double precision);'
         |    LANGUAGE SQL
         |    IMMUTABLE
         |    RETURNS NULL ON NULL INPUT;
-        |""".stripMargin
-    ).executeUpdate()
+        |""".stripMargin)
+      .executeUpdate()
   }
 
   listTestCases.foreach(createScalaTestCase)

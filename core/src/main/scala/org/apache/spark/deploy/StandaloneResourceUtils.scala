@@ -38,25 +38,33 @@ private[spark] object StandaloneResourceUtils extends Logging {
   /**
    * A mutable resource information which provides more efficient modification on addresses.
    */
-  private[spark] case class MutableResourceInfo(name: String, addresses: mutable.HashSet[String]) {
+  private[spark] case class MutableResourceInfo(
+      name: String,
+      addresses: mutable.HashSet[String]) {
 
-    def + (other: MutableResourceInfo): this.type = {
-      assert(name == other.name, s"Inconsistent resource name, expected $name, " +
-        s"but got ${other.name}")
+    def +(other: MutableResourceInfo): this.type = {
+      assert(
+        name == other.name,
+        s"Inconsistent resource name, expected $name, " +
+          s"but got ${other.name}")
       other.addresses.foreach(this.addresses.add)
       this
     }
 
-    def + (other: ResourceInformation): this.type = {
-      assert(name == other.name, s"Inconsistent resource name, expected $name, " +
-        s"but got ${other.name}")
+    def +(other: ResourceInformation): this.type = {
+      assert(
+        name == other.name,
+        s"Inconsistent resource name, expected $name, " +
+          s"but got ${other.name}")
       other.addresses.foreach(this.addresses.add)
       this
     }
 
-    def - (other: ResourceInformation): this.type = {
-      assert(name == other.name, s"Inconsistent resource name, expected $name, " +
-        s"but got ${other.name}")
+    def -(other: ResourceInformation): this.type = {
+      assert(
+        name == other.name,
+        s"Inconsistent resource name, expected $name, " +
+          s"but got ${other.name}")
       other.addresses.foreach(this.addresses.remove)
       this
     }
@@ -82,10 +90,14 @@ private[spark] object StandaloneResourceUtils extends Logging {
   /**
    * Save the allocated resources of driver(cluster only) or executor into a JSON formatted
    * resources file. Used in Standalone only.
-   * @param componentName spark.driver / spark.executor
-   * @param resources allocated resources for driver(cluster only) or executor
-   * @param dir the target directory used to place the resources file
-   * @return None if resources is empty or Some(file) which represents the resources file
+   * @param componentName
+   *   spark.driver / spark.executor
+   * @param resources
+   *   allocated resources for driver(cluster only) or executor
+   * @param dir
+   *   the target directory used to place the resources file
+   * @return
+   *   None if resources is empty or Some(file) which represents the resources file
    */
   def prepareResourcesFile(
       componentName: String,
@@ -98,7 +110,9 @@ private[spark] object StandaloneResourceUtils extends Logging {
     val compShortName = componentName.substring(componentName.lastIndexOf(".") + 1)
     val tmpFile = Utils.tempFileWith(dir)
     val allocations = resources.map { case (rName, rInfo) =>
-      ResourceAllocation(new ResourceID(componentName, rName), rInfo.addresses.toImmutableArraySeq)
+      ResourceAllocation(
+        new ResourceID(componentName, rName),
+        rInfo.addresses.toImmutableArraySeq)
     }.toSeq
     try {
       writeResourceAllocationJson(allocations, tmpFile)
@@ -114,16 +128,14 @@ private[spark] object StandaloneResourceUtils extends Logging {
     Some(resourcesFile)
   }
 
-  private def writeResourceAllocationJson[T](
-      allocations: Seq[T],
-      jsonFile: File): Unit = {
+  private def writeResourceAllocationJson[T](allocations: Seq[T], jsonFile: File): Unit = {
     implicit val formats: Formats = DefaultFormats
     val allocationJson = Extraction.decompose(allocations)
     Files.write(jsonFile.toPath, compact(render(allocationJson)).getBytes())
   }
 
-  def toMutable(immutableResources: Map[String, ResourceInformation])
-    : Map[String, MutableResourceInfo] = {
+  def toMutable(
+      immutableResources: Map[String, ResourceInformation]): Map[String, MutableResourceInfo] = {
     immutableResources.map { case (rName, rInfo) =>
       val mutableAddress = new mutable.HashSet[String]()
       mutableAddress ++= rInfo.addresses
@@ -135,29 +147,35 @@ private[spark] object StandaloneResourceUtils extends Logging {
   def formatResourcesDetails(
       usedInfo: Map[String, ResourceInformation],
       freeInfo: Map[String, ResourceInformation]): String = {
-    usedInfo.map { case (rName, rInfo) =>
-      val used = rInfo.addresses.mkString("[", ", ", "]")
-      val free = freeInfo(rName).addresses.mkString("[", ", ", "]")
-      s"$rName: Free: $free / Used: $used"
-    }.mkString(", ")
+    usedInfo
+      .map { case (rName, rInfo) =>
+        val used = rInfo.addresses.mkString("[", ", ", "]")
+        val free = freeInfo(rName).addresses.mkString("[", ", ", "]")
+        s"$rName: Free: $free / Used: $used"
+      }
+      .mkString(", ")
   }
 
   // used for UI
   def formatResourcesAddresses(resources: Map[String, ResourceInformation]): String = {
-    resources.map { case (rName, rInfo) =>
-      s"$rName: ${rInfo.addresses.mkString("[", ", ", "]")}"
-    }.mkString(", ")
+    resources
+      .map { case (rName, rInfo) =>
+        s"$rName: ${rInfo.addresses.mkString("[", ", ", "]")}"
+      }
+      .mkString(", ")
   }
 
   // used for UI
   def formatResourcesUsed(
       resourcesTotal: Map[String, Int],
       resourcesUsed: Map[String, Int]): String = {
-    resourcesTotal.map { case (rName, totalSize) =>
-      val used = resourcesUsed(rName)
-      val total = totalSize
-      s"$used / $total $rName"
-    }.mkString(", ")
+    resourcesTotal
+      .map { case (rName, totalSize) =>
+        val used = resourcesUsed(rName)
+        val total = totalSize
+        s"$used / $total $rName"
+      }
+      .mkString(", ")
   }
 
   // used for UI

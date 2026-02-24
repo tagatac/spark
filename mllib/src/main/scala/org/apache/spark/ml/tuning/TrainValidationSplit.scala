@@ -45,14 +45,17 @@ import org.apache.spark.util.ThreadUtils
  * Params for [[TrainValidationSplit]] and [[TrainValidationSplitModel]].
  */
 private[ml] trait TrainValidationSplitParams extends ValidatorParams {
+
   /**
-   * Param for ratio between train and validation data. Must be between 0 and 1.
-   * Default: 0.75
+   * Param for ratio between train and validation data. Must be between 0 and 1. Default: 0.75
    *
    * @group param
    */
-  val trainRatio: DoubleParam = new DoubleParam(this, "trainRatio",
-    "ratio between training set and validation set (>= 0 && <= 1)", ParamValidators.inRange(0, 1))
+  val trainRatio: DoubleParam = new DoubleParam(
+    this,
+    "trainRatio",
+    "ratio between training set and validation set (>= 0 && <= 1)",
+    ParamValidators.inRange(0, 1))
 
   /** @group getParam */
   def getTrainRatio: Double = $(trainRatio)
@@ -61,16 +64,18 @@ private[ml] trait TrainValidationSplitParams extends ValidatorParams {
 }
 
 /**
- * Validation for hyper-parameter tuning.
- * Randomly splits the input dataset into train and validation sets,
- * and uses evaluation metric on the validation set to select the best model.
+ * Validation for hyper-parameter tuning. Randomly splits the input dataset into train and
+ * validation sets, and uses evaluation metric on the validation set to select the best model.
  * Similar to [[CrossValidator]], but only splits the set once.
  */
 @Since("1.5.0")
 class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: String)
-  extends Estimator[TrainValidationSplitModel]
-  with TrainValidationSplitParams with HasParallelism with HasCollectSubModels
-  with MLWritable with Logging {
+    extends Estimator[TrainValidationSplitModel]
+    with TrainValidationSplitParams
+    with HasParallelism
+    with HasCollectSubModels
+    with MLWritable
+    with Logging {
 
   @Since("1.5.0")
   def this() = this(Identifiable.randomUID("tvs"))
@@ -96,8 +101,8 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   def setSeed(value: Long): this.type = set(seed, value)
 
   /**
-   * Set the maximum level of parallelism to evaluate models in parallel.
-   * Default is 1 for serial evaluation
+   * Set the maximum level of parallelism to evaluate models in parallel. Default is 1 for serial
+   * evaluation
    *
    * @group expertSetParam
    */
@@ -105,12 +110,12 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
   def setParallelism(value: Int): this.type = set(parallelism, value)
 
   /**
-   * Whether to collect submodels when fitting. If set, we can get submodels from
-   * the returned model.
+   * Whether to collect submodels when fitting. If set, we can get submodels from the returned
+   * model.
    *
    * Note: If set this param, when you save the returned model, you can set an option
-   * "persistSubModels" to be "true" before saving, in order to save these submodels.
-   * You can check documents of
+   * "persistSubModels" to be "true" before saving, in order to save these submodels. You can
+   * check documents of
    * {@link org.apache.spark.ml.tuning.TrainValidationSplitModel.TrainValidationSplitModelWriter}
    * for more information.
    *
@@ -159,7 +164,7 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
         val metric = eval.evaluate(model.transform(validationDataset, paramMap))
         instr.logDebug(s"Got metric $metric for model trained with $paramMap.")
         metric
-      } (executionContext)
+      }(executionContext)
     }
 
     // Wait for all metrics to be calculated
@@ -169,17 +174,20 @@ class TrainValidationSplit @Since("1.5.0") (@Since("1.5.0") override val uid: St
     trainingDataset.unpersist()
     validationDataset.unpersist()
 
-    instr.logInfo(log"Train validation split metrics: ${MDC(
-      TRAIN_VALIDATION_SPLIT_METRICS, metrics.mkString("[", ", ", "]"))}")
+    instr.logInfo(
+      log"Train validation split metrics: ${MDC(TRAIN_VALIDATION_SPLIT_METRICS, metrics.mkString("[", ", ", "]"))}")
     val (bestMetric, bestIndex) =
       if (eval.isLargerBetter) metrics.zipWithIndex.maxBy(_._1)
       else metrics.zipWithIndex.minBy(_._1)
     instr.logInfo(log"Best set of parameters:\n${MDC(ESTIMATOR_PARAM_MAP, epm(bestIndex))}")
-    instr.logInfo(log"Best train validation split metric: " +
-      log"${MDC(TRAIN_VALIDATION_SPLIT_METRIC, bestMetric)}.")
+    instr.logInfo(
+      log"Best train validation split metric: " +
+        log"${MDC(TRAIN_VALIDATION_SPLIT_METRIC, bestMetric)}.")
     val bestModel = est.fit(dataset, epm(bestIndex)).asInstanceOf[Model[_]]
-    copyValues(new TrainValidationSplitModel(uid, bestModel, metrics)
-      .setSubModels(subModels).setParent(this))
+    copyValues(
+      new TrainValidationSplitModel(uid, bestModel, metrics)
+        .setSubModels(subModels)
+        .setParent(this))
   }
 
   @Since("1.5.0")
@@ -211,7 +219,7 @@ object TrainValidationSplit extends MLReadable[TrainValidationSplit] {
   override def load(path: String): TrainValidationSplit = super.load(path)
 
   private[TrainValidationSplit] class TrainValidationSplitWriter(instance: TrainValidationSplit)
-    extends MLWriter {
+      extends MLWriter {
 
     ValidatorParams.validateParams(instance)
 
@@ -242,16 +250,21 @@ object TrainValidationSplit extends MLReadable[TrainValidationSplit] {
 /**
  * Model from train validation split.
  *
- * @param uid Id.
- * @param bestModel Estimator determined best model.
- * @param validationMetrics Evaluated validation metrics.
+ * @param uid
+ *   Id.
+ * @param bestModel
+ *   Estimator determined best model.
+ * @param validationMetrics
+ *   Evaluated validation metrics.
  */
 @Since("1.5.0")
 class TrainValidationSplitModel private[ml] (
     @Since("1.5.0") override val uid: String,
     @Since("1.5.0") val bestModel: Model[_],
     @Since("1.5.0") val validationMetrics: Array[Double])
-  extends Model[TrainValidationSplitModel] with TrainValidationSplitParams with MLWritable {
+    extends Model[TrainValidationSplitModel]
+    with TrainValidationSplitParams
+    with MLWritable {
 
   /** A Python-friendly auxiliary constructor. */
   private[ml] def this(uid: String, bestModel: Model[_], validationMetrics: JList[Double]) = {
@@ -260,15 +273,14 @@ class TrainValidationSplitModel private[ml] (
 
   private var _subModels: Option[Array[Model[_]]] = None
 
-  private[tuning] def setSubModels(subModels: Option[Array[Model[_]]])
-    : TrainValidationSplitModel = {
+  private[tuning] def setSubModels(
+      subModels: Option[Array[Model[_]]]): TrainValidationSplitModel = {
     _subModels = subModels
     this
   }
 
   // A Python-friendly auxiliary method
-  private[tuning] def setSubModels(subModels: JList[Model[_]])
-    : TrainValidationSplitModel = {
+  private[tuning] def setSubModels(subModels: JList[Model[_]]): TrainValidationSplitModel = {
     _subModels = if (subModels != null) {
       Some(subModels.asScala.toArray)
     } else {
@@ -278,15 +290,19 @@ class TrainValidationSplitModel private[ml] (
   }
 
   /**
-   * @return submodels represented in array. The index of array corresponds to the ordering of
-   *         estimatorParamMaps
-   * @throws IllegalArgumentException if subModels are not available. To retrieve subModels,
-   *         make sure to set collectSubModels to true before fitting.
+   * @return
+   *   submodels represented in array. The index of array corresponds to the ordering of
+   *   estimatorParamMaps
+   * @throws IllegalArgumentException
+   *   if subModels are not available. To retrieve subModels, make sure to set collectSubModels to
+   *   true before fitting.
    */
   @Since("2.3.0")
   def subModels: Array[Model[_]] = {
-    require(_subModels.isDefined, "subModels not available, To retrieve subModels, make sure " +
-      "to set collectSubModels to true before fitting.")
+    require(
+      _subModels.isDefined,
+      "subModels not available, To retrieve subModels, make sure " +
+        "to set collectSubModels to true before fitting.")
     _subModels.get
   }
 
@@ -306,11 +322,10 @@ class TrainValidationSplitModel private[ml] (
 
   @Since("1.5.0")
   override def copy(extra: ParamMap): TrainValidationSplitModel = {
-    val copied = new TrainValidationSplitModel (
+    val copied = new TrainValidationSplitModel(
       uid,
       bestModel.copy(extra).asInstanceOf[Model[_]],
-      validationMetrics.clone()
-    ).setSubModels(TrainValidationSplitModel.copySubModels(_subModels))
+      validationMetrics.clone()).setSubModels(TrainValidationSplitModel.copySubModels(_subModels))
     copyValues(copied, extra).setParent(parent)
   }
 
@@ -328,8 +343,8 @@ class TrainValidationSplitModel private[ml] (
 @Since("2.0.0")
 object TrainValidationSplitModel extends MLReadable[TrainValidationSplitModel] {
 
-  private[TrainValidationSplitModel] def copySubModels(subModels: Option[Array[Model[_]]])
-    : Option[Array[Model[_]]] = {
+  private[TrainValidationSplitModel] def copySubModels(
+      subModels: Option[Array[Model[_]]]): Option[Array[Model[_]]] = {
     subModels.map(_.map(_.copy(ParamMap.empty).asInstanceOf[Model[_]]))
   }
 
@@ -341,50 +356,59 @@ object TrainValidationSplitModel extends MLReadable[TrainValidationSplitModel] {
 
   /**
    * Writer for TrainValidationSplitModel.
-   * @param instance TrainValidationSplitModel instance used to construct the writer
+   * @param instance
+   *   TrainValidationSplitModel instance used to construct the writer
    *
-   * TrainValidationSplitModel supports an option "persistSubModels", with possible values
-   * "true" or "false". If you set the collectSubModels Param before fitting, then you can
-   * set "persistSubModels" to "true" in order to persist the subModels. By default,
-   * "persistSubModels" will be "true" when subModels are available and "false" otherwise.
-   * If subModels are not available, then setting "persistSubModels" to "true" will cause
-   * an exception.
+   * TrainValidationSplitModel supports an option "persistSubModels", with possible values "true"
+   * or "false". If you set the collectSubModels Param before fitting, then you can set
+   * "persistSubModels" to "true" in order to persist the subModels. By default,
+   * "persistSubModels" will be "true" when subModels are available and "false" otherwise. If
+   * subModels are not available, then setting "persistSubModels" to "true" will cause an
+   * exception.
    */
   @Since("2.3.0")
   final class TrainValidationSplitModelWriter private[tuning] (
-      instance: TrainValidationSplitModel) extends MLWriter {
+      instance: TrainValidationSplitModel)
+      extends MLWriter {
 
     ValidatorParams.validateParams(instance)
 
     override protected def saveImpl(path: String): Unit = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "TrainValidationSplitModel does not support saving to local filesystem path."
-        )
+          "TrainValidationSplitModel does not support saving to local filesystem path.")
       }
-      val persistSubModelsParam = optionMap.getOrElse("persistsubmodels",
-        if (instance.hasSubModels) "true" else "false")
+      val persistSubModelsParam =
+        optionMap.getOrElse("persistsubmodels", if (instance.hasSubModels) "true" else "false")
 
-      require(Array("true", "false").contains(persistSubModelsParam.toLowerCase(Locale.ROOT)),
+      require(
+        Array("true", "false").contains(persistSubModelsParam.toLowerCase(Locale.ROOT)),
         s"persistSubModels option value ${persistSubModelsParam} is invalid, the possible " +
-        "values are \"true\" or \"false\"")
+          "values are \"true\" or \"false\"")
       val persistSubModels = persistSubModelsParam.toBoolean
 
       import org.json4s.JsonDSL._
-      val extraMetadata = ("validationMetrics" -> instance.validationMetrics.toImmutableArraySeq) ~
-        ("persistSubModels" -> persistSubModels)
+      val extraMetadata =
+        ("validationMetrics" -> instance.validationMetrics.toImmutableArraySeq) ~
+          ("persistSubModels" -> persistSubModels)
       ValidatorParams.saveImpl(path, instance, sparkSession, Some(extraMetadata))
       val bestModelPath = new Path(path, "bestModel").toString
       instance.bestModel.asInstanceOf[MLWritable].write.session(sparkSession).save(bestModelPath)
       if (persistSubModels) {
-        require(instance.hasSubModels, "When persisting tuning models, you can only set " +
-          "persistSubModels to true if the tuning was done with collectSubModels set to true. " +
-          "To save the sub-models, try rerunning fitting with collectSubModels set to true.")
+        require(
+          instance.hasSubModels,
+          "When persisting tuning models, you can only set " +
+            "persistSubModels to true if the tuning was done with collectSubModels set to true. " +
+            "To save the sub-models, try rerunning fitting with collectSubModels set to true.")
         val subModelsPath = new Path(path, "subModels")
         for (paramIndex <- instance.getEstimatorParamMaps.indices) {
           val modelPath = new Path(subModelsPath, paramIndex.toString).toString
-          instance.subModels(paramIndex).asInstanceOf[MLWritable]
-            .write.session(sparkSession).save(modelPath)
+          instance
+            .subModels(paramIndex)
+            .asInstanceOf[MLWritable]
+            .write
+            .session(sparkSession)
+            .save(modelPath)
         }
       }
     }
@@ -398,16 +422,17 @@ object TrainValidationSplitModel extends MLReadable[TrainValidationSplitModel] {
     override def load(path: String): TrainValidationSplitModel = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "TrainValidationSplitModel does not support loading from local filesystem path."
-        )
+          "TrainValidationSplitModel does not support loading from local filesystem path.")
       }
       implicit val format = DefaultFormats
 
       val (metadata, estimator, evaluator, estimatorParamMaps) =
         ValidatorParams.loadImpl(path, sparkSession, className)
       val bestModelPath = new Path(path, "bestModel").toString
-      val bestModel = DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sparkSession)
-      val validationMetrics = (metadata.metadata \ "validationMetrics").extract[Seq[Double]].toArray
+      val bestModel =
+        DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sparkSession)
+      val validationMetrics =
+        (metadata.metadata \ "validationMetrics").extract[Seq[Double]].toArray
       val persistSubModels = (metadata.metadata \ "persistSubModels")
         .extractOrElse[Boolean](false)
 
@@ -416,15 +441,15 @@ object TrainValidationSplitModel extends MLReadable[TrainValidationSplitModel] {
         val _subModels = Array.ofDim[Model[_]](estimatorParamMaps.length)
         for (paramIndex <- estimatorParamMaps.indices) {
           val modelPath = new Path(subModelsPath, paramIndex.toString).toString
-          _subModels(paramIndex) =
-            DefaultParamsReader.loadParamsInstance(modelPath, sparkSession)
+          _subModels(paramIndex) = DefaultParamsReader.loadParamsInstance(modelPath, sparkSession)
         }
         Some(_subModels)
       } else None
 
       val model = new TrainValidationSplitModel(metadata.uid, bestModel, validationMetrics)
         .setSubModels(subModels)
-      model.set(model.estimator, estimator)
+      model
+        .set(model.estimator, estimator)
         .set(model.evaluator, evaluator)
         .set(model.estimatorParamMaps, estimatorParamMaps)
       metadata.getAndSetParams(model, skipParams = Option(List("estimatorParamMaps")))

@@ -136,8 +136,8 @@ class MLEventsSuite extends SparkFunSuite with MLlibTestSparkContext with Eventu
     event9.estimator = pipeline
     event9.model = pipelineModel
 
-    val expected = Seq(
-      event0, event1, event2, event3, event4, event5, event6, event7, event8, event9)
+    val expected =
+      Seq(event0, event1, event2, event3, event4, event5, event6, event7, event8, event9)
     eventually(timeout(10.seconds), interval(1.second)) {
       assert(events === expected)
     }
@@ -165,8 +165,8 @@ class MLEventsSuite extends SparkFunSuite with MLlibTestSparkContext with Eventu
     when(model.transform(meq(dataset2))).thenReturn(dataset3)
     when(transformer2.transform(meq(dataset3))).thenReturn(dataset4)
 
-    val newPipelineModel = new PipelineModel(
-      "pipeline0", Array(transformer1, model, transformer2))
+    val newPipelineModel =
+      new PipelineModel("pipeline0", Array(transformer1, model, transformer2))
     assert(events.isEmpty)
     val output = newPipelineModel.transform(dataset1)
 
@@ -245,11 +245,9 @@ class MLEventsSuite extends SparkFunSuite with MLlibTestSparkContext with Eventu
       pipelineReader.load(path)
       eventually(timeout(10.seconds), interval(1.second)) {
         events.foreach {
-          case e: LoadInstanceStart[_]
-              if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
+          case e: LoadInstanceStart[_] if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
             assert(e.path.endsWith("writableStage"))
-          case e: LoadInstanceEnd[_]
-              if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
+          case e: LoadInstanceEnd[_] if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
             assert(e.instance.isInstanceOf[PipelineStage])
           case e: LoadInstanceStart[_] =>
             assert(e.reader === pipelineReader)
@@ -308,11 +306,9 @@ class MLEventsSuite extends SparkFunSuite with MLlibTestSparkContext with Eventu
       pipelineModelReader.load(path)
       eventually(timeout(10.seconds), interval(1.second)) {
         events.foreach {
-          case e: LoadInstanceStart[_]
-            if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
+          case e: LoadInstanceStart[_] if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
             assert(e.path.endsWith("writableStage"))
-          case e: LoadInstanceEnd[_]
-            if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
+          case e: LoadInstanceEnd[_] if e.reader.isInstanceOf[DefaultParamsReader[_]] =>
             assert(e.instance.isInstanceOf[PipelineStage])
           case e: LoadInstanceStart[_] =>
             assert(e.reader === pipelineModelReader)

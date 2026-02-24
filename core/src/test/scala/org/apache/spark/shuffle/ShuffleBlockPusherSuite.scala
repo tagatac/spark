@@ -49,7 +49,8 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
   @Mock(answer = RETURNS_SMART_NULLS) private var blockManager: BlockManager = _
   @Mock(answer = RETURNS_SMART_NULLS) private var dependency: ShuffleDependency[Int, Int, Int] = _
   @Mock(answer = RETURNS_SMART_NULLS) private var shuffleClient: BlockStoreClient = _
-  @Mock(answer = RETURNS_SMART_NULLS) private var executorBackend: CoarseGrainedExecutorBackend = _
+  @Mock(answer = RETURNS_SMART_NULLS) private var executorBackend: CoarseGrainedExecutorBackend =
+    _
 
   private var conf: SparkConf = _
   private val pushedBlocks = new ArrayBuffer[String]
@@ -65,7 +66,8 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     when(dependency.shuffleId).thenReturn(0)
     when(dependency.partitioner).thenReturn(new HashPartitioner(8))
     when(dependency.serializer).thenReturn(new JavaSerializer(conf))
-    when(dependency.getMergerLocs).thenReturn(Seq(BlockManagerId("test-client", "test-client", 1)))
+    when(dependency.getMergerLocs).thenReturn(
+      Seq(BlockManagerId("test-client", "test-client", 1)))
     // Set the env because the shuffler writer gets the shuffle client instance from the env.
     val mockEnv = mock(classOf[SparkEnv])
     when(mockEnv.conf).thenReturn(conf)
@@ -87,22 +89,25 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
         pushedBlocks ++= blocks
         val managedBuffers = invocation.getArguments()(3).asInstanceOf[Array[ManagedBuffer]]
         val blockPushListener = invocation.getArguments()(4).asInstanceOf[BlockPushingListener]
-        blocks.lazyZip(managedBuffers).foreach((blockId, buffer) => {
-          blockPushListener.onBlockPushSuccess(blockId, buffer)
-        })
+        blocks
+          .lazyZip(managedBuffers)
+          .foreach((blockId, buffer) => {
+            blockPushListener.onBlockPushSuccess(blockId, buffer)
+          })
       })
   }
 
   private def verifyPushRequests(
       pushRequests: Seq[PushRequest],
       expectedSizes: Seq[Int]): Unit = {
-    pushRequests.lazyZip(expectedSizes).foreach((req, size) => {
-      assert(req.size == size)
-    })
+    pushRequests
+      .lazyZip(expectedSizes)
+      .foreach((req, size) => {
+        assert(req.size == size)
+      })
   }
 
-  private def verifyBlockPushCompleted(
-      blockPusher: ShuffleBlockPusher): Unit = {
+  private def verifyBlockPushCompleted(blockPusher: ShuffleBlockPusher): Unit = {
     verify(executorBackend, times(1))
       .notifyDriverAboutPushCompletion(dependency.shuffleId, 0, 0)
     assert(blockPusher.isPushCompletionNotified)
@@ -115,10 +120,19 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     val blockPusher = new TestShuffleBlockPusher(conf)
     val mergerLocs = dependency.getMergerLocs.map(loc => BlockManagerId("", loc.host, loc.port))
     val largeBlockSize = 2 * 1024 * 1024
-    blockPusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 5), dependency, 0)
-    val pushRequests = blockPusher.prepareBlockPushRequests(5, 0, 0, 0,
-      mock(classOf[File]), Array(2, 2, 2, largeBlockSize, largeBlockSize), mergerLocs,
+    blockPusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 5),
+      dependency,
+      0)
+    val pushRequests = blockPusher.prepareBlockPushRequests(
+      5,
+      0,
+      0,
+      0,
+      mock(classOf[File]),
+      Array(2, 2, 2, largeBlockSize, largeBlockSize),
+      mergerLocs,
       mock(classOf[TransportConf]))
     blockPusher.runPendingTasks()
     assert(pushRequests.length == 3)
@@ -131,10 +145,20 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     conf.set("spark.shuffle.push.maxBlockSizeToPush", "1k")
     val blockPusher = new TestShuffleBlockPusher(conf)
     val mergerLocs = dependency.getMergerLocs.map(loc => BlockManagerId("", loc.host, loc.port))
-    blockPusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 5), dependency, 0)
-    val pushRequests = blockPusher.prepareBlockPushRequests(5, 0, 0, 0,
-      mock(classOf[File]), Array(2, 2, 2, 1028, 1024), mergerLocs, mock(classOf[TransportConf]))
+    blockPusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 5),
+      dependency,
+      0)
+    val pushRequests = blockPusher.prepareBlockPushRequests(
+      5,
+      0,
+      0,
+      0,
+      mock(classOf[File]),
+      Array(2, 2, 2, 1028, 1024),
+      mergerLocs,
+      mock(classOf[TransportConf]))
     blockPusher.runPendingTasks()
     assert(pushRequests.length == 2)
     verifyPushRequests(pushRequests, Seq(6, 1024))
@@ -146,25 +170,38 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     conf.set("spark.reducer.maxBlocksInFlightPerAddress", "1")
     val blockPusher = new TestShuffleBlockPusher(conf)
     val mergerLocs = dependency.getMergerLocs.map(loc => BlockManagerId("", loc.host, loc.port))
-    blockPusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 5), dependency, 0)
-    val pushRequests = blockPusher.prepareBlockPushRequests(5, 0, 0, 0,
-      mock(classOf[File]), Array(2, 2, 2, 2, 2), mergerLocs, mock(classOf[TransportConf]))
+    blockPusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 5),
+      dependency,
+      0)
+    val pushRequests = blockPusher.prepareBlockPushRequests(
+      5,
+      0,
+      0,
+      0,
+      mock(classOf[File]),
+      Array(2, 2, 2, 2, 2),
+      mergerLocs,
+      mock(classOf[TransportConf]))
     blockPusher.runPendingTasks()
     assert(pushRequests.length == 5)
     verifyPushRequests(pushRequests, Seq(2, 2, 2, 2, 2))
     verifyBlockPushCompleted(blockPusher)
   }
 
-  test("SPARK-33701: Ensure all the blocks are pushed before notifying driver" +
-    " about push completion") {
+  test(
+    "SPARK-33701: Ensure all the blocks are pushed before notifying driver" +
+      " about push completion") {
     conf.set(REDUCER_MAX_BLOCKS_IN_FLIGHT_PER_ADDRESS, 12)
     conf.set("spark.shuffle.push.maxBlockBatchSize", "20b")
     val latch = new CountDownLatch(1)
     // Different remote servers to send 2 different requests to ensure that all the blocks
     // are pushed before notifying driver about push completion
-    when(dependency.getMergerLocs).thenReturn(Seq(BlockManagerId("test-client", "test-client", 1),
-      BlockManagerId("slow-client", "slow-client", 1)))
+    when(dependency.getMergerLocs).thenReturn(
+      Seq(
+        BlockManagerId("test-client", "test-client", 1),
+        BlockManagerId("slow-client", "slow-client", 1)))
     when(shuffleClient.pushBlocks(ArgumentMatchers.eq("slow-client"), any(), any(), any(), any()))
       .thenAnswer((invocation: InvocationOnMock) => {
         val blocks = invocation.getArguments()(2).asInstanceOf[Array[String]]
@@ -188,10 +225,20 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     val semaphore = new Semaphore(0)
     val blockPusher = new ConcurrentTestBlockPusher(conf, semaphore)
     val mergerLocs = dependency.getMergerLocs.map(loc => BlockManagerId("", loc.host, loc.port))
-    blockPusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 5), dependency, 0)
-    val pushRequests = blockPusher.prepareBlockPushRequests(5, 0, 0, 0,
-      mock(classOf[File]), Array(2, 2, 2, 2, 2), mergerLocs, mock(classOf[TransportConf]))
+    blockPusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 5),
+      dependency,
+      0)
+    val pushRequests = blockPusher.prepareBlockPushRequests(
+      5,
+      0,
+      0,
+      0,
+      mock(classOf[File]),
+      Array(2, 2, 2, 2, 2),
+      mergerLocs,
+      mock(classOf[TransportConf]))
     latch.countDown()
     latch.countDown()
     semaphore.acquire()
@@ -204,8 +251,11 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
   test("Basic block push") {
     interceptPushedBlocksForSuccess()
     val blockPusher = new TestShuffleBlockPusher(conf)
-    blockPusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+    blockPusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     blockPusher.runPendingTasks()
     verify(shuffleClient, times(1))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -218,8 +268,7 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     conf.set("spark.shuffle.push.maxBlockSizeToPush", "1k")
     interceptPushedBlocksForSuccess()
     val pusher = new TestShuffleBlockPusher(conf)
-    pusher.initiateBlockPush(
-      mock(classOf[File]), Array(2, 2, 2, 2, 2, 2, 2, 1100), dependency, 0)
+    pusher.initiateBlockPush(mock(classOf[File]), Array(2, 2, 2, 2, 2, 2, 2, 1100), dependency, 0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(1))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -233,7 +282,10 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     interceptPushedBlocksForSuccess()
     val pusher = new TestShuffleBlockPusher(conf)
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(8))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -244,8 +296,8 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
 
   test("Hit maxBlocksInFlightPerAddress limit so that the blocks are deferred") {
     conf.set("spark.reducer.maxBlocksInFlightPerAddress", "2")
-    var blockPendingResponse : String = null
-    var listener : BlockPushingListener = null
+    var blockPendingResponse: String = null
+    var listener: BlockPushingListener = null
     when(shuffleClient.pushBlocks(any(), any(), any(), any(), any()))
       .thenAnswer((invocation: InvocationOnMock) => {
         val blocks = invocation.getArguments()(2).asInstanceOf[Array[String]]
@@ -261,14 +313,19 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
           // blocks to be deferred
           blockPushListener.onBlockPushSuccess(blocks(0), managedBuffers(0))
         } else {
-          blocks.lazyZip(managedBuffers).foreach((blockId, buffer) => {
-            blockPushListener.onBlockPushSuccess(blockId, buffer)
-          })
+          blocks
+            .lazyZip(managedBuffers)
+            .foreach((blockId, buffer) => {
+              blockPushListener.onBlockPushSuccess(blockId, buffer)
+            })
         }
       })
     val pusher = new TestShuffleBlockPusher(conf)
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(1))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -283,13 +340,17 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     ShuffleBlockPusher.stop()
   }
 
-  test("Number of shuffle blocks grouped in a single push request is limited by " +
+  test(
+    "Number of shuffle blocks grouped in a single push request is limited by " +
       "maxBlockBatchSize") {
     conf.set("spark.shuffle.push.maxBlockBatchSize", "1m")
     interceptPushedBlocksForSuccess()
     val pusher = new TestShuffleBlockPusher(conf)
-    pusher.initiateBlockPush(mock(classOf[File]),
-      createArray(dependency.partitioner.numPartitions, 512 * 1024), dependency, 0)
+    pusher.initiateBlockPush(
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 512 * 1024),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(4))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -302,39 +363,40 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     val pusher = new ShuffleBlockPusher(conf)
     val errorHandler = pusher.createErrorHandler()
     assert(
-      !errorHandler.shouldRetryError(new BlockPushNonFatalFailure(
-        ReturnCode.TOO_LATE_BLOCK_PUSH, "")))
+      !errorHandler.shouldRetryError(
+        new BlockPushNonFatalFailure(ReturnCode.TOO_LATE_BLOCK_PUSH, "")))
     assert(
-      !errorHandler.shouldRetryError(new BlockPushNonFatalFailure(
-        ReturnCode.TOO_OLD_ATTEMPT_PUSH, "")))
+      !errorHandler.shouldRetryError(
+        new BlockPushNonFatalFailure(ReturnCode.TOO_OLD_ATTEMPT_PUSH, "")))
     assert(
-      !errorHandler.shouldRetryError(new BlockPushNonFatalFailure(
-        ReturnCode.STALE_BLOCK_PUSH, "")))
+      !errorHandler.shouldRetryError(
+        new BlockPushNonFatalFailure(ReturnCode.STALE_BLOCK_PUSH, "")))
     assert(errorHandler.shouldRetryError(new RuntimeException(new ConnectException())))
     assert(
-      errorHandler.shouldRetryError(new BlockPushNonFatalFailure(
-        ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, "")))
-    assert (errorHandler.shouldRetryError(new Throwable()))
+      errorHandler.shouldRetryError(
+        new BlockPushNonFatalFailure(ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, "")))
+    assert(errorHandler.shouldRetryError(new Throwable()))
   }
 
   test("Error logging") {
     val pusher = new ShuffleBlockPusher(conf)
     val errorHandler = pusher.createErrorHandler()
     assert(
-      !errorHandler.shouldLogError(new BlockPushNonFatalFailure(
-        ReturnCode.TOO_LATE_BLOCK_PUSH, "")))
+      !errorHandler.shouldLogError(
+        new BlockPushNonFatalFailure(ReturnCode.TOO_LATE_BLOCK_PUSH, "")))
     assert(
-      !errorHandler.shouldLogError(new BlockPushNonFatalFailure(
-        ReturnCode.TOO_OLD_ATTEMPT_PUSH, "")))
+      !errorHandler.shouldLogError(
+        new BlockPushNonFatalFailure(ReturnCode.TOO_OLD_ATTEMPT_PUSH, "")))
     assert(
-      !errorHandler.shouldLogError(new BlockPushNonFatalFailure(
-        ReturnCode.STALE_BLOCK_PUSH, "")))
-    assert(!errorHandler.shouldLogError(new BlockPushNonFatalFailure(
-      ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, "")))
+      !errorHandler.shouldLogError(new BlockPushNonFatalFailure(ReturnCode.STALE_BLOCK_PUSH, "")))
+    assert(
+      !errorHandler.shouldLogError(
+        new BlockPushNonFatalFailure(ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, "")))
     assert(errorHandler.shouldLogError(new Throwable()))
   }
 
-  test("Blocks are continued to push even when a block push fails with collision " +
+  test(
+    "Blocks are continued to push even when a block push fails with collision " +
       "exception") {
     conf.set("spark.reducer.maxBlocksInFlightPerAddress", "1")
     val pusher = new TestShuffleBlockPusher(conf)
@@ -347,8 +409,9 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
           if (failBlock) {
             failBlock = false
             // Fail the first block with the collision exception.
-            blockPushListener.onBlockPushFailure(blockId, new BlockPushNonFatalFailure(
-              ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, ""))
+            blockPushListener.onBlockPushFailure(
+              blockId,
+              new BlockPushNonFatalFailure(ReturnCode.BLOCK_APPEND_COLLISION_DETECTED, ""))
           } else {
             pushedBlocks += blockId
             blockPushListener.onBlockPushSuccess(blockId, mock(classOf[ManagedBuffer]))
@@ -356,7 +419,10 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
         })
       })
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(8))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -364,7 +430,8 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     verifyBlockPushCompleted(pusher)
   }
 
-  test("More blocks are not pushed when a block push fails with too late " +
+  test(
+    "More blocks are not pushed when a block push fails with too late " +
       "exception") {
     conf.set("spark.reducer.maxBlocksInFlightPerAddress", "1")
     val pusher = new TestShuffleBlockPusher(conf)
@@ -377,8 +444,9 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
           if (failBlock) {
             failBlock = false
             // Fail the first block with the too late exception.
-            blockPushListener.onBlockPushFailure(blockId, new BlockPushNonFatalFailure(
-              ReturnCode.TOO_LATE_BLOCK_PUSH, ""))
+            blockPushListener.onBlockPushFailure(
+              blockId,
+              new BlockPushNonFatalFailure(ReturnCode.TOO_LATE_BLOCK_PUSH, ""))
           } else {
             pushedBlocks += blockId
             blockPushListener.onBlockPushSuccess(blockId, mock(classOf[ManagedBuffer]))
@@ -386,7 +454,10 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
         })
       })
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(1))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -404,12 +475,16 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
         val blockPushListener = invocation.getArguments()(4).asInstanceOf[BlockPushingListener]
         blocks.foreach(blockId => {
           blockPushListener.onBlockPushFailure(
-            blockId, new RuntimeException(new ConnectException()))
+            blockId,
+            new RuntimeException(new ConnectException()))
         })
       })
     val pusher = new TestShuffleBlockPusher(conf)
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(2))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -430,12 +505,15 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
         val blockPushListener = invocation.getArguments()(4).asInstanceOf[BlockPushingListener]
         pushedBlocks.foreach(blockId => {
           blockPushListener.onBlockPushFailure(
-            blockId, new IOException("Failed to send RPC",
-              new FileNotFoundException("file not found")))
+            blockId,
+            new IOException("Failed to send RPC", new FileNotFoundException("file not found")))
         })
       })
     pusher.initiateBlockPush(
-      mock(classOf[File]), createArray(dependency.partitioner.numPartitions, 2), dependency, 0)
+      mock(classOf[File]),
+      createArray(dependency.partitioner.numPartitions, 2),
+      dependency,
+      0)
     pusher.runPendingTasks()
     verify(shuffleClient, times(1))
       .pushBlocks(any(), any(), any(), any(), any())
@@ -443,8 +521,7 @@ class ShuffleBlockPusherSuite extends SparkFunSuite {
     ShuffleBlockPusher.stop()
   }
 
-  private class TestShuffleBlockPusher(
-      conf: SparkConf) extends ShuffleBlockPusher(conf) {
+  private class TestShuffleBlockPusher(conf: SparkConf) extends ShuffleBlockPusher(conf) {
     val tasks = new LinkedBlockingQueue[Runnable]
 
     override protected def submitTask(task: Runnable): Unit = {

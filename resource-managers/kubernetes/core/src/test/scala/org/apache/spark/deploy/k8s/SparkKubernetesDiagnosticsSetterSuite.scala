@@ -32,8 +32,10 @@ import org.apache.spark.deploy.k8s.Config._
 import org.apache.spark.deploy.k8s.Constants.EXIT_EXCEPTION_ANNOTATION
 import org.apache.spark.deploy.k8s.Fabric8Aliases.PODS
 
-class SparkKubernetesDiagnosticsSetterSuite extends SparkFunSuite
-  with MockitoSugar with BeforeAndAfterEach {
+class SparkKubernetesDiagnosticsSetterSuite
+    extends SparkFunSuite
+    with MockitoSugar
+    with BeforeAndAfterEach {
 
   @Mock
   private var client: KubernetesClient = _
@@ -77,7 +79,8 @@ class SparkKubernetesDiagnosticsSetterSuite extends SparkFunSuite
     val podCaptor: ArgumentCaptor[Pod] = ArgumentCaptor.forClass(classOf[Pod])
     verify(driverPodOperations).patch(any(classOf[PatchContext]), podCaptor.capture())
 
-    assert(podCaptor.getValue.getMetadata.getAnnotations.get(EXIT_EXCEPTION_ANNOTATION)
-      == StringUtils.stringifyException(diagnostics))
+    assert(
+      podCaptor.getValue.getMetadata.getAnnotations.get(EXIT_EXCEPTION_ANNOTATION)
+        == StringUtils.stringifyException(diagnostics))
   }
 }

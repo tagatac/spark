@@ -44,8 +44,7 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
 
       withTable("empty_orc") {
         withTempView("empty", "single") {
-          spark.sql(
-            s"""CREATE TABLE empty_orc(key INT, value STRING)
+          spark.sql(s"""CREATE TABLE empty_orc(key INT, value STRING)
                |STORED AS ORC
                |LOCATION '${dir.toURI}'
              """.stripMargin)
@@ -60,14 +59,12 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
               spark.read.orc(path)
             },
             condition = "UNABLE_TO_INFER_SCHEMA",
-            parameters = Map("format" -> "ORC")
-          )
+            parameters = Map("format" -> "ORC"))
 
           val singleRowDF = Seq((0, "foo")).toDF("key", "value").coalesce(1)
           singleRowDF.createOrReplaceTempView("single")
 
-          spark.sql(
-            s"""INSERT INTO TABLE empty_orc
+          spark.sql(s"""INSERT INTO TABLE empty_orc
                |SELECT key, value FROM single
              """.stripMargin)
 
@@ -89,15 +86,13 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
           withTable("dummy_orc") {
             withTempPath { dir =>
               val path = dir.getCanonicalPath
-              spark.sql(
-                s"""
+              spark.sql(s"""
                    |CREATE TABLE dummy_orc(key INT, value STRING)
                    |STORED AS ORC
                    |LOCATION '${dir.toURI}'
                  """.stripMargin)
 
-              spark.sql(
-                s"""
+              spark.sql(s"""
                    |INSERT INTO TABLE dummy_orc
                    |SELECT key, value FROM single
                  """.stripMargin)
@@ -107,19 +102,23 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
 
               val queryExecution = df.queryExecution
               if (orcConversion == "true") {
-                queryExecution.analyzed.collectFirst {
-                  case _: LogicalRelation => ()
-                }.getOrElse {
-                  fail(s"Expecting the query plan to convert orc to data sources, " +
-                    s"but got:\n$queryExecution")
-                }
+                queryExecution.analyzed
+                  .collectFirst { case _: LogicalRelation =>
+                    ()
+                  }
+                  .getOrElse {
+                    fail(s"Expecting the query plan to convert orc to data sources, " +
+                      s"but got:\n$queryExecution")
+                  }
               } else {
-                queryExecution.analyzed.collectFirst {
-                  case _: HiveTableRelation => ()
-                }.getOrElse {
-                  fail(s"Expecting no conversion from orc to data sources, " +
-                    s"but got:\n$queryExecution")
-                }
+                queryExecution.analyzed
+                  .collectFirst { case _: HiveTableRelation =>
+                    ()
+                  }
+                  .getOrElse {
+                    fail(s"Expecting no conversion from orc to data sources, " +
+                      s"but got:\n$queryExecution")
+                  }
               }
             }
           }
@@ -158,10 +157,11 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
         withSQLConf(SQLConf.ORC_IMPLEMENTATION.key -> orcImpl) {
           withTable("spark_20728") {
             sql("CREATE TABLE spark_20728(a INT) USING ORC")
-            val fileFormat = sql("SELECT * FROM spark_20728").queryExecution.analyzed.collectFirst {
-              case l: LogicalRelation =>
-                l.relation.asInstanceOf[HadoopFsRelation].fileFormat.getClass
-            }
+            val fileFormat =
+              sql("SELECT * FROM spark_20728").queryExecution.analyzed.collectFirst {
+                case l: LogicalRelation =>
+                  l.relation.asInstanceOf[HadoopFsRelation].fileFormat.getClass
+              }
             assert(fileFormat == Some(format))
           }
         }
@@ -228,7 +228,9 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
   }
 
   private def getCachedDataSourceTable(table: TableIdentifier) = {
-    spark.sessionState.catalog.asInstanceOf[HiveSessionCatalog].metastoreCatalog
+    spark.sessionState.catalog
+      .asInstanceOf[HiveSessionCatalog]
+      .metastoreCatalog
       .getCachedDataSourceTable(table)
   }
 
@@ -237,18 +239,17 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
       val singleRowDF = Seq((0, "foo")).toDF("key", "value")
       singleRowDF.createOrReplaceTempView("single")
       Seq("true", "false").foreach { conversion =>
-        withSQLConf(HiveUtils.CONVERT_METASTORE_ORC.key -> "true",
+        withSQLConf(
+          HiveUtils.CONVERT_METASTORE_ORC.key -> "true",
           HiveUtils.CONVERT_INSERTING_PARTITIONED_TABLE.key -> conversion) {
           withTable("dummy_orc_partitioned") {
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  |CREATE TABLE dummy_orc_partitioned(key INT, value STRING)
                  |PARTITIONED by (`date` STRING)
                  |STORED AS ORC
                  """.stripMargin)
 
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  |INSERT INTO TABLE dummy_orc_partitioned
                  |PARTITION (`date` = '2019-04-01')
                  |SELECT key, value FROM single
@@ -276,22 +277,22 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
       val singleRowDF = Seq((0, "foo")).toDF("key", "value")
       singleRowDF.createOrReplaceTempView("single")
       Seq("true", "false").foreach { conversion =>
-        withSQLConf(HiveUtils.CONVERT_METASTORE_ORC.key -> "true",
+        withSQLConf(
+          HiveUtils.CONVERT_METASTORE_ORC.key -> "true",
           HiveUtils.CONVERT_INSERTING_UNPARTITIONED_TABLE.key -> conversion) {
           withTable("dummy_orc_unpartitioned") {
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  |CREATE TABLE dummy_orc_unpartitioned(key INT, value STRING)
                  |STORED AS ORC
                  """.stripMargin)
 
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  |INSERT INTO TABLE dummy_orc_unpartitioned
                  |SELECT key, value FROM single
                  """.stripMargin)
 
-            val orcUnpartitionedTable = TableIdentifier("dummy_orc_unpartitioned", Some("default"))
+            val orcUnpartitionedTable =
+              TableIdentifier("dummy_orc_unpartitioned", Some("default"))
             if (conversion == "true") {
               // if converted, we refresh the cached relation.
               assert(getCachedDataSourceTable(orcUnpartitionedTable) === null)
@@ -315,14 +316,12 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
           SQLConf.ORC_IMPLEMENTATION.key -> orcImpl,
           SQLConf.ORC_VECTORIZED_READER_ENABLED.key -> vectorized) {
           withTable("test_hive_orc_impl") {
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  | CREATE TABLE test_hive_orc_impl
                  | (_col1 INT, _col2 STRING, _col3 INT)
                  | STORED AS ORC
                """.stripMargin)
-            spark.sql(
-              s"""
+            spark.sql(s"""
                  | INSERT INTO
                  | test_hive_orc_impl
                  | VALUES(9, '12', 2020)
@@ -340,13 +339,16 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
     Seq("native", "hive").foreach { orcImpl =>
       Seq(true, false).foreach { forcePositionalEvolution =>
         Seq(true, false).foreach { convertMetastore =>
-          withSQLConf(SQLConf.ORC_IMPLEMENTATION.key -> orcImpl,
+          withSQLConf(
+            SQLConf.ORC_IMPLEMENTATION.key -> orcImpl,
             OrcConf.FORCE_POSITIONAL_EVOLUTION.getAttribute -> forcePositionalEvolution.toString,
             HiveUtils.CONVERT_METASTORE_ORC.key -> convertMetastore.toString) {
             withTempPath { f =>
               val path = f.getCanonicalPath
               Seq[(Integer, Integer)]((1, 2), (3, 4), (5, 6), (null, null))
-                .toDF("c1", "c2").write.orc(path)
+                .toDF("c1", "c2")
+                .write
+                .orc(path)
               val correctAnswer = Seq(Row(1, 2), Row(3, 4), Row(5, 6), Row(null, null))
               checkAnswer(spark.read.orc(path), correctAnswer)
 
@@ -372,19 +374,23 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
     Seq("native", "hive").foreach { orcImpl =>
       Seq(true, false).foreach { forcePositionalEvolution =>
         Seq(true, false).foreach { convertMetastore =>
-          withSQLConf(SQLConf.ORC_IMPLEMENTATION.key -> orcImpl,
+          withSQLConf(
+            SQLConf.ORC_IMPLEMENTATION.key -> orcImpl,
             OrcConf.FORCE_POSITIONAL_EVOLUTION.getAttribute -> forcePositionalEvolution.toString,
             HiveUtils.CONVERT_METASTORE_ORC.key -> convertMetastore.toString) {
             withTempPath { f =>
               val path = f.getCanonicalPath
               Seq[(Integer, Integer, Integer)]((1, 2, 1), (3, 4, 2), (5, 6, 3), (null, null, 4))
-                .toDF("c1", "c2", "p").write.partitionBy("p").orc(path)
-              val correctAnswer = Seq(Row(1, 2, 1), Row(3, 4, 2), Row(5, 6, 3), Row(null, null, 4))
+                .toDF("c1", "c2", "p")
+                .write
+                .partitionBy("p")
+                .orc(path)
+              val correctAnswer =
+                Seq(Row(1, 2, 1), Row(3, 4, 2), Row(5, 6, 3), Row(null, null, 4))
               checkAnswer(spark.read.orc(path), correctAnswer)
 
               withTable("t") {
-                sql(
-                  s"""
+                sql(s"""
                      |CREATE EXTERNAL TABLE t(c3 INT, c2 INT)
                      |PARTITIONED BY (p int)
                      |STORED AS ORC
@@ -416,10 +422,12 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
         SQLConf.IGNORE_CORRUPT_FILES.key -> "false",
         SQLConf.ORC_IMPLEMENTATION.key -> "hive") {
         Seq(true, false).foreach { mergeSchema =>
-          checkAnswer(spark.read
-            .option("mergeSchema", value = mergeSchema)
-            .option("ignoreCorruptFiles", value = true)
-            .orc(basePath), Row(0L, 1))
+          checkAnswer(
+            spark.read
+              .option("mergeSchema", value = mergeSchema)
+              .option("ignoreCorruptFiles", value = true)
+              .orc(basePath),
+            Row(0L, 1))
         }
       }
     }
@@ -431,8 +439,7 @@ class HiveOrcQuerySuite extends OrcQueryTest with TestHiveSingleton {
         val tempDir = new File(dir, "files").getCanonicalPath
         checkError(
           exception = intercept[AnalysisException] {
-            sql("select time'12:01:02' as t")
-              .write.format("orc").mode("overwrite").save(tempDir)
+            sql("select time'12:01:02' as t").write.format("orc").mode("overwrite").save(tempDir)
           },
           condition = "UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE",
           parameters = Map(

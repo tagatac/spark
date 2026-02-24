@@ -22,17 +22,21 @@ import org.apache.spark.internal.LogKeys.{BLOCK_ID, BYTE_SIZE}
 import org.apache.spark.storage.LogBlockType.LogBlockType
 
 /**
- * Rolling log writer that writes log entries to blocks in a rolling manner. Here we split
- * log blocks based on size limit.
+ * Rolling log writer that writes log entries to blocks in a rolling manner. Here we split log
+ * blocks based on size limit.
  *
- * @param blockManager BlockManager to manage log blocks.
- * @param blockIdGenerator BlockId generator to generate unique block IDs for log blocks.
- * @param rollingSize Size limit for each log block. Default is 32MB (33554432 bytes).
+ * @param blockManager
+ *   BlockManager to manage log blocks.
+ * @param blockIdGenerator
+ *   BlockId generator to generate unique block IDs for log blocks.
+ * @param rollingSize
+ *   Size limit for each log block. Default is 32MB (33554432 bytes).
  */
 private[spark] class RollingLogWriter(
     blockManager: BlockManager,
     blockIdGenerator: LogBlockIdGenerator,
-    rollingSize: Long = 33554432L) extends Logging {
+    rollingSize: Long = 33554432L)
+    extends Logging {
   private var currentBlockWriter: Option[LogBlockWriter] = None
   private var lastLogTime: Long = 0L
   private val logBlockType: LogBlockType = blockIdGenerator.logBlockType
@@ -45,14 +49,15 @@ private[spark] class RollingLogWriter(
   }
 
   /**
-   * Write a log entry. If the current block writer is empty, it will create a new one.
-   * If the current block exceeds the rolling size, it will roll over to a new block for
-   * the next log entry.
+   * Write a log entry. If the current block writer is empty, it will create a new one. If the
+   * current block exceeds the rolling size, it will roll over to a new block for the next log
+   * entry.
    *
-   * @param logEntry log entry to write.
-   * @param removeBlockOnException if true, current log block will be deleted without saving to
-   *                               BlockManager. Otherwise, not action will be taken on current
-   *                               block which might be corrupted.
+   * @param logEntry
+   *   log entry to write.
+   * @param removeBlockOnException
+   *   if true, current log block will be deleted without saving to BlockManager. Otherwise, not
+   *   action will be taken on current block which might be corrupted.
    */
   def writeLog(logEntry: LogLine, removeBlockOnException: Boolean = false): Unit = {
     // Create a new log writer if it's empty
@@ -107,8 +112,9 @@ private[spark] class RollingLogWriter(
   private def saveCurrentBlock(): Unit = {
     currentBlockWriter.foreach { writer =>
       val blockId = blockIdGenerator.nextBlockId(lastLogTime, blockManager.executorId)
-      logInfo(log"Saving log block ${MDC(BLOCK_ID, blockId)} with " +
-        log"approximate size: ${MDC(BYTE_SIZE, writer.bytesWritten())} bytes.")
+      logInfo(
+        log"Saving log block ${MDC(BLOCK_ID, blockId)} with " +
+          log"approximate size: ${MDC(BYTE_SIZE, writer.bytesWritten())} bytes.")
       writer.save(blockId)
     }
   }

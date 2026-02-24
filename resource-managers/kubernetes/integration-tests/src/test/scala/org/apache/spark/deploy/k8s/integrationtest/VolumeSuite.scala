@@ -37,7 +37,10 @@ private[spark] trait VolumeSuite { k8sSuite: KubernetesSuite =>
     }
   }
 
-  test("A driver-only Spark job with a tmpfs-backed localDir volume", k8sTestTag, commandTestTag) {
+  test(
+    "A driver-only Spark job with a tmpfs-backed localDir volume",
+    k8sTestTag,
+    commandTestTag) {
     sparkAppConf
       .set("spark.kubernetes.driver.master", "local[10]")
       .set("spark.kubernetes.local.dirs.tmpfs", "true")
@@ -49,8 +52,13 @@ private[spark] trait VolumeSuite { k8sSuite: KubernetesSuite =>
       Array.empty[String],
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
-        val path = driverPod.getSpec.getContainers.get(0).getEnv.asScala
-          .filter(_.getName == "SPARK_LOCAL_DIRS").map(_.getValue).head
+        val path = driverPod.getSpec.getContainers
+          .get(0)
+          .getEnv
+          .asScala
+          .filter(_.getName == "SPARK_LOCAL_DIRS")
+          .map(_.getValue)
+          .head
         checkDisk(driverPod, path, "tmpfs")
       },
       _ => (),
@@ -58,8 +66,10 @@ private[spark] trait VolumeSuite { k8sSuite: KubernetesSuite =>
       executorPatience = IGNORE)
   }
 
-  test("A driver-only Spark job with a tmpfs-backed emptyDir data volume", k8sTestTag,
-      commandTestTag) {
+  test(
+    "A driver-only Spark job with a tmpfs-backed emptyDir data volume",
+    k8sTestTag,
+    commandTestTag) {
     sparkAppConf
       .set("spark.kubernetes.driver.master", "local[10]")
       .set("spark.kubernetes.driver.volumes.emptyDir.data.mount.path", "/data")
@@ -140,14 +150,24 @@ private[spark] trait VolumeSuite { k8sSuite: KubernetesSuite =>
       Array.empty[String],
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
-        val path = driverPod.getSpec.getContainers.get(0).getEnv.asScala
-          .filter(_.getName == "SPARK_LOCAL_DIRS").map(_.getValue).head
+        val path = driverPod.getSpec.getContainers
+          .get(0)
+          .getEnv
+          .asScala
+          .filter(_.getName == "SPARK_LOCAL_DIRS")
+          .map(_.getValue)
+          .head
         checkDisk(driverPod, path, "tmpfs")
       },
       executorPodChecker = (executorPod: Pod) => {
         doBasicExecutorPodCheck(executorPod)
-        val path = executorPod.getSpec.getContainers.get(0).getEnv.asScala
-          .filter(_.getName == "SPARK_LOCAL_DIRS").map(_.getValue).head
+        val path = executorPod.getSpec.getContainers
+          .get(0)
+          .getEnv
+          .asScala
+          .filter(_.getName == "SPARK_LOCAL_DIRS")
+          .map(_.getValue)
+          .head
         checkDisk(executorPod, path, "tmpfs")
       },
       isJVM = true)

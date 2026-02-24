@@ -43,20 +43,22 @@ private[spark] trait RollingPolicy {
 }
 
 /**
- * Defines a [[org.apache.spark.util.logging.RollingPolicy]] by which files will be rolled
- * over at a fixed interval.
+ * Defines a [[org.apache.spark.util.logging.RollingPolicy]] by which files will be rolled over at
+ * a fixed interval.
  */
 private[spark] class TimeBasedRollingPolicy(
     var rolloverIntervalMillis: Long,
     rollingFileSuffixPattern: String,
-    checkIntervalConstraint: Boolean = true   // set to false while testing
-  ) extends RollingPolicy with Logging {
+    checkIntervalConstraint: Boolean = true // set to false while testing
+) extends RollingPolicy
+    with Logging {
 
   import TimeBasedRollingPolicy._
   if (checkIntervalConstraint && rolloverIntervalMillis < MINIMUM_INTERVAL_SECONDS * 1000L) {
-    logWarning(log"Rolling interval [${MDC(TIME_UNITS, rolloverIntervalMillis)} " +
-      log"ms] is too small. Setting the interval to the acceptable minimum of " +
-      log"${MDC(MIN_TIME, MINIMUM_INTERVAL_SECONDS * 1000)} ms.")
+    logWarning(
+      log"Rolling interval [${MDC(TIME_UNITS, rolloverIntervalMillis)} " +
+        log"ms] is too small. Setting the interval to the acceptable minimum of " +
+        log"${MDC(MIN_TIME, MINIMUM_INTERVAL_SECONDS * 1000)} ms.")
     rolloverIntervalMillis = MINIMUM_INTERVAL_SECONDS * 1000L
   }
 
@@ -71,10 +73,11 @@ private[spark] class TimeBasedRollingPolicy(
   /** Rollover has occurred, so find the next time to rollover */
   def rolledOver(): Unit = {
     nextRolloverTime = calculateNextRolloverTime()
-    logDebug(s"Current time: ${System.currentTimeMillis}, next rollover time: " + nextRolloverTime)
+    logDebug(
+      s"Current time: ${System.currentTimeMillis}, next rollover time: " + nextRolloverTime)
   }
 
-  def bytesWritten(bytes: Long): Unit = { }  // nothing to do
+  def bytesWritten(bytes: Long): Unit = {} // nothing to do
 
   private def calculateNextRolloverTime(): Long = {
     val now = System.currentTimeMillis()
@@ -91,23 +94,25 @@ private[spark] class TimeBasedRollingPolicy(
 }
 
 private[spark] object TimeBasedRollingPolicy {
-  val MINIMUM_INTERVAL_SECONDS = 60L  // 1 minute
+  val MINIMUM_INTERVAL_SECONDS = 60L // 1 minute
 }
 
 /**
- * Defines a [[org.apache.spark.util.logging.RollingPolicy]] by which files will be rolled
- * over after reaching a particular size.
+ * Defines a [[org.apache.spark.util.logging.RollingPolicy]] by which files will be rolled over
+ * after reaching a particular size.
  */
 private[spark] class SizeBasedRollingPolicy(
     var rolloverSizeBytes: Long,
-    checkSizeConstraint: Boolean = true     // set to false while testing
-  ) extends RollingPolicy with Logging {
+    checkSizeConstraint: Boolean = true // set to false while testing
+) extends RollingPolicy
+    with Logging {
 
   import SizeBasedRollingPolicy._
   if (checkSizeConstraint && rolloverSizeBytes < MINIMUM_SIZE_BYTES) {
-    logWarning(log"Rolling size [${MDC(NUM_BYTES, rolloverSizeBytes)} bytes] is too small. " +
-      log"Setting the size to the acceptable minimum of ${MDC(MIN_SIZE, MINIMUM_SIZE_BYTES)} " +
-      log"bytes.")
+    logWarning(
+      log"Rolling size [${MDC(NUM_BYTES, rolloverSizeBytes)} bytes] is too small. " +
+        log"Setting the size to the acceptable minimum of ${MDC(MIN_SIZE, MINIMUM_SIZE_BYTES)} " +
+        log"bytes.")
     rolloverSizeBytes = MINIMUM_SIZE_BYTES
   }
 
@@ -139,4 +144,3 @@ private[spark] class SizeBasedRollingPolicy(
 private[spark] object SizeBasedRollingPolicy {
   val MINIMUM_SIZE_BYTES = RollingFileAppender.DEFAULT_BUFFER_SIZE * 10
 }
-

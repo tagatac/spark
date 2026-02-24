@@ -22,6 +22,7 @@ import scala.collection.immutable
 import scala.reflect.ClassTag
 
 private[spark] trait SparkCollectionUtils {
+
   /**
    * Same function as `keys.zipWithIndex.toMap`, but has perf gain.
    */

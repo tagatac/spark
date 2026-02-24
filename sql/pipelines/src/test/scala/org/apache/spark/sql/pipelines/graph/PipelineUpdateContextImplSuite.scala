@@ -28,19 +28,14 @@ class PipelineUpdateContextImplSuite extends PipelineTest with SharedSparkSessio
       "file:///tmp/test",
       "hdfs://localhost:9000/pipelines",
       "s3a://my-bucket/pipelines",
-      "abfss://container@account.dfs.core.windows.net/pipelines"
-    )
+      "abfss://container@account.dfs.core.windows.net/pipelines")
 
     validStorageRoots.foreach(PipelineUpdateContextImpl.validateStorageRoot)
   }
 
   test("validateStorageRoot should reject relative paths") {
-    val invalidStorageRoots = Seq(
-      "relative/path",
-      "./relative/path",
-      "../relative/path",
-      "pipelines"
-    )
+    val invalidStorageRoots =
+      Seq("relative/path", "./relative/path", "../relative/path", "pipelines")
 
     invalidStorageRoots.foreach { storageRoot =>
       val exception = intercept[SparkException] {
@@ -52,11 +47,7 @@ class PipelineUpdateContextImplSuite extends PipelineTest with SharedSparkSessio
   }
 
   test("validateStorageRoot should reject absolute paths without URI scheme") {
-    val invalidStorageRoots = Seq(
-      "/tmp/test",
-      "/absolute/path",
-      "/pipelines/storage"
-    )
+    val invalidStorageRoots = Seq("/tmp/test", "/absolute/path", "/pipelines/storage")
 
     invalidStorageRoots.foreach { storageRoot =>
       val exception = intercept[SparkException] {
@@ -80,8 +71,7 @@ class PipelineUpdateContextImplSuite extends PipelineTest with SharedSparkSessio
     val context = new PipelineUpdateContextImpl(
       unresolvedGraph = graph,
       eventCallback = _ => {},
-      storageRoot = validStorageRoot
-    )
+      storageRoot = validStorageRoot)
     assert(context.storageRoot == validStorageRoot)
 
     val invalidStorageRoot = "/tmp/test"
@@ -89,8 +79,7 @@ class PipelineUpdateContextImplSuite extends PipelineTest with SharedSparkSessio
       new PipelineUpdateContextImpl(
         unresolvedGraph = graph,
         eventCallback = _ => {},
-        storageRoot = invalidStorageRoot
-      )
+        storageRoot = invalidStorageRoot)
     }
     assert(exception.getCondition == "PIPELINE_STORAGE_ROOT_INVALID")
     assert(exception.getMessageParameters.get("storage_root") == invalidStorageRoot)

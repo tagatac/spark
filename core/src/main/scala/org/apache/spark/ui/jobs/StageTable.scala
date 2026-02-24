@@ -46,29 +46,29 @@ private[ui] class StageTableBase(
 
   val currentTime = System.currentTimeMillis()
 
-  val toNodeSeq = try {
-    new StagePagedTable(
-      store,
-      stages,
-      tableHeaderID,
-      stageTag,
-      basePath,
-      subPath,
-      isFairScheduler,
-      killEnabled,
-      currentTime,
-      isFailedStage,
-      request
-    ).table(stagePage)
-  } catch {
-    case e @ (_ : IllegalArgumentException | _ : IndexOutOfBoundsException) =>
-      <div class="alert alert-error">
+  val toNodeSeq =
+    try {
+      new StagePagedTable(
+        store,
+        stages,
+        tableHeaderID,
+        stageTag,
+        basePath,
+        subPath,
+        isFairScheduler,
+        killEnabled,
+        currentTime,
+        isFailedStage,
+        request).table(stagePage)
+    } catch {
+      case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
+        <div class="alert alert-error">
         <p>Error while rendering stage table:</p>
         <pre>
           {Utils.exceptionString(e)}
         </pre>
       </div>
-  }
+    }
 }
 
 private[ui] class StageTableRowData(
@@ -103,7 +103,8 @@ private[ui] class StagePagedTable(
     killEnabled: Boolean,
     currentTime: Long,
     isFailedStage: Boolean,
-    request: HttpServletRequest) extends PagedTable[StageTableRowData] {
+    request: HttpServletRequest)
+    extends PagedTable[StageTableRowData] {
 
   override def tableId: String = stageTag + "-table"
 
@@ -121,14 +122,8 @@ private[ui] class StagePagedTable(
   private val parameterPath = UIUtils.prependBaseUri(request, basePath) + s"/$subPath/?" +
     getParameterOtherTable(request, stageTag)
 
-  override val dataSource = new StageDataSource(
-    store,
-    stages,
-    currentTime,
-    pageSize,
-    sortColumn,
-    desc
-  )
+  override val dataSource =
+    new StageDataSource(store, stages, currentTime, pageSize, sortColumn, desc)
 
   override def pageLink(page: Int): String = {
     parameterPath +
@@ -146,24 +141,33 @@ private[ui] class StagePagedTable(
     // stageHeadersAndCssClasses has three parts: header title, sortable and tooltip information.
     // The tooltip information could be None, which indicates it does not have a tooltip.
     val stageHeadersAndCssClasses: Seq[(String, Boolean, Option[String])] =
-      Seq(("Stage Id", true, None)) ++
-      {if (isFairScheduler) {Seq(("Pool Name", true, None))} else Seq.empty} ++
-      Seq(
-        ("Description", true, None),
-        ("Submitted", true, None),
-        ("Duration", true, Some(ToolTips.DURATION)),
-        ("Tasks: Succeeded/Total", false, None),
-        ("Input", true, Some(ToolTips.INPUT)),
-        ("Output", true, Some(ToolTips.OUTPUT)),
-        ("Shuffle Read", true, Some(ToolTips.SHUFFLE_READ)),
-        ("Shuffle Write", true, Some(ToolTips.SHUFFLE_WRITE))
-      ) ++
-      {if (isFailedStage) {Seq(("Failure Reason", false, None))} else Seq.empty}
+      Seq(("Stage Id", true, None)) ++ {
+        if (isFairScheduler) { Seq(("Pool Name", true, None)) }
+        else Seq.empty
+      } ++
+        Seq(
+          ("Description", true, None),
+          ("Submitted", true, None),
+          ("Duration", true, Some(ToolTips.DURATION)),
+          ("Tasks: Succeeded/Total", false, None),
+          ("Input", true, Some(ToolTips.INPUT)),
+          ("Output", true, Some(ToolTips.OUTPUT)),
+          ("Shuffle Read", true, Some(ToolTips.SHUFFLE_READ)),
+          ("Shuffle Write", true, Some(ToolTips.SHUFFLE_WRITE))) ++ {
+          if (isFailedStage) { Seq(("Failure Reason", false, None)) }
+          else Seq.empty
+        }
 
     isSortColumnValid(stageHeadersAndCssClasses, sortColumn)
 
-    headerRow(stageHeadersAndCssClasses, desc, pageSize, sortColumn, parameterPath,
-      stageTag, tableHeaderId)
+    headerRow(
+      stageHeadersAndCssClasses,
+      desc,
+      pageSize,
+      sortColumn,
+      parameterPath,
+      stageTag,
+      tableHeaderId)
   }
 
   override def row(data: StageTableRowData): Seq[Node] = {
@@ -178,42 +182,52 @@ private[ui] class StagePagedTable(
       case Some(stageData) =>
         val info = data.stage
 
-        {if (data.attemptId > 0) {
-          <td>{data.stageId} (retry {data.attemptId})</td>
-        } else {
-          <td>{data.stageId}</td>
-        }} ++
-        {if (isFairScheduler) {
-          <td>
-            <a href={"%s/stages/pool?poolname=%s"
-              .format(UIUtils.prependBaseUri(request, basePath), data.schedulingPool)}>
+        {
+          if (data.attemptId > 0) {
+            <td>{data.stageId} (retry {data.attemptId})</td>
+          } else {
+            <td>{data.stageId}</td>
+          }
+        } ++ {
+          if (isFairScheduler) {
+            <td>
+            <a href={
+              "%s/stages/pool?poolname=%s"
+                .format(UIUtils.prependBaseUri(request, basePath), data.schedulingPool)
+            }>
               {data.schedulingPool}
             </a>
           </td>
-        } else {
-          Seq.empty
-        }} ++
-        <td>{makeDescription(info, data.descriptionOption)}</td>
+          } else {
+            Seq.empty
+          }
+        } ++
+          <td>{makeDescription(info, data.descriptionOption)}</td>
         <td valign="middle">
           {data.formattedSubmissionTime}
         </td>
         <td>{data.formattedDuration}</td>
         <td class="progress-cell">
-          {UIUtils.makeProgressBar(started = stageData.numActiveTasks,
-          completed = stageData.numCompleteTasks, failed = stageData.numFailedTasks,
-          skipped = 0, reasonToNumKilled = stageData.killedTasksSummary, total = info.numTasks)}
+          {
+            UIUtils.makeProgressBar(
+              started = stageData.numActiveTasks,
+              completed = stageData.numCompleteTasks,
+              failed = stageData.numFailedTasks,
+              skipped = 0,
+              reasonToNumKilled = stageData.killedTasksSummary,
+              total = info.numTasks)
+          }
         </td>
         <td>{data.inputReadWithUnit}</td>
         <td>{data.outputWriteWithUnit}</td>
         <td>{data.shuffleReadWithUnit}</td>
-        <td>{data.shuffleWriteWithUnit}</td> ++
-        {
-          if (isFailedStage) {
-            UIUtils.errorMessageCell(info.failureReason.getOrElse(""))
-          } else {
-            Seq.empty
+        <td>{data.shuffleWriteWithUnit}</td> ++ {
+            if (isFailedStage) {
+              UIUtils.errorMessageCell(info.failureReason.getOrElse(""))
+            } else {
+              Seq.empty
+            }
           }
-        }
     }
   }
 
@@ -239,13 +253,15 @@ private[ui] class StagePagedTable(
             class="expand-details">
         +details
       </span> ++
-      <div class="stage-details collapsed">
-        {if (cachedRddInfos.nonEmpty) {
-          Text("RDD: ") ++
-          cachedRddInfos.map { i =>
-            <a href={s"$basePathUri/storage/rdd/?id=${i.id}"}>{i.name}</a>
+        <div class="stage-details collapsed">
+        {
+          if (cachedRddInfos.nonEmpty) {
+            Text("RDD: ") ++
+              cachedRddInfos.map { i =>
+                <a href={s"$basePathUri/storage/rdd/?id=${i.id}"}>{i.name}</a>
+              }
           }
-        }}
+        }
         <pre>{s.details}</pre>
       </div>
     }
@@ -255,16 +271,18 @@ private[ui] class StagePagedTable(
   }
 
   protected def missingStageRow(stageId: Int): Seq[Node] = {
-    <td>{stageId}</td> ++
-    {if (isFairScheduler) {<td>-</td>} else Seq.empty} ++
-    <td>No data available for this stage</td> ++ // Description
-    <td></td> ++ // Submitted
-    <td></td> ++ // Duration
-    <td></td> ++ // Tasks: Succeeded/Total
-    <td></td> ++ // Input
-    <td></td> ++ // Output
-    <td></td> ++ // Shuffle Read
-    <td></td> // Shuffle Write
+    <td>{stageId}</td> ++ {
+      if (isFairScheduler) { <td>-</td> }
+      else Seq.empty
+    } ++
+      <td>No data available for this stage</td> ++ // Description
+      <td></td> ++ // Submitted
+      <td></td> ++ // Duration
+      <td></td> ++ // Tasks: Succeeded/Total
+      <td></td> ++ // Input
+      <td></td> ++ // Output
+      <td></td> ++ // Shuffle Read
+      <td></td> // Shuffle Write
   }
 }
 
@@ -274,7 +292,8 @@ private[ui] class StageDataSource(
     currentTime: Long,
     pageSize: Int,
     sortColumn: String,
-    desc: Boolean) extends PagedDataSource[StageTableRowData](pageSize) {
+    desc: Boolean)
+    extends PagedDataSource[StageTableRowData](pageSize) {
   // Convert v1.StageData to StageTableRowData which contains the final contents to show in the
   // table so that we can avoid creating duplicate contents during sorting the data
   private val data = stages.map(stageRow).sorted(ordering(sortColumn, desc))
@@ -330,8 +349,7 @@ private[ui] class StageDataSource(
       shuffleRead,
       shuffleReadWithUnit,
       shuffleWrite,
-      shuffleWriteWithUnit
-    )
+      shuffleWriteWithUnit)
   }
 
   /**

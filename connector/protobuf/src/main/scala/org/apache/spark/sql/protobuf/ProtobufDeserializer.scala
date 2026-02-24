@@ -45,8 +45,11 @@ private[sql] class ProtobufDeserializer(
 
   def this(rootDescriptor: Descriptor, rootCatalystType: DataType) = {
     this(
-      rootDescriptor, rootCatalystType, new NoopFilters, TypeRegistry.getEmptyTypeRegistry, false
-    )
+      rootDescriptor,
+      rootCatalystType,
+      new NoopFilters,
+      TypeRegistry.getEmptyTypeRegistry,
+      false)
   }
 
   private val converter: Any => Option[InternalRow] =
@@ -218,12 +221,10 @@ private[sql] class ProtobufDeserializer(
 
       case (INT, LongType) =>
         (updater, ordinal, value) =>
-          updater.setLong(
-            ordinal,
-            Integer.toUnsignedLong(value.asInstanceOf[Int]))
-      case  (
-        MESSAGE | BOOLEAN | INT | FLOAT | DOUBLE | LONG | STRING | ENUM | BYTE_STRING,
-        ArrayType(dataType: DataType, containsNull)) if protoType.isRepeated =>
+          updater.setLong(ordinal, Integer.toUnsignedLong(value.asInstanceOf[Int]))
+      case (
+            MESSAGE | BOOLEAN | INT | FLOAT | DOUBLE | LONG | STRING | ENUM | BYTE_STRING,
+            ArrayType(dataType: DataType, containsNull)) if protoType.isRepeated =>
         newArrayWriter(
           protoType,
           protoPath,
@@ -295,7 +296,7 @@ private[sql] class ProtobufDeserializer(
           updater.setLong(ordinal, micros + TimeUnit.NANOSECONDS.toMicros(nanoSeconds))
 
       case (MESSAGE, StringType)
-        if protoType.getMessageType.getFullName == "google.protobuf.Any" =>
+          if protoType.getMessageType.getFullName == "google.protobuf.Any" =>
         (updater, ordinal, value) =>
           // Convert 'Any' protobuf message to JSON string.
           val jsonStr = jsonPrinter.print(value.asInstanceOf[DynamicMessage])
@@ -304,7 +305,7 @@ private[sql] class ProtobufDeserializer(
       // Handle well known wrapper types. We unpack the value field when the desired
       // output type is a primitive (determined by the option in [[ProtobufOptions]])
       case (MESSAGE, BooleanType)
-        if protoType.getMessageType.getFullName == BoolValue.getDescriptor.getFullName =>
+          if protoType.getMessageType.getFullName == BoolValue.getDescriptor.getFullName =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -314,8 +315,8 @@ private[sql] class ProtobufDeserializer(
             updater.setBoolean(ordinal, unwrapped.asInstanceOf[Boolean])
           }
       case (MESSAGE, IntegerType)
-        if (protoType.getMessageType.getFullName == Int32Value.getDescriptor.getFullName
-          || protoType.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName) =>
+          if (protoType.getMessageType.getFullName == Int32Value.getDescriptor.getFullName
+            || protoType.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName) =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -325,7 +326,7 @@ private[sql] class ProtobufDeserializer(
             updater.setInt(ordinal, unwrapped.asInstanceOf[Int])
           }
       case (MESSAGE, LongType)
-        if (protoType.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName) =>
+          if (protoType.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName) =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -335,8 +336,8 @@ private[sql] class ProtobufDeserializer(
             updater.setLong(ordinal, Integer.toUnsignedLong(unwrapped.asInstanceOf[Int]))
           }
       case (MESSAGE, LongType)
-        if (protoType.getMessageType.getFullName == Int64Value.getDescriptor.getFullName
-          || protoType.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName) =>
+          if (protoType.getMessageType.getFullName == Int64Value.getDescriptor.getFullName
+            || protoType.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName) =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -346,7 +347,7 @@ private[sql] class ProtobufDeserializer(
             updater.setLong(ordinal, unwrapped.asInstanceOf[Long])
           }
       case (MESSAGE, DecimalType.LongDecimal)
-        if (protoType.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName) =>
+          if (protoType.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName) =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -354,11 +355,12 @@ private[sql] class ProtobufDeserializer(
             updater.setNullAt(ordinal)
           } else {
             val dec = Decimal.fromString(
-              UTF8String.fromString(java.lang.Long.toUnsignedString(unwrapped.asInstanceOf[Long])))
+              UTF8String.fromString(
+                java.lang.Long.toUnsignedString(unwrapped.asInstanceOf[Long])))
             updater.setDecimal(ordinal, dec)
           }
       case (MESSAGE, StringType)
-        if protoType.getMessageType.getFullName == StringValue.getDescriptor.getFullName =>
+          if protoType.getMessageType.getFullName == StringValue.getDescriptor.getFullName =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -368,7 +370,7 @@ private[sql] class ProtobufDeserializer(
             updater.set(ordinal, UTF8String.fromString(unwrapped.asInstanceOf[String]))
           }
       case (MESSAGE, BinaryType)
-        if protoType.getMessageType.getFullName == BytesValue.getDescriptor.getFullName =>
+          if protoType.getMessageType.getFullName == BytesValue.getDescriptor.getFullName =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -378,7 +380,7 @@ private[sql] class ProtobufDeserializer(
             updater.set(ordinal, unwrapped.asInstanceOf[ByteString].toByteArray)
           }
       case (MESSAGE, FloatType)
-        if protoType.getMessageType.getFullName == FloatValue.getDescriptor.getFullName =>
+          if protoType.getMessageType.getFullName == FloatValue.getDescriptor.getFullName =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -388,7 +390,7 @@ private[sql] class ProtobufDeserializer(
             updater.setFloat(ordinal, unwrapped.asInstanceOf[Float])
           }
       case (MESSAGE, DoubleType)
-        if protoType.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName =>
+          if protoType.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName =>
         (updater, ordinal, value) =>
           val dm = value.asInstanceOf[DynamicMessage]
           val unwrapped = getFieldValue(dm, dm.getDescriptorForType.getFields.get(0))
@@ -503,12 +505,10 @@ private[sql] class ProtobufDeserializer(
     //
     // Repeated fields have to be treated separately as they cannot have `hasField`
     // called on them.
-    if (
-      field.isRepeated
-        || record.hasField(field)
-        || field.hasDefaultValue
-        || (!field.hasPresence && this.emitDefaultValues)
-    ) {
+    if (field.isRepeated
+      || record.hasField(field)
+      || field.hasDefaultValue
+      || (!field.hasPresence && this.emitDefaultValues)) {
       record.getField(field)
     } else {
       null

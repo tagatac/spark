@@ -39,10 +39,10 @@ import org.apache.spark.internal.config.Tests.IS_TESTING
 import org.apache.spark.util.{AccumulatorContext, Utils}
 
 /**
- * Base trait for all unit tests in Spark for handling common functionality.
- * The major difference between this trait and SparkFunSuite:
- * 1, SparkFunSuite extends AnyFunSuite, while this trait can be used for all test styles.
- * 2, SparkFunSuite provides some extra testing functions based on AnyFunSuite's test function.
+ * Base trait for all unit tests in Spark for handling common functionality. The major difference
+ * between this trait and SparkFunSuite: 1, SparkFunSuite extends AnyFunSuite, while this trait
+ * can be used for all test styles. 2, SparkFunSuite provides some extra testing functions based
+ * on AnyFunSuite's test function.
  *
  * Thread audit happens normally here automatically when a new test suite created.
  *
@@ -51,21 +51,14 @@ import org.apache.spark.util.{AccumulatorContext, Utils}
  *
  * class MyTestSuite extends AnyFunSuite with SparkTestSuite {
  *
- *   override val enableAutoThreadAudit = false
+ * override val enableAutoThreadAudit = false
  *
- *   protected override def beforeAll(): Unit = {
- *     doThreadPreAudit()
- *     super.beforeAll()
- *   }
+ * protected override def beforeAll(): Unit = { doThreadPreAudit() super.beforeAll() }
  *
- *   protected override def afterAll(): Unit = {
- *     super.afterAll()
- *     doThreadPostAudit()
- *   }
- * }
+ * protected override def afterAll(): Unit = { super.afterAll() doThreadPostAudit() } }
  */
 trait SparkTestSuite
-  extends TestSuite
+    extends TestSuite
     with BeforeAndAfterAll
     with BeforeAndAfterEach
     with ThreadAudit
@@ -162,9 +155,8 @@ trait SparkTestSuite
   /**
    * Log the suite name and the test name before and after each test.
    *
-   * Subclasses should never override this method. If they wish to run
-   * custom code before and after each test, they should mix in the
-   * {{org.scalatest.BeforeAndAfter}} trait instead.
+   * Subclasses should never override this method. If they wish to run custom code before and
+   * after each test, they should mix in the {{org.scalatest.BeforeAndAfter}} trait instead.
    */
   final protected override def withFixture(test: NoArgTest): Outcome = {
     val testName = test.text
@@ -190,34 +182,35 @@ trait SparkTestSuite
    */
   protected def withTempDir(f: File => Unit): Unit = {
     val dir = Utils.createTempDir()
-    try f(dir) finally {
+    try f(dir)
+    finally {
       Utils.deleteRecursively(dir)
     }
   }
 
   /**
-   * Creates a temporary directory containing a secret file, which is then passed to `f` and
-   * will be deleted after `f` returns.
+   * Creates a temporary directory containing a secret file, which is then passed to `f` and will
+   * be deleted after `f` returns.
    */
   protected def withSecretFile(contents: String = "test-secret")(f: File => Unit): Unit = {
     val secretDir = Utils.createTempDir("temp-secrets")
     val secretFile = new File(secretDir, "temp-secret.txt")
     Files.write(secretFile.toPath, contents.getBytes(UTF_8))
-    try f(secretFile) finally {
+    try f(secretFile)
+    finally {
       Utils.deleteRecursively(secretDir)
     }
   }
 
   /**
-   * Adds a log appender and optionally sets a log level to the root logger or the logger with
-   * the specified name, then executes the specified function, and in the end removes the log
-   * appender and restores the log level if necessary.
+   * Adds a log appender and optionally sets a log level to the root logger or the logger with the
+   * specified name, then executes the specified function, and in the end removes the log appender
+   * and restores the log level if necessary.
    */
   protected def withLogAppender(
       appender: AbstractAppender,
       loggerNames: Seq[String] = Seq.empty,
-      level: Option[Level] = Some(Level.INFO))(
-      f: => Unit): Unit = {
+      level: Option[Level] = Some(Level.INFO))(f: => Unit): Unit = {
     val loggers = if (loggerNames.nonEmpty) {
       loggerNames.map(LogManager.getLogger)
     } else {
@@ -237,7 +230,8 @@ trait SparkTestSuite
         LogManager.getContext(false).asInstanceOf[LoggerContext].updateLoggers()
       }
     }
-    try f finally {
+    try f
+    finally {
       loggers.foreach(_.asInstanceOf[Logger].removeAppender(appender))
       appender.stop()
       if (level.isDefined) {
@@ -276,13 +270,16 @@ trait SparkTestSuite
 
   /**
    * Checks an exception with an error condition against expected results.
-   * @param exception     The exception to check
-   * @param condition     The expected error condition identifying the error
-   * @param sqlState      Optional the expected SQLSTATE, not verified if not supplied
-   * @param parameters    A map of parameter names and values. The names are as defined
-   *                      in the error-classes file.
-   * @param matchPVals    Optionally treat the parameters value as regular expression pattern.
-   *                      false if not supplied.
+   * @param exception
+   *   The exception to check
+   * @param condition
+   *   The expected error condition identifying the error
+   * @param sqlState
+   *   Optional the expected SQLSTATE, not verified if not supplied
+   * @param parameters
+   *   A map of parameter names and values. The names are as defined in the error-classes file.
+   * @param matchPVals
+   *   Optionally treat the parameters value as regular expression pattern. false if not supplied.
    */
   protected def checkError(
       exception: SparkThrowable,
@@ -296,47 +293,57 @@ trait SparkTestSuite
     val expectedParameters = exception.getMessageParameters.asScala
     if (matchPVals) {
       assert(expectedParameters.size === parameters.size)
-      expectedParameters.foreach(
-        exp => {
-          val parm = parameters.getOrElse(exp._1,
-            throw new IllegalArgumentException("Missing parameter" + exp._1))
-          if (!exp._2.matches(parm)) {
-            throw new IllegalArgumentException("For parameter '" + exp._1 + "' value '" + exp._2 +
+      expectedParameters.foreach(exp => {
+        val parm = parameters.getOrElse(
+          exp._1,
+          throw new IllegalArgumentException("Missing parameter" + exp._1))
+        if (!exp._2.matches(parm)) {
+          throw new IllegalArgumentException(
+            "For parameter '" + exp._1 + "' value '" + exp._2 +
               "' does not match: " + parm)
-          }
         }
-      )
+      })
     } else {
       assert(expectedParameters === parameters)
     }
     val actualQueryContext = exception.getQueryContext()
-    assert(actualQueryContext.length === queryContext.length, "Invalid length of the query context")
+    assert(
+      actualQueryContext.length === queryContext.length,
+      "Invalid length of the query context")
     actualQueryContext.zip(queryContext).foreach { case (actual, expected) =>
-      assert(actual.contextType() === expected.contextType,
+      assert(
+        actual.contextType() === expected.contextType,
         "Invalid contextType of a query context Actual:" + actual.toString)
       if (actual.contextType() == QueryContextType.SQL) {
-        assert(actual.objectType() === expected.objectType,
+        assert(
+          actual.objectType() === expected.objectType,
           "Invalid objectType of a query context Actual:" + actual.toString)
-        assert(actual.objectName() === expected.objectName,
+        assert(
+          actual.objectName() === expected.objectName,
           "Invalid objectName of a query context. Actual:" + actual.toString)
         // If startIndex and stopIndex are -1, it means we simply want to check the
         // fragment of the query context. This should be the case when the fragment is
         // distinguished within the query text.
         if (expected.startIndex != -1) {
-          assert(actual.startIndex() === expected.startIndex,
+          assert(
+            actual.startIndex() === expected.startIndex,
             "Invalid startIndex of a query context. Actual:" + actual.toString)
         }
         if (expected.stopIndex != -1) {
-          assert(actual.stopIndex() === expected.stopIndex,
+          assert(
+            actual.stopIndex() === expected.stopIndex,
             "Invalid stopIndex of a query context. Actual:" + actual.toString)
         }
-        assert(actual.fragment() === expected.fragment,
+        assert(
+          actual.fragment() === expected.fragment,
           "Invalid fragment of a query context. Actual:" + actual.toString)
       } else if (actual.contextType() == QueryContextType.DataFrame) {
-        assert(actual.fragment() === expected.fragment,
+        assert(
+          actual.fragment() === expected.fragment,
           "Invalid code fragment of a query context. Actual:" + actual.toString)
         if (expected.callSitePattern.nonEmpty) {
-          assert(actual.callSite().matches(expected.callSitePattern),
+          assert(
+            actual.callSite().matches(expected.callSitePattern),
             "Invalid callSite of a query context. Actual:" + actual.toString)
         }
       }
@@ -378,8 +385,7 @@ trait SparkTestSuite
       sqlState: Option[String],
       parameters: Map[String, String],
       context: ExpectedContext): Unit =
-    checkError(exception, condition, sqlState, parameters,
-      false, Array(context))
+    checkError(exception, condition, sqlState, parameters, false, Array(context))
 
   protected def checkErrorMatchPVals(
       exception: SparkThrowable,
@@ -393,29 +399,27 @@ trait SparkTestSuite
       sqlState: Option[String],
       parameters: Map[String, String],
       context: ExpectedContext): Unit =
-    checkError(exception, condition, sqlState, parameters,
-      matchPVals = true, Array(context))
+    checkError(exception, condition, sqlState, parameters, matchPVals = true, Array(context))
 
   protected def checkErrorTableNotFound(
       exception: SparkThrowable,
       tableName: String,
       queryContext: ExpectedContext): Unit =
-    checkError(exception = exception,
+    checkError(
+      exception = exception,
       condition = "TABLE_OR_VIEW_NOT_FOUND",
       parameters = Map("relationName" -> tableName),
       queryContext = Array(queryContext))
 
-  protected def checkErrorTableNotFound(
-      exception: SparkThrowable,
-      tableName: String): Unit =
-    checkError(exception = exception,
+  protected def checkErrorTableNotFound(exception: SparkThrowable, tableName: String): Unit =
+    checkError(
+      exception = exception,
       condition = "TABLE_OR_VIEW_NOT_FOUND",
       parameters = Map("relationName" -> tableName))
 
-  protected def checkErrorTableAlreadyExists(
-      exception: SparkThrowable,
-      tableName: String): Unit =
-    checkError(exception = exception,
+  protected def checkErrorTableAlreadyExists(exception: SparkThrowable, tableName: String): Unit =
+    checkError(
+      exception = exception,
       condition = "TABLE_OR_VIEW_ALREADY_EXISTS",
       parameters = Map("relationName" -> tableName))
 
@@ -426,8 +430,7 @@ trait SparkTestSuite
       startIndex: Int,
       stopIndex: Int,
       fragment: String,
-      callSitePattern: String
-  )
+      callSitePattern: String)
 
   object ExpectedContext {
     def apply(fragment: String, start: Int, stop: Int): ExpectedContext = {
@@ -446,8 +449,14 @@ trait SparkTestSuite
         startIndex: Int,
         stopIndex: Int,
         fragment: String): ExpectedContext = {
-      new ExpectedContext(QueryContextType.SQL, objectType, objectName, startIndex, stopIndex,
-        fragment, "")
+      new ExpectedContext(
+        QueryContextType.SQL,
+        objectType,
+        objectName,
+        startIndex,
+        stopIndex,
+        fragment,
+        "")
     }
 
     def apply(fragment: String, callSitePattern: String): ExpectedContext = {
@@ -483,4 +492,3 @@ trait SparkTestSuite
     }
   }
 }
-

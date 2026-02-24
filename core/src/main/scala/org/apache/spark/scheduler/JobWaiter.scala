@@ -32,7 +32,8 @@ private[spark] class JobWaiter[T](
     val jobId: Int,
     totalTasks: Int,
     resultHandler: (Int, T) => Unit)
-  extends JobListener with Logging {
+    extends JobListener
+    with Logging {
 
   private val finishedTasks = new AtomicInteger(0)
   // If the job is finished, this will be its result. In the case of 0 task jobs (e.g. zero
@@ -46,17 +47,17 @@ private[spark] class JobWaiter[T](
 
   /**
    * Sends a signal to the DAGScheduler to cancel the job with an optional reason. The
-   * cancellation itself is handled asynchronously. After the low level scheduler cancels
-   * all the tasks belonging to this job, it will fail this job with a SparkException.
+   * cancellation itself is handled asynchronously. After the low level scheduler cancels all the
+   * tasks belonging to this job, it will fail this job with a SparkException.
    */
   def cancel(reason: Option[String]): Unit = {
     dagScheduler.cancelJob(jobId, reason)
   }
 
   /**
-   * Sends a signal to the DAGScheduler to cancel the job. The cancellation itself is
-   * handled asynchronously. After the low level scheduler cancels all the tasks belonging
-   * to this job, it will fail this job with a SparkException.
+   * Sends a signal to the DAGScheduler to cancel the job. The cancellation itself is handled
+   * asynchronously. After the low level scheduler cancels all the tasks belonging to this job, it
+   * will fail this job with a SparkException.
    */
   def cancel(): Unit = cancel(None)
 

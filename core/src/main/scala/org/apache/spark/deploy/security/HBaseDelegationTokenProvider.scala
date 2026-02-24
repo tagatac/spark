@@ -33,7 +33,8 @@ import org.apache.spark.security.HadoopDelegationTokenProvider
 import org.apache.spark.util.Utils
 
 private[security] class HBaseDelegationTokenProvider
-  extends HadoopDelegationTokenProvider with Logging {
+    extends HadoopDelegationTokenProvider
+    with Logging {
 
   override def serviceName: String = "hbase"
 
@@ -43,19 +44,22 @@ private[security] class HBaseDelegationTokenProvider
       creds: Credentials): Option[Long] = {
     try {
       val mirror = universe.runtimeMirror(Utils.getContextOrSparkClassLoader)
-      val obtainToken = mirror.classLoader.
-        loadClass("org.apache.hadoop.hbase.security.token.TokenUtil")
+      val obtainToken = mirror.classLoader
+        .loadClass("org.apache.hadoop.hbase.security.token.TokenUtil")
         .getMethod("obtainToken", classOf[Configuration])
 
       logDebug("Attempting to fetch HBase security token.")
-      val token = obtainToken.invoke(null, hbaseConf(hadoopConf))
+      val token = obtainToken
+        .invoke(null, hbaseConf(hadoopConf))
         .asInstanceOf[Token[_ <: TokenIdentifier]]
       logInfo(log"Get token from HBase: ${MDC(TOKEN, token.toString)}")
       creds.addToken(token.getService, token)
     } catch {
       case NonFatal(e) =>
-        logWarning(Utils.createFailedToGetTokenMessage(serviceName) + log" Retrying to fetch " +
-          log"HBase security token with ${MDC(SERVICE_NAME, serviceName)} connection parameter.", e)
+        logWarning(
+          Utils.createFailedToGetTokenMessage(serviceName) + log" Retrying to fetch " +
+            log"HBase security token with ${MDC(SERVICE_NAME, serviceName)} connection parameter.",
+          e)
         // Seems to be spark is trying to get the token from HBase 2.x.x  version or above where the
         // obtainToken(Configuration conf) API has been removed. Lets try obtaining the token from
         // another compatible API of HBase service.
@@ -65,26 +69,28 @@ private[security] class HBaseDelegationTokenProvider
   }
 
   /**
-   * Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf) is a deprecated
-   * method and in Hbase 2.0.0 the method is already removed.
-   * The HBase client API used in below method is introduced from HBase 0.98.9 version,
-   * to invoke this api first connection object has to be retrieved from ConnectionFactory and the
-   * same connection can be passed to
+   * Token<AuthenticationTokenIdentifier> obtainToken(Configuration conf) is a deprecated method
+   * and in Hbase 2.0.0 the method is already removed. The HBase client API used in below method
+   * is introduced from HBase 0.98.9 version, to invoke this api first connection object has to be
+   * retrieved from ConnectionFactory and the same connection can be passed to
    * Token<AuthenticationTokenIdentifier> obtainToken(Connection conn) API
    *
-   * @param hadoopConf Configuration of current Hadoop Compatible system.
-   * @param creds Credentials to add tokens and security keys to.
+   * @param hadoopConf
+   *   Configuration of current Hadoop Compatible system.
+   * @param creds
+   *   Credentials to add tokens and security keys to.
    */
   private def obtainDelegationTokensWithHBaseConn(
       hadoopConf: Configuration,
       creds: Credentials): Unit = {
-    var hbaseConnection : Closeable = null
+    var hbaseConnection: Closeable = null
     try {
       val mirror = universe.runtimeMirror(Utils.getContextOrSparkClassLoader)
       val connectionFactoryClass = mirror.classLoader
         .loadClass("org.apache.hadoop.hbase.client.ConnectionFactory")
         .getMethod("createConnection", classOf[Configuration])
-      hbaseConnection = connectionFactoryClass.invoke(null, hbaseConf(hadoopConf))
+      hbaseConnection = connectionFactoryClass
+        .invoke(null, hbaseConf(hadoopConf))
         .asInstanceOf[Closeable]
       val connectionParamTypeClassRef = mirror.classLoader
         .loadClass("org.apache.hadoop.hbase.client.Connection")
@@ -92,7 +98,8 @@ private[security] class HBaseDelegationTokenProvider
         .loadClass("org.apache.hadoop.hbase.security.token.TokenUtil")
         .getMethod("obtainToken", connectionParamTypeClassRef)
       logDebug("Attempting to fetch HBase security token.")
-      val token = obtainTokenMethod.invoke(null, hbaseConnection)
+      val token = obtainTokenMethod
+        .invoke(null, hbaseConnection)
         .asInstanceOf[Token[_ <: TokenIdentifier]]
       logInfo(log"Get token from HBase: ${MDC(TOKEN, token.toString)}")
       creds.addToken(token.getService, token)
@@ -115,9 +122,9 @@ private[security] class HBaseDelegationTokenProvider
   private def hbaseConf(conf: Configuration): Configuration = {
     try {
       val mirror = universe.runtimeMirror(Utils.getContextOrSparkClassLoader)
-      val confCreate = mirror.classLoader.
-        loadClass("org.apache.hadoop.hbase.HBaseConfiguration").
-        getMethod("create", classOf[Configuration])
+      val confCreate = mirror.classLoader
+        .loadClass("org.apache.hadoop.hbase.HBaseConfiguration")
+        .getMethod("create", classOf[Configuration])
       confCreate.invoke(null, conf).asInstanceOf[Configuration]
     } catch {
       case NonFatal(e) =>

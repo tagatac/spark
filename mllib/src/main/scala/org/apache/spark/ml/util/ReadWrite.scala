@@ -17,10 +17,7 @@
 
 package org.apache.spark.ml.util
 
-import java.io.{
-  BufferedInputStream, BufferedOutputStream, DataInputStream, DataOutputStream,
-  File, FileInputStream, FileOutputStream, IOException
-}
+import java.io.{BufferedInputStream, BufferedOutputStream, DataInputStream, DataOutputStream, File, FileInputStream, FileOutputStream, IOException}
 import java.nio.file.{Files, Paths}
 import java.util.{Locale, ServiceLoader}
 
@@ -96,17 +93,25 @@ private[util] sealed trait BaseReadWrite {
 @Unstable
 @Since("2.4.0")
 trait MLWriterFormat {
+
   /**
    * Function to write the provided pipeline stage out.
    *
-   * @param path  The path to write the result out to.
-   * @param session  SparkSession associated with the write request.
-   * @param optionMap  User provided options stored as strings.
-   * @param stage  The pipeline stage to be saved.
+   * @param path
+   *   The path to write the result out to.
+   * @param session
+   *   SparkSession associated with the write request.
+   * @param optionMap
+   *   User provided options stored as strings.
+   * @param stage
+   *   The pipeline stage to be saved.
    */
   @Since("2.4.0")
-  def write(path: String, session: SparkSession, optionMap: mutable.Map[String, String],
-    stage: PipelineStage): Unit
+  def write(
+      path: String,
+      session: SparkSession,
+      optionMap: mutable.Map[String, String],
+      stage: PipelineStage): Unit
 }
 
 /**
@@ -120,6 +125,7 @@ trait MLWriterFormat {
 @Unstable
 @Since("2.4.0")
 trait MLFormatRegister extends MLWriterFormat {
+
   /**
    * The string that represents the format that this format provider uses. This is, along with
    * stageName, is overridden by children to provide a nice alias for the writer. For example:
@@ -191,7 +197,7 @@ abstract class MLWriter extends BaseReadWrite with Logging {
   }
 
   /**
-   * `save()` handles overwriting and then calls this method.  Subclasses should override this
+   * `save()` handles overwriting and then calls this method. Subclasses should override this
    * method to implement the actual saving of the instance.
    */
   @Since("1.6.0")
@@ -236,8 +242,8 @@ class GeneralMLWriter(stage: PipelineStage) extends MLWriter with Logging {
   private var source: String = "internal"
 
   /**
-   * Specifies the format of ML export (e.g. "pmml", "internal", or
-   * the fully qualified class name for export).
+   * Specifies the format of ML export (e.g. "pmml", "internal", or the fully qualified class name
+   * for export).
    */
   @Since("2.4.0")
   def format(source: String): this.type = {
@@ -268,7 +274,8 @@ class GeneralMLWriter(stage: PipelineStage) extends MLWriter with Logging {
           case Failure(error) =>
             throw new SparkException(
               s"Could not load requested format $source for $stageName ($targetName) had $formats" +
-              s"supporting $shortNames", error)
+                s"supporting $shortNames",
+              error)
         }
       case head :: Nil =>
         head.getClass
@@ -315,6 +322,7 @@ trait MLWritable {
 @Since("2.4.0")
 @Unstable
 trait GeneralMLWritable extends MLWritable {
+
   /**
    * Returns an `MLWriter` instance for this ML instance.
    */
@@ -323,13 +331,14 @@ trait GeneralMLWritable extends MLWritable {
 }
 
 /**
- * Helper trait for making simple `Params` types writable.  If a `Params` class stores
- * all data as [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide
- * a default implementation of writing saved instances of the class.
- * This only handles simple [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
+ * Helper trait for making simple `Params` types writable. If a `Params` class stores all data as
+ * [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide a default
+ * implementation of writing saved instances of the class. This only handles simple
+ * [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
  * [[org.apache.spark.sql.Dataset]].
  *
- * @see `DefaultParamsReadable`, the counterpart to this trait
+ * @see
+ *   `DefaultParamsReadable`, the counterpart to this trait
  */
 trait DefaultParamsWritable extends MLWritable { self: Params =>
 
@@ -339,7 +348,8 @@ trait DefaultParamsWritable extends MLWritable { self: Params =>
 /**
  * Abstract class for utility classes that can load ML instances.
  *
- * @tparam T ML instance type
+ * @tparam T
+ *   ML instance type
  */
 @Since("1.6.0")
 abstract class MLReader[T] extends BaseReadWrite {
@@ -369,7 +379,8 @@ abstract class MLReader[T] extends BaseReadWrite {
 /**
  * Trait for objects that provide `MLReader`.
  *
- * @tparam T ML instance type
+ * @tparam T
+ *   ML instance type
  */
 @Since("1.6.0")
 trait MLReadable[T] {
@@ -383,22 +394,24 @@ trait MLReadable[T] {
   /**
    * Reads an ML instance from the input path, a shortcut of `read.load(path)`.
    *
-   * @note Implementing classes should override this to be Java-friendly.
+   * @note
+   *   Implementing classes should override this to be Java-friendly.
    */
   @Since("1.6.0")
   def load(path: String): T = read.load(path)
 }
 
-
 /**
- * Helper trait for making simple `Params` types readable.  If a `Params` class stores
- * all data as [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide
- * a default implementation of reading saved instances of the class.
- * This only handles simple [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
+ * Helper trait for making simple `Params` types readable. If a `Params` class stores all data as
+ * [[org.apache.spark.ml.param.Param]] values, then extending this trait will provide a default
+ * implementation of reading saved instances of the class. This only handles simple
+ * [[org.apache.spark.ml.param.Param]] types; e.g., it will not handle
  * [[org.apache.spark.sql.Dataset]].
  *
- * @tparam T ML instance type
- * @see `DefaultParamsWritable`, the counterpart to this trait
+ * @tparam T
+ *   ML instance type
+ * @see
+ *   `DefaultParamsWritable`, the counterpart to this trait
  */
 trait DefaultParamsReadable[T] extends MLReadable[T] {
 
@@ -407,10 +420,11 @@ trait DefaultParamsReadable[T] extends MLReadable[T] {
 
 /**
  * Default `MLWriter` implementation for transformers and estimators that contain basic
- * (json4s-serializable) params and no data. This will not handle more complex params or types with
- * data (e.g., models with coefficients).
+ * (json4s-serializable) params and no data. This will not handle more complex params or types
+ * with data (e.g., models with coefficients).
  *
- * @param instance object to save
+ * @param instance
+ *   object to save
  */
 private[ml] class DefaultParamsWriter(instance: Params) extends MLWriter {
 
@@ -423,18 +437,20 @@ private[ml] object DefaultParamsWriter {
 
   /**
    * Saves metadata + Params to: path + "/metadata"
-   *  - class
-   *  - timestamp
-   *  - sparkVersion
-   *  - uid
-   *  - defaultParamMap
-   *  - paramMap
-   *  - (optionally, extra metadata)
+   *   - class
+   *   - timestamp
+   *   - sparkVersion
+   *   - uid
+   *   - defaultParamMap
+   *   - paramMap
+   *   - (optionally, extra metadata)
    *
-   * @param extraMetadata  Extra metadata to be saved at same level as uid, paramMap, etc.
-   * @param paramMap  If given, this is saved in the "paramMap" field.
-   *                  Otherwise, all [[org.apache.spark.ml.param.Param]]s are encoded using
-   *                  [[org.apache.spark.ml.param.Param.jsonEncode()]].
+   * @param extraMetadata
+   *   Extra metadata to be saved at same level as uid, paramMap, etc.
+   * @param paramMap
+   *   If given, this is saved in the "paramMap" field. Otherwise, all
+   *   [[org.apache.spark.ml.param.Param]]s are encoded using
+   *   [[org.apache.spark.ml.param.Param.jsonEncode()]].
    */
   @deprecated("use saveMetadata with SparkSession", "4.0.0")
   def saveMetadata(
@@ -452,18 +468,20 @@ private[ml] object DefaultParamsWriter {
 
   /**
    * Saves metadata + Params to: path + "/metadata"
-   *  - class
-   *  - timestamp
-   *  - sparkVersion
-   *  - uid
-   *  - defaultParamMap
-   *  - paramMap
-   *  - (optionally, extra metadata)
+   *   - class
+   *   - timestamp
+   *   - sparkVersion
+   *   - uid
+   *   - defaultParamMap
+   *   - paramMap
+   *   - (optionally, extra metadata)
    *
-   * @param extraMetadata  Extra metadata to be saved at same level as uid, paramMap, etc.
-   * @param paramMap  If given, this is saved in the "paramMap" field.
-   *                  Otherwise, all [[org.apache.spark.ml.param.Param]]s are encoded using
-   *                  [[org.apache.spark.ml.param.Param.jsonEncode()]].
+   * @param extraMetadata
+   *   Extra metadata to be saved at same level as uid, paramMap, etc.
+   * @param paramMap
+   *   If given, this is saved in the "paramMap" field. Otherwise, all
+   *   [[org.apache.spark.ml.param.Param]]s are encoded using
+   *   [[org.apache.spark.ml.param.Param.jsonEncode()]].
    */
   def saveMetadata(
       instance: Params,
@@ -489,10 +507,11 @@ private[ml] object DefaultParamsWriter {
     saveMetadata(instance, path, spark, None, None)
 
   /**
-   * Helper for [[saveMetadata()]] which extracts the JSON to save.
-   * This is useful for ensemble models which need to save metadata for many sub-models.
+   * Helper for [[saveMetadata()]] which extracts the JSON to save. This is useful for ensemble
+   * models which need to save metadata for many sub-models.
    *
-   * @see [[saveMetadata()]] for details on what this includes.
+   * @see
+   *   [[saveMetadata()]] for details on what this includes.
    */
   @deprecated("use getMetadataToSave with SparkSession", "4.0.0")
   def getMetadataToSave(
@@ -507,10 +526,11 @@ private[ml] object DefaultParamsWriter {
       paramMap)
 
   /**
-   * Helper for [[saveMetadata()]] which extracts the JSON to save.
-   * This is useful for ensemble models which need to save metadata for many sub-models.
+   * Helper for [[saveMetadata()]] which extracts the JSON to save. This is useful for ensemble
+   * models which need to save metadata for many sub-models.
    *
-   * @see [[saveMetadata()]] for details on what this includes.
+   * @see
+   *   [[saveMetadata()]] for details on what this includes.
    */
   def getMetadataToSave(
       instance: Params,
@@ -549,12 +569,9 @@ private[ml] object DefaultParamsWriter {
       extraMetadata: Option[JObject]): String =
     getMetadataToSave(instance, spark, extraMetadata, None)
 
-  def getMetadataToSave(
-      instance: Params,
-      spark: SparkSession): String =
+  def getMetadataToSave(instance: Params, spark: SparkSession): String =
     getMetadataToSave(instance, spark, None, None)
 }
-
 
 private[ml] object MLAllowListedLoader {
 
@@ -562,7 +579,9 @@ private[ml] object MLAllowListedLoader {
     try {
       // Use Spark Connect ML safe class loader if it is available.
       val MLHandlerClazz = Utils.classForName("org.apache.spark.sql.connect.ml.MLHandler")
-      MLHandlerClazz.getMethod("safeMLClassLoader").invoke(null)
+      MLHandlerClazz
+        .getMethod("safeMLClassLoader")
+        .invoke(null)
         .asInstanceOf[String => Class[_]]
     } catch {
       case _: ClassNotFoundException => null
@@ -581,11 +600,11 @@ private[ml] object MLAllowListedLoader {
 
 /**
  * Default `MLReader` implementation for transformers and estimators that contain basic
- * (json4s-serializable) params and no data. This will not handle more complex params or types with
- * data (e.g., models with coefficients).
+ * (json4s-serializable) params and no data. This will not handle more complex params or types
+ * with data (e.g., models with coefficients).
  *
- * @tparam T ML instance type
- * TODO: Consider adding check for correct class name.
+ * @tparam T
+ *   ML instance type TODO: Consider adding check for correct class name.
  */
 private[ml] class DefaultParamsReader[T] extends MLReader[T] {
 
@@ -604,11 +623,14 @@ private[ml] object DefaultParamsReader {
   /**
    * All info from metadata file.
    *
-   * @param params  paramMap, as a `JValue`
-   * @param defaultParams defaultParamMap, as a `JValue`. For metadata file prior to Spark 2.4,
-   *                      this is `JNothing`.
-   * @param metadata  All metadata, including the other fields
-   * @param metadataJson  Full metadata file String (for debugging)
+   * @param params
+   *   paramMap, as a `JValue`
+   * @param defaultParams
+   *   defaultParamMap, as a `JValue`. For metadata file prior to Spark 2.4, this is `JNothing`.
+   * @param metadata
+   *   All metadata, including the other fields
+   * @param metadataJson
+   *   Full metadata file String (for debugging)
    */
   case class Metadata(
       className: String,
@@ -620,21 +642,18 @@ private[ml] object DefaultParamsReader {
       metadata: JValue,
       metadataJson: String) {
 
-
     private def getValueFromParams(params: JValue): Seq[(String, JValue)] = {
       params match {
         case JObject(pairs) => pairs
         case _ =>
-          throw new IllegalArgumentException(
-            s"Cannot recognize JSON metadata: $metadataJson.")
+          throw new IllegalArgumentException(s"Cannot recognize JSON metadata: $metadataJson.")
       }
     }
 
     /**
-     * Get the JSON value of the [[org.apache.spark.ml.param.Param]] of the given name.
-     * This can be useful for getting a Param value before an instance of `Params`
-     * is available. This will look up `params` first, if not existing then looking up
-     * `defaultParams`.
+     * Get the JSON value of the [[org.apache.spark.ml.param.Param]] of the given name. This can
+     * be useful for getting a Param value before an instance of `Params` is available. This will
+     * look up `params` first, if not existing then looking up `defaultParams`.
      */
     def getParamValue(paramName: String): JValue = {
       implicit val format = DefaultFormats
@@ -651,24 +670,24 @@ private[ml] object DefaultParamsReader {
           pName == paramName
         }
       }
-      assert(foundPairs.length == 1, s"Expected one instance of Param '$paramName' but found" +
-        s" ${foundPairs.length} in JSON Params: " + pairs.map(_.toString).mkString(", "))
+      assert(
+        foundPairs.length == 1,
+        s"Expected one instance of Param '$paramName' but found" +
+          s" ${foundPairs.length} in JSON Params: " + pairs.map(_.toString).mkString(", "))
 
       foundPairs.map(_._2).head
     }
 
     /**
-     * Extract Params from metadata, and set them in the instance.
-     * This works if all Params (except params included by `skipParams` list) implement
+     * Extract Params from metadata, and set them in the instance. This works if all Params
+     * (except params included by `skipParams` list) implement
      * [[org.apache.spark.ml.param.Param.jsonDecode()]].
      *
-     * @param skipParams The params included in `skipParams` won't be set. This is useful if some
-     *                   params don't implement [[org.apache.spark.ml.param.Param.jsonDecode()]]
-     *                   and need special handling.
+     * @param skipParams
+     *   The params included in `skipParams` won't be set. This is useful if some params don't
+     *   implement [[org.apache.spark.ml.param.Param.jsonDecode()]] and need special handling.
      */
-    def getAndSetParams(
-        instance: Params,
-        skipParams: Option[List[String]] = None): Unit = {
+    def getAndSetParams(instance: Params, skipParams: Option[List[String]] = None): Unit = {
       setParams(instance, skipParams, isDefault = false)
 
       // For metadata file prior to Spark 2.4, there is no default section.
@@ -698,8 +717,7 @@ private[ml] object DefaultParamsReader {
             }
           }
         case _ =>
-          throw new IllegalArgumentException(
-            s"Cannot recognize JSON metadata: ${metadataJson}.")
+          throw new IllegalArgumentException(s"Cannot recognize JSON metadata: ${metadataJson}.")
       }
     }
   }
@@ -707,15 +725,14 @@ private[ml] object DefaultParamsReader {
   /**
    * Load metadata saved using [[DefaultParamsWriter.saveMetadata()]]
    *
-   * @param expectedClassName  If non empty, this is checked against the loaded metadata.
-   * @throws IllegalArgumentException if expectedClassName is specified and does not match metadata
+   * @param expectedClassName
+   *   If non empty, this is checked against the loaded metadata.
+   * @throws IllegalArgumentException
+   *   if expectedClassName is specified and does not match metadata
    */
   @deprecated("use loadMetadata with SparkSession", "4.0.0")
   def loadMetadata(path: String, sc: SparkContext, expectedClassName: String = ""): Metadata =
-    loadMetadata(
-      path,
-      SparkSession.builder().sparkContext(sc).getOrCreate(),
-      expectedClassName)
+    loadMetadata(path, SparkSession.builder().sparkContext(sc).getOrCreate(), expectedClassName)
 
   def loadMetadata(path: String, spark: SparkSession, expectedClassName: String): Metadata = {
     val metadataPath = new Path(path, "metadata").toString
@@ -727,12 +744,15 @@ private[ml] object DefaultParamsReader {
     loadMetadata(path, spark, "")
 
   /**
-   * Parse metadata JSON string produced by [[DefaultParamsWriter.getMetadataToSave()]].
-   * This is a helper function for [[loadMetadata()]].
+   * Parse metadata JSON string produced by [[DefaultParamsWriter.getMetadataToSave()]]. This is a
+   * helper function for [[loadMetadata()]].
    *
-   * @param metadataStr  JSON string of metadata
-   * @param expectedClassName  If non empty, this is checked against the loaded metadata.
-   * @throws IllegalArgumentException if expectedClassName is specified and does not match metadata
+   * @param metadataStr
+   *   JSON string of metadata
+   * @param expectedClassName
+   *   If non empty, this is checked against the loaded metadata.
+   * @throws IllegalArgumentException
+   *   if expectedClassName is specified and does not match metadata
    */
   def parseMetadata(metadataStr: String, expectedClassName: String = ""): Metadata = {
     val metadata = parse(metadataStr)
@@ -745,16 +765,26 @@ private[ml] object DefaultParamsReader {
     val defaultParams = metadata \ "defaultParamMap"
     val params = metadata \ "paramMap"
     if (expectedClassName.nonEmpty) {
-      require(className == expectedClassName, s"Error loading metadata: Expected class name" +
-        s" $expectedClassName but found class name $className")
+      require(
+        className == expectedClassName,
+        s"Error loading metadata: Expected class name" +
+          s" $expectedClassName but found class name $className")
     }
 
-    Metadata(className, uid, timestamp, sparkVersion, params, defaultParams, metadata, metadataStr)
+    Metadata(
+      className,
+      uid,
+      timestamp,
+      sparkVersion,
+      params,
+      defaultParams,
+      metadata,
+      metadataStr)
   }
 
   /**
-   * Load a `Params` instance from the given path, and return it.
-   * This assumes the instance implements [[MLReadable]].
+   * Load a `Params` instance from the given path, and return it. This assumes the instance
+   * implements [[MLReadable]].
    */
   @deprecated("use loadParamsInstance with SparkSession", "4.0.0")
   def loadParamsInstance[T](path: String, sc: SparkContext): T =
@@ -764,8 +794,8 @@ private[ml] object DefaultParamsReader {
     loadParamsInstanceReader(path, spark).load(path)
 
   /**
-   * Load a `Params` instance reader from the given path, and return it.
-   * This assumes the instance implements [[MLReadable]].
+   * Load a `Params` instance reader from the given path, and return it. This assumes the instance
+   * implements [[MLReadable]].
    */
   @deprecated("use loadParamsInstanceReader with SparkSession", "4.0.0")
   def loadParamsInstanceReader[T](path: String, sc: SparkContext): MLReader[T] =
@@ -782,16 +812,18 @@ private[ml] object DefaultParamsReader {
  * Default Meta-Algorithm read and write implementation.
  */
 private[ml] object MetaAlgorithmReadWrite {
+
   /**
-   * Examine the given estimator (which may be a compound estimator) and extract a mapping
-   * from UIDs to corresponding `Params` instances.
+   * Examine the given estimator (which may be a compound estimator) and extract a mapping from
+   * UIDs to corresponding `Params` instances.
    */
   def getUidMap(instance: Params): Map[String, Params] = {
     val uidList = getUidMapImpl(instance)
     val uidMap = uidList.toMap
     if (uidList.size != uidMap.size) {
-      throw new RuntimeException(s"${instance.getClass.getName}.load found a compound estimator" +
-        s" with stages with duplicate UIDs. List of UIDs: ${uidList.map(_._1).mkString(", ")}.")
+      throw new RuntimeException(
+        s"${instance.getClass.getName}.load found a compound estimator" +
+          s" with stages with duplicate UIDs. List of UIDs: ${uidList.map(_._1).mkString(", ")}.")
     }
     uidMap
   }
@@ -845,7 +877,6 @@ private[spark] class FileSystemOverwrite extends Logging {
     }
   }
 }
-
 
 private[spark] object ReadWriteUtils {
   val localSavingModeState = new ThreadLocal[Boolean]() {
@@ -925,10 +956,10 @@ private[spark] object ReadWriteUtils {
   }
 
   def serializeMap[K, V](
-      map: Map[K, V], dos: DataOutputStream,
+      map: Map[K, V],
+      dos: DataOutputStream,
       keySerializer: (K, DataOutputStream) => Unit,
-      valueSerializer: (V, DataOutputStream) => Unit
-  ): Unit = {
+      valueSerializer: (V, DataOutputStream) => Unit): Unit = {
     dos.writeInt(map.size)
     map.foreach { case (k, v) =>
       keySerializer(k, dos)
@@ -939,8 +970,7 @@ private[spark] object ReadWriteUtils {
   def deserializeMap[K, V](
       dis: DataInputStream,
       keyDeserializer: DataInputStream => K,
-      valueDeserializer: DataInputStream => V
-  ): Map[K, V] = {
+      valueDeserializer: DataInputStream => V): Map[K, V] = {
     val len = dis.readInt()
     val kvList = new Array[(K, V)](len)
     for (i <- 0 until len) {
@@ -1022,8 +1052,9 @@ private[spark] object ReadWriteUtils {
   }
 
   def serializeGenericArray[T: ClassTag](
-    array: Array[T], dos: DataOutputStream, serializer: (T, DataOutputStream) => Unit
-  ): Unit = {
+      array: Array[T],
+      dos: DataOutputStream,
+      serializer: (T, DataOutputStream) => Unit): Unit = {
     dos.writeInt(array.length)
     for (item <- array) {
       serializer(item, dos)
@@ -1031,8 +1062,8 @@ private[spark] object ReadWriteUtils {
   }
 
   def deserializeGenericArray[T: ClassTag](
-    dis: DataInputStream, deserializer: DataInputStream => T
-  ): Array[T] = {
+      dis: DataInputStream,
+      deserializer: DataInputStream => T): Array[T] = {
     val len = dis.readInt()
     val data = new Array[T](len)
     for (i <- 0 until len) {
@@ -1061,21 +1092,24 @@ private[spark] object ReadWriteUtils {
   }
 
   def saveObjectToLocal[T <: Product: ClassTag: TypeTag](
-      path: String, data: T, serializer: (T, DataOutputStream) => Unit
-    ): Unit = {
+      path: String,
+      data: T,
+      serializer: (T, DataOutputStream) => Unit): Unit = {
     val filePath = Paths.get(path)
     Files.createDirectories(filePath.getParent)
 
     Using.resource(
-      new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filePath.toFile)))
-    ) { dos =>
-      serializer(data, dos)
+      new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filePath.toFile)))) {
+      dos =>
+        serializer(data, dos)
     }
   }
 
   def saveObject[T <: Product: ClassTag: TypeTag](
-      path: String, data: T, spark: SparkSession, localSerializer: (T, DataOutputStream) => Unit
-  ): Unit = {
+      path: String,
+      data: T,
+      spark: SparkSession,
+      localSerializer: (T, DataOutputStream) => Unit): Unit = {
     if (localSavingModeState.get()) {
       saveObjectToLocal(path, data, localSerializer)
     } else {
@@ -1084,18 +1118,18 @@ private[spark] object ReadWriteUtils {
   }
 
   def loadObjectFromLocal[T <: Product: ClassTag: TypeTag](
-      path: String, deserializer: DataInputStream => T
-    ): T = {
-    Using.resource(
-      new DataInputStream(new BufferedInputStream(new FileInputStream(path)))
-    ) { dis =>
-      deserializer(dis)
+      path: String,
+      deserializer: DataInputStream => T): T = {
+    Using.resource(new DataInputStream(new BufferedInputStream(new FileInputStream(path)))) {
+      dis =>
+        deserializer(dis)
     }
   }
 
   def loadObject[T <: Product: ClassTag: TypeTag](
-    path: String, spark: SparkSession, localDeserializer: DataInputStream => T
-  ): T = {
+      path: String,
+      spark: SparkSession,
+      localDeserializer: DataInputStream => T): T = {
     if (localSavingModeState.get()) {
       loadObjectFromLocal(path, localDeserializer)
     } else {
@@ -1105,18 +1139,19 @@ private[spark] object ReadWriteUtils {
   }
 
   def saveArray[T <: Product: ClassTag: TypeTag](
-      path: String, data: Array[T], spark: SparkSession,
+      path: String,
+      data: Array[T],
+      spark: SparkSession,
       localSerializer: (T, DataOutputStream) => Unit,
-      numDataParts: Int = -1
-  ): Unit = {
+      numDataParts: Int = -1): Unit = {
     if (localSavingModeState.get()) {
       val filePath = Paths.get(path)
       Files.createDirectories(filePath.getParent)
 
       Using.resource(
-        new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filePath.toFile)))
-      ) { dos =>
-        serializeGenericArray(data, dos, localSerializer)
+        new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filePath.toFile)))) {
+        dos =>
+          serializeGenericArray(data, dos, localSerializer)
       }
     } else {
       import org.apache.spark.util.ArrayImplicits._
@@ -1130,13 +1165,13 @@ private[spark] object ReadWriteUtils {
   }
 
   def loadArray[T <: Product: ClassTag: TypeTag](
-      path: String, spark: SparkSession, localDeserializer: DataInputStream => T
-    ): Array[T] = {
+      path: String,
+      spark: SparkSession,
+      localDeserializer: DataInputStream => T): Array[T] = {
     if (localSavingModeState.get()) {
-      Using.resource(
-        new DataInputStream(new BufferedInputStream(new FileInputStream(path)))
-      ) { dis =>
-        deserializeGenericArray(dis, localDeserializer)
+      Using.resource(new DataInputStream(new BufferedInputStream(new FileInputStream(path)))) {
+        dis =>
+          deserializeGenericArray(dis, localDeserializer)
       }
     } else {
       import spark.implicits._
@@ -1151,8 +1186,9 @@ private[spark] object ReadWriteUtils {
           val filePath = Paths.get(path)
           Files.createDirectories(filePath.getParent)
           ArrowFileReadWrite.save(d, filePath)
-        case o => throw new UnsupportedOperationException(
-          s"Unsupported dataframe type: ${o.getClass.getName}")
+        case o =>
+          throw new UnsupportedOperationException(
+            s"Unsupported dataframe type: ${o.getClass.getName}")
       }
     } else {
       df.write.parquet(path)
@@ -1164,8 +1200,9 @@ private[spark] object ReadWriteUtils {
       spark match {
         case s: org.apache.spark.sql.classic.SparkSession =>
           ArrowFileReadWrite.load(s, Paths.get(path))
-        case o => throw new UnsupportedOperationException(
-          s"Unsupported session type: ${o.getClass.getName}")
+        case o =>
+          throw new UnsupportedOperationException(
+            s"Unsupported session type: ${o.getClass.getName}")
       }
     } else {
       spark.read.parquet(path)

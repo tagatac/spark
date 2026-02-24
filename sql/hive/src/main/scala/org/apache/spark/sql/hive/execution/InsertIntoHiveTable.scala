@@ -37,7 +37,6 @@ import org.apache.spark.sql.execution.command.CommandUtils
 import org.apache.spark.sql.execution.datasources.{FileFormat, V1WriteCommand, V1WritesUtils}
 import org.apache.spark.sql.hive.client.HiveClientImpl
 
-
 /**
  * Command for writing data out to a Hive table.
  *
@@ -79,8 +78,10 @@ case class InsertIntoHiveTable(
     bucketSpec: Option[BucketSpec],
     options: Map[String, String],
     fileFormat: FileFormat,
-    @transient hiveTmpPath: HiveTempPath
-  ) extends SaveAsHiveFile with V1WriteCommand with V1WritesHiveUtils {
+    @transient hiveTmpPath: HiveTempPath)
+    extends SaveAsHiveFile
+    with V1WriteCommand
+    with V1WritesHiveUtils {
 
   override def staticPartitions: TablePartitionSpec = {
     partition.filter(_._2.nonEmpty).map { case (k, v) => k -> v.get }
@@ -91,9 +92,9 @@ case class InsertIntoHiveTable(
   }
 
   /**
-   * Inserts all the rows in the table into Hive.  Row objects are properly serialized with the
-   * `org.apache.hadoop.hive.serde2.SerDe` and the
-   * `org.apache.hadoop.mapred.OutputFormat` provided by the table definition.
+   * Inserts all the rows in the table into Hive. Row objects are properly serialized with the
+   * `org.apache.hadoop.hive.serde2.SerDe` and the `org.apache.hadoop.mapred.OutputFormat`
+   * provided by the table definition.
    */
   override def run(sparkSession: SparkSession, child: SparkPlan): Seq[Row] = {
     val externalCatalog = sparkSession.sharedState.externalCatalog
@@ -146,11 +147,14 @@ case class InsertIntoHiveTable(
       if (numDynamicPartitions > 0) {
         val numWrittenParts = writtenParts.size
         val maxDynamicPartitionsKey = HiveConf.ConfVars.DYNAMICPARTITIONMAXPARTS.varname
-        val maxDynamicPartitions = hadoopConf.getInt(maxDynamicPartitionsKey,
+        val maxDynamicPartitions = hadoopConf.getInt(
+          maxDynamicPartitionsKey,
           HiveConf.ConfVars.DYNAMICPARTITIONMAXPARTS.defaultIntVal)
         if (numWrittenParts > maxDynamicPartitions) {
           throw QueryExecutionErrors.writePartitionExceedConfigSizeWhenDynamicPartitionError(
-            numWrittenParts, maxDynamicPartitions, maxDynamicPartitionsKey)
+            numWrittenParts,
+            maxDynamicPartitions,
+            maxDynamicPartitionsKey)
         }
         if (overwrite && table.tableType == CatalogTableType.EXTERNAL) {
           // SPARK-29295: When insert overwrite to a Hive external table partition, if the
@@ -159,12 +163,15 @@ case class InsertIntoHiveTable(
           // insert overwrite to the same partition, the partition will have both old and new
           // data. We construct partition path. If the path exists, we delete it manually.
           writtenParts.foreach { partPath =>
-            val dpMap = partPath.split("/").map { part =>
-              val splitPart = part.split("=")
-              assert(splitPart.size == 2, s"Invalid written partition path: $part")
-              ExternalCatalogUtils.unescapePathName(splitPart(0)) ->
-                ExternalCatalogUtils.unescapePathName(splitPart(1))
-            }.toMap
+            val dpMap = partPath
+              .split("/")
+              .map { part =>
+                val splitPart = part.split("=")
+                assert(splitPart.size == 2, s"Invalid written partition path: $part")
+                ExternalCatalogUtils.unescapePathName(splitPart(0)) ->
+                  ExternalCatalogUtils.unescapePathName(splitPart(1))
+              }
+              .toMap
 
             val caseInsensitiveDpMap = CaseInsensitiveMap(dpMap)
 
@@ -179,8 +186,10 @@ case class InsertIntoHiveTable(
             }
             val partitionColumnNames = table.partitionColumnNames
             val tablePath = new Path(table.location)
-            val partitionPath = ExternalCatalogUtils.generatePartitionPath(updatedPartitionSpec,
-              partitionColumnNames, tablePath)
+            val partitionPath = ExternalCatalogUtils.generatePartitionPath(
+              updatedPartitionSpec,
+              partitionColumnNames,
+              tablePath)
 
             val fs = partitionPath.getFileSystem(hadoopConf)
             if (fs.exists(partitionPath)) {
@@ -261,8 +270,7 @@ object InsertIntoHiveTable extends V1WritesHiveUtils {
       // substitute some output formats, e.g. substituting SequenceFileOutputFormat to
       // HiveSequenceFileOutputFormat.
       hiveQlTable.getOutputFormatClass,
-      hiveQlTable.getMetadata
-    )
+      hiveQlTable.getMetadata)
     val hadoopConf = sparkSession.sessionState.newHadoopConf()
     val tableLocation = hiveQlTable.getDataLocation
     val hiveTempPath = new HiveTempPath(sparkSession, hadoopConf, tableLocation)
@@ -274,7 +282,17 @@ object InsertIntoHiveTable extends V1WritesHiveUtils {
     val bucketSpec = table.bucketSpec
     val options = getOptionsWithHiveBucketWrite(bucketSpec)
 
-    new InsertIntoHiveTable(table, partition, query, overwrite, ifPartitionNotExists,
-      outputColumnNames, partitionColumns, bucketSpec, options, fileFormat, hiveTempPath)
+    new InsertIntoHiveTable(
+      table,
+      partition,
+      query,
+      overwrite,
+      ifPartitionNotExists,
+      outputColumnNames,
+      partitionColumns,
+      bucketSpec,
+      options,
+      fileFormat,
+      hiveTempPath)
   }
 }

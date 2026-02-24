@@ -29,41 +29,41 @@ object GraphErrors {
   /**
    * Throws when a dataset is marked as internal but is not defined in the graph.
    *
-   * @param datasetName the name of the dataset that is not defined
+   * @param datasetName
+   *   the name of the dataset that is not defined
    */
   def pipelineLocalDatasetNotDefinedError(datasetName: String): SparkException = {
     SparkException.internalError(
       s"Failed to read dataset '$datasetName'. This dataset was expected to be " +
-      s"defined and created by the pipeline."
-    )
+        s"defined and created by the pipeline.")
   }
 
   /**
-   * Throws when a table path is unresolved, i.e. the table identifier
-   * does not exist in the catalog.
+   * Throws when a table path is unresolved, i.e. the table identifier does not exist in the
+   * catalog.
    *
-   * @param identifier the unresolved table identifier
+   * @param identifier
+   *   the unresolved table identifier
    */
   def unresolvedTablePath(identifier: TableIdentifier): SparkException = {
     new SparkException(
       errorClass = "UNRESOLVED_TABLE_PATH",
       messageParameters = Map("identifier" -> identifier.toString),
-      cause = null
-    )
+      cause = null)
   }
 
   /**
    * Throws an error if the user-specified schema and the inferred schema are not compatible.
    *
-   * @param tableIdentifier the identifier of the table that was not found
+   * @param tableIdentifier
+   *   the identifier of the table that was not found
    */
   def incompatibleUserSpecifiedAndInferredSchemasError(
       tableIdentifier: TableIdentifier,
       datasetType: DatasetType,
       specifiedSchema: StructType,
       inferredSchema: StructType,
-      cause: Option[Throwable] = None
-  ): AnalysisException = {
+      cause: Option[Throwable] = None): AnalysisException = {
     val streamingTableHint =
       if (datasetType == DatasetType.STREAMING_TABLE) {
         s""""
@@ -81,32 +81,28 @@ object GraphErrors {
         "tableName" -> tableIdentifier.unquotedString,
         "streamingTableHint" -> streamingTableHint,
         "specifiedSchema" -> specifiedSchema.treeString,
-        "inferredDataSchema" -> inferredSchema.treeString
-      ),
-      cause = Option(cause.orNull)
-    )
+        "inferredDataSchema" -> inferredSchema.treeString),
+      cause = Option(cause.orNull))
   }
 
   /**
-   * Throws if the latest inferred schema for a pipeline table is not compatible with
-   * the table's existing schema.
+   * Throws if the latest inferred schema for a pipeline table is not compatible with the table's
+   * existing schema.
    *
-   * @param tableIdentifier the identifier of the table that was not found
+   * @param tableIdentifier
+   *   the identifier of the table that was not found
    */
   def unableToInferSchemaError(
       tableIdentifier: TableIdentifier,
       inferredSchema: StructType,
       incompatibleSchema: StructType,
-      cause: Option[Throwable] = None
-  ): AnalysisException = {
+      cause: Option[Throwable] = None): AnalysisException = {
     new AnalysisException(
       errorClass = "UNABLE_TO_INFER_PIPELINE_TABLE_SCHEMA",
       messageParameters = Map(
         "tableName" -> tableIdentifier.unquotedString,
         "inferredDataSchema" -> inferredSchema.treeString,
-        "incompatibleDataSchema" -> incompatibleSchema.treeString
-      ),
-      cause = Option(cause.orNull)
-    )
+        "incompatibleDataSchema" -> incompatibleSchema.treeString),
+      cause = Option(cause.orNull))
   }
 }

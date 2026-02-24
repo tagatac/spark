@@ -25,11 +25,12 @@ import org.apache.spark.internal.{Logging, LogKeys}
 import org.apache.spark.network.util.JavaUtils
 
 private[spark] trait SparkFileUtils extends Logging {
+
   /**
    * Return a well-formed URI for the file described by a user input string.
    *
-   * If the supplied path does not contain a scheme, or is a relative path, it will be
-   * converted into an absolute path with a file:// scheme.
+   * If the supplied path does not contain a scheme, or is a relative path, it will be converted
+   * into an absolute path with a file:// scheme.
    */
   def resolveURI(path: String): URI = {
     try {
@@ -41,7 +42,10 @@ private[spark] trait SparkFileUtils extends Logging {
       // distributed cache)
       if (uri.getFragment() != null) {
         val absoluteURI = new File(uri.getPath()).getAbsoluteFile().toURI()
-        return new URI(absoluteURI.getScheme(), absoluteURI.getHost(), absoluteURI.getPath(),
+        return new URI(
+          absoluteURI.getScheme(),
+          absoluteURI.getHost(),
+          absoluteURI.getPath(),
           uri.getFragment())
       }
     } catch {
@@ -89,7 +93,8 @@ private[spark] trait SparkFileUtils extends Logging {
 
   /**
    * Create a directory given the abstract pathname
-   * @return true, if the directory is successfully created; otherwise, return false.
+   * @return
+   *   true, if the directory is successfully created; otherwise, return false.
    */
   def createDirectory(dir: File): Boolean = {
     try {
@@ -98,7 +103,7 @@ private[spark] trait SparkFileUtils extends Logging {
       // no longer be silent fails. But the check is kept for the safety concern. We can
       // remove the check when we're sure that Files.createDirectories() would never fail silently.
       Files.createDirectories(dir.toPath)
-      if ( !dir.exists() || !dir.isDirectory) {
+      if (!dir.exists() || !dir.isDirectory) {
         logError(log"Failed to create directory ${MDC(LogKeys.PATH, dir)}")
       }
       dir.isDirectory
@@ -110,16 +115,16 @@ private[spark] trait SparkFileUtils extends Logging {
   }
 
   /**
-   * Create a directory inside the given parent directory. The directory is guaranteed to be
-   * newly created, and is not marked for automatic deletion.
+   * Create a directory inside the given parent directory. The directory is guaranteed to be newly
+   * created, and is not marked for automatic deletion.
    */
   def createDirectory(root: String, namePrefix: String = "spark"): File = {
     JavaUtils.createDirectory(root, namePrefix)
   }
 
   /**
-   * Create a temporary directory inside the `java.io.tmpdir` prefixed with `spark`.
-   * The directory will be automatically deleted when the VM shuts down.
+   * Create a temporary directory inside the `java.io.tmpdir` prefixed with `spark`. The directory
+   * will be automatically deleted when the VM shuts down.
    */
   def createTempDir(): File =
     createTempDir(System.getProperty("java.io.tmpdir"), "spark")
@@ -150,9 +155,8 @@ private[spark] trait SparkFileUtils extends Logging {
   }
 
   /**
-   * Delete a file or directory and its contents recursively.
-   * Don't follow directories if they are symlinks.
-   * Throws an exception if deletion is unsuccessful.
+   * Delete a file or directory and its contents recursively. Don't follow directories if they are
+   * symlinks. Throws an exception if deletion is unsuccessful.
    */
   def deleteRecursively(file: File): Unit = {
     JavaUtils.deleteRecursively(file)
@@ -170,16 +174,20 @@ private[spark] trait SparkFileUtils extends Logging {
 
   def getFile(names: String*): File = {
     require(names != null && names.forall(_ != null))
-    names.tail.foldLeft(Path.of(names.head)) { (path, part) =>
-      path.resolve(part)
-    }.toFile
+    names.tail
+      .foldLeft(Path.of(names.head)) { (path, part) =>
+        path.resolve(part)
+      }
+      .toFile
   }
 
   def getFile(parent: File, names: String*): File = {
     require(parent != null && names != null && names.forall(_ != null))
-    names.foldLeft(parent.toPath) { (path, part) =>
-      path.resolve(part)
-    }.toFile
+    names
+      .foldLeft(parent.toPath) { (path, part) =>
+        path.resolve(part)
+      }
+      .toFile
   }
 
   /** Move src to dst simply. File attribute times are not copied. */

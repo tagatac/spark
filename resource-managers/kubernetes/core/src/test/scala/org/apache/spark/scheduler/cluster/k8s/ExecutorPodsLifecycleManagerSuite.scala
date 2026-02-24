@@ -71,10 +71,8 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     when(kubernetesClient.pods()).thenReturn(podOperations)
     when(podOperations.inNamespace(anyString())).thenReturn(podsWithNamespace)
     when(podsWithNamespace.withName(any(classOf[String]))).thenAnswer(namedPodsAnswer())
-    eventHandlerUnderTest = new ExecutorPodsLifecycleManager(
-      sparkConf,
-      kubernetesClient,
-      snapshotsStore)
+    eventHandlerUnderTest =
+      new ExecutorPodsLifecycleManager(sparkConf, kubernetesClient, snapshotsStore)
     eventHandlerUnderTest.start(schedulerBackend)
   }
 
@@ -85,8 +83,11 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
       .set(MAX_EXECUTOR_FAILURES.key, "2")
       .set(EXECUTOR_ATTEMPT_FAILURE_VALIDITY_INTERVAL_MS.key, "2s")
     snapshotsStore = new DeterministicExecutorPodsSnapshotsStore()
-    eventHandlerUnderTest = new ExecutorPodsLifecycleManager(_conf,
-      kubernetesClient, snapshotsStore, waitForExecutorPodsClock) {
+    eventHandlerUnderTest = new ExecutorPodsLifecycleManager(
+      _conf,
+      kubernetesClient,
+      snapshotsStore,
+      waitForExecutorPodsClock) {
       override private[k8s] def stopApplication(exitCode: Int): Unit = {
         logError("!!!")
         _exitCode = exitCode
@@ -168,9 +169,10 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     verify(namedExecutorPods(failedPod.getMetadata.getName), times(1)).delete()
   }
 
-  test("When the scheduler backend lists executor ids that aren't present in the cluster," +
-    " remove those executors from Spark.") {
-      when(schedulerBackend.getExecutorsWithRegistrationTs()).thenReturn(Map("1" -> 7L))
+  test(
+    "When the scheduler backend lists executor ids that aren't present in the cluster," +
+      " remove those executors from Spark.") {
+    when(schedulerBackend.getExecutorsWithRegistrationTs()).thenReturn(Map("1" -> 7L))
     val missingPodDelta =
       eventHandlerUnderTest.conf.get(Config.KUBERNETES_EXECUTOR_MISSING_POD_DETECT_DELTA)
     snapshotsStore.clock.advance(missingPodDelta + 7)
@@ -203,7 +205,8 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     val patchCaptor = ArgumentCaptor.forClass(classOf[Pod])
     verify(namedExecutorPods(failedPod.getMetadata.getName))
       .patch(any[PatchContext], patchCaptor.capture())
-    assert(patchCaptor.getValue.getMetadata.getLabels.get(SPARK_EXECUTOR_INACTIVE_LABEL) === "true")
+    assert(
+      patchCaptor.getValue.getMetadata.getLabels.get(SPARK_EXECUTOR_INACTIVE_LABEL) === "true")
   }
 
   test("SPARK-49804: Use the exit code of executor container always") {
@@ -220,7 +223,7 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     val basePod = failedExecutorWithoutDeletion(1)
     val failedPodWithDeletionTimestamp = new PodBuilder(basePod)
       .editOrNewMetadata()
-        .withDeletionTimestamp("1970-01-01T00:00:00Z")
+      .withDeletionTimestamp("1970-01-01T00:00:00Z")
       .endMetadata()
       .build()
 
@@ -264,7 +267,6 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
     val reasonStr = reason.map(r => s"The API gave the following brief reason: ${r}")
     val msgStr = message.map(m => s"The API gave the following message: ${m}")
 
-
     s"""
        |${exitMsg}
        |${reasonStr.getOrElse("")}
@@ -279,7 +281,6 @@ class ExecutorPodsLifecycleManagerSuite extends SparkFunSuite with BeforeAndAfte
   private def namedPodsAnswer(): Answer[PodResource] =
     (invocation: InvocationOnMock) => {
       val podName: String = invocation.getArgument(0)
-      namedExecutorPods.getOrElseUpdate(
-        podName, mock(classOf[PodResource]))
+      namedExecutorPods.getOrElseUpdate(podName, mock(classOf[PodResource]))
     }
 }

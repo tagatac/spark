@@ -28,10 +28,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DataType, StructType}
 
 /**
- * (private[classification])  Params for probabilistic classification.
+ * (private[classification]) Params for probabilistic classification.
  */
 private[ml] trait ProbabilisticClassifierParams
-  extends ClassifierParams with HasProbabilityCol with HasThresholds {
+    extends ClassifierParams
+    with HasProbabilityCol
+    with HasThresholds {
   override protected def validateAndTransformSchema(
       schema: StructType,
       fitting: Boolean,
@@ -41,19 +43,22 @@ private[ml] trait ProbabilisticClassifierParams
   }
 }
 
-
 /**
  * Single-label binary or multiclass classifier which can output class conditional probabilities.
  *
- * @tparam FeaturesType  Type of input features.  E.g., `Vector`
- * @tparam E  Concrete Estimator type
- * @tparam M  Concrete Model type
+ * @tparam FeaturesType
+ *   Type of input features. E.g., `Vector`
+ * @tparam E
+ *   Concrete Estimator type
+ * @tparam M
+ *   Concrete Model type
  */
 abstract class ProbabilisticClassifier[
     FeaturesType,
     E <: ProbabilisticClassifier[FeaturesType, E, M],
     M <: ProbabilisticClassificationModel[FeaturesType, M]]
-  extends Classifier[FeaturesType, E, M] with ProbabilisticClassifierParams {
+    extends Classifier[FeaturesType, E, M]
+    with ProbabilisticClassifierParams {
 
   /** @group setParam */
   def setProbabilityCol(value: String): E = set(probabilityCol, value).asInstanceOf[E]
@@ -62,35 +67,39 @@ abstract class ProbabilisticClassifier[
   def setThresholds(value: Array[Double]): E = set(thresholds, value).asInstanceOf[E]
 }
 
-
 /**
- * Model produced by a [[ProbabilisticClassifier]].
- * Classes are indexed {0, 1, ..., numClasses - 1}.
+ * Model produced by a [[ProbabilisticClassifier]]. Classes are indexed {0, 1, ..., numClasses -
+ * 1}.
  *
- * @tparam FeaturesType  Type of input features.  E.g., `Vector`
- * @tparam M  Concrete Model type
+ * @tparam FeaturesType
+ *   Type of input features. E.g., `Vector`
+ * @tparam M
+ *   Concrete Model type
  */
 abstract class ProbabilisticClassificationModel[
     FeaturesType,
     M <: ProbabilisticClassificationModel[FeaturesType, M]]
-  extends ClassificationModel[FeaturesType, M] with ProbabilisticClassifierParams {
+    extends ClassificationModel[FeaturesType, M]
+    with ProbabilisticClassifierParams {
 
   /** @group setParam */
   def setProbabilityCol(value: String): M = set(probabilityCol, value).asInstanceOf[M]
 
   /** @group setParam */
   def setThresholds(value: Array[Double]): M = {
-    require(value.length == numClasses, this.getClass.getSimpleName +
-      ".setThresholds() called with non-matching numClasses and thresholds.length." +
-      s" numClasses=$numClasses, but thresholds has length ${value.length}")
+    require(
+      value.length == numClasses,
+      this.getClass.getSimpleName +
+        ".setThresholds() called with non-matching numClasses and thresholds.length." +
+        s" numClasses=$numClasses, but thresholds has length ${value.length}")
     set(thresholds, value).asInstanceOf[M]
   }
 
   override def transformSchema(schema: StructType): StructType = {
     var outputSchema = super.transformSchema(schema)
     if ($(probabilityCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateAttributeGroupSize(outputSchema,
-        $(probabilityCol), numClasses)
+      outputSchema =
+        SchemaUtils.updateAttributeGroupSize(outputSchema, $(probabilityCol), numClasses)
     }
     outputSchema
   }
@@ -98,19 +107,23 @@ abstract class ProbabilisticClassificationModel[
   /**
    * Transforms dataset by reading from [[featuresCol]], and appending new columns as specified by
    * parameters:
-   *  - predicted labels as [[predictionCol]] of type `Double`
-   *  - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`
-   *  - probability of each class as [[probabilityCol]] of type `Vector`.
+   *   - predicted labels as [[predictionCol]] of type `Double`
+   *   - raw predictions (confidences) as [[rawPredictionCol]] of type `Vector`
+   *   - probability of each class as [[probabilityCol]] of type `Vector`.
    *
-   * @param dataset input dataset
-   * @return transformed dataset
+   * @param dataset
+   *   input dataset
+   * @return
+   *   transformed dataset
    */
   override def transform(dataset: Dataset[_]): DataFrame = {
     val outputSchema = transformSchema(dataset.schema, logging = true)
     if (isDefined(thresholds)) {
-      require($(thresholds).length == numClasses, this.getClass.getSimpleName +
-        ".transform() called with non-matching numClasses and thresholds.length." +
-        s" numClasses=$numClasses, but thresholds has length ${$(thresholds).length}")
+      require(
+        $(thresholds).length == numClasses,
+        this.getClass.getSimpleName +
+          ".transform() called with non-matching numClasses and thresholds.length." +
+          s" numClasses=$numClasses, but thresholds has length ${$(thresholds).length}")
     }
 
     // Output selected columns only.
@@ -121,7 +134,9 @@ abstract class ProbabilisticClassificationModel[
       val predictRawUDF = udf { features: Any =>
         predictRaw(features.asInstanceOf[FeaturesType])
       }
-      outputData = outputData.withColumn(getRawPredictionCol, predictRawUDF(col(getFeaturesCol)),
+      outputData = outputData.withColumn(
+        getRawPredictionCol,
+        predictRawUDF(col(getFeaturesCol)),
         outputSchema($(rawPredictionCol)).metadata)
       numColsOutput += 1
     }
@@ -134,7 +149,9 @@ abstract class ProbabilisticClassificationModel[
         }
         probabilityUDF(col($(featuresCol)))
       }
-      outputData = outputData.withColumn($(probabilityCol), probCol,
+      outputData = outputData.withColumn(
+        $(probabilityCol),
+        probCol,
         outputSchema($(probabilityCol)).metadata)
       numColsOutput += 1
     }
@@ -149,26 +166,27 @@ abstract class ProbabilisticClassificationModel[
         }
         predictUDF(col($(featuresCol)))
       }
-      outputData = outputData.withColumn($(predictionCol), predCol,
-        outputSchema($(predictionCol)).metadata)
+      outputData =
+        outputData.withColumn($(predictionCol), predCol, outputSchema($(predictionCol)).metadata)
       numColsOutput += 1
     }
 
     if (numColsOutput == 0) {
-      this.logWarning(log"${MDC(LogKeys.UUID, uid)}: ProbabilisticClassificationModel.transform()" +
-        log" does nothing because no output columns were set.")
+      this.logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: ProbabilisticClassificationModel.transform()" +
+          log" does nothing because no output columns were set.")
     }
     outputData.toDF()
   }
 
   /**
-   * Estimate the probability of each class given the raw prediction,
-   * doing the computation in-place.
-   * These predictions are also called class conditional probabilities.
+   * Estimate the probability of each class given the raw prediction, doing the computation
+   * in-place. These predictions are also called class conditional probabilities.
    *
    * This internal method is used to implement `transform()` and output [[probabilityCol]].
    *
-   * @return Estimated class conditional probabilities (modified input vector)
+   * @return
+   *   Estimated class conditional probabilities (modified input vector)
    */
   protected def raw2probabilityInPlace(rawPrediction: Vector): Vector
 
@@ -189,12 +207,13 @@ abstract class ProbabilisticClassificationModel[
   }
 
   /**
-   * Predict the probability of each class given the features.
-   * These predictions are also called class conditional probabilities.
+   * Predict the probability of each class given the features. These predictions are also called
+   * class conditional probabilities.
    *
    * This internal method is used to implement `transform()` and output [[probabilityCol]].
    *
-   * @return Estimated class conditional probabilities
+   * @return
+   *   Estimated class conditional probabilities
    */
   @Since("3.0.0")
   def predictProbability(features: FeaturesType): Vector = {
@@ -203,9 +222,10 @@ abstract class ProbabilisticClassificationModel[
   }
 
   /**
-   * Given a vector of class conditional probabilities, select the predicted label.
-   * This supports thresholds which favor particular labels.
-   * @return  predicted label
+   * Given a vector of class conditional probabilities, select the predicted label. This supports
+   * thresholds which favor particular labels.
+   * @return
+   *   predicted label
    */
   protected def probability2prediction(probability: Vector): Double = {
     if (!isDefined(thresholds)) {
@@ -233,12 +253,12 @@ abstract class ProbabilisticClassificationModel[
   }
 
   /**
-   *If the probability and prediction columns are set, this method returns the current model,
-   * otherwise it generates new columns for them and sets them as columns on a new copy of
-   * the current model
+   * If the probability and prediction columns are set, this method returns the current model,
+   * otherwise it generates new columns for them and sets them as columns on a new copy of the
+   * current model
    */
-  override private[classification] def findSummaryModel():
-  (ProbabilisticClassificationModel[FeaturesType, M], String, String) = {
+  override private[classification] def findSummaryModel()
+      : (ProbabilisticClassificationModel[FeaturesType, M], String, String) = {
     val model = if ($(probabilityCol).isEmpty && $(predictionCol).isEmpty) {
       copy(ParamMap.empty)
         .setProbabilityCol("probability_" + java.util.UUID.randomUUID.toString)
@@ -259,17 +279,17 @@ private[ml] object ProbabilisticClassificationModel {
   /**
    * Normalize a vector of raw predictions to be a multinomial probability vector, in place.
    *
-   * The input raw predictions should be nonnegative.
-   * The output vector sums to 1.
+   * The input raw predictions should be nonnegative. The output vector sums to 1.
    *
-   * NOTE: This is NOT applicable to all models, only ones which effectively use class
-   *       instance counts for raw predictions.
+   * NOTE: This is NOT applicable to all models, only ones which effectively use class instance
+   * counts for raw predictions.
    *
-   * @throws IllegalArgumentException if the input vector is all-0 or including negative values
+   * @throws IllegalArgumentException
+   *   if the input vector is all-0 or including negative values
    */
   def normalizeToProbabilitiesInPlace(v: DenseVector): Unit = {
-    v.values.foreach(value => require(value >= 0,
-      "The input raw predictions should be nonnegative."))
+    v.values.foreach(value =>
+      require(value >= 0, "The input raw predictions should be nonnegative."))
     val sum = v.values.sum
     require(sum > 0, "Can't normalize the 0-vector.")
     var i = 0

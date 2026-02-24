@@ -32,8 +32,7 @@ import org.apache.spark.sql.internal.SQLConf.HiveCaseSensitiveInferenceMode.{Val
 import org.apache.spark.sql.test.SQLTestUtils
 import org.apache.spark.sql.types._
 
-class HiveSchemaInferenceSuite
-  extends QueryTest with TestHiveSingleton with SQLTestUtils {
+class HiveSchemaInferenceSuite extends QueryTest with TestHiveSingleton with SQLTestUtils {
 
   import HiveSchemaInferenceSuite._
   import HiveExternalCatalog.DATASOURCE_SCHEMA_PREFIX
@@ -67,11 +66,7 @@ class HiveSchemaInferenceSuite
       dir: File): StructType = {
     // Treat all table fields as bigints...
     val structFields = fields.map { field =>
-      StructField(
-        name = field,
-        dataType = LongType,
-        nullable = true,
-        metadata = Metadata.empty)
+      StructField(name = field, dataType = LongType, nullable = true, metadata = Metadata.empty)
     }
     // and all partition columns as ints
     val partitionStructFields = partitionCols.map { field =>
@@ -85,16 +80,17 @@ class HiveSchemaInferenceSuite
     val schema = StructType(structFields ++ partitionStructFields)
 
     // Write some test data (partitioned if specified)
-    val writer = spark.range(NUM_RECORDS)
+    val writer = spark
+      .range(NUM_RECORDS)
       .selectExpr((fields ++ partitionCols).map("id as " + _): _*)
       .write
       .partitionBy(partitionCols: _*)
       .mode("overwrite")
     fileType match {
       case ORC_FILE_TYPE =>
-       writer.orc(dir.getAbsolutePath)
+        writer.orc(dir.getAbsolutePath)
       case PARQUET_FILE_TYPE =>
-       writer.parquet(dir.getAbsolutePath)
+        writer.parquet(dir.getAbsolutePath)
     }
 
     // Create Hive external table with lowercased schema
@@ -132,8 +128,8 @@ class HiveSchemaInferenceSuite
     schema
   }
 
-  private def withTestTables(
-    fileType: String)(f: (Seq[String], Seq[String], StructType) => Unit): Unit = {
+  private def withTestTables(fileType: String)(
+      f: (Seq[String], Seq[String], StructType) => Unit): Unit = {
     // Test both a partitioned and unpartitioned Hive table
     val tableFields = Seq(
       (Seq("fieldOne"), Seq("partCol1", "partCol2")),
@@ -147,8 +143,8 @@ class HiveSchemaInferenceSuite
     }
   }
 
-  private def withFileTypes(f: (String) => Unit): Unit
-    = Seq(ORC_FILE_TYPE, PARQUET_FILE_TYPE).foreach(f)
+  private def withFileTypes(f: (String) => Unit): Unit =
+    Seq(ORC_FILE_TYPE, PARQUET_FILE_TYPE).foreach(f)
 
   private def withInferenceMode(mode: InferenceMode)(f: => Unit): Unit = {
     withSQLConf(
@@ -163,8 +159,8 @@ class HiveSchemaInferenceSuite
     }
   }
 
-  private def testTableSchema(expectedSchema: StructType): Unit
-    = assert(spark.table(TEST_TABLE_NAME).schema == expectedSchema)
+  private def testTableSchema(expectedSchema: StructType): Unit = assert(
+    spark.table(TEST_TABLE_NAME).schema == expectedSchema)
 
   withFileTypes { fileType =>
     test(s"$fileType: schema should be inferred and saved when INFER_AND_SAVE is specified") {
@@ -215,43 +211,41 @@ class HiveSchemaInferenceSuite
   test("mergeWithMetastoreSchema() should return expected results") {
     // Field type conflict resolution
     assertResult(
-      StructType(Seq(
-        StructField("lowerCase", StringType),
-        StructField("UPPERCase", DoubleType, nullable = false)))) {
+      StructType(
+        Seq(
+          StructField("lowerCase", StringType),
+          StructField("UPPERCase", DoubleType, nullable = false)))) {
 
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("lowercase", StringType),
-          StructField("uppercase", DoubleType, nullable = false))),
-
-        StructType(Seq(
-          StructField("lowerCase", BinaryType),
-          StructField("UPPERCase", IntegerType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("lowercase", StringType),
+            StructField("uppercase", DoubleType, nullable = false))),
+        StructType(
+          Seq(
+            StructField("lowerCase", BinaryType),
+            StructField("UPPERCase", IntegerType, nullable = true))))
     }
 
     // MetaStore schema is subset of parquet schema
-    assertResult(
-      StructType(Seq(
-        StructField("UPPERCase", DoubleType, nullable = false)))) {
+    assertResult(StructType(Seq(StructField("UPPERCase", DoubleType, nullable = false)))) {
 
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("uppercase", DoubleType, nullable = false))),
-
-        StructType(Seq(
-          StructField("lowerCase", BinaryType),
-          StructField("UPPERCase", IntegerType, nullable = true))))
+        StructType(Seq(StructField("uppercase", DoubleType, nullable = false))),
+        StructType(
+          Seq(
+            StructField("lowerCase", BinaryType),
+            StructField("UPPERCase", IntegerType, nullable = true))))
     }
 
     // Metastore schema contains additional non-nullable fields.
     assert(intercept[Throwable] {
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("uppercase", DoubleType, nullable = false),
-          StructField("lowerCase", BinaryType, nullable = false))),
-
-        StructType(Seq(
-          StructField("UPPERCase", IntegerType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("uppercase", DoubleType, nullable = false),
+            StructField("lowerCase", BinaryType, nullable = false))),
+        StructType(Seq(StructField("UPPERCase", IntegerType, nullable = true))))
     }.getMessage.contains("Detected conflicting schemas"))
 
     // Conflicting non-nullable field names
@@ -263,28 +257,27 @@ class HiveSchemaInferenceSuite
 
     // Parquet schema is subset of metaStore schema and has uppercase field name
     assertResult(
-      StructType(Seq(
-        StructField("UPPERCase", DoubleType, nullable = true),
-        StructField("lowerCase", BinaryType, nullable = true)))) {
+      StructType(
+        Seq(
+          StructField("UPPERCase", DoubleType, nullable = true),
+          StructField("lowerCase", BinaryType, nullable = true)))) {
 
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("UPPERCase", DoubleType, nullable = true),
-          StructField("lowerCase", BinaryType, nullable = true))),
-
-        StructType(Seq(
-          StructField("lowerCase", BinaryType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("UPPERCase", DoubleType, nullable = true),
+            StructField("lowerCase", BinaryType, nullable = true))),
+        StructType(Seq(StructField("lowerCase", BinaryType, nullable = true))))
     }
 
     // Metastore schema contains additional nullable fields.
     assert(intercept[Throwable] {
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("UPPERCase", DoubleType, nullable = false),
-          StructField("lowerCase", BinaryType, nullable = true))),
-
-        StructType(Seq(
-          StructField("lowerCase", BinaryType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("UPPERCase", DoubleType, nullable = false),
+            StructField("lowerCase", BinaryType, nullable = true))),
+        StructType(Seq(StructField("lowerCase", BinaryType, nullable = true))))
     }.getMessage.contains("Detected conflicting schemas"))
 
     // Check that merging missing nullable fields works as expected.
@@ -294,26 +287,30 @@ class HiveSchemaInferenceSuite
         StructField("secondField", StringType, nullable = true),
         StructField("thirdfield", StringType, nullable = true)))) {
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("firstfield", StringType, nullable = true),
-          StructField("secondfield", StringType, nullable = true),
-          StructField("thirdfield", StringType, nullable = true))),
-        StructType(Seq(
-          StructField("firstField", StringType, nullable = true),
-          StructField("secondField", StringType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("firstfield", StringType, nullable = true),
+            StructField("secondfield", StringType, nullable = true),
+            StructField("thirdfield", StringType, nullable = true))),
+        StructType(
+          Seq(
+            StructField("firstField", StringType, nullable = true),
+            StructField("secondField", StringType, nullable = true))))
     }
 
     // Merge should fail if the Metastore contains any additional fields that are not
     // nullable.
     assert(intercept[Throwable] {
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("firstfield", StringType, nullable = true),
-          StructField("secondfield", StringType, nullable = true),
-          StructField("thirdfield", StringType, nullable = false))),
-        StructType(Seq(
-          StructField("firstField", StringType, nullable = true),
-          StructField("secondField", StringType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("firstfield", StringType, nullable = true),
+            StructField("secondfield", StringType, nullable = true),
+            StructField("thirdfield", StringType, nullable = false))),
+        StructType(
+          Seq(
+            StructField("firstField", StringType, nullable = true),
+            StructField("secondField", StringType, nullable = true))))
     }.getMessage.contains("Detected conflicting schemas"))
 
     // Schema merge should maintain metastore order.
@@ -325,16 +322,18 @@ class HiveSchemaInferenceSuite
         StructField("fourth_field", StringType, nullable = true),
         StructField("fifth_field", StringType, nullable = true)))) {
       HiveMetastoreCatalog.mergeWithMetastoreSchema(
-        StructType(Seq(
-          StructField("first_field", StringType, nullable = true),
-          StructField("second_field", StringType, nullable = true),
-          StructField("third_field", StringType, nullable = true),
-          StructField("fourth_field", StringType, nullable = true),
-          StructField("fifth_field", StringType, nullable = true))),
-        StructType(Seq(
-          StructField("fifth_field", StringType, nullable = true),
-          StructField("third_field", StringType, nullable = true),
-          StructField("second_field", StringType, nullable = true))))
+        StructType(
+          Seq(
+            StructField("first_field", StringType, nullable = true),
+            StructField("second_field", StringType, nullable = true),
+            StructField("third_field", StringType, nullable = true),
+            StructField("fourth_field", StringType, nullable = true),
+            StructField("fifth_field", StringType, nullable = true))),
+        StructType(
+          Seq(
+            StructField("fifth_field", StringType, nullable = true),
+            StructField("third_field", StringType, nullable = true),
+            StructField("second_field", StringType, nullable = true))))
     }
   }
 }

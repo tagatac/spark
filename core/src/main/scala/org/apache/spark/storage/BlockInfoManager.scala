@@ -32,19 +32,21 @@ import org.apache.spark.{SparkException, TaskContext}
 import org.apache.spark.errors.SparkCoreErrors
 import org.apache.spark.internal.Logging
 
-
 /**
  * Tracks metadata for an individual block.
  *
  * Instances of this class are _not_ thread-safe and are protected by locks in the
  * [[BlockInfoManager]].
  *
- * @param level the block's storage level. This is the requested persistence level, not the
- *              effective storage level of the block (i.e. if this is MEMORY_AND_DISK, then this
- *              does not imply that the block is actually resident in memory).
- * @param classTag the block's [[ClassTag]], used to select the serializer
- * @param tellMaster whether state changes for this block should be reported to the master. This
- *                   is true for most blocks, but is false for broadcast blocks.
+ * @param level
+ *   the block's storage level. This is the requested persistence level, not the effective storage
+ *   level of the block (i.e. if this is MEMORY_AND_DISK, then this does not imply that the block
+ *   is actually resident in memory).
+ * @param classTag
+ *   the block's [[ClassTag]], used to select the serializer
+ * @param tellMaster
+ *   whether state changes for this block should be reported to the master. This is true for most
+ *   blocks, but is false for broadcast blocks.
  */
 private[storage] class BlockInfo(
     val level: StorageLevel,
@@ -101,14 +103,16 @@ private class BlockInfoWrapper(
 
   def withLock[T](f: (BlockInfo, Condition) => T): T = {
     lock.lock()
-    try f(info, condition) finally {
+    try f(info, condition)
+    finally {
       lock.unlock()
     }
   }
 
   def tryLock(f: (BlockInfo, Condition) => Unit): Unit = {
     if (lock.tryLock()) {
-      try f(info, condition) finally {
+      try f(info, condition)
+      finally {
         lock.unlock()
       }
     }
@@ -123,8 +127,8 @@ private[storage] object BlockInfo {
   val NO_WRITER: Long = -1
 
   /**
-   * Special task attempt id constant used to mark a block's write lock as being held by
-   * a non-task thread (e.g. by a driver thread or by unit test code).
+   * Special task attempt id constant used to mark a block's write lock as being held by a
+   * non-task thread (e.g. by a driver thread or by unit test code).
    */
   val NON_TASK_WRITER: Long = -1024
 }
@@ -138,14 +142,15 @@ private[storage] object BlockInfo {
  *
  * This class is thread-safe.
  */
-private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false) extends Logging {
+private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false)
+    extends Logging {
 
   private type TaskAttemptId = Long
 
   /**
    * Used to look up metadata for individual blocks. Entries are added to this map via an atomic
-   * set-if-not-exists operation ([[lockNewBlockForWriting()]]) and are removed
-   * by [[removeBlock()]].
+   * set-if-not-exists operation ([[lockNewBlockForWriting()]]) and are removed by
+   * [[removeBlock()]].
    */
   private[this] val blockInfoWrappers = new ConcurrentHashMap[BlockId, BlockInfoWrapper]
 
@@ -167,10 +172,10 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
    * Stripe used to control multi-threaded access to block information.
    *
    * We are using this instead of the synchronizing on the [[BlockInfo]] objects to avoid race
-   * conditions in the `lockNewBlockForWriting` method. When this method returns successfully it is
-   * assumed that the passed in [[BlockInfo]] object is persisted by the info manager and that it is
-   * safe to modify it. The only way we can guarantee this is by having a unique lock per block ID
-   * that has a longer lifespan than the blocks' info object.
+   * conditions in the `lockNewBlockForWriting` method. When this method returns successfully it
+   * is assumed that the passed in [[BlockInfo]] object is persisted by the info manager and that
+   * it is safe to modify it. The only way we can guarantee this is by having a unique lock per
+   * block ID that has a longer lifespan than the blocks' info object.
    */
   private[this] val locks = Striped.lock(1024)
 
@@ -180,8 +185,8 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   private[this] val writeLocksByTask = new ConcurrentHashMap[TaskAttemptId, util.Set[BlockId]]
 
   /**
-   * Tracks the set of blocks that each task has locked for reading, along with the number of times
-   * that a block has been locked (since our read locks are re-entrant).
+   * Tracks the set of blocks that each task has locked for reading, along with the number of
+   * times that a block has been locked (since our read locks are re-entrant).
    */
   private[this] val readLocksByTask =
     new ConcurrentHashMap[TaskAttemptId, ConcurrentHashMultiset[BlockId]]
@@ -224,7 +229,9 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
    * This must be called prior to calling any other BlockInfoManager methods from that task.
    */
   def registerTask(taskAttemptId: TaskAttemptId): Unit = {
-    writeLocksByTask.putIfAbsent(taskAttemptId, util.Collections.synchronizedSet(new util.HashSet))
+    writeLocksByTask.putIfAbsent(
+      taskAttemptId,
+      util.Collections.synchronizedSet(new util.HashSet))
     readLocksByTask.putIfAbsent(taskAttemptId, ConcurrentHashMultiset.create())
   }
 
@@ -239,9 +246,7 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   /**
    * Helper for lock acquisistion.
    */
-  private def acquireLock(
-      blockId: BlockId,
-      blocking: Boolean)(
+  private def acquireLock(blockId: BlockId, blocking: Boolean)(
       f: BlockInfo => Boolean): Option[BlockInfo] = {
     var done = false
     var result: Option[BlockInfo] = None
@@ -266,9 +271,9 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   }
 
   /**
-   * Apply function `f` on the [[BlockInfo]] object and the acquisition [[Condition]] for `blockId`.
-   * Function `f` will be executed while holding the lock for the [[BlockInfo]] object. If `blockId`
-   * was not registered, an error will be thrown.
+   * Apply function `f` on the [[BlockInfo]] object and the acquisition [[Condition]] for
+   * `blockId`. Function `f` will be executed while holding the lock for the [[BlockInfo]] object.
+   * If `blockId` was not registered, an error will be thrown.
    */
   private def blockInfo[T](blockId: BlockId)(f: (BlockInfo, Condition) => T): T = {
     val wrapper = blockInfoWrappers.get(blockId)
@@ -290,15 +295,16 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
    * A single task can lock a block multiple times for reading, in which case each lock will need
    * to be released separately.
    *
-   * @param blockId the block to lock.
-   * @param blocking if true (default), this call will block until the lock is acquired. If false,
-   *                 this call will return immediately if the lock acquisition fails.
-   * @return None if the block did not exist or was removed (in which case no lock is held), or
-   *         Some(BlockInfo) (in which case the block is locked for reading).
+   * @param blockId
+   *   the block to lock.
+   * @param blocking
+   *   if true (default), this call will block until the lock is acquired. If false, this call
+   *   will return immediately if the lock acquisition fails.
+   * @return
+   *   None if the block did not exist or was removed (in which case no lock is held), or
+   *   Some(BlockInfo) (in which case the block is locked for reading).
    */
-  def lockForReading(
-      blockId: BlockId,
-      blocking: Boolean = true): Option[BlockInfo] = {
+  def lockForReading(blockId: BlockId, blocking: Boolean = true): Option[BlockInfo] = {
     val taskAttemptId = currentTaskAttemptId
     logTrace(s"Task $taskAttemptId trying to acquire read lock for $blockId")
     acquireLock(blockId, blocking) { info =>
@@ -316,17 +322,19 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
    * Lock a block for writing and return its metadata.
    *
    * If another task has already locked this block for either reading or writing, then this call
-   * will block until the other locks are released or will return immediately if `blocking = false`.
+   * will block until the other locks are released or will return immediately if
+   * `blocking = false`.
    *
-   * @param blockId the block to lock.
-   * @param blocking if true (default), this call will block until the lock is acquired. If false,
-   *                 this call will return immediately if the lock acquisition fails.
-   * @return None if the block did not exist or was removed (in which case no lock is held), or
-   *         Some(BlockInfo) (in which case the block is locked for writing).
+   * @param blockId
+   *   the block to lock.
+   * @param blocking
+   *   if true (default), this call will block until the lock is acquired. If false, this call
+   *   will return immediately if the lock acquisition fails.
+   * @return
+   *   None if the block did not exist or was removed (in which case no lock is held), or
+   *   Some(BlockInfo) (in which case the block is locked for writing).
    */
-  def lockForWriting(
-      blockId: BlockId,
-      blocking: Boolean = true): Option[BlockInfo] = {
+  def lockForWriting(blockId: BlockId, blocking: Boolean = true): Option[BlockInfo] = {
     val taskAttemptId = currentTaskAttemptId
     logTrace(s"Task $taskAttemptId trying to acquire write lock for $blockId")
     acquireLock(blockId, blocking) { info =>
@@ -375,7 +383,8 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
     val taskAttemptId = currentTaskAttemptId
     logTrace(s"Task $taskAttemptId downgrading write lock for $blockId")
     blockInfo(blockId) { (info, _) =>
-      require(info.writerTask == taskAttemptId,
+      require(
+        info.writerTask == taskAttemptId,
         s"Task $taskAttemptId tried to downgrade a write lock that it does not hold on" +
           s" block $blockId")
       unlock(blockId)
@@ -385,9 +394,9 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   }
 
   /**
-   * Release a lock on the given block.
-   * In case a TaskContext is not propagated properly to all child threads for the task, we fail to
-   * get the TID from TaskContext, so we have to explicitly pass the TID value to release the lock.
+   * Release a lock on the given block. In case a TaskContext is not propagated properly to all
+   * child threads for the task, we fail to get the TID from TaskContext, so we have to explicitly
+   * pass the TID value to release the lock.
    *
    * See SPARK-18406 for more discussion of this issue.
    */
@@ -410,7 +419,8 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
           assert(info.readerCount > 0, s"Block $blockId is not locked for reading")
           info.readerCount -= 1
           val newPinCountForTask: Int = countsForTask.remove(blockId, 1) - 1
-          assert(newPinCountForTask >= 0,
+          assert(
+            newPinCountForTask >= 0,
             s"Task $taskAttemptId release lock on block $blockId more times than it acquired it")
         }
       }
@@ -421,13 +431,14 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   /**
    * Attempt to acquire the appropriate lock for writing a new block.
    *
-   * This enforces the first-writer-wins semantics. If we are the first to write the block,
-   * then just go ahead and acquire the write lock. Otherwise, if another thread is already
-   * writing the block, then we wait for the write to finish before acquiring the read lock.
+   * This enforces the first-writer-wins semantics. If we are the first to write the block, then
+   * just go ahead and acquire the write lock. Otherwise, if another thread is already writing the
+   * block, then we wait for the write to finish before acquiring the read lock.
    *
-   * @return true if the block did not already exist, false otherwise.
-   *         If this returns true, a write lock on the new block will be held.
-   *         If this returns false then a read lock will be held iff keepReadLock == true.
+   * @return
+   *   true if the block did not already exist, false otherwise. If this returns true, a write
+   *   lock on the new block will be held. If this returns false then a read lock will be held iff
+   *   keepReadLock == true.
    */
   def lockNewBlockForWriting(
       blockId: BlockId,
@@ -480,11 +491,12 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   }
 
   /**
-   * Release all lock held by the given task, clearing that task's pin bookkeeping
-   * structures and updating the global pin counts. This method should be called at the
-   * end of a task (either by a task completion handler or in `TaskRunner.run()`).
+   * Release all lock held by the given task, clearing that task's pin bookkeeping structures and
+   * updating the global pin counts. This method should be called at the end of a task (either by
+   * a task completion handler or in `TaskRunner.run()`).
    *
-   * @return the ids of blocks whose pins were released
+   * @return
+   *   the ids of blocks whose pins were released
    */
   def releaseAllLocksForTask(taskAttemptId: TaskAttemptId): Seq[BlockId] = {
     val blocksWithReleasedLocks = mutable.ArrayBuffer[BlockId]()
@@ -537,8 +549,8 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
   def size: Int = blockInfoWrappers.size
 
   /**
-   * Return the number of map entries in this pin counter's internal data structures.
-   * This is used in unit tests in order to detect memory leaks.
+   * Return the number of map entries in this pin counter's internal data structures. This is used
+   * in unit tests in order to detect memory leaks.
    */
   private[storage] def getNumberOfMapEntries: Long = {
     size +
@@ -661,7 +673,8 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
         map: ConcurrentHashMap[K, ConcurrentHashMap.KeySetView[BlockId, java.lang.Boolean]],
         key: K,
         block: BlockId): Unit = {
-      map.compute(key,
+      map.compute(
+        key,
         (_, set) => {
           if (null != set) {
             set.remove(block)
@@ -670,8 +683,7 @@ private[storage] class BlockInfoManager(trackingCacheVisibility: Boolean = false
             // missing
             null
           }
-        }
-      )
+        })
     }
 
     blockId match {

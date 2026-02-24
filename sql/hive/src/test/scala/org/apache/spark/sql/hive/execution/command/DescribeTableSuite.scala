@@ -25,8 +25,8 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.util.Utils
 
 /**
- * The class contains tests for the `DESCRIBE TABLE` command to check V1 Hive external
- * table catalog.
+ * The class contains tests for the `DESCRIBE TABLE` command to check V1 Hive external table
+ * catalog.
  */
 class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase {
   override def commandVersion: String = super[DescribeTableSuiteBase].commandVersion
@@ -44,18 +44,19 @@ class DescribeTableSuite extends v1.DescribeTableSuiteBase with CommandSuiteBase
     }
   }
 
-
   test("DESCRIBE TABLE EXTENDED of a partitioned table") {
     withNamespaceAndTable("ns", "table") { tbl =>
-      spark.sql(s"CREATE TABLE $tbl (id bigint, data string) $defaultUsing" +
-        " PARTITIONED BY (id)" +
-        " COMMENT 'this is a test table'" +
-        " LOCATION 'file:/tmp/testcat/table_name'")
+      spark.sql(
+        s"CREATE TABLE $tbl (id bigint, data string) $defaultUsing" +
+          " PARTITIONED BY (id)" +
+          " COMMENT 'this is a test table'" +
+          " LOCATION 'file:/tmp/testcat/table_name'")
       val descriptionDf = spark.sql(s"DESCRIBE TABLE EXTENDED $tbl")
-      assert(descriptionDf.schema.map(field => (field.name, field.dataType)) === Seq(
-        ("col_name", StringType),
-        ("data_type", StringType),
-        ("comment", StringType)))
+      assert(
+        descriptionDf.schema.map(field => (field.name, field.dataType)) === Seq(
+          ("col_name", StringType),
+          ("data_type", StringType),
+          ("comment", StringType)))
       QueryTest.checkAnswer(
         // Filter out 'Table Properties' to don't check `transient_lastDdlTime`
         descriptionDf.filter("!(col_name in ('Created Time', 'Table Properties', 'Created By'))"),

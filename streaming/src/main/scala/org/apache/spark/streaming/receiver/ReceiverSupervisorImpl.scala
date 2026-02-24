@@ -37,17 +37,18 @@ import org.apache.spark.streaming.util.WriteAheadLogUtils
 import org.apache.spark.util.{RpcUtils, Utils}
 
 /**
- * Concrete implementation of [[org.apache.spark.streaming.receiver.ReceiverSupervisor]]
- * which provides all the necessary functionality for handling the data received by
- * the receiver. Specifically, it creates a [[org.apache.spark.streaming.receiver.BlockGenerator]]
- * object that is used to divide the received data stream into blocks of data.
+ * Concrete implementation of [[org.apache.spark.streaming.receiver.ReceiverSupervisor]] which
+ * provides all the necessary functionality for handling the data received by the receiver.
+ * Specifically, it creates a [[org.apache.spark.streaming.receiver.BlockGenerator]] object that
+ * is used to divide the received data stream into blocks of data.
  */
 private[streaming] class ReceiverSupervisorImpl(
     receiver: Receiver[_],
     env: SparkEnv,
     hadoopConf: Configuration,
-    checkpointDirOption: Option[String]
-  ) extends ReceiverSupervisor(receiver, env.conf) with Logging {
+    checkpointDirOption: Option[String])
+    extends ReceiverSupervisor(receiver, env.conf)
+    with Logging {
 
   private val host = SparkEnv.get.blockManager.blockManagerId.host
   private val executorId = SparkEnv.get.blockManager.blockManagerId.executorId
@@ -60,20 +61,26 @@ private[streaming] class ReceiverSupervisorImpl(
             "Please use streamingContext.checkpoint() to set the checkpoint directory. " +
             "See documentation for more details.")
       }
-      new WriteAheadLogBasedBlockHandler(env.blockManager, env.serializerManager, receiver.streamId,
-        receiver.storageLevel, env.conf, hadoopConf, checkpointDirOption.get)
+      new WriteAheadLogBasedBlockHandler(
+        env.blockManager,
+        env.serializerManager,
+        receiver.streamId,
+        receiver.storageLevel,
+        env.conf,
+        hadoopConf,
+        checkpointDirOption.get)
     } else {
       new BlockManagerBasedBlockHandler(env.blockManager, receiver.storageLevel)
     }
   }
-
 
   /** Remote RpcEndpointRef for the ReceiverTracker */
   private val trackerEndpoint = RpcUtils.makeDriverRef("ReceiverTracker", env.conf, env.rpcEnv)
 
   /** RpcEndpointRef for receiving messages from the ReceiverTracker in the driver */
   private val endpoint = env.rpcEnv.setupEndpoint(
-    "Receiver-" + streamId + "-" + System.currentTimeMillis(), new ThreadSafeRpcEndpoint {
+    "Receiver-" + streamId + "-" + System.currentTimeMillis(),
+    new ThreadSafeRpcEndpoint {
       override val rpcEnv: RpcEnv = env.rpcEnv
 
       override def receive: PartialFunction[Any, Unit] = {
@@ -98,9 +105,9 @@ private[streaming] class ReceiverSupervisorImpl(
 
   /** Divides received data records into data blocks for pushing in BlockManager. */
   private val defaultBlockGeneratorListener = new BlockGeneratorListener {
-    def onAddData(data: Any, metadata: Any): Unit = { }
+    def onAddData(data: Any, metadata: Any): Unit = {}
 
-    def onGenerateBlock(blockId: StreamBlockId): Unit = { }
+    def onGenerateBlock(blockId: StreamBlockId): Unit = {}
 
     def onError(message: String, throwable: Throwable): Unit = {
       reportError(message, throwable)
@@ -113,7 +120,8 @@ private[streaming] class ReceiverSupervisorImpl(
   private val defaultBlockGenerator = createBlockGenerator(defaultBlockGeneratorListener)
 
   /** Get the current rate limit of the default block generator */
-  override private[streaming] def getCurrentRateLimit: Long = defaultBlockGenerator.getCurrentLimit
+  override private[streaming] def getCurrentRateLimit: Long =
+    defaultBlockGenerator.getCurrentLimit
 
   /** Push a single record of received data into block generator. */
   def pushSingle(data: Any): Unit = {
@@ -124,8 +132,7 @@ private[streaming] class ReceiverSupervisorImpl(
   def pushArrayBuffer(
       arrayBuffer: ArrayBuffer[_],
       metadataOption: Option[Any],
-      blockIdOption: Option[StreamBlockId]
-    ): Unit = {
+      blockIdOption: Option[StreamBlockId]): Unit = {
     pushAndReportBlock(ArrayBufferBlock(arrayBuffer), metadataOption, blockIdOption)
   }
 
@@ -133,8 +140,7 @@ private[streaming] class ReceiverSupervisorImpl(
   def pushIterator(
       iterator: Iterator[_],
       metadataOption: Option[Any],
-      blockIdOption: Option[StreamBlockId]
-    ): Unit = {
+      blockIdOption: Option[StreamBlockId]): Unit = {
     pushAndReportBlock(IteratorBlock(iterator), metadataOption, blockIdOption)
   }
 
@@ -142,8 +148,7 @@ private[streaming] class ReceiverSupervisorImpl(
   def pushBytes(
       bytes: ByteBuffer,
       metadataOption: Option[Any],
-      blockIdOption: Option[StreamBlockId]
-    ): Unit = {
+      blockIdOption: Option[StreamBlockId]): Unit = {
     pushAndReportBlock(ByteBufferBlock(bytes), metadataOption, blockIdOption)
   }
 
@@ -151,8 +156,7 @@ private[streaming] class ReceiverSupervisorImpl(
   def pushAndReportBlock(
       receivedBlock: ReceivedBlock,
       metadataOption: Option[Any],
-      blockIdOption: Option[StreamBlockId]
-    ): Unit = {
+      blockIdOption: Option[StreamBlockId]): Unit = {
     val blockId = blockIdOption.getOrElse(nextBlockId)
     val time = System.currentTimeMillis
     val blockStoreResult = receivedBlockHandler.storeBlock(blockId, receivedBlock)
@@ -188,8 +192,8 @@ private[streaming] class ReceiverSupervisorImpl(
   }
 
   override protected def onReceiverStart(): Boolean = {
-    val msg = RegisterReceiver(
-      streamId, receiver.getClass.getSimpleName, host, executorId, endpoint)
+    val msg =
+      RegisterReceiver(streamId, receiver.getClass.getSimpleName, host, executorId, endpoint)
     trackerEndpoint.askSync[Boolean](msg)
   }
 
@@ -203,7 +207,7 @@ private[streaming] class ReceiverSupervisorImpl(
   override def createBlockGenerator(
       blockGeneratorListener: BlockGeneratorListener): BlockGenerator = {
     // Cleanup BlockGenerators that have already been stopped
-    val stoppedGenerators = registeredBlockGenerators.asScala.filter{ _.isStopped() }
+    val stoppedGenerators = registeredBlockGenerators.asScala.filter { _.isStopped() }
     stoppedGenerators.foreach(registeredBlockGenerators.remove(_))
 
     val newBlockGenerator = new BlockGenerator(blockGeneratorListener, streamId, env.conf)

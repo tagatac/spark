@@ -33,24 +33,22 @@ import org.apache.spark.util.{Clock, EventLoop, ManualClock, Utils}
 private[scheduler] sealed trait JobGeneratorEvent
 private[scheduler] case class GenerateJobs(time: Time) extends JobGeneratorEvent
 private[scheduler] case class ClearMetadata(time: Time) extends JobGeneratorEvent
-private[scheduler] case class DoCheckpoint(
-    time: Time, clearCheckpointDataLater: Boolean) extends JobGeneratorEvent
+private[scheduler] case class DoCheckpoint(time: Time, clearCheckpointDataLater: Boolean)
+    extends JobGeneratorEvent
 private[scheduler] case class ClearCheckpointData(time: Time) extends JobGeneratorEvent
 
 /**
- * This class generates jobs from DStreams as well as drives checkpointing and cleaning
- * up DStream metadata.
+ * This class generates jobs from DStreams as well as drives checkpointing and cleaning up DStream
+ * metadata.
  */
-private[streaming]
-class JobGenerator(jobScheduler: JobScheduler) extends Logging {
+private[streaming] class JobGenerator(jobScheduler: JobScheduler) extends Logging {
 
   private val ssc = jobScheduler.ssc
   private val conf = ssc.conf
   private val graph = ssc.graph
 
   val clock = {
-    val clockClass = ssc.sc.conf.get(
-      "spark.streaming.clock", "org.apache.spark.util.SystemClock")
+    val clockClass = ssc.sc.conf.get("spark.streaming.clock", "org.apache.spark.util.SystemClock")
     try {
       Utils.classForName[Clock](clockClass).getConstructor().newInstance()
     } catch {
@@ -60,8 +58,11 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
     }
   }
 
-  private val timer = new RecurringTimer(clock, ssc.graph.batchDuration.milliseconds,
-    longTime => eventLoop.post(GenerateJobs(new Time(longTime))), "JobGenerator")
+  private val timer = new RecurringTimer(
+    clock,
+    ssc.graph.batchDuration.milliseconds,
+    longTime => eventLoop.post(GenerateJobs(new Time(longTime))),
+    "JobGenerator")
 
   // This is marked lazy so that this is initialized after checkpoint duration has been set
   // in the context and the generator has been started.
@@ -105,9 +106,8 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
   }
 
   /**
-   * Stop generation of jobs. processReceivedData = true makes this wait until jobs
-   * of current ongoing time interval has been generated, processed and corresponding
-   * checkpoints written.
+   * Stop generation of jobs. processReceivedData = true makes this wait until jobs of current
+   * ongoing time interval has been generated, processed and corresponding checkpoints written.
    */
   def stop(processReceivedData: Boolean): Unit = synchronized {
     if (eventLoop == null) return // generator has already been stopped
@@ -116,7 +116,8 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
       logInfo("Stopping JobGenerator gracefully")
       val timeWhenStopStarted = System.nanoTime()
       val stopTimeoutMs = conf.getTimeAsMs(
-        StreamingConf.GRACEFUL_STOP_TIMEOUT.key, s"${10 * ssc.graph.batchDuration.milliseconds}ms")
+        StreamingConf.GRACEFUL_STOP_TIMEOUT.key,
+        s"${10 * ssc.graph.batchDuration.milliseconds}ms")
       val pollTime = 100
 
       // To prevent graceful stop to get stuck permanently
@@ -124,8 +125,9 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
         val diff = TimeUnit.NANOSECONDS.toMillis((System.nanoTime() - timeWhenStopStarted))
         val timedOut = diff > stopTimeoutMs
         if (timedOut) {
-          logWarning(log"Timed out while stopping the job generator " +
-            log"(timeout = ${MDC(TIMEOUT, stopTimeoutMs)})")
+          logWarning(
+            log"Timed out while stopping the job generator " +
+              log"(timeout = ${MDC(TIMEOUT, stopTimeoutMs)})")
         }
         timedOut
       }
@@ -221,24 +223,29 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
     val checkpointTime = ssc.initialCheckpoint.checkpointTime
     val restartTime = new Time(timer.getRestartTime(graph.zeroTime.milliseconds))
     val downTimes = checkpointTime.until(restartTime, batchDuration)
-    logInfo(log"Batches during down time (${MDC(LogKeys.NUM_BATCHES, downTimes.size)} batches): " +
-      log"${MDC(LogKeys.BATCH_TIMES, downTimes.mkString(","))}")
+    logInfo(
+      log"Batches during down time (${MDC(LogKeys.NUM_BATCHES, downTimes.size)} batches): " +
+        log"${MDC(LogKeys.BATCH_TIMES, downTimes.mkString(","))}")
 
     // Batches that were unprocessed before failure
     val pendingTimes = ssc.initialCheckpoint.pendingTimes.sorted(Time.ordering)
-    logInfo(log"Batches pending processing (" +
-      log"${MDC(LogKeys.COUNT, pendingTimes.length)} batches): " +
-      log"${MDC(LogKeys.PENDING_TIMES, pendingTimes.mkString(","))}")
+    logInfo(
+      log"Batches pending processing (" +
+        log"${MDC(LogKeys.COUNT, pendingTimes.length)} batches): " +
+        log"${MDC(LogKeys.PENDING_TIMES, pendingTimes.mkString(","))}")
     // Reschedule jobs for these times
-    val timesToReschedule = (pendingTimes ++ downTimes).filter { _ < restartTime }
-      .distinct.sorted(Time.ordering)
-    logInfo(log"Batches to reschedule (${MDC(LogKeys.COUNT, timesToReschedule.length)} " +
-      log"batches): ${MDC(LogKeys.BATCH_TIMES, timesToReschedule.mkString(","))}")
+    val timesToReschedule =
+      (pendingTimes ++ downTimes).filter { _ < restartTime }.distinct.sorted(Time.ordering)
+    logInfo(
+      log"Batches to reschedule (${MDC(LogKeys.COUNT, timesToReschedule.length)} " +
+        log"batches): ${MDC(LogKeys.BATCH_TIMES, timesToReschedule.mkString(","))}")
     timesToReschedule.foreach { time =>
       // Allocate the related blocks when recovering from failure, because some blocks that were
       // added but not allocated, are dangling in the queue after recovering, we have to allocate
       // those blocks to the next batch, which is the batch they were supposed to go.
-      jobScheduler.receiverTracker.allocateBlocksToBatch(time) // allocate received blocks to batch
+      jobScheduler.receiverTracker.allocateBlocksToBatch(
+        time
+      ) // allocate received blocks to batch
       jobScheduler.submitJobSet(JobSet(time, graph.generateJobs(time)))
     }
 
@@ -247,13 +254,15 @@ class JobGenerator(jobScheduler: JobScheduler) extends Logging {
     logInfo(log"Restarted JobGenerator at ${MDC(LogKeys.RESTART_TIME, restartTime)}")
   }
 
-  /** Generate jobs and perform checkpointing for the given `time`.  */
+  /** Generate jobs and perform checkpointing for the given `time`. */
   private def generateJobs(time: Time): Unit = {
     // Checkpoint all RDDs marked for checkpointing to ensure their lineages are
     // truncated periodically. Otherwise, we may run into stack overflows (SPARK-6847).
     ssc.sparkContext.setLocalProperty(RDD.CHECKPOINT_ALL_MARKED_ANCESTORS, "true")
     Try {
-      jobScheduler.receiverTracker.allocateBlocksToBatch(time) // allocate received blocks to batch
+      jobScheduler.receiverTracker.allocateBlocksToBatch(
+        time
+      ) // allocate received blocks to batch
       graph.generateJobs(time) // generate jobs using allocated block
     } match {
       case Success(jobs) =>

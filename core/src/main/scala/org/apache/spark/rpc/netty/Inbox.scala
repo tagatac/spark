@@ -26,17 +26,16 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.internal.LogKeys._
 import org.apache.spark.rpc.{RpcAddress, RpcEndpoint, ThreadSafeRpcEndpoint}
 
-
 private[netty] sealed trait InboxMessage
 
-private[netty] case class OneWayMessage(
-    senderAddress: RpcAddress,
-    content: Any) extends InboxMessage
+private[netty] case class OneWayMessage(senderAddress: RpcAddress, content: Any)
+    extends InboxMessage
 
 private[netty] case class RpcMessage(
     senderAddress: RpcAddress,
     content: Any,
-    context: NettyRpcCallContext) extends InboxMessage
+    context: NettyRpcCallContext)
+    extends InboxMessage
 
 private[netty] case object OnStart extends InboxMessage
 
@@ -46,19 +45,21 @@ private[netty] case object OnStop extends InboxMessage
 private[netty] case class RemoteProcessConnected(remoteAddress: RpcAddress) extends InboxMessage
 
 /** A message to tell all endpoints that a remote process has disconnected. */
-private[netty] case class RemoteProcessDisconnected(remoteAddress: RpcAddress) extends InboxMessage
+private[netty] case class RemoteProcessDisconnected(remoteAddress: RpcAddress)
+    extends InboxMessage
 
 /** A message to tell all endpoints that a network error has happened. */
-private[netty] case class RemoteProcessConnectionError(cause: Throwable, remoteAddress: RpcAddress)
-  extends InboxMessage
+private[netty] case class RemoteProcessConnectionError(
+    cause: Throwable,
+    remoteAddress: RpcAddress)
+    extends InboxMessage
 
 /**
  * An inbox that stores messages for an [[RpcEndpoint]] and posts messages to it thread-safely.
  */
-private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
-  extends Logging {
+private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint) extends Logging {
 
-  inbox =>  // Give this an alias so we can use it more clearly in closures.
+  inbox => // Give this an alias so we can use it more clearly in closures.
 
   @GuardedBy("this")
   protected val messages = new java.util.LinkedList[InboxMessage]()
@@ -101,9 +102,13 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
         message match {
           case RpcMessage(_sender, content, context) =>
             try {
-              endpoint.receiveAndReply(context).applyOrElse[Any, Unit](content, { msg =>
-                throw new SparkException(s"Unsupported message $message from ${_sender}")
-              })
+              endpoint
+                .receiveAndReply(context)
+                .applyOrElse[Any, Unit](
+                  content,
+                  { msg =>
+                    throw new SparkException(s"Unsupported message $message from ${_sender}")
+                  })
             } catch {
               case e: Throwable =>
                 context.sendFailure(e)
@@ -113,9 +118,11 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
             }
 
           case OneWayMessage(_sender, content) =>
-            endpoint.receive.applyOrElse[Any, Unit](content, { msg =>
-              throw new SparkException(s"Unsupported message $message from ${_sender}")
-            })
+            endpoint.receive.applyOrElse[Any, Unit](
+              content,
+              { msg =>
+                throw new SparkException(s"Unsupported message $message from ${_sender}")
+              })
 
           case OnStart =>
             endpoint.onStart()
@@ -129,7 +136,8 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
 
           case OnStop =>
             val activeThreads = inbox.synchronized { inbox.numActiveThreads }
-            assert(activeThreads == 1,
+            assert(
+              activeThreads == 1,
               s"There should be only a single active thread but found $activeThreads threads.")
             dispatcher.removeRpcEndpointRef(endpoint)
             endpoint.onStop()
@@ -194,8 +202,9 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
    * Exposed for testing.
    */
   protected def onDrop(message: InboxMessage): Unit = {
-    logWarning(log"Drop ${MDC(MESSAGE, message)} " +
-      log"because endpoint ${MDC(END_POINT, endpointName)} is stopped")
+    logWarning(
+      log"Drop ${MDC(MESSAGE, message)} " +
+        log"because endpoint ${MDC(END_POINT, endpointName)} is stopped")
   }
 
   /**
@@ -208,14 +217,18 @@ private[netty] class Inbox(val endpointName: String, val endpoint: RpcEndpoint)
         // Should reduce the number of active threads before throw the error.
         numActiveThreads -= 1
       }
-      logError(log"An error happened while processing message in the inbox for" +
-        log" ${MDC(END_POINT, endpointName)}", fatal)
+      logError(
+        log"An error happened while processing message in the inbox for" +
+          log" ${MDC(END_POINT, endpointName)}",
+        fatal)
       throw fatal
     }
 
-    try action catch {
+    try action
+    catch {
       case NonFatal(e) =>
-        try endpoint.onError(e) catch {
+        try endpoint.onError(e)
+        catch {
           case NonFatal(ee) =>
             if (stopped) {
               logDebug("Ignoring error", ee)

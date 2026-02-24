@@ -32,16 +32,24 @@ import org.apache.spark.ui.UIUtils.formatImportJavaScript
 /**
  * A helper class to generate JavaScript and HTML for both timeline and histogram graphs.
  *
- * @param timelineDivId the timeline `id` used in the html `div` tag
- * @param histogramDivId the timeline `id` used in the html `div` tag
- * @param data the data for the graph
- * @param minX the min value of X axis
- * @param maxX the max value of X axis
- * @param minY the min value of Y axis
- * @param maxY the max value of Y axis
- * @param unitY the unit of Y axis
- * @param batchInterval if `batchInterval` is not None, we will draw a line for `batchInterval` in
- *                      the graph
+ * @param timelineDivId
+ *   the timeline `id` used in the html `div` tag
+ * @param histogramDivId
+ *   the timeline `id` used in the html `div` tag
+ * @param data
+ *   the data for the graph
+ * @param minX
+ *   the min value of X axis
+ * @param maxX
+ *   the max value of X axis
+ * @param minY
+ *   the min value of Y axis
+ * @param maxY
+ *   the max value of Y axis
+ * @param unitY
+ *   the unit of Y axis
+ * @param batchInterval
+ *   if `batchInterval` is not None, we will draw a line for `batchInterval` in the graph
  */
 private[spark] class GraphUIData(
     timelineDivId: String,
@@ -57,9 +65,11 @@ private[spark] class GraphUIData(
   private var dataJavaScriptName: String = _
 
   def generateDataJs(jsCollector: JsCollector): Unit = {
-    val jsForData = data.map { case (x, y) =>
-      s"""{"x": $x, "y": $y}"""
-    }.mkString("[", ",", "]")
+    val jsForData = data
+      .map { case (x, y) =>
+        s"""{"x": $x, "y": $y}"""
+      }
+      .mkString("[", ",", "]")
     dataJavaScriptName = jsCollector.nextVariableName
     jsCollector.addPreparedStatement(s"var $dataJavaScriptName = $jsForData;")
   }
@@ -104,10 +114,12 @@ private[spark] class GraphUIData(
       values: Array[(Long, ju.Map[String, JLong])]): Seq[Node] = {
     val operationLabels = values.flatMap(_._2.keySet().asScala).toSet
     val durationDataPadding = UIUtils.durationDataPadding(values)
-    val jsForData = durationDataPadding.map { case (x, y) =>
-      val s = y.toSeq.sortBy(_._1).map(e => s""""${e._1}": "${e._2}"""").mkString(",")
-      s"""{x: "${UIUtils.formatBatchTime(x, 1, showYYYYMMSS = false)}", $s}"""
-    }.mkString("[", ",", "]")
+    val jsForData = durationDataPadding
+      .map { case (x, y) =>
+        val s = y.toSeq.sortBy(_._1).map(e => s""""${e._1}": "${e._2}"""").mkString(",")
+        s"""{x: "${UIUtils.formatBatchTime(x, 1, showYYYYMMSS = false)}", $s}"""
+      }
+      .mkString("[", ",", "]")
     val jsForLabels = operationLabels.toSeq.sorted.mkString("[\"", "\",\"", "\"]")
 
     dataJavaScriptName = jsCollector.nextVariableName
@@ -115,15 +127,14 @@ private[spark] class GraphUIData(
     val labels = jsCollector.nextVariableName
     jsCollector.addPreparedStatement(s"var $labels = $jsForLabels;")
     jsCollector.addImports("/static/structured-streaming-page.js", "drawAreaStack")
-    jsCollector.addStatement(
-      s"drawAreaStack('#$timelineDivId', $labels, $dataJavaScriptName)")
+    jsCollector.addStatement(s"drawAreaStack('#$timelineDivId', $labels, $dataJavaScriptName)")
     <div id={timelineDivId}></div>
   }
 }
 
 /**
- * A helper class that allows the user to add JavaScript statements which will be executed when the
- * DOM has finished loading.
+ * A helper class that allows the user to add JavaScript statements which will be executed when
+ * the DOM has finished loading.
  */
 private[spark] class JsCollector(req: HttpServletRequest) {
 

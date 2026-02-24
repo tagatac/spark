@@ -30,27 +30,26 @@ import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.receiver.Receiver
 import org.apache.spark.util.NextIterator
 
-private[streaming]
-class SocketInputDStream[T: ClassTag](
+private[streaming] class SocketInputDStream[T: ClassTag](
     _ssc: StreamingContext,
     host: String,
     port: Int,
     bytesToObjects: InputStream => Iterator[T],
-    storageLevel: StorageLevel
-  ) extends ReceiverInputDStream[T](_ssc) {
+    storageLevel: StorageLevel)
+    extends ReceiverInputDStream[T](_ssc) {
 
   def getReceiver(): Receiver[T] = {
     new SocketReceiver(host, port, bytesToObjects, storageLevel)
   }
 }
 
-private[streaming]
-class SocketReceiver[T: ClassTag](
+private[streaming] class SocketReceiver[T: ClassTag](
     host: String,
     port: Int,
     bytesToObjects: InputStream => Iterator[T],
-    storageLevel: StorageLevel
-  ) extends Receiver[T](storageLevel) with Logging {
+    storageLevel: StorageLevel)
+    extends Receiver[T](storageLevel)
+    with Logging {
 
   private var socket: Socket = _
 
@@ -106,12 +105,11 @@ class SocketReceiver[T: ClassTag](
   }
 }
 
-private[streaming]
-object SocketReceiver  {
+private[streaming] object SocketReceiver {
 
   /**
-   * This methods translates the data from an inputstream (say, from a socket)
-   * to '\n' delimited strings and returns an iterator to access the strings.
+   * This methods translates the data from an inputstream (say, from a socket) to '\n' delimited
+   * strings and returns an iterator to access the strings.
    */
   def bytesToLines(inputStream: InputStream): Iterator[String] = {
     val dataInputStream = new BufferedReader(

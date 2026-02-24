@@ -23,8 +23,8 @@ import org.apache.spark.{SparkContext, SparkException, SparkFunSuite}
 import org.apache.spark.serializer.SerializerInstance
 
 /**
- * Another test suite for the closure cleaner that is finer-grained.
- * For tests involving end-to-end Spark jobs, see {{ClosureCleanerSuite}}.
+ * Another test suite for the closure cleaner that is finer-grained. For tests involving
+ * end-to-end Spark jobs, see {{ClosureCleanerSuite}}.
  */
 class ClosureCleanerSuite2 extends SparkFunSuite {
 
@@ -67,14 +67,17 @@ class ClosureCleanerSuite2 extends SparkFunSuite {
   }
 
   /**
-   * Helper method for testing whether closure cleaning works as expected.
-   * This cleans the given closure twice, with and without transitive cleaning.
+   * Helper method for testing whether closure cleaning works as expected. This cleans the given
+   * closure twice, with and without transitive cleaning.
    *
-   * @param closure closure to test cleaning with
-   * @param serializableBefore if true, verify that the closure is serializable
-   *                           before cleaning, otherwise assert that it is not
-   * @param serializableAfter if true, assert that the closure is serializable
-   *                          after cleaning otherwise assert that it is not
+   * @param closure
+   *   closure to test cleaning with
+   * @param serializableBefore
+   *   if true, verify that the closure is serializable before cleaning, otherwise assert that it
+   *   is not
+   * @param serializableAfter
+   *   if true, assert that the closure is serializable after cleaning otherwise assert that it is
+   *   not
    */
   private def verifyCleaning(
       closure: AnyRef,
@@ -157,8 +160,8 @@ class ClosureCleanerSuite2 extends SparkFunSuite {
     }
     val closure3 = (k: Int, l: Int, m: Int) => {
       (1 to k).flatMap(closure2) ++ // 4 levels
-      (1 to l).flatMap(closure1) ++ // 3 levels
-      (1 to m).map { x => x + 1 } // 2 levels
+        (1 to l).flatMap(closure1) ++ // 3 levels
+        (1 to m).map { x => x + 1 } // 2 levels
     }
     val closure1r = closure1(1)
     val closure2r = closure2(2)
@@ -273,8 +276,7 @@ class ClosureCleanerSuite2 extends SparkFunSuite {
 
       // As before, this closure is neither serializable nor cleanable
       verifyCleaning(inner1, serializableBefore = false, serializableAfter = false)
-      verifyCleaning(
-        inner2, serializableBefore = true, serializableAfter = true)
+      verifyCleaning(inner2, serializableBefore = true, serializableAfter = true)
     }
 
     // Same as above, but with more levels of nesting

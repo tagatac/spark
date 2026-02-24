@@ -35,12 +35,11 @@ import org.apache.spark.status.api.v1
 import org.apache.spark.util.ThreadUtils
 
 /**
- * Spark plugin to roll executor pods periodically.
- * This is independent from ExecutorPodsAllocator and aims to decommission executors
- * one by one in both static and dynamic allocation.
+ * Spark plugin to roll executor pods periodically. This is independent from ExecutorPodsAllocator
+ * and aims to decommission executors one by one in both static and dynamic allocation.
  *
- * To use this plugin, we assume that a user has the required maximum number of executors + 1
- * in both static and dynamic allocation configurations.
+ * To use this plugin, we assume that a user has the required maximum number of executors + 1 in
+ * both static and dynamic allocation configurations.
  */
 class ExecutorRollPlugin extends SparkPlugin {
   override def driverPlugin(): DriverPlugin = new ExecutorRollDriverPlugin()
@@ -62,8 +61,9 @@ class ExecutorRollDriverPlugin extends DriverPlugin with Logging {
   override def init(sc: SparkContext, ctx: PluginContext): JMap[String, String] = {
     val interval = sc.conf.get(EXECUTOR_ROLL_INTERVAL)
     if (interval <= 0) {
-      logWarning(log"Disabled due to invalid interval value, " +
-        log"'${MDC(INTERVAL, interval * MILLIS_PER_SECOND)}'")
+      logWarning(
+        log"Disabled due to invalid interval value, " +
+          log"'${MDC(INTERVAL, interval * MILLIS_PER_SECOND)}'")
     } else if (!sc.conf.get(DECOMMISSION_ENABLED)) {
       logWarning(log"Disabled because ${MDC(CONFIG, DECOMMISSION_ENABLED.key)} is false.")
     } else {
@@ -72,33 +72,36 @@ class ExecutorRollDriverPlugin extends DriverPlugin with Logging {
       sparkContext = sc
 
       val policy = ExecutorRollPolicy.withName(sc.conf.get(EXECUTOR_ROLL_POLICY))
-      periodicService.scheduleAtFixedRate(() => {
-        try {
-          sparkContext.schedulerBackend match {
-            case scheduler: KubernetesClusterSchedulerBackend =>
-              val executorSummaryList = sparkContext
-                .statusStore
-                .executorList(true)
-              choose(executorSummaryList, policy) match {
-                case Some(id) =>
-                  // Use decommission to be safe.
-                  logInfo(log"Ask to decommission executor ${MDC(EXECUTOR_ID, id)}")
-                  val now = System.currentTimeMillis()
-                  scheduler.decommissionExecutor(
-                    id,
-                    ExecutorDecommissionInfo(s"Rolling via $policy at $now"),
-                    adjustTargetNumExecutors = false)
-                case _ =>
-                  logInfo("There is nothing to roll.")
-              }
-            case _ =>
-              logWarning(log"This plugin expects " +
-                log"${MDC(CLASS_NAME, classOf[KubernetesClusterSchedulerBackend].getSimpleName)}.")
+      periodicService.scheduleAtFixedRate(
+        () => {
+          try {
+            sparkContext.schedulerBackend match {
+              case scheduler: KubernetesClusterSchedulerBackend =>
+                val executorSummaryList = sparkContext.statusStore
+                  .executorList(true)
+                choose(executorSummaryList, policy) match {
+                  case Some(id) =>
+                    // Use decommission to be safe.
+                    logInfo(log"Ask to decommission executor ${MDC(EXECUTOR_ID, id)}")
+                    val now = System.currentTimeMillis()
+                    scheduler.decommissionExecutor(
+                      id,
+                      ExecutorDecommissionInfo(s"Rolling via $policy at $now"),
+                      adjustTargetNumExecutors = false)
+                  case _ =>
+                    logInfo("There is nothing to roll.")
+                }
+              case _ =>
+                logWarning(log"This plugin expects " +
+                  log"${MDC(CLASS_NAME, classOf[KubernetesClusterSchedulerBackend].getSimpleName)}.")
+            }
+          } catch {
+            case e: Throwable => logError("Error in rolling thread", e)
           }
-        } catch {
-          case e: Throwable => logError("Error in rolling thread", e)
-        }
-      }, interval, interval, TimeUnit.SECONDS)
+        },
+        interval,
+        interval,
+        TimeUnit.SECONDS)
     }
     Map.empty[String, String].asJava
   }
@@ -108,8 +111,9 @@ class ExecutorRollDriverPlugin extends DriverPlugin with Logging {
   private def getPeakMetrics(summary: v1.ExecutorSummary, name: String): Long =
     summary.peakMemoryMetrics.getOrElse(EMPTY_METRICS).getMetricValue(name)
 
-  private def choose(list: Seq[v1.ExecutorSummary], policy: ExecutorRollPolicy.Value)
-      : Option[String] = {
+  private def choose(
+      list: Seq[v1.ExecutorSummary],
+      policy: ExecutorRollPolicy.Value): Option[String] = {
     val listWithoutDriver = list
       .filterNot(_.id.equals(SparkContext.DRIVER_IDENTIFIER))
       .filter(_.totalTasks >= minTasks)
@@ -146,14 +150,14 @@ class ExecutorRollDriverPlugin extends DriverPlugin with Logging {
   }
 
   /**
-   * We build multiple outlier lists and concat in the following importance order to find
-   * outliers in various perspective:
-   *   AVERAGE_DURATION > TOTAL_DURATION > TOTAL_GC_TIME > FAILED_TASKS >
-   *     PEAK_JVM_ONHEAP_MEMORY > PEAK_JVM_OFFHEAP_MEMORY > TOTAL_SHUFFLE_WRITE > DISK_USED
-   * Since we will choose only first item, the duplication is okay.
+   * We build multiple outlier lists and concat in the following importance order to find outliers
+   * in various perspective: AVERAGE_DURATION > TOTAL_DURATION > TOTAL_GC_TIME > FAILED_TASKS >
+   * PEAK_JVM_ONHEAP_MEMORY > PEAK_JVM_OFFHEAP_MEMORY > TOTAL_SHUFFLE_WRITE > DISK_USED Since we
+   * will choose only first item, the duplication is okay.
    */
   private def outliersFromMultipleDimensions(listWithoutDriver: Seq[v1.ExecutorSummary]) =
-    outliers(listWithoutDriver.filter(_.totalTasks > 0),
+    outliers(
+      listWithoutDriver.filter(_.totalTasks > 0),
       e => (e.totalDuration / e.totalTasks).toFloat) ++
       outliers(listWithoutDriver, e => e.totalDuration.toFloat) ++
       outliers(listWithoutDriver, e => e.totalGCTime.toFloat) ++
@@ -164,11 +168,11 @@ class ExecutorRollDriverPlugin extends DriverPlugin with Logging {
       outliers(listWithoutDriver, e => e.diskUsed.toFloat)
 
   /**
-   * Return executors whose metrics is outstanding, '(value - mean) > 2-sigma'. This is
-   * a best-effort approach because the snapshot of ExecutorSummary is not a normal distribution.
-   * Outliers can be defined in several ways (https://en.wikipedia.org/wiki/Outlier).
-   * Here, we borrowed 2-sigma idea from https://en.wikipedia.org/wiki/68-95-99.7_rule.
-   * In case of normal distribution, this is known to be 2.5 percent roughly.
+   * Return executors whose metrics is outstanding, '(value - mean) > 2-sigma'. This is a
+   * best-effort approach because the snapshot of ExecutorSummary is not a normal distribution.
+   * Outliers can be defined in several ways (https://en.wikipedia.org/wiki/Outlier). Here, we
+   * borrowed 2-sigma idea from https://en.wikipedia.org/wiki/68-95-99.7_rule. In case of normal
+   * distribution, this is known to be 2.5 percent roughly.
    */
   private def outliers(
       list: Seq[v1.ExecutorSummary],

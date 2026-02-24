@@ -67,7 +67,8 @@ object DriverWrapper extends Logging {
 
       case _ =>
         // scalastyle:off println
-        System.err.println("Usage: DriverWrapper <workerUrl> <userJar> <driverMainClass> [options]")
+        System.err.println(
+          "Usage: DriverWrapper <workerUrl> <userJar> <driverMainClass> [options]")
         // scalastyle:on println
         System.exit(-1)
     }
@@ -79,13 +80,18 @@ object DriverWrapper extends Logging {
 
     val ivyProperties = DependencyUtils.getIvyProperties()
 
-    val resolvedMavenCoordinates = DependencyUtils.resolveMavenDependencies(true,
-      ivyProperties.packagesExclusions, ivyProperties.packages, ivyProperties.repositories,
-      ivyProperties.ivyRepoPath, Option(ivyProperties.ivySettingsPath))
+    val resolvedMavenCoordinates = DependencyUtils.resolveMavenDependencies(
+      true,
+      ivyProperties.packagesExclusions,
+      ivyProperties.packages,
+      ivyProperties.repositories,
+      ivyProperties.ivyRepoPath,
+      Option(ivyProperties.ivySettingsPath))
     val jars = {
       val jarsProp = sys.props.get(config.JARS.key).orNull
       if (resolvedMavenCoordinates.nonEmpty) {
-        DependencyUtils.mergeFileLists(jarsProp,
+        DependencyUtils.mergeFileLists(
+          jarsProp,
           DependencyUtils.mergeFileLists(resolvedMavenCoordinates: _*))
       } else {
         jarsProp

@@ -47,137 +47,189 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     conn.prepareStatement("CREATE DATABASE foo").executeUpdate()
     conn.setCatalog("foo")
     conn.prepareStatement("CREATE TYPE enum_type AS ENUM ('d1', 'd2')").executeUpdate()
-    conn.prepareStatement("CREATE TABLE bar (c0 text, c1 integer, c2 double precision, c3 bigint, "
-      + "c4 bit(1), c5 bit(10), c6 bytea, c7 boolean, c8 inet, c9 cidr, "
-      + "c10 integer[], c11 text[], c12 real[], c13 numeric(2,2)[], c14 enum_type, "
-      + "c15 float4, c16 smallint, c17 numeric[], c18 bit varying(6), c19 point, c20 line, "
-      + "c21 lseg, c22 box, c23 path, c24 polygon, c25 circle, c26 pg_lsn, "
-      + "c27 character(2), c28 character varying(3), c29 date, c30 interval, "
-      + "c31 macaddr, c32 macaddr8, c33 numeric(6,4), c34 pg_snapshot, "
-      + "c35 real, c36 time, c37 timestamp, c38 tsquery, c39 tsvector, c40 txid_snapshot, "
-      + "c41 xml)").executeUpdate()
-    conn.prepareStatement("INSERT INTO bar VALUES ('hello', 42, 1.25, 123456789012345, B'0', "
-      + "B'1000100101', E'\\\\xDEADBEEF', true, '172.16.0.42', '192.168.0.0/16', "
-      + """'{1, 2}', '{"a", null, "b"}', '{0.11, 0.22}', '{0.11, 0.22}', 'd1', 1.01, 1, """
-      + "'{111.2222, 333.4444}', B'101010', '(800, 600)', '(23.8, 56.2), (16.23, 89.2)', "
-      + "'[(80.12, 131.24), (201.5, 503.33)]', '(19.84, 11.23), (20.21, 2.1)', "
-      + "'(10.2, 30.4), (50.6, 70.8), (90.1, 11.3)', "
-      + "'((100.3, 40.2), (20.198, 83.1), (500.821, 311.38))', '<500, 200, 100>', '16/B374D848', "
-      + "'ab', 'efg', '2021-02-02', '1 minute', '00:11:22:33:44:55', "
-      + "'00:11:22:33:44:55:66:77', 12.3456, '10:20:10,14,15', 1E+37, "
-      + "'17:22:31.123', '2016-08-12 10:22:31.949271', 'cat:AB & dog:CD', "
-      + "'dog and cat and fox', '10:20:10,14,15', '<key>id</key><value>10</value>')"
-    ).executeUpdate()
-    conn.prepareStatement("INSERT INTO bar VALUES (null, null, null, null, null, "
-      + "null, null, null, null, null, null, null, null, null, null, null, null, "
-      + "null, null, null, null, null, null, null, null, null, null, null, null, "
-      + "null, null, null, null, null, null, null, null, null, null, null, null, null)"
-    ).executeUpdate()
-
-    conn.prepareStatement("CREATE TABLE ts_with_timezone " +
-      "(id integer, tstz TIMESTAMP WITH TIME ZONE, ttz TIME WITH TIME ZONE)")
+    conn
+      .prepareStatement(
+        "CREATE TABLE bar (c0 text, c1 integer, c2 double precision, c3 bigint, "
+          + "c4 bit(1), c5 bit(10), c6 bytea, c7 boolean, c8 inet, c9 cidr, "
+          + "c10 integer[], c11 text[], c12 real[], c13 numeric(2,2)[], c14 enum_type, "
+          + "c15 float4, c16 smallint, c17 numeric[], c18 bit varying(6), c19 point, c20 line, "
+          + "c21 lseg, c22 box, c23 path, c24 polygon, c25 circle, c26 pg_lsn, "
+          + "c27 character(2), c28 character varying(3), c29 date, c30 interval, "
+          + "c31 macaddr, c32 macaddr8, c33 numeric(6,4), c34 pg_snapshot, "
+          + "c35 real, c36 time, c37 timestamp, c38 tsquery, c39 tsvector, c40 txid_snapshot, "
+          + "c41 xml)")
       .executeUpdate()
-    conn.prepareStatement("INSERT INTO ts_with_timezone VALUES " +
-      "(1, TIMESTAMP WITH TIME ZONE '2016-08-12 10:22:31.949271-07', " +
-      "TIME WITH TIME ZONE '17:22:31.949271+00')")
+    conn
+      .prepareStatement(
+        "INSERT INTO bar VALUES ('hello', 42, 1.25, 123456789012345, B'0', "
+          + "B'1000100101', E'\\\\xDEADBEEF', true, '172.16.0.42', '192.168.0.0/16', "
+          + """'{1, 2}', '{"a", null, "b"}', '{0.11, 0.22}', '{0.11, 0.22}', 'd1', 1.01, 1, """
+          + "'{111.2222, 333.4444}', B'101010', '(800, 600)', '(23.8, 56.2), (16.23, 89.2)', "
+          + "'[(80.12, 131.24), (201.5, 503.33)]', '(19.84, 11.23), (20.21, 2.1)', "
+          + "'(10.2, 30.4), (50.6, 70.8), (90.1, 11.3)', "
+          + "'((100.3, 40.2), (20.198, 83.1), (500.821, 311.38))', '<500, 200, 100>', '16/B374D848', "
+          + "'ab', 'efg', '2021-02-02', '1 minute', '00:11:22:33:44:55', "
+          + "'00:11:22:33:44:55:66:77', 12.3456, '10:20:10,14,15', 1E+37, "
+          + "'17:22:31.123', '2016-08-12 10:22:31.949271', 'cat:AB & dog:CD', "
+          + "'dog and cat and fox', '10:20:10,14,15', '<key>id</key><value>10</value>')")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO bar VALUES (null, null, null, null, null, "
+          + "null, null, null, null, null, null, null, null, null, null, null, null, "
+          + "null, null, null, null, null, null, null, null, null, null, null, null, "
+          + "null, null, null, null, null, null, null, null, null, null, null, null, null)")
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE st_with_array (c0 uuid, c1 inet, c2 cidr," +
-      "c3 json, c4 jsonb, c5 uuid[], c6 inet[], c7 cidr[], c8 json[], c9 jsonb[], c10 xml[], " +
-      "c11 tsvector[], c12 tsquery[], c13 macaddr[], c14 txid_snapshot[], c15 point[], " +
-      "c16 line[], c17 lseg[], c18 box[], c19 path[], c20 polygon[], c21 circle[], c22 pg_lsn[], " +
-      "c23 bit varying(6)[], c24 interval[], c25 macaddr8[], c26 pg_snapshot[])")
+    conn
+      .prepareStatement(
+        "CREATE TABLE ts_with_timezone " +
+          "(id integer, tstz TIMESTAMP WITH TIME ZONE, ttz TIME WITH TIME ZONE)")
       .executeUpdate()
-    conn.prepareStatement("INSERT INTO st_with_array VALUES ( " +
-      "'0a532531-cdf1-45e3-963d-5de90b6a30f1', '172.168.22.1', '192.168.100.128/25', " +
-      """'{"a": "foo", "b": "bar"}', '{"a": 1, "b": 2}', """ +
-      "ARRAY['7be8aaf8-650e-4dbb-8186-0a749840ecf2'," +
-      "'205f9bfc-018c-4452-a605-609c0cfad228']::uuid[], ARRAY['172.16.0.41', " +
-      "'172.16.0.42']::inet[], ARRAY['192.168.0.0/24', '10.1.0.0/16']::cidr[], " +
-      """ARRAY['{"a": "foo", "b": "bar"}', '{"a": 1, "b": 2}']::json[], """ +
-      """ARRAY['{"a": 1, "b": 2, "c": 3}']::jsonb[], """ +
-      """ARRAY['<key>id</key><value>10</value>']::xml[], ARRAY['The dog laying on the grass', """ +
-      """'the:1 cat:2 is:3 on:4 the:5 table:6']::tsvector[], """ +
-      """ARRAY['programming & language & ! interpreter', 'cat:AB & dog:CD']::tsquery[], """ +
-      """ARRAY['12:34:56:78:90:ab', 'cd-ef-12-34-56-78']::macaddr[], """ +
-      """ARRAY['10:20:10,14,15']::txid_snapshot[], """ +
-      """ARRAY['(800, 600)', '83.24, 5.10']::point[], """ +
-      """ARRAY['(23.8, 56.2), (16.23, 89.2)', '{23.85, 10.87, 5.92}']::line[], """ +
-      """ARRAY['[(80.12, 131.24), (201.5, 503.33)]']::lseg[], """ +
-      """ARRAY['(19.84, 11.23), (20.21, 2.1)']::box[], """ +
-      """ARRAY['(10.2, 30.4), (50.6, 70.8), (90.1, 11.3)']::path[], """ +
-      """ARRAY['((100.3, 40.2), (20.198, 83.1), (500.821, 311.38))']::polygon[], """ +
-      """ARRAY['<500, 200, 100>']::circle[], """ +
-      """ARRAY['16/B374D848']::pg_lsn[], """ +
-      """ARRAY[B'101010']::bit varying(6)[], """ +
-      """ARRAY['1 day', '2 minutes']::interval[], """ +
-      """ARRAY['08:00:2b:01:02:03:04:05']::macaddr8[], """ +
-      """ARRAY['10:20:10,14,15']::pg_snapshot[])"""
-    ).executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO ts_with_timezone VALUES " +
+          "(1, TIMESTAMP WITH TIME ZONE '2016-08-12 10:22:31.949271-07', " +
+          "TIME WITH TIME ZONE '17:22:31.949271+00')")
+      .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE char_types (" +
-      "c0 char(4), c1 character(4), c2 character varying(4), c3 varchar(4), c4 bpchar(1)," +
-      "c5 bpchar, c6 char)"
-    ).executeUpdate()
-    conn.prepareStatement("INSERT INTO char_types VALUES " +
-      "('abcd', 'efgh', 'ijkl', 'mnop', 'q', 'eason', 'c' )").executeUpdate()
+    conn
+      .prepareStatement("CREATE TABLE st_with_array (c0 uuid, c1 inet, c2 cidr," +
+        "c3 json, c4 jsonb, c5 uuid[], c6 inet[], c7 cidr[], c8 json[], c9 jsonb[], c10 xml[], " +
+        "c11 tsvector[], c12 tsquery[], c13 macaddr[], c14 txid_snapshot[], c15 point[], " +
+        "c16 line[], c17 lseg[], c18 box[], c19 path[], c20 polygon[], c21 circle[], c22 pg_lsn[], " +
+        "c23 bit varying(6)[], c24 interval[], c25 macaddr8[], c26 pg_snapshot[])")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO st_with_array VALUES ( " +
+          "'0a532531-cdf1-45e3-963d-5de90b6a30f1', '172.168.22.1', '192.168.100.128/25', " +
+          """'{"a": "foo", "b": "bar"}', '{"a": 1, "b": 2}', """ +
+          "ARRAY['7be8aaf8-650e-4dbb-8186-0a749840ecf2'," +
+          "'205f9bfc-018c-4452-a605-609c0cfad228']::uuid[], ARRAY['172.16.0.41', " +
+          "'172.16.0.42']::inet[], ARRAY['192.168.0.0/24', '10.1.0.0/16']::cidr[], " +
+          """ARRAY['{"a": "foo", "b": "bar"}', '{"a": 1, "b": 2}']::json[], """ +
+          """ARRAY['{"a": 1, "b": 2, "c": 3}']::jsonb[], """ +
+          """ARRAY['<key>id</key><value>10</value>']::xml[], ARRAY['The dog laying on the grass', """ +
+          """'the:1 cat:2 is:3 on:4 the:5 table:6']::tsvector[], """ +
+          """ARRAY['programming & language & ! interpreter', 'cat:AB & dog:CD']::tsquery[], """ +
+          """ARRAY['12:34:56:78:90:ab', 'cd-ef-12-34-56-78']::macaddr[], """ +
+          """ARRAY['10:20:10,14,15']::txid_snapshot[], """ +
+          """ARRAY['(800, 600)', '83.24, 5.10']::point[], """ +
+          """ARRAY['(23.8, 56.2), (16.23, 89.2)', '{23.85, 10.87, 5.92}']::line[], """ +
+          """ARRAY['[(80.12, 131.24), (201.5, 503.33)]']::lseg[], """ +
+          """ARRAY['(19.84, 11.23), (20.21, 2.1)']::box[], """ +
+          """ARRAY['(10.2, 30.4), (50.6, 70.8), (90.1, 11.3)']::path[], """ +
+          """ARRAY['((100.3, 40.2), (20.198, 83.1), (500.821, 311.38))']::polygon[], """ +
+          """ARRAY['<500, 200, 100>']::circle[], """ +
+          """ARRAY['16/B374D848']::pg_lsn[], """ +
+          """ARRAY[B'101010']::bit varying(6)[], """ +
+          """ARRAY['1 day', '2 minutes']::interval[], """ +
+          """ARRAY['08:00:2b:01:02:03:04:05']::macaddr8[], """ +
+          """ARRAY['10:20:10,14,15']::pg_snapshot[])""")
+      .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE char_array_types (" +
-      "c0 char(4)[], c1 character(4)[], c2 character varying(4)[], c3 varchar(4)[]," +
-      "c4 bpchar(1)[], c5 bpchar[])"
-    ).executeUpdate()
-    conn.prepareStatement("INSERT INTO char_array_types VALUES " +
-      """('{"a", "bcd"}', '{"ef", "gh"}', '{"i", "j", "kl"}', '{"mnop"}', '{"q", "r"}',
-        | '{"Eason", "Ethan"}')""".stripMargin
-    ).executeUpdate()
+    conn
+      .prepareStatement(
+        "CREATE TABLE char_types (" +
+          "c0 char(4), c1 character(4), c2 character varying(4), c3 varchar(4), c4 bpchar(1)," +
+          "c5 bpchar, c6 char)")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO char_types VALUES " +
+          "('abcd', 'efgh', 'ijkl', 'mnop', 'q', 'eason', 'c' )")
+      .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE money_types (" +
-      "c0 money)").executeUpdate()
-    conn.prepareStatement("INSERT INTO money_types VALUES " +
-      "('$1,000.00')").executeUpdate()
+    conn
+      .prepareStatement(
+        "CREATE TABLE char_array_types (" +
+          "c0 char(4)[], c1 character(4)[], c2 character varying(4)[], c3 varchar(4)[]," +
+          "c4 bpchar(1)[], c5 bpchar[])")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO char_array_types VALUES " +
+          """('{"a", "bcd"}', '{"ef", "gh"}', '{"i", "j", "kl"}', '{"mnop"}', '{"q", "r"}',
+        | '{"Eason", "Ethan"}')""".stripMargin)
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE money_types (" +
+          "c0 money)")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO money_types VALUES " +
+          "('$1,000.00')")
+      .executeUpdate()
 
     conn.prepareStatement(s"CREATE TABLE timestamp_ntz(v timestamp)").executeUpdate()
-    conn.prepareStatement(s"""INSERT INTO timestamp_ntz VALUES
+    conn
+      .prepareStatement(s"""INSERT INTO timestamp_ntz VALUES
       |('2013-04-05 12:01:02'),
       |('2013-04-05 18:01:02.123'),
-      |('2013-04-05 18:01:02.123456')""".stripMargin).executeUpdate()
-
-    conn.prepareStatement("CREATE TABLE infinity_timestamp" +
-      "(id SERIAL PRIMARY KEY, timestamp_column TIMESTAMP, timestamp_array TIMESTAMP[])")
-      .executeUpdate()
-    conn.prepareStatement("INSERT INTO infinity_timestamp (timestamp_column, timestamp_array)" +
-      " VALUES ('infinity', ARRAY[TIMESTAMP 'infinity']), " +
-        "('-infinity', ARRAY[TIMESTAMP '-infinity'])")
+      |('2013-04-05 18:01:02.123456')""".stripMargin)
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE infinity_dates" +
-        "(id SERIAL PRIMARY KEY, date_column DATE, date_array DATE[])")
+    conn
+      .prepareStatement(
+        "CREATE TABLE infinity_timestamp" +
+          "(id SERIAL PRIMARY KEY, timestamp_column TIMESTAMP, timestamp_array TIMESTAMP[])")
       .executeUpdate()
-    conn.prepareStatement("INSERT INTO infinity_dates (date_column, date_array)" +
-        " VALUES ('infinity', ARRAY[DATE 'infinity']), " +
-        "('-infinity', ARRAY[DATE '-infinity'])")
+    conn
+      .prepareStatement(
+        "INSERT INTO infinity_timestamp (timestamp_column, timestamp_array)" +
+          " VALUES ('infinity', ARRAY[TIMESTAMP 'infinity']), " +
+          "('-infinity', ARRAY[TIMESTAMP '-infinity'])")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE infinity_dates" +
+          "(id SERIAL PRIMARY KEY, date_column DATE, date_array DATE[])")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO infinity_dates (date_column, date_array)" +
+          " VALUES ('infinity', ARRAY[DATE 'infinity']), " +
+          "('-infinity', ARRAY[DATE '-infinity'])")
       .executeUpdate()
 
     conn.prepareStatement("CREATE DOMAIN not_null_text AS TEXT DEFAULT ''").executeUpdate()
-    conn.prepareStatement("create table custom_type(type_array not_null_text[]," +
-      "type not_null_text)").executeUpdate()
-    conn.prepareStatement("INSERT INTO custom_type (type_array, type) VALUES" +
-      "('{1,fds,fdsa}','fdasfasdf')").executeUpdate()
-
-    conn.prepareStatement(
-      "CREATE FUNCTION test_null() RETURNS VOID AS $$ BEGIN RETURN; END; $$ LANGUAGE plpgsql")
+    conn
+      .prepareStatement(
+        "create table custom_type(type_array not_null_text[]," +
+          "type not_null_text)")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO custom_type (type_array, type) VALUES" +
+          "('{1,fds,fdsa}','fdasfasdf')")
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE test_bit_array (c1 bit(1)[], c2 bit(5)[])").executeUpdate()
-    conn.prepareStatement("INSERT INTO test_bit_array VALUES (ARRAY[B'1', B'0'], " +
-      "ARRAY[B'00001', B'00010'])").executeUpdate()
+    conn
+      .prepareStatement(
+        "CREATE FUNCTION test_null() RETURNS VOID AS $$ BEGIN RETURN; END; $$ LANGUAGE plpgsql")
+      .executeUpdate()
 
-    conn.prepareStatement(
-      """
+    conn
+      .prepareStatement("CREATE TABLE test_bit_array (c1 bit(1)[], c2 bit(5)[])")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO test_bit_array VALUES (ARRAY[B'1', B'0'], " +
+          "ARRAY[B'00001', B'00010'])")
+      .executeUpdate()
+
+    conn
+      .prepareStatement("""
         |CREATE TYPE complex AS (
         |    b       bool,
         |    d       double precision
-        |)""".stripMargin).executeUpdate()
+        |)""".stripMargin)
+      .executeUpdate()
     conn.prepareStatement("CREATE TABLE complex_table (c1 complex)").executeUpdate()
     conn.prepareStatement("INSERT INTO complex_table VALUES (ROW(true, 1.0))").executeUpdate()
     conn.prepareStatement("CREATE DOMAIN myint AS integer CHECK (VALUE > 0)").executeUpdate()
@@ -240,10 +292,12 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     assert(rows(0).getLong(3) == 123456789012345L)
     assert(!rows(0).getBoolean(4))
     // BIT(10)'s come back as ASCII strings of ten ASCII 0's and 1's...
-    assert(java.util.Arrays.equals(rows(0).getAs[Array[Byte]](5),
-      Array[Byte](49, 48, 48, 48, 49, 48, 48, 49, 48, 49)))
-    assert(java.util.Arrays.equals(rows(0).getAs[Array[Byte]](6),
-      Array[Byte](0xDE.toByte, 0xAD.toByte, 0xBE.toByte, 0xEF.toByte)))
+    assert(java.util.Arrays
+      .equals(rows(0).getAs[Array[Byte]](5), Array[Byte](49, 48, 48, 48, 49, 48, 48, 49, 48, 49)))
+    assert(
+      java.util.Arrays.equals(
+        rows(0).getAs[Array[Byte]](6),
+        Array[Byte](0xde.toByte, 0xad.toByte, 0xbe.toByte, 0xef.toByte)))
     assert(rows(0).getBoolean(7))
     assert(rows(0).getString(8) == "172.16.0.42")
     assert(rows(0).getString(9) == "192.168.0.0/16")
@@ -254,8 +308,9 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     assert(rows(0).getString(14) == "d1")
     assert(rows(0).getFloat(15) == 1.01f)
     assert(rows(0).getShort(16) == 1)
-    assert(rows(0).getSeq(17) ==
-      Seq("111.222200000000000000", "333.444400000000000000").map(BigDecimal(_).bigDecimal))
+    assert(
+      rows(0).getSeq(17) ==
+        Seq("111.222200000000000000", "333.444400000000000000").map(BigDecimal(_).bigDecimal))
     assert(rows(0).getString(18) == "101010")
     assert(rows(0).getString(19) == "(800,600)")
     assert(rows(0).getString(20) == "{-4.359313077939234,-1,159.9516512549538}")
@@ -273,7 +328,7 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     assert(rows(0).getString(32) == "00:11:22:33:44:55:66:77")
     assert(rows(0).getDecimal(33) == new JBigDecimal("12.3456"))
     assert(rows(0).getString(34) == "10:20:10,14,15")
-    assert(rows(0).getFloat(35) == 1E+37F)
+    assert(rows(0).getFloat(35) == 1e+37f)
     assert(rows(0).getTimestamp(36) == Timestamp.valueOf("1970-01-01 17:22:31.123"))
     assert(rows(0).getTimestamp(37) == Timestamp.valueOf("2016-08-12 10:22:31.949271"))
     assert(rows(0).getString(38) == "'cat':AB & 'dog':CD")
@@ -290,17 +345,22 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     // Test only that it doesn't crash.
     df.write.jdbc(jdbcUrl, "public.barcopy", new Properties)
     // Test that written numeric type has same DataType as input
-    assert(spark.read.jdbc(jdbcUrl, "public.barcopy", new Properties).schema(13).dataType ==
-      ArrayType(DecimalType(2, 2), true))
+    assert(
+      spark.read.jdbc(jdbcUrl, "public.barcopy", new Properties).schema(13).dataType ==
+        ArrayType(DecimalType(2, 2), true))
     // Test write null values.
     df.select(df.queryExecution.analyzed.output.map { a =>
       lit(null).cast(a.dataType).as(a.name)
-    }: _*).write.jdbc(jdbcUrl, "public.barcopy2", new Properties)
+    }: _*)
+      .write
+      .jdbc(jdbcUrl, "public.barcopy2", new Properties)
   }
 
   test("Creating a table with shorts and floats") {
-    spark.createDataFrame(Seq((1.0f, 1.toShort)))
-      .write.jdbc(jdbcUrl, "shortfloat", new Properties)
+    spark
+      .createDataFrame(Seq((1.0f, 1.toShort)))
+      .write
+      .jdbc(jdbcUrl, "shortfloat", new Properties)
     val schema = spark.read.jdbc(jdbcUrl, "shortfloat", new Properties).schema
     assert(schema(0).dataType == FloatType)
     assert(schema(1).dataType == ShortType)
@@ -311,15 +371,18 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
       val df = spark.read
         .option("preferTimestampNTZ", prefer)
         .jdbc(jdbcUrl, "ts_with_timezone", new Properties)
-      checkAnswer(df, Row(
-        1,
-        DateTimeUtils.toJavaTimestamp(1471022551949271L),
-        DateTimeUtils.toJavaTimestamp(62551949000L)))
+      checkAnswer(
+        df,
+        Row(
+          1,
+          DateTimeUtils.toJavaTimestamp(1471022551949271L),
+          DateTimeUtils.toJavaTimestamp(62551949000L)))
     }
   }
 
-  test("SPARK-22291: Conversion error when transforming array types of " +
-    "uuid, inet and cidr to StingType in PostgreSQL") {
+  test(
+    "SPARK-22291: Conversion error when transforming array types of " +
+      "uuid, inet and cidr to StingType in PostgreSQL") {
     val df = spark.read.jdbc(jdbcUrl, "st_with_array", new Properties)
     val rows = df.collect()
     assert(rows(0).getString(0) == "0a532531-cdf1-45e3-963d-5de90b6a30f1")
@@ -327,22 +390,28 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
     assert(rows(0).getString(2) == "192.168.100.128/25")
     assert(rows(0).getString(3) == "{\"a\": \"foo\", \"b\": \"bar\"}")
     assert(rows(0).getString(4) == "{\"a\": 1, \"b\": 2}")
-    assert(rows(0).getSeq(5) == Seq("7be8aaf8-650e-4dbb-8186-0a749840ecf2",
-      "205f9bfc-018c-4452-a605-609c0cfad228"))
+    assert(
+      rows(0).getSeq(5) == Seq(
+        "7be8aaf8-650e-4dbb-8186-0a749840ecf2",
+        "205f9bfc-018c-4452-a605-609c0cfad228"))
     assert(rows(0).getSeq(6) == Seq("172.16.0.41", "172.16.0.42"))
     assert(rows(0).getSeq(7) == Seq("192.168.0.0/24", "10.1.0.0/16"))
     assert(rows(0).getSeq(8) == Seq("""{"a": "foo", "b": "bar"}""", """{"a": 1, "b": 2}"""))
     assert(rows(0).getSeq(9) == Seq("""{"a": 1, "b": 2, "c": 3}"""))
     assert(rows(0).getSeq(10) == Seq("""<key>id</key><value>10</value>"""))
-    assert(rows(0).getSeq(11) == Seq("'The' 'dog' 'grass' 'laying' 'on' 'the'",
-      "'cat':2 'is':3 'on':4 'table':6 'the':1,5"))
-    assert(rows(0).getSeq(12) == Seq("'programming' & 'language' & !'interpreter'",
-      "'cat':AB & 'dog':CD"))
+    assert(
+      rows(0).getSeq(11) == Seq(
+        "'The' 'dog' 'grass' 'laying' 'on' 'the'",
+        "'cat':2 'is':3 'on':4 'table':6 'the':1,5"))
+    assert(
+      rows(0)
+        .getSeq(12) == Seq("'programming' & 'language' & !'interpreter'", "'cat':AB & 'dog':CD"))
     assert(rows(0).getSeq(13) == Seq("12:34:56:78:90:ab", "cd:ef:12:34:56:78"))
     assert(rows(0).getSeq(14) == Seq("10:20:10,14,15"))
     assert(rows(0).getSeq(15) == Seq("(800.0,600.0)", "(83.24,5.1)"))
-    assert(rows(0).getSeq(16) == Seq("{-4.359313077939234,-1.0,159.9516512549538}",
-      "{23.85,10.87,5.92}"))
+    assert(
+      rows(0)
+        .getSeq(16) == Seq("{-4.359313077939234,-1.0,159.9516512549538}", "{23.85,10.87,5.92}"))
     assert(rows(0).getSeq(17) == Seq("[(80.12,131.24),(201.5,503.33)]"))
     assert(rows(0).getSeq(18) == Seq("(20.21,11.23),(19.84,2.1)"))
     assert(rows(0).getSeq(19) == Seq("((10.2,30.4),(50.6,70.8),(90.1,11.3))"))
@@ -356,23 +425,21 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("query JDBC option") {
-    val expectedResult = Set(
-      (42, 123456789012345L)
-    ).map { case (c1, c3) =>
+    val expectedResult = Set((42, 123456789012345L)).map { case (c1, c3) =>
       Row(Integer.valueOf(c1), java.lang.Long.valueOf(c3))
     }
 
     val query = "SELECT c1, c3 FROM bar WHERE c1 IS NOT NULL"
     // query option to pass on the query string.
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", query)
       .load()
     assert(df.collect().toSet === expectedResult)
 
     // query option in the create table path.
-    sql(
-      s"""
+    sql(s"""
          |CREATE OR REPLACE TEMPORARY VIEW queryOption
          |USING org.apache.spark.sql.jdbc
          |OPTIONS (url '$jdbcUrl', query '$query')
@@ -381,8 +448,10 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("write byte as smallint") {
-    spark.createDataFrame(Seq((1.toByte, 2.toShort)))
-      .write.jdbc(jdbcUrl, "byte_to_smallint_test", new Properties)
+    spark
+      .createDataFrame(Seq((1.toByte, 2.toShort)))
+      .write
+      .jdbc(jdbcUrl, "byte_to_smallint_test", new Properties)
     val df = spark.read.jdbc(jdbcUrl, "byte_to_smallint_test", new Properties)
     val schema = df.schema
     assert(schema.head.dataType == ShortType)
@@ -400,8 +469,15 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
 
   test("SPARK-32576: character array type tests") {
     val df = spark.read.jdbc(jdbcUrl, "char_array_types", new Properties)
-    checkAnswer(df, Row(Seq("a   ", "bcd "), Seq("ef  ", "gh  "), Seq("i", "j", "kl"),
-      Seq("mnop"), Seq("q", "r"), Seq("Eason", "Ethan")))
+    checkAnswer(
+      df,
+      Row(
+        Seq("a   ", "bcd "),
+        Seq("ef  ", "gh  "),
+        Seq("i", "j", "kl"),
+        Seq("mnop"),
+        Seq("q", "r"),
+        Seq("Eason", "Ethan")))
   }
 
   test("SPARK-34333: money type tests") {
@@ -486,7 +562,8 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("SPARK-47407: Support java.sql.Types.NULL for NullType") {
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", "SELECT test_null()")
       .load()
@@ -496,8 +573,9 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
 
   test("SPARK-47628: Fix reading bit array type") {
     val df = spark.read.jdbc(jdbcUrl, "test_bit_array", new Properties)
-    val expected = Row(Array(true, false), Array(
-      Array[Byte](48, 48, 48, 48, 49), Array[Byte](48, 48, 48, 49, 48)))
+    val expected = Row(
+      Array(true, false),
+      Array(Array[Byte](48, 48, 48, 48, 49), Array[Byte](48, 48, 48, 49, 48)))
     checkAnswer(df, expected)
   }
 
@@ -513,8 +591,8 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
       spark.read.jdbc(jdbcUrl, "double_dim_array", new Properties),
       Row(Seq(Seq(1, 2), Seq(3, 4))))
 
-    sql("select array(array(array(1, 2), array(3, 4)), array(array(5, 6), array(7, 8))) as col0")
-      .write.jdbc(jdbcUrl, "triple_dim_array", new Properties)
+    sql("select array(array(array(1, 2), array(3, 4)), array(array(5, 6), array(7, 8))) as col0").write
+      .jdbc(jdbcUrl, "triple_dim_array", new Properties)
 
     checkAnswer(
       spark.read.jdbc(jdbcUrl, "triple_dim_array", new Properties),
@@ -524,14 +602,17 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
   test("SPARK-47701: Reading complex type") {
     val df = spark.read.jdbc(jdbcUrl, "complex_table", new Properties)
     checkAnswer(df, Row("(t,1)"))
-    val df2 = spark.read.format("jdbc")
+    val df2 = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
-      .option("query", "SELECT (c1).b, (c1).d FROM complex_table").load()
+      .option("query", "SELECT (c1).b, (c1).d FROM complex_table")
+      .load()
     checkAnswer(df2, Row(true, 1.0d))
   }
 
   test("SPARK-47701: Range Types") {
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", "SELECT '[3,7)'::int4range")
       .load()
@@ -544,15 +625,18 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("SPARK-47710: Reading Object Identifier Types") {
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
-      .option("query", "SELECT 1::oid, 'bar'::regclass, 'integer'::regtype").load()
+      .option("query", "SELECT 1::oid, 'bar'::regclass, 'integer'::regtype")
+      .load()
     checkAnswer(df, Row(1, "bar", "integer"))
   }
 
   test("SPARK-47886: special number values") {
     def toDF(qry: String): DataFrame = {
-      spark.read.format("jdbc")
+      spark.read
+        .format("jdbc")
         .option("url", jdbcUrl)
         .option("query", qry)
         .load()
@@ -562,8 +646,7 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
       Row(Double.NaN, Double.PositiveInfinity, Double.NegativeInfinity))
     checkAnswer(
       toDF("SELECT 'NaN'::float4 c1, 'infinity'::float4 c2, '-infinity'::float4 c3"),
-      Row(Float.NaN, Float.PositiveInfinity, Float.NegativeInfinity)
-    )
+      Row(Float.NaN, Float.PositiveInfinity, Float.NegativeInfinity))
 
     Seq("NaN", "infinity", "-infinity").foreach { v =>
       val df = toDF(s"SELECT '$v'::numeric c1")
@@ -589,17 +672,21 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
 
     // read timestamps for test
     withSQLConf(SQLConf.LEGACY_POSTGRES_DATETIME_MAPPING_ENABLED.key -> "true") {
-      val df1 = spark.read.option("preferTimestampNTZ", false)
+      val df1 = spark.read
+        .option("preferTimestampNTZ", false)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_false", new Properties)
       checkAnswer(df1, Row(Timestamp.valueOf("2018-11-17 13:33:33")))
-      val df2 = spark.read.option("preferTimestampNTZ", true)
+      val df2 = spark.read
+        .option("preferTimestampNTZ", true)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_false", new Properties)
       checkAnswer(df2, Row(LocalDateTime.of(2018, 11, 17, 13, 33, 33)))
 
-      val df3 = spark.read.option("preferTimestampNTZ", false)
+      val df3 = spark.read
+        .option("preferTimestampNTZ", false)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_true", new Properties)
       checkAnswer(df3, Row(Timestamp.valueOf("2018-11-17 13:33:33")))
-      val df4 = spark.read.option("preferTimestampNTZ", true)
+      val df4 = spark.read
+        .option("preferTimestampNTZ", true)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_true", new Properties)
       checkAnswer(df4, Row(LocalDateTime.of(2018, 11, 17, 13, 33, 33)))
     }
@@ -611,10 +698,12 @@ class PostgresIntegrationSuite extends SharedJDBCIntegrationSuite {
         checkAnswer(dfCopy, Row(Timestamp.valueOf("2018-11-17 13:33:33")))
       }
 
-      val df5 = spark.read.option("preferTimestampNTZ", false)
+      val df5 = spark.read
+        .option("preferTimestampNTZ", false)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_true", new Properties)
       checkAnswer(df5, Row(Timestamp.valueOf("2018-11-17 13:33:33")))
-      val df6 = spark.read.option("preferTimestampNTZ", true)
+      val df6 = spark.read
+        .option("preferTimestampNTZ", true)
         .jdbc(jdbcUrl, "ts_with_timezone_copy_true", new Properties)
       checkAnswer(df6, Row(LocalDateTime.of(2018, 11, 17, 13, 33, 33)))
     }

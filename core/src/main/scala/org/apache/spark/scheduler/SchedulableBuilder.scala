@@ -34,8 +34,7 @@ import org.apache.spark.scheduler.SchedulingMode.SchedulingMode
 import org.apache.spark.util.Utils
 
 /**
- * An interface to build Schedulable tree
- * buildPools: build the tree nodes(pools)
+ * An interface to build Schedulable tree buildPools: build the tree nodes(pools)
  * addTaskSetManager: build the leaf nodes(TaskSetManagers)
  */
 private[spark] trait SchedulableBuilder {
@@ -47,7 +46,8 @@ private[spark] trait SchedulableBuilder {
 }
 
 private[spark] class FIFOSchedulableBuilder(val rootPool: Pool)
-  extends SchedulableBuilder with Logging {
+    extends SchedulableBuilder
+    with Logging {
 
   override def buildPools(): Unit = {
     // nothing
@@ -59,7 +59,8 @@ private[spark] class FIFOSchedulableBuilder(val rootPool: Pool)
 }
 
 private[spark] class FairSchedulableBuilder(val rootPool: Pool, sc: SparkContext)
-  extends SchedulableBuilder with Logging {
+    extends SchedulableBuilder
+    with Logging {
 
   val schedulerAllocFile = sc.conf.get(SCHEDULER_ALLOCATION_FILE)
   val DEFAULT_SCHEDULER_FILE = "fairscheduler.xml"
@@ -77,36 +78,41 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, sc: SparkContext
   override def buildPools(): Unit = {
     var fileData: Option[(InputStream, String)] = None
     try {
-      fileData = schedulerAllocFile.map { f =>
-        val filePath = new Path(f)
-        val fis = filePath.getFileSystem(sc.hadoopConfiguration).open(filePath)
-        logInfo(log"Creating Fair Scheduler pools from ${MDC(LogKeys.FILE_NAME, f)}")
-        Some((fis, f))
-      }.getOrElse {
-        val is = Utils.getSparkClassLoader.getResourceAsStream(DEFAULT_SCHEDULER_FILE)
-        if (is != null) {
-          logInfo(log"Creating Fair Scheduler pools from default file: " +
-            log"${MDC(LogKeys.FILE_NAME, DEFAULT_SCHEDULER_FILE)}")
-          Some((is, DEFAULT_SCHEDULER_FILE))
-        } else {
-          val schedulingMode = sc.conf.get(SCHEDULER_MODE)
-          rootPool.addSchedulable(new Pool(
-            DEFAULT_POOL_NAME, schedulingMode, DEFAULT_MINIMUM_SHARE, DEFAULT_WEIGHT))
-          logInfo(log"Fair scheduler configuration not found, created default pool: " +
-            log"${MDC(LogKeys.DEFAULT_NAME, DEFAULT_POOL_NAME)}, " +
-            log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, schedulingMode)}, " +
-            log"minShare: ${MDC(LogKeys.MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
-            log"weight: ${MDC(LogKeys.WEIGHT, DEFAULT_WEIGHT)}")
-          None
+      fileData = schedulerAllocFile
+        .map { f =>
+          val filePath = new Path(f)
+          val fis = filePath.getFileSystem(sc.hadoopConfiguration).open(filePath)
+          logInfo(log"Creating Fair Scheduler pools from ${MDC(LogKeys.FILE_NAME, f)}")
+          Some((fis, f))
         }
-      }
+        .getOrElse {
+          val is = Utils.getSparkClassLoader.getResourceAsStream(DEFAULT_SCHEDULER_FILE)
+          if (is != null) {
+            logInfo(
+              log"Creating Fair Scheduler pools from default file: " +
+                log"${MDC(LogKeys.FILE_NAME, DEFAULT_SCHEDULER_FILE)}")
+            Some((is, DEFAULT_SCHEDULER_FILE))
+          } else {
+            val schedulingMode = sc.conf.get(SCHEDULER_MODE)
+            rootPool.addSchedulable(
+              new Pool(DEFAULT_POOL_NAME, schedulingMode, DEFAULT_MINIMUM_SHARE, DEFAULT_WEIGHT))
+            logInfo(
+              log"Fair scheduler configuration not found, created default pool: " +
+                log"${MDC(LogKeys.DEFAULT_NAME, DEFAULT_POOL_NAME)}, " +
+                log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, schedulingMode)}, " +
+                log"minShare: ${MDC(LogKeys.MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
+                log"weight: ${MDC(LogKeys.WEIGHT, DEFAULT_WEIGHT)}")
+            None
+          }
+        }
 
       fileData.foreach { case (is, fileName) => buildFairSchedulerPool(is, fileName) }
     } catch {
       case NonFatal(t) =>
         if (fileData.isDefined) {
           val fileName = fileData.get._2
-          logError(log"Error while building the fair scheduler pools from ${MDC(PATH, fileName)}",
+          logError(
+            log"Error while building the fair scheduler pools from ${MDC(PATH, fileName)}",
             t)
         } else {
           logError("Error while building the fair scheduler pools", t)
@@ -122,13 +128,17 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, sc: SparkContext
 
   private def buildDefaultPool(): Unit = {
     if (rootPool.getSchedulableByName(DEFAULT_POOL_NAME) == null) {
-      val pool = new Pool(DEFAULT_POOL_NAME, DEFAULT_SCHEDULING_MODE,
-        DEFAULT_MINIMUM_SHARE, DEFAULT_WEIGHT)
+      val pool = new Pool(
+        DEFAULT_POOL_NAME,
+        DEFAULT_SCHEDULING_MODE,
+        DEFAULT_MINIMUM_SHARE,
+        DEFAULT_WEIGHT)
       rootPool.addSchedulable(pool)
-      logInfo(log"Created default pool: ${MDC(LogKeys.POOL_NAME, DEFAULT_POOL_NAME)}, " +
-        log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, DEFAULT_SCHEDULING_MODE)}, " +
-        log"minShare: ${MDC(LogKeys.MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
-        log"weight: ${MDC(LogKeys.WEIGHT, DEFAULT_WEIGHT)}")
+      logInfo(
+        log"Created default pool: ${MDC(LogKeys.POOL_NAME, DEFAULT_POOL_NAME)}, " +
+          log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, DEFAULT_SCHEDULING_MODE)}, " +
+          log"minShare: ${MDC(LogKeys.MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
+          log"weight: ${MDC(LogKeys.WEIGHT, DEFAULT_WEIGHT)}")
     }
   }
 
@@ -138,19 +148,19 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, sc: SparkContext
 
       val poolName = (poolNode \ POOL_NAME_PROPERTY).text
 
-      val schedulingMode = getSchedulingModeValue(poolNode, poolName,
-        DEFAULT_SCHEDULING_MODE, fileName)
-      val minShare = getIntValue(poolNode, poolName, MINIMUM_SHARES_PROPERTY,
-        DEFAULT_MINIMUM_SHARE, fileName)
-      val weight = getIntValue(poolNode, poolName, WEIGHT_PROPERTY,
-        DEFAULT_WEIGHT, fileName)
+      val schedulingMode =
+        getSchedulingModeValue(poolNode, poolName, DEFAULT_SCHEDULING_MODE, fileName)
+      val minShare =
+        getIntValue(poolNode, poolName, MINIMUM_SHARES_PROPERTY, DEFAULT_MINIMUM_SHARE, fileName)
+      val weight = getIntValue(poolNode, poolName, WEIGHT_PROPERTY, DEFAULT_WEIGHT, fileName)
 
       rootPool.addSchedulable(new Pool(poolName, schedulingMode, minShare, weight))
 
-      logInfo(log"Created pool: ${MDC(LogKeys.POOL_NAME, poolName)}, " +
-        log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, schedulingMode)}, " +
-        log"minShare: ${MDC(LogKeys.MIN_SHARE, minShare)}, " +
-        log"weight: ${MDC(LogKeys.WEIGHT, weight)}")
+      logInfo(
+        log"Created pool: ${MDC(LogKeys.POOL_NAME, poolName)}, " +
+          log"schedulingMode: ${MDC(LogKeys.SCHEDULING_MODE, schedulingMode)}, " +
+          log"minShare: ${MDC(LogKeys.MIN_SHARE, minShare)}, " +
+          log"weight: ${MDC(LogKeys.WEIGHT, weight)}")
     }
   }
 
@@ -194,40 +204,43 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, sc: SparkContext
       data.toInt
     } catch {
       case _: NumberFormatException =>
-        logWarning(log"Error while loading fair scheduler configuration from " +
-          log"${MDC(FILE_NAME, fileName)}: " +
-          log"${MDC(PROPERTY_NAME, propertyName)} is blank or invalid: ${MDC(DATA, data)}, " +
-          log"using the default ${MDC(DEFAULT_NAME, propertyName)}: " +
-          log"${MDC(DEFAULT_VALUE, defaultValue)} for pool: ${MDC(POOL_NAME, poolName)}")
+        logWarning(
+          log"Error while loading fair scheduler configuration from " +
+            log"${MDC(FILE_NAME, fileName)}: " +
+            log"${MDC(PROPERTY_NAME, propertyName)} is blank or invalid: ${MDC(DATA, data)}, " +
+            log"using the default ${MDC(DEFAULT_NAME, propertyName)}: " +
+            log"${MDC(DEFAULT_VALUE, defaultValue)} for pool: ${MDC(POOL_NAME, poolName)}")
         defaultValue
     }
   }
 
   override def addTaskSetManager(manager: Schedulable, properties: Properties): Unit = {
     val poolName = if (properties != null) {
-        properties.getProperty(FAIR_SCHEDULER_PROPERTIES, DEFAULT_POOL_NAME)
-      } else {
-        DEFAULT_POOL_NAME
-      }
+      properties.getProperty(FAIR_SCHEDULER_PROPERTIES, DEFAULT_POOL_NAME)
+    } else {
+      DEFAULT_POOL_NAME
+    }
     var parentPool = rootPool.getSchedulableByName(poolName)
     if (parentPool == null) {
       // we will create a new pool that user has configured in app
       // instead of being defined in xml file
-      parentPool = new Pool(poolName, DEFAULT_SCHEDULING_MODE,
-        DEFAULT_MINIMUM_SHARE, DEFAULT_WEIGHT)
+      parentPool =
+        new Pool(poolName, DEFAULT_SCHEDULING_MODE, DEFAULT_MINIMUM_SHARE, DEFAULT_WEIGHT)
       rootPool.addSchedulable(parentPool)
-      logWarning(log"A job was submitted with scheduler pool " +
-        log"${MDC(SCHEDULER_POOL_NAME, poolName)}, which has not been " +
-        log"configured. This can happen when the file that pools are read from isn't set, or " +
-        log"when that file doesn't contain ${MDC(POOL_NAME, poolName)}. " +
-        log"Created ${MDC(CREATED_POOL_NAME, poolName)} with default " +
-        log"configuration (schedulingMode: " +
-        log"${MDC(LogKeys.SCHEDULING_MODE, DEFAULT_SCHEDULING_MODE)}, " +
-        log"minShare: ${MDC(MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
-        log"weight: ${MDC(WEIGHT, DEFAULT_WEIGHT)}")
+      logWarning(
+        log"A job was submitted with scheduler pool " +
+          log"${MDC(SCHEDULER_POOL_NAME, poolName)}, which has not been " +
+          log"configured. This can happen when the file that pools are read from isn't set, or " +
+          log"when that file doesn't contain ${MDC(POOL_NAME, poolName)}. " +
+          log"Created ${MDC(CREATED_POOL_NAME, poolName)} with default " +
+          log"configuration (schedulingMode: " +
+          log"${MDC(LogKeys.SCHEDULING_MODE, DEFAULT_SCHEDULING_MODE)}, " +
+          log"minShare: ${MDC(MIN_SHARE, DEFAULT_MINIMUM_SHARE)}, " +
+          log"weight: ${MDC(WEIGHT, DEFAULT_WEIGHT)}")
     }
     parentPool.addSchedulable(manager)
-    logInfo(log"Added task set ${MDC(LogKeys.TASK_SET_MANAGER, manager.name)} tasks to pool " +
-      log"${MDC(LogKeys.POOL_NAME, poolName)}")
+    logInfo(
+      log"Added task set ${MDC(LogKeys.TASK_SET_MANAGER, manager.name)} tasks to pool " +
+        log"${MDC(LogKeys.POOL_NAME, poolName)}")
   }
 }

@@ -32,8 +32,7 @@ class HiveIncompatibleColTypeChangeSuite extends SparkFunSuite with TestHiveSing
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    hiveClient.runSqlHive(
-      "SET hive.metastore.disallow.incompatible.col.type.changes=true")
+    hiveClient.runSqlHive("SET hive.metastore.disallow.incompatible.col.type.changes=true")
   }
 
   override def afterEach(): Unit = {
@@ -45,8 +44,7 @@ class HiveIncompatibleColTypeChangeSuite extends SparkFunSuite with TestHiveSing
 
   override def afterAll(): Unit = {
     try {
-      hiveClient.runSqlHive(
-        "SET hive.metastore.disallow.incompatible.col.type.changes=false")
+      hiveClient.runSqlHive("SET hive.metastore.disallow.incompatible.col.type.changes=false")
     } finally {
       super.afterAll()
     }
@@ -87,8 +85,7 @@ class HiveIncompatibleColTypeChangeSuite extends SparkFunSuite with TestHiveSing
         "clazz" -> "org.apache.hadoop.hive.ql.metadata.HiveException",
         "msg" -> ("Unable to alter table. " +
           "The following columns have types incompatible with the existing columns " +
-          "in their respective positions :\ncol"))
-    )
+          "in their respective positions :\ncol")))
   }
 
   private def testAlterTable(

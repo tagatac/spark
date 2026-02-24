@@ -26,14 +26,20 @@ import org.apache.spark.sql.pipelines.Language
 /**
  * Records information used to track the provenance of a given query to user code.
  *
- * @param language The language used by the user to define the query.
- * @param filePath Path to the file of the user code that defines the query.
- * @param sqlText The SQL text of the query.
- * @param line The line number of the query in the user code.
- *             Line numbers are 1-indexed.
- * @param startPosition The start position of the query in the user code.
- * @param objectType The type of the object that the query is associated with. (Table, View, etc)
- * @param objectName The name of the object that the query is associated with.
+ * @param language
+ *   The language used by the user to define the query.
+ * @param filePath
+ *   Path to the file of the user code that defines the query.
+ * @param sqlText
+ *   The SQL text of the query.
+ * @param line
+ *   The line number of the query in the user code. Line numbers are 1-indexed.
+ * @param startPosition
+ *   The start position of the query in the user code.
+ * @param objectType
+ *   The type of the object that the query is associated with. (Table, View, etc)
+ * @param objectName
+ *   The name of the object that the query is associated with.
  */
 case class QueryOrigin(
     language: Option[Language] = None,
@@ -42,8 +48,7 @@ case class QueryOrigin(
     line: Option[Int] = None,
     startPosition: Option[Int] = None,
     objectType: Option[String] = None,
-    objectName: Option[String] = None
-) {
+    objectName: Option[String] = None) {
 
   /**
    * Merges this origin with another one.
@@ -59,8 +64,7 @@ case class QueryOrigin(
       line = other.line.orElse(line),
       startPosition = other.startPosition.orElse(startPosition),
       objectType = other.objectType.orElse(objectType),
-      objectName = other.objectName.orElse(objectName)
-    )
+      objectName = other.objectName.orElse(objectName))
   }
 
   /**
@@ -74,9 +78,7 @@ case class QueryOrigin(
       QueryOrigin(
         sqlText = other.sqlText,
         line = other.line,
-        startPosition = other.startPosition
-      )
-    )
+        startPosition = other.startPosition))
   }
 }
 
@@ -115,17 +117,18 @@ object QueryOrigin extends Logging {
     }
   }
 
-  /** Returns the `QueryOrigin` stored as a suppressed exception in the given throwable.
+  /**
+   * Returns the `QueryOrigin` stored as a suppressed exception in the given throwable.
    *
-   * @return Some(origin) if the origin is recorded as part of the given throwable, `None`
-   *         otherwise.
+   * @return
+   *   Some(origin) if the origin is recorded as part of the given throwable, `None` otherwise.
    */
   def getOrigin(t: Throwable): Option[QueryOrigin] = {
     try {
       // Wrap in an `Option(_)` first to handle `null` throwable.
       Option(t).flatMap { ex =>
-        ex.getSuppressed.collectFirst {
-          case QueryOriginWrapper(context) => context
+        ex.getSuppressed.collectFirst { case QueryOriginWrapper(context) =>
+          context
         }
       }
     } catch {

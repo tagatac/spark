@@ -37,10 +37,9 @@ import org.apache.spark.errors.SparkCoreErrors
 import org.apache.spark.internal.LogKeys.{COMMAND, ERROR, PATH}
 import org.apache.spark.util.Utils
 
-
 /**
- * An RDD that pipes the contents of each parent partition through an external command
- * (printing them one per line) and returns the output as a collection of strings.
+ * An RDD that pipes the contents of each parent partition through an external command (printing
+ * them one per line) and returns the output as a collection of strings.
  */
 private[spark] class PipedRDD[T: ClassTag](
     prev: RDD[T],
@@ -51,13 +50,14 @@ private[spark] class PipedRDD[T: ClassTag](
     separateWorkingDir: Boolean,
     bufferSize: Int,
     encoding: String)
-  extends RDD[String](prev) {
+    extends RDD[String](prev) {
 
   override def getPartitions: Array[Partition] = firstParent[T].partitions
 
   /**
    * A FilenameFilter that accepts anything that isn't equal to the name passed in.
-   * @param filterName of file or directory to leave out
+   * @param filterName
+   *   of file or directory to leave out
    */
   class NotEqualsFileNameFilter(filterName: String) extends FilenameFilter {
     def accept(dir: File, name: String): Boolean = {
@@ -100,15 +100,18 @@ private[spark] class PipedRDD[T: ClassTag](
         // are creating here.
         for (file <- currentDir.list(tasksDirFilter)) {
           val fileWithDir = new File(currentDir, file)
-          Utils.symlink(new File(fileWithDir.getAbsolutePath()),
+          Utils.symlink(
+            new File(fileWithDir.getAbsolutePath()),
             new File(taskDirectory + File.separator + fileWithDir.getName()))
         }
         pb.directory(taskDirFile)
         workInTaskDirectory = true
       } catch {
         case e: Exception =>
-          logError(log"Unable to setup task working directory: ${MDC(ERROR, e.getMessage)}" +
-          log" (${MDC(PATH, taskDirectory)})", e)
+          logError(
+            log"Unable to setup task working directory: ${MDC(ERROR, e.getMessage)}" +
+              log" (${MDC(PATH, taskDirectory)})",
+            e)
       }
     }
 
@@ -138,8 +141,8 @@ private[spark] class PipedRDD[T: ClassTag](
     val stdinWriterThread = new Thread(s"${PipedRDD.STDIN_WRITER_THREAD_PREFIX} $command") {
       override def run(): Unit = {
         TaskContext.setTaskContext(context)
-        val out = new PrintWriter(new BufferedWriter(
-          new OutputStreamWriter(proc.getOutputStream, encoding), bufferSize))
+        val out = new PrintWriter(
+          new BufferedWriter(new OutputStreamWriter(proc.getOutputStream, encoding), bufferSize))
         try {
           // scalastyle:off println
           // input the pipe context firstly
@@ -200,8 +203,9 @@ private[spark] class PipedRDD[T: ClassTag](
           val exitStatus = proc.waitFor()
           cleanup()
           if (exitStatus != 0) {
-            throw new IllegalStateException(s"Subprocess exited with status $exitStatus. " +
-              s"Command ran: " + command.mkString(" "))
+            throw new IllegalStateException(
+              s"Subprocess exited with status $exitStatus. " +
+                s"Command ran: " + command.mkString(" "))
           }
           false
         }
@@ -223,8 +227,9 @@ private[spark] class PipedRDD[T: ClassTag](
         val t = childThreadException.get()
         if (t != null) {
           val commandRan = command.mkString(" ")
-          logError(log"Caught exception while running pipe() operator. Command ran: " +
-            log"${MDC(COMMAND, commandRan)}. Exception: ${MDC(ERROR, t.getMessage)}")
+          logError(
+            log"Caught exception while running pipe() operator. Command ran: " +
+              log"${MDC(COMMAND, commandRan)}. Exception: ${MDC(ERROR, t.getMessage)}")
           proc.destroy()
           cleanup()
           throw t

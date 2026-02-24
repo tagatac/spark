@@ -20,7 +20,9 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
 object StreamingUtils {
-  def resolvedCheckpointLocation(hadoopConf: Configuration, checkpointLocation: String): String = {
+  def resolvedCheckpointLocation(
+      hadoopConf: Configuration,
+      checkpointLocation: String): String = {
     val checkpointPath = new Path(checkpointLocation)
     val fs = checkpointPath.getFileSystem(hadoopConf)
     checkpointPath.makeQualified(fs.getUri, fs.getWorkingDirectory).toUri.toString

@@ -79,7 +79,7 @@ class ExecRedirectConsolePlugin extends ExecutorPlugin with Logging {
 }
 
 private[spark] class LoggingPrintStream(redirect: String => Unit)
-  extends PrintStream(new LineBuffer(4 * 1024 * 1024)) {
+    extends PrintStream(new LineBuffer(4 * 1024 * 1024)) {
 
   override def write(b: Int): Unit = {
     super.write(b)
@@ -113,9 +113,11 @@ private[spark] class LineBuffer(lineMaxBytes: Long) extends ByteArrayOutputStrea
 
   def tryGenerateContext: Option[String] =
     if (isLineEnded) {
-      try Some(new String(buf, 0, count - LF_LENGTH)) finally reset()
+      try Some(new String(buf, 0, count - LF_LENGTH))
+      finally reset()
     } else if (count >= lineMaxBytes) {
-      try Some(new String(buf, 0, count)) finally reset()
+      try Some(new String(buf, 0, count))
+      finally reset()
     } else {
       None
     }

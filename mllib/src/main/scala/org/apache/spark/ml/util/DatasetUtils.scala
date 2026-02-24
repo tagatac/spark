@@ -31,13 +31,13 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
-
 private[spark] object DatasetUtils extends Logging {
 
   private[ml] def checkNonNanValues(colName: String, displayed: String): Column = {
     val casted = col(colName).cast(DoubleType)
     when(casted.isNull || casted.isNaN, raise_error(lit(s"$displayed MUST NOT be Null or NaN")))
-      .when(casted === Double.NegativeInfinity || casted === Double.PositiveInfinity,
+      .when(
+        casted === Double.NegativeInfinity || casted === Double.PositiveInfinity,
         raise_error(concat(lit(s"$displayed MUST NOT be Infinity, but got "), casted)))
       .otherwise(casted)
   }
@@ -46,14 +46,13 @@ private[spark] object DatasetUtils extends Logging {
     checkNonNanValues(labelCol, "Labels")
   }
 
-  private[ml] def checkClassificationLabels(
-    labelCol: String,
-    numClasses: Option[Int]): Column = {
+  private[ml] def checkClassificationLabels(labelCol: String, numClasses: Option[Int]): Column = {
     val casted = col(labelCol).cast(DoubleType)
     numClasses match {
       case Some(2) =>
         when(casted.isNull || casted.isNaN, raise_error(lit("Labels MUST NOT be Null or NaN")))
-          .when(casted =!= 0 && casted =!= 1,
+          .when(
+            casted =!= 0 && casted =!= 1,
             raise_error(concat(lit("Labels MUST be in {0, 1}, but got "), casted)))
           .otherwise(casted)
 
@@ -61,9 +60,11 @@ private[spark] object DatasetUtils extends Logging {
         val n = numClasses.getOrElse(Int.MaxValue)
         require(0 < n && n <= Int.MaxValue)
         when(casted.isNull || casted.isNaN, raise_error(lit("Labels MUST NOT be Null or NaN")))
-          .when(casted < 0 || casted >= n,
+          .when(
+            casted < 0 || casted >= n,
             raise_error(concat(lit(s"Labels MUST be in [0, $n), but got "), casted)))
-          .when(casted =!= casted.cast(IntegerType),
+          .when(
+            casted =!= casted.cast(IntegerType),
             raise_error(concat(lit("Labels MUST be Integers, but got "), casted)))
           .otherwise(casted)
     }
@@ -72,7 +73,8 @@ private[spark] object DatasetUtils extends Logging {
   private[ml] def checkNonNegativeWeights(weightCol: String): Column = {
     val casted = col(weightCol).cast(DoubleType)
     when(casted.isNull || casted.isNaN, raise_error(lit("Weights MUST NOT be Null or NaN")))
-      .when(casted < 0 || casted === Double.PositiveInfinity,
+      .when(
+        casted < 0 || casted === Double.PositiveInfinity,
         raise_error(concat(lit("Weights MUST NOT be Negative or Infinity, but got "), casted)))
       .otherwise(casted)
   }
@@ -84,10 +86,14 @@ private[spark] object DatasetUtils extends Logging {
 
   private[ml] def checkNonNanVectors(vectorCol: Column): Column = {
     when(vectorCol.isNull, raise_error(lit("Vectors MUST NOT be Null")))
-      .when(exists(unwrap_udt(vectorCol).getField("values"),
-        v => v.isNaN || v === Double.NegativeInfinity || v === Double.PositiveInfinity),
-        raise_error(concat(lit("Vector values MUST NOT be NaN or Infinity, but got "),
-          vectorCol.cast(StringType))))
+      .when(
+        exists(
+          unwrap_udt(vectorCol).getField("values"),
+          v => v.isNaN || v === Double.NegativeInfinity || v === Double.PositiveInfinity),
+        raise_error(
+          concat(
+            lit("Vector values MUST NOT be NaN or Infinity, but got "),
+            vectorCol.cast(StringType))))
       .otherwise(vectorCol)
   }
 
@@ -111,22 +117,26 @@ private[spark] object DatasetUtils extends Logging {
       case _ => lit(1.0)
     }
 
-    df.select(labelCol, weightCol, checkNonNanVectors(p.getFeaturesCol))
-      .rdd.map { case Row(l: Double, w: Double, v: Vector) => Instance(l, w, v) }
+    df.select(labelCol, weightCol, checkNonNanVectors(p.getFeaturesCol)).rdd.map {
+      case Row(l: Double, w: Double, v: Vector) => Instance(l, w, v)
+    }
   }
 
   /**
    * Cast a column in a Dataset to Vector type.
    *
    * The supported data types of the input column are
-   * - Vector
-   * - float/double type Array.
+   *   - Vector
+   *   - float/double type Array.
    *
    * Note: The returned column does not have Metadata.
    *
-   * @param dataset input DataFrame
-   * @param colName column name.
-   * @return Vector column
+   * @param dataset
+   *   input DataFrame
+   * @param colName
+   *   column name.
+   * @return
+   *   Vector column
    */
   def columnToVector(dataset: Dataset[_], colName: String): Column = {
     val columnDataType = dataset.schema(colName).dataType
@@ -134,14 +144,16 @@ private[spark] object DatasetUtils extends Logging {
       case _: VectorUDT => col(colName)
       case fdt: ArrayType =>
         val transferUDF = fdt.elementType match {
-          case _: FloatType => udf(f = (vector: Seq[Float]) => {
-            val inputArray = Array.ofDim[Double](vector.size)
-            vector.indices.foreach(idx => inputArray(idx) = vector(idx).toDouble)
-            Vectors.dense(inputArray)
-          })
-          case _: DoubleType => udf((vector: Seq[Double]) => {
-            Vectors.dense(vector.toArray)
-          })
+          case _: FloatType =>
+            udf(f = (vector: Seq[Float]) => {
+              val inputArray = Array.ofDim[Double](vector.size)
+              vector.indices.foreach(idx => inputArray(idx) = vector(idx).toDouble)
+              Vectors.dense(inputArray)
+            })
+          case _: DoubleType =>
+            udf((vector: Seq[Double]) => {
+              Vectors.dense(vector.toArray)
+            })
           case other =>
             throw new IllegalArgumentException(s"Array[$other] column cannot be cast to Vector")
         }
@@ -152,26 +164,28 @@ private[spark] object DatasetUtils extends Logging {
   }
 
   def columnToOldVector(dataset: Dataset[_], colName: String): RDD[OldVector] = {
-    dataset.select(columnToVector(dataset, colName))
-      .rdd.map {
-      case Row(point: Vector) => OldVectors.fromML(point)
+    dataset.select(columnToVector(dataset, colName)).rdd.map { case Row(point: Vector) =>
+      OldVectors.fromML(point)
     }
   }
 
   /**
-   * Get the number of classes.  This looks in column metadata first, and if that is missing,
-   * then this assumes classes are indexed 0,1,...,numClasses-1 and computes numClasses
-   * by finding the maximum label value.
+   * Get the number of classes. This looks in column metadata first, and if that is missing, then
+   * this assumes classes are indexed 0,1,...,numClasses-1 and computes numClasses by finding the
+   * maximum label value.
    *
-   * Label validation (ensuring all labels are integers >= 0) needs to be handled elsewhere,
-   * such as in `extractLabeledPoints()`.
+   * Label validation (ensuring all labels are integers >= 0) needs to be handled elsewhere, such
+   * as in `extractLabeledPoints()`.
    *
-   * @param dataset  Dataset which contains a column [[labelCol]]
-   * @param maxNumClasses  Maximum number of classes allowed when inferred from data.  If numClasses
-   *                       is specified in the metadata, then maxNumClasses is ignored.
-   * @return  number of classes
-   * @throws IllegalArgumentException  if metadata does not specify numClasses, and the
-   *                                   actual numClasses exceeds maxNumClasses
+   * @param dataset
+   *   Dataset which contains a column [[labelCol]]
+   * @param maxNumClasses
+   *   Maximum number of classes allowed when inferred from data. If numClasses is specified in
+   *   the metadata, then maxNumClasses is ignored.
+   * @return
+   *   number of classes
+   * @throws IllegalArgumentException
+   *   if metadata does not specify numClasses, and the actual numClasses exceeds maxNumClasses
    */
   private[ml] def getNumClasses(
       dataset: Dataset[_],
@@ -188,24 +202,28 @@ private[spark] object DatasetUtils extends Logging {
           throw new SparkException("ML algorithm was given empty dataset.")
         }
         val maxDoubleLabel: Double = maxLabelRow.head.getDouble(0)
-        require((maxDoubleLabel + 1).isValidInt, s"Classifier found max label value =" +
-          s" $maxDoubleLabel but requires integers in range [0, ... ${Int.MaxValue})")
+        require(
+          (maxDoubleLabel + 1).isValidInt,
+          s"Classifier found max label value =" +
+            s" $maxDoubleLabel but requires integers in range [0, ... ${Int.MaxValue})")
         val numClasses = maxDoubleLabel.toInt + 1
-        require(numClasses <= maxNumClasses, s"Classifier inferred $numClasses from label values" +
-          s" in column $labelCol, but this exceeded the max numClasses ($maxNumClasses) allowed" +
-          s" to be inferred from values.  To avoid this error for labels with > $maxNumClasses" +
-          s" classes, specify numClasses explicitly in the metadata; this can be done by applying" +
-          s" StringIndexer to the label column.")
-        logInfo(log"${MDC(CLASS_NAME, this.getClass.getCanonicalName)} inferred ${MDC(
-          NUM_CLASSES, numClasses)} classes for labelCol=${MDC(LABEL_COLUMN, labelCol)}" +
-          log" since numClasses was not specified in the column metadata.")
+        require(
+          numClasses <= maxNumClasses,
+          s"Classifier inferred $numClasses from label values" +
+            s" in column $labelCol, but this exceeded the max numClasses ($maxNumClasses) allowed" +
+            s" to be inferred from values.  To avoid this error for labels with > $maxNumClasses" +
+            s" classes, specify numClasses explicitly in the metadata; this can be done by applying" +
+            s" StringIndexer to the label column.")
+        logInfo(
+          log"${MDC(CLASS_NAME, this.getClass.getCanonicalName)} inferred ${MDC(NUM_CLASSES, numClasses)} classes for labelCol=${MDC(LABEL_COLUMN, labelCol)}" +
+            log" since numClasses was not specified in the column metadata.")
         numClasses
     }
   }
 
   /**
-   * Obtain the number of features in a vector column.
-   * If no metadata is available, extract it from the dataset.
+   * Obtain the number of features in a vector column. If no metadata is available, extract it
+   * from the dataset.
    */
   private[ml] def getNumFeatures(dataset: Dataset[_], vectorCol: String): Int = {
     MetadataUtils.getNumFeatures(dataset.schema(vectorCol)).getOrElse {

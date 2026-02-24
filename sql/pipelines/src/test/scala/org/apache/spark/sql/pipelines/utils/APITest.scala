@@ -472,8 +472,7 @@ trait APITest
         val sources = Seq(
           PipelineSourceFile(
             name = "transformations/definition.py",
-            contents =
-              s"""
+            contents = s"""
                  |from pyspark import pipelines as dp
                  |from pyspark.sql import DataFrame, SparkSession
                  |
@@ -490,9 +489,7 @@ trait APITest
                  |)
                  |def mySinkFlow():
                  |  return spark.readStream.table("src")
-                 |""".stripMargin
-          )
-        )
+                 |""".stripMargin))
 
         val pipeline = createAndRunPipeline(pipelineConfig, sources)
         awaitPipelineTermination(pipeline)
@@ -500,8 +497,7 @@ trait APITest
         // verify sink output
         checkAnswer(
           spark.read.format(format).load(dir.getPath),
-          Seq(0, 1, 2, 3, 4).toDF().collect().toSeq
-        )
+          Seq(0, 1, 2, 3, 4).toDF().collect().toSeq)
       } finally {
         // clean up temp directory
         Utils.deleteRecursively(dir)
@@ -576,9 +572,16 @@ trait APITest
       checkAnswer(
         spark.sql(s"SELECT * FROM $fullName ORDER BY id"),
         Seq(
-          Row(0, 0, 0), Row(1, 1, 1), Row(2, 2, 0), Row(3, 0, 1), Row(4, 1, 0),
-          Row(5, 2, 1), Row(6, 0, 0), Row(7, 1, 1), Row(8, 2, 0), Row(9, 0, 1)
-        ))
+          Row(0, 0, 0),
+          Row(1, 1, 1),
+          Row(2, 2, 0),
+          Row(3, 0, 1),
+          Row(4, 1, 0),
+          Row(5, 2, 1),
+          Row(6, 0, 0),
+          Row(7, 1, 1),
+          Row(8, 2, 0),
+          Row(9, 0, 1)))
     }
 
     // Verify clustering information is stored in catalog
@@ -665,8 +668,8 @@ trait APITest
 
   private def runSelectiveRefreshTest(tc: SelectiveRefreshTestCase): Unit = {
     test(tc.name) {
-      val pipelineSpec = TestPipelineSpec(include =
-        Seq("transformations/st.sql", "transformations/mv.sql"))
+      val pipelineSpec =
+        TestPipelineSpec(include = Seq("transformations/st.sql", "transformations/mv.sql"))
       val externalTable = s"source_data"
       // create initial source table
       spark.sql(s"DROP TABLE IF EXISTS $externalTable")

@@ -61,8 +61,18 @@ class BlockInfoManagerSuite extends SparkFunSuite {
   private def withTaskId[T](taskAttemptId: Long)(block: => T): T = {
     try {
       TaskContext.setTaskContext(
-        new TaskContextImpl(0, 0, 0, taskAttemptId, 0,
-          1, null, new Properties, null, TaskMetrics.empty, 1))
+        new TaskContextImpl(
+          0,
+          0,
+          0,
+          taskAttemptId,
+          0,
+          1,
+          null,
+          new Properties,
+          null,
+          TaskMetrics.empty,
+          1))
       block
     } finally {
       TaskContext.unset()
@@ -105,7 +115,8 @@ class BlockInfoManagerSuite extends SparkFunSuite {
     assert(blockInfoManager.getNumberOfMapEntries === initialNumMapEntries + 1)
   }
 
-  test("lockNewBlockForWriting blocks while write lock is held, then returns false after release") {
+  test(
+    "lockNewBlockForWriting blocks while write lock is held, then returns false after release") {
     withTaskId(0) {
       assert(blockInfoManager.lockNewBlockForWriting("block", newBlockInfo()))
     }
@@ -119,7 +130,7 @@ class BlockInfoManagerSuite extends SparkFunSuite {
         blockInfoManager.lockNewBlockForWriting("block", newBlockInfo())
       }
     }
-    Thread.sleep(300)  // Hack to try to ensure that both future tasks are waiting
+    Thread.sleep(300) // Hack to try to ensure that both future tasks are waiting
     withTaskId(0) {
       blockInfoManager.downgradeLock("block")
     }
@@ -130,7 +141,8 @@ class BlockInfoManagerSuite extends SparkFunSuite {
     assert(blockInfoManager.get("block").get.readerCount === 3)
   }
 
-  test("lockNewBlockForWriting blocks while write lock is held, then returns true after removal") {
+  test(
+    "lockNewBlockForWriting blocks while write lock is held, then returns true after removal") {
     withTaskId(0) {
       assert(blockInfoManager.lockNewBlockForWriting("block", newBlockInfo()))
     }
@@ -144,7 +156,7 @@ class BlockInfoManagerSuite extends SparkFunSuite {
         blockInfoManager.lockNewBlockForWriting("block", newBlockInfo())
       }
     }
-    Thread.sleep(300)  // Hack to try to ensure that both future tasks are waiting
+    Thread.sleep(300) // Hack to try to ensure that both future tasks are waiting
     withTaskId(0) {
       blockInfoManager.removeBlock("block")
     }
@@ -271,7 +283,7 @@ class BlockInfoManagerSuite extends SparkFunSuite {
         blockInfoManager.lockForReading("block")
       }
     }
-    Thread.sleep(300)  // Hack to try to ensure that both future tasks are waiting
+    Thread.sleep(300) // Hack to try to ensure that both future tasks are waiting
     withTaskId(0) {
       blockInfoManager.unlock("block")
     }
@@ -296,13 +308,14 @@ class BlockInfoManagerSuite extends SparkFunSuite {
         blockInfoManager.lockForWriting("block")
       }
     }
-    Thread.sleep(300)  // Hack to try to ensure that both future tasks are waiting
+    Thread.sleep(300) // Hack to try to ensure that both future tasks are waiting
     withTaskId(0) {
       blockInfoManager.unlock("block")
     }
     assert(
-      ThreadUtils.awaitResult(
-        Future.firstCompletedOf(Seq(write1Future, write2Future)), 1.seconds).isDefined)
+      ThreadUtils
+        .awaitResult(Future.firstCompletedOf(Seq(write1Future, write2Future)), 1.seconds)
+        .isDefined)
     val firstWriteWinner = if (write1Future.isCompleted) 1 else 2
     withTaskId(firstWriteWinner) {
       blockInfoManager.unlock("block")
@@ -354,7 +367,7 @@ class BlockInfoManagerSuite extends SparkFunSuite {
         blockInfoManager.lockForWriting("block")
       }
     }
-    Thread.sleep(300)  // Hack to try to ensure that both future tasks are waiting
+    Thread.sleep(300) // Hack to try to ensure that both future tasks are waiting
     withTaskId(0) {
       blockInfoManager.removeBlock("block")
     }

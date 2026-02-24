@@ -68,10 +68,9 @@ class HiveMetastoreCatalogSuite extends TestHiveSingleton with SQLTestUtils {
     }
   }
 
-  test("Validate catalog metadata for supported data types")  {
+  test("Validate catalog metadata for supported data types") {
     withTable("t") {
-      sql(
-        """
+      sql("""
           |CREATE TABLE t (
           |c1 boolean,
           |c2 tinyint,
@@ -132,14 +131,15 @@ class HiveMetastoreCatalogSuite extends TestHiveSingleton with SQLTestUtils {
 }
 
 class DataSourceWithHiveMetastoreCatalogSuite
-  extends QueryTest with SQLTestUtils with TestHiveSingleton {
+    extends QueryTest
+    with SQLTestUtils
+    with TestHiveSingleton {
   import hiveContext._
   import testImplicits._
 
-  private val testDF = range(1, 3).select(
-    ($"id" + 0.1) cast DecimalType(10, 3) as "d1",
-    $"id" cast StringType as "d2"
-  ).coalesce(1)
+  private val testDF = range(1, 3)
+    .select(($"id" + 0.1) cast DecimalType(10, 3) as "d1", $"id" cast StringType as "d2")
+    .coalesce(1)
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -151,72 +151,30 @@ class DataSourceWithHiveMetastoreCatalogSuite
     "parquet" -> ((
       "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
       "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
-      "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
-    )),
-
+      "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")),
     "org.apache.spark.sql.execution.datasources.parquet.ParquetFileFormat" -> ((
       "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
       "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
-      "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"
-    )),
-
+      "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe")),
     "orc" -> ((
       "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat",
       "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat",
-      "org.apache.hadoop.hive.ql.io.orc.OrcSerde"
-    )),
-
+      "org.apache.hadoop.hive.ql.io.orc.OrcSerde")),
     "org.apache.spark.sql.hive.orc" -> ((
       "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat",
       "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat",
-      "org.apache.hadoop.hive.ql.io.orc.OrcSerde"
-    )),
-
+      "org.apache.hadoop.hive.ql.io.orc.OrcSerde")),
     "org.apache.spark.sql.execution.datasources.orc.OrcFileFormat" -> ((
       "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat",
       "org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat",
-      "org.apache.hadoop.hive.ql.io.orc.OrcSerde"
-    ))
-  ).foreach { case (provider, (inputFormat, outputFormat, serde)) =>
-    test(s"Persist non-partitioned $provider relation into metastore as managed table") {
-      withTable("t") {
-        withSQLConf(SQLConf.PARQUET_WRITE_LEGACY_FORMAT.key -> "true") {
-          testDF
-            .write
-            .mode(SaveMode.Overwrite)
-            .format(provider)
-            .saveAsTable("t")
-        }
-
-        val hiveTable = sessionState.catalog.getTableMetadata(TableIdentifier("t", Some("default")))
-        assert(hiveTable.storage.inputFormat === Some(inputFormat))
-        assert(hiveTable.storage.outputFormat === Some(outputFormat))
-        assert(hiveTable.storage.serde === Some(serde))
-
-        assert(hiveTable.partitionColumnNames.isEmpty)
-        assert(hiveTable.tableType === CatalogTableType.MANAGED)
-
-        val columns = hiveTable.schema
-        assert(columns.map(_.name) === Seq("d1", "d2"))
-        assert(columns.map(_.dataType) === Seq(DecimalType(10, 3), StringType))
-
-        checkAnswer(table("t"), testDF)
-        assert(sparkSession.metadataHive.runSqlHive("SELECT * FROM t") ===
-          Seq("1.100\t1", "2.100\t2"))
-      }
-    }
-
-    test(s"Persist non-partitioned $provider relation into metastore as external table") {
-      withTempPath { dir =>
+      "org.apache.hadoop.hive.ql.io.orc.OrcSerde"))).foreach {
+    case (provider, (inputFormat, outputFormat, serde)) =>
+      test(s"Persist non-partitioned $provider relation into metastore as managed table") {
         withTable("t") {
-          val path = dir.getCanonicalFile
-
           withSQLConf(SQLConf.PARQUET_WRITE_LEGACY_FORMAT.key -> "true") {
-            testDF
-              .write
+            testDF.write
               .mode(SaveMode.Overwrite)
               .format(provider)
-              .option("path", path.toString)
               .saveAsTable("t")
           }
 
@@ -226,55 +184,88 @@ class DataSourceWithHiveMetastoreCatalogSuite
           assert(hiveTable.storage.outputFormat === Some(outputFormat))
           assert(hiveTable.storage.serde === Some(serde))
 
-          assert(hiveTable.tableType === CatalogTableType.EXTERNAL)
-          assert(hiveTable.storage.locationUri === Some(makeQualifiedPath(dir.getAbsolutePath)))
+          assert(hiveTable.partitionColumnNames.isEmpty)
+          assert(hiveTable.tableType === CatalogTableType.MANAGED)
 
           val columns = hiveTable.schema
           assert(columns.map(_.name) === Seq("d1", "d2"))
           assert(columns.map(_.dataType) === Seq(DecimalType(10, 3), StringType))
 
           checkAnswer(table("t"), testDF)
-          assert(sparkSession.metadataHive.runSqlHive("SELECT * FROM t") ===
-            Seq("1.100\t1", "2.100\t2"))
+          assert(
+            sparkSession.metadataHive.runSqlHive("SELECT * FROM t") ===
+              Seq("1.100\t1", "2.100\t2"))
         }
       }
-    }
 
-    test(s"Persist non-partitioned $provider relation into metastore as managed table using CTAS") {
-      withTempPath { dir =>
-        withTable("t") {
-          sql(
-            s"""CREATE TABLE t USING $provider
+      test(s"Persist non-partitioned $provider relation into metastore as external table") {
+        withTempPath { dir =>
+          withTable("t") {
+            val path = dir.getCanonicalFile
+
+            withSQLConf(SQLConf.PARQUET_WRITE_LEGACY_FORMAT.key -> "true") {
+              testDF.write
+                .mode(SaveMode.Overwrite)
+                .format(provider)
+                .option("path", path.toString)
+                .saveAsTable("t")
+            }
+
+            val hiveTable =
+              sessionState.catalog.getTableMetadata(TableIdentifier("t", Some("default")))
+            assert(hiveTable.storage.inputFormat === Some(inputFormat))
+            assert(hiveTable.storage.outputFormat === Some(outputFormat))
+            assert(hiveTable.storage.serde === Some(serde))
+
+            assert(hiveTable.tableType === CatalogTableType.EXTERNAL)
+            assert(hiveTable.storage.locationUri === Some(makeQualifiedPath(dir.getAbsolutePath)))
+
+            val columns = hiveTable.schema
+            assert(columns.map(_.name) === Seq("d1", "d2"))
+            assert(columns.map(_.dataType) === Seq(DecimalType(10, 3), StringType))
+
+            checkAnswer(table("t"), testDF)
+            assert(
+              sparkSession.metadataHive.runSqlHive("SELECT * FROM t") ===
+                Seq("1.100\t1", "2.100\t2"))
+          }
+        }
+      }
+
+      test(
+        s"Persist non-partitioned $provider relation into metastore as managed table using CTAS") {
+        withTempPath { dir =>
+          withTable("t") {
+            sql(s"""CREATE TABLE t USING $provider
                |OPTIONS (path '${dir.toURI}')
                |AS SELECT 1 AS d1, "val_1" AS d2
              """.stripMargin)
 
-          val hiveTable =
-            sessionState.catalog.getTableMetadata(TableIdentifier("t", Some("default")))
-          assert(hiveTable.storage.inputFormat === Some(inputFormat))
-          assert(hiveTable.storage.outputFormat === Some(outputFormat))
-          assert(hiveTable.storage.serde === Some(serde))
+            val hiveTable =
+              sessionState.catalog.getTableMetadata(TableIdentifier("t", Some("default")))
+            assert(hiveTable.storage.inputFormat === Some(inputFormat))
+            assert(hiveTable.storage.outputFormat === Some(outputFormat))
+            assert(hiveTable.storage.serde === Some(serde))
 
-          assert(hiveTable.partitionColumnNames.isEmpty)
-          assert(hiveTable.tableType === CatalogTableType.EXTERNAL)
+            assert(hiveTable.partitionColumnNames.isEmpty)
+            assert(hiveTable.tableType === CatalogTableType.EXTERNAL)
 
-          val columns = hiveTable.schema
-          assert(columns.map(_.name) === Seq("d1", "d2"))
-          assert(columns.map(_.dataType) === Seq(IntegerType, StringType))
+            val columns = hiveTable.schema
+            assert(columns.map(_.name) === Seq("d1", "d2"))
+            assert(columns.map(_.dataType) === Seq(IntegerType, StringType))
 
-          checkAnswer(table("t"), Row(1, "val_1"))
-          assert(sparkSession.metadataHive.runSqlHive("SELECT * FROM t") === Seq("1\tval_1"))
+            checkAnswer(table("t"), Row(1, "val_1"))
+            assert(sparkSession.metadataHive.runSqlHive("SELECT * FROM t") === Seq("1\tval_1"))
+          }
         }
       }
-    }
 
   }
 
   test("SPARK-27592 set the bucketed data source table SerDe correctly") {
     val provider = "parquet"
     withTable("t") {
-      spark.sql(
-        s"""
+      spark.sql(s"""
           |CREATE TABLE t
           |USING $provider
           |CLUSTERED BY (c1)
@@ -291,9 +282,10 @@ class DataSourceWithHiveMetastoreCatalogSuite
       assert(metadata.storage.outputFormat === hiveSerDe.outputFormat)
 
       // It's a bucketed table at Spark side
-      assert(sql("DESC FORMATTED t").collect().containsSlice(
-        Seq(Row("Num Buckets", "2", ""), Row("Bucket Columns", "[`c1`]", ""))
-      ))
+      assert(
+        sql("DESC FORMATTED t")
+          .collect()
+          .containsSlice(Seq(Row("Num Buckets", "2", ""), Row("Bucket Columns", "[`c1`]", ""))))
       checkAnswer(table("t"), Row(1, 2))
 
       // It's not a bucketed table at Hive side
@@ -309,8 +301,7 @@ class DataSourceWithHiveMetastoreCatalogSuite
   test("SPARK-27592 set the partitioned bucketed data source table SerDe correctly") {
     val provider = "parquet"
     withTable("t") {
-      spark.sql(
-        s"""
+      spark.sql(s"""
            |CREATE TABLE t
            |USING $provider
            |PARTITIONED BY (p)
@@ -328,9 +319,10 @@ class DataSourceWithHiveMetastoreCatalogSuite
       assert(metadata.storage.outputFormat === hiveSerDe.outputFormat)
 
       // It's a bucketed table at Spark side
-      assert(sql("DESC FORMATTED t").collect().containsSlice(
-        Seq(Row("Num Buckets", "2", ""), Row("Bucket Columns", "[`key`]", ""))
-      ))
+      assert(
+        sql("DESC FORMATTED t")
+          .collect()
+          .containsSlice(Seq(Row("Num Buckets", "2", ""), Row("Bucket Columns", "[`key`]", ""))))
       checkAnswer(table("t").select("key", "value"), table("src"))
 
       // It's not a bucketed table at Hive side
@@ -339,8 +331,9 @@ class DataSourceWithHiveMetastoreCatalogSuite
       assert(hiveSide.contains("Bucket Columns:     \t[]                  \t "))
       assert(hiveSide.contains("\tspark.sql.sources.schema.numBuckets\t2                   "))
       assert(hiveSide.contains("\tspark.sql.sources.schema.bucketCol.0\tkey                 "))
-      assert(sparkSession.metadataHive.runSqlHive("SELECT count(*) FROM t") ===
-        Seq(table("src").count().toString))
+      assert(
+        sparkSession.metadataHive.runSqlHive("SELECT count(*) FROM t") ===
+          Seq(table("src").count().toString))
     }
   }
 
@@ -351,8 +344,7 @@ class DataSourceWithHiveMetastoreCatalogSuite
       spark.range(3).selectExpr("id").write.parquet(partitionLikeDir)
       withTable("non_partition_table") {
         withSQLConf(HiveUtils.CONVERT_METASTORE_PARQUET.key -> "true") {
-          spark.sql(
-            s"""
+          spark.sql(s"""
                |CREATE TABLE non_partition_table (id bigint)
                |STORED AS PARQUET LOCATION '$baseDir'
                |""".stripMargin)
@@ -373,48 +365,45 @@ class DataSourceWithHiveMetastoreCatalogSuite
     "parquet" -> (
       "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe",
       HiveUtils.CONVERT_METASTORE_PARQUET.key),
-    "orc" -> (
-      "org.apache.hadoop.hive.ql.io.orc.OrcSerde",
-      HiveUtils.CONVERT_METASTORE_ORC.key)
-  ).foreach { case (format, (serde, formatConvertConf)) =>
-    test("SPARK-28266: convertToLogicalRelation should not interpret `path` property when " +
-      s"reading Hive tables using $format file format") {
-      withTempPath(dir => {
-        val baseDir = dir.getAbsolutePath
-        withSQLConf(formatConvertConf -> "true") {
+    "orc" -> ("org.apache.hadoop.hive.ql.io.orc.OrcSerde", HiveUtils.CONVERT_METASTORE_ORC.key))
+    .foreach { case (format, (serde, formatConvertConf)) =>
+      test(
+        "SPARK-28266: convertToLogicalRelation should not interpret `path` property when " +
+          s"reading Hive tables using $format file format") {
+        withTempPath(dir => {
+          val baseDir = dir.getAbsolutePath
+          withSQLConf(formatConvertConf -> "true") {
 
-          withTable("t1") {
-            hiveClient.runSqlHive(
-              s"""
+            withTable("t1") {
+              hiveClient.runSqlHive(s"""
                  |CREATE TABLE t1 (id bigint)
                  |ROW FORMAT SERDE '$serde'
                  |WITH SERDEPROPERTIES ('path'='someNonLocationValue')
                  |STORED AS $format LOCATION '$baseDir'
                  |""".stripMargin)
 
-            assertResult(0) {
-              spark.sql("SELECT * FROM t1").count()
+              assertResult(0) {
+                spark.sql("SELECT * FROM t1").count()
+              }
             }
-          }
 
-          spark.range(3).selectExpr("id").write.format(format).save(baseDir)
-          withTable("t2") {
-            hiveClient.runSqlHive(
-              s"""
+            spark.range(3).selectExpr("id").write.format(format).save(baseDir)
+            withTable("t2") {
+              hiveClient.runSqlHive(s"""
                  |CREATE TABLE t2 (id bigint)
                  |ROW FORMAT SERDE '$serde'
                  |WITH SERDEPROPERTIES ('path'='$baseDir')
                  |STORED AS $format LOCATION '$baseDir'
                  |""".stripMargin)
 
-            assertResult(3) {
-              spark.sql("SELECT * FROM t2").count()
+              assertResult(3) {
+                spark.sql("SELECT * FROM t2").count()
+              }
             }
           }
-        }
-      })
+        })
+      }
     }
-  }
 
   test("SPARK-46934: Handle special characters in struct types") {
     withTable("t") {
@@ -441,7 +430,7 @@ class DataSourceWithHiveMetastoreCatalogSuite
   test("SPARK-54028: Table and View with complex nested schema and ALTER operations") {
     withTable("t") {
       val schema =
-          "struct_field STRUCT<" +
+        "struct_field STRUCT<" +
           "`colon:field_name`:STRING" +
           ">"
       sql("CREATE TABLE t (" + schema + ")")
@@ -466,8 +455,9 @@ class DataSourceWithHiveMetastoreCatalogSuite
         assert(spark.table("t").schema === CatalystSqlParser.parseTableSchema(updatedSchema))
 
         // Alter view to include new column
-        sql("ALTER VIEW v AS " +
-          "SELECT `struct_field`,`field_1` FROM t")
+        sql(
+          "ALTER VIEW v AS " +
+            "SELECT `struct_field`,`field_1` FROM t")
 
         // Verify view schema after ALTER
         assert(spark.table("v").schema === CatalystSqlParser.parseTableSchema(updatedSchema))
@@ -478,8 +468,9 @@ class DataSourceWithHiveMetastoreCatalogSuite
   test("SPARK-46934: Handle special characters in struct types with CTAS") {
     withTable("t") {
       val schema = "`a.b` struct<`a.b.b`:array<string>, `a b c`:map<int, string>>"
-      sql("CREATE TABLE t AS " +
-        "SELECT named_struct('a.b.b', array('a'), 'a b c', map(1, 'a')) AS `a.b`")
+      sql(
+        "CREATE TABLE t AS " +
+          "SELECT named_struct('a.b.b', array('a'), 'a b c', map(1, 'a')) AS `a.b`")
       assert(spark.table("t").schema === CatalystSqlParser.parseTableSchema(schema))
     }
   }

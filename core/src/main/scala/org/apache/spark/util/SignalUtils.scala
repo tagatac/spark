@@ -58,7 +58,9 @@ private[spark] object SignalUtils extends Logging {
    */
   def register(signal: String)(action: => Boolean): Unit = {
     if (Utils.isUnix) {
-      register(signal, log"Failed to register signal handler for ${MDC(SIGNAL, signal)}",
+      register(
+        signal,
+        log"Failed to register signal handler for ${MDC(SIGNAL, signal)}",
         logStackTrace = true)(action)
     }
   }
@@ -72,16 +74,14 @@ private[spark] object SignalUtils extends Logging {
    *
    * All actions for a given signal are run in a separate thread.
    */
-  def register(
-      signal: String,
-      failMessage: MessageWithContext,
-      logStackTrace: Boolean = true)(
+  def register(signal: String, failMessage: MessageWithContext, logStackTrace: Boolean = true)(
       action: => Boolean): Unit = synchronized {
     try {
-      val handler = handlers.getOrElseUpdate(signal, {
-        logInfo(log"Registering signal handler for ${MDC(SIGNAL, signal)}")
-        new ActionHandler(new Signal(signal))
-      })
+      val handler = handlers.getOrElseUpdate(
+        signal, {
+          logInfo(log"Registering signal handler for ${MDC(SIGNAL, signal)}")
+          new ActionHandler(new Signal(signal))
+        })
       handler.register(action)
     } catch {
       case ex: Exception =>
@@ -99,8 +99,8 @@ private[spark] object SignalUtils extends Logging {
   private class ActionHandler(signal: Signal) extends SignalHandler {
 
     /**
-     * List of actions upon the signal; the callbacks should return true if the signal is "handled",
-     * i.e. should not escalate to the next callback.
+     * List of actions upon the signal; the callbacks should return true if the signal is
+     * "handled", i.e. should not escalate to the next callback.
      */
     private val actions = Collections.synchronizedList(new java.util.LinkedList[() => Boolean])
 
@@ -130,8 +130,9 @@ private[spark] object SignalUtils extends Logging {
 
     /**
      * Adds an action to be run by this handler.
-     * @param action An action to be run when a signal is received. Return true if the signal
-     *               should be stopped with this handler, false if it should be escalated.
+     * @param action
+     *   An action to be run when a signal is received. Return true if the signal should be
+     *   stopped with this handler, false if it should be escalated.
      */
     def register(action: => Boolean): Unit = actions.add(() => action)
   }

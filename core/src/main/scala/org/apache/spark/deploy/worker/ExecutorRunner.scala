@@ -36,8 +36,7 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
 import org.apache.spark.util.logging.FileAppender
 
 /**
- * Manages the execution of one executor process.
- * This is currently only used in standalone mode.
+ * Manages the execution of one executor process. This is currently only used in standalone mode.
  */
 private[deploy] class ExecutorRunner(
     val appId: String,
@@ -59,7 +58,7 @@ private[deploy] class ExecutorRunner(
     @volatile var state: ExecutorState.Value,
     val rpId: Int,
     val resources: Map[String, ResourceInformation] = Map.empty)
-  extends Logging {
+    extends Logging {
 
   private val fullId = appId + "/" + execId
   private var workerThread: Thread = null
@@ -86,13 +85,15 @@ private[deploy] class ExecutorRunner(
       if (state == ExecutorState.LAUNCHING || state == ExecutorState.RUNNING) {
         state = ExecutorState.FAILED
       }
-      killProcess("Worker shutting down") }
+      killProcess("Worker shutting down")
+    }
   }
 
   /**
    * Kill executor process, wait for exit and notify worker to update resource status.
    *
-   * @param message the exception message which caused the executor's death
+   * @param message
+   *   the exception message which caused the executor's death
    */
   private def killProcess(message: String): Unit = {
     var exitCode: Option[Int] = None
@@ -106,8 +107,9 @@ private[deploy] class ExecutorRunner(
       }
       exitCode = Utils.terminateProcess(process, EXECUTOR_TERMINATE_TIMEOUT_MS)
       if (exitCode.isEmpty) {
-        logWarning(log"Failed to terminate process: ${MDC(PROCESS, process)}" +
-          log". This process will likely be orphaned.")
+        logWarning(
+          log"Failed to terminate process: ${MDC(PROCESS, process)}" +
+            log". This process will likely be orphaned.")
       }
     }
     try {
@@ -132,7 +134,9 @@ private[deploy] class ExecutorRunner(
     }
   }
 
-  /** Replace variables such as {{EXECUTOR_ID}} and {{CORES}} in a command argument passed to us */
+  /**
+   * Replace variables such as {{EXECUTOR_ID}} and {{CORES}} in a command argument passed to us
+   */
   private[worker] def substituteVariables(argument: String): String = argument match {
     case "{{WORKER_URL}}" => workerUrl
     case "{{EXECUTOR_ID}}" => execId.toString
@@ -150,16 +154,22 @@ private[deploy] class ExecutorRunner(
     try {
       val resourceFileOpt = prepareResourcesFile(SPARK_EXECUTOR_PREFIX, resources, executorDir)
       // Launch the process
-      val arguments = appDesc.command.arguments ++ resourceFileOpt.map(f =>
-        Seq("--resourcesFile", f.getAbsolutePath)).getOrElse(Seq.empty)
+      val arguments = appDesc.command.arguments ++ resourceFileOpt
+        .map(f => Seq("--resourcesFile", f.getAbsolutePath))
+        .getOrElse(Seq.empty)
       val subsOpts = appDesc.command.javaOpts.map {
         Utils.substituteAppNExecIds(_, appId, execId.toString)
       }
       val subsCommand = appDesc.command.copy(arguments = arguments, javaOpts = subsOpts)
-      val builder = CommandUtils.buildProcessBuilder(subsCommand, new SecurityManager(conf),
-        memory, sparkHome.getAbsolutePath, substituteVariables)
+      val builder = CommandUtils.buildProcessBuilder(
+        subsCommand,
+        new SecurityManager(conf),
+        memory,
+        sparkHome.getAbsolutePath,
+        substituteVariables)
       val command = builder.command()
-      val redactedCommand = Utils.redactCommandLineArgs(conf, command.asScala.toSeq)
+      val redactedCommand = Utils
+        .redactCommandLineArgs(conf, command.asScala.toSeq)
         .mkString("\"", "\" \"", "\"")
       logInfo(log"Launch command: ${MDC(COMMAND, redactedCommand)}")
 
@@ -181,8 +191,7 @@ private[deploy] class ExecutorRunner(
       builder.environment.put("SPARK_LOG_URL_STDOUT", s"${baseUrl}stdout")
 
       process = builder.start()
-      val header = "Spark Executor Command: %s\n%s\n\n".format(
-        redactedCommand, "=".repeat(40))
+      val header = "Spark Executor Command: %s\n%s\n\n".format(redactedCommand, "=".repeat(40))
 
       // Redirect its stdout and stderr to files
       val stdout = new File(executorDir, "stdout")

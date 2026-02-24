@@ -70,8 +70,8 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
 
   def newYarnConfig(): YarnConfiguration
 
-  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)
-                             (implicit pos: Position): Unit = {
+  override protected def test(testName: String, testTags: Tag*)(testFun: => Any)(implicit
+      pos: Position): Unit = {
     super.test(testName, testTags: _*) {
       assume(isBindSuccessful, "Mini Yarn cluster should be able to bind.")
       testFun
@@ -91,7 +91,8 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
     // Disable the disk utilization check to avoid the test hanging when people's disks are
     // getting full.
     val yarnConf = newYarnConfig()
-    yarnConf.set("yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage",
+    yarnConf.set(
+      "yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage",
       "100.0")
 
     // capacity-scheduler.xml is missing in hadoop-client-minicluster so this is a workaround
@@ -112,8 +113,9 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
       yarnCluster.init(yarnConf)
       yarnCluster.start()
     } catch {
-      case e: Throwable if org.apache.commons.lang3.exception.ExceptionUtils.indexOfThrowable(
-          e, classOf[java.net.BindException]) != -1 =>
+      case e: Throwable
+          if org.apache.commons.lang3.exception.ExceptionUtils
+            .indexOfThrowable(e, classOf[java.net.BindException]) != -1 =>
         isBindSuccessful = false
         return
     }
@@ -181,11 +183,13 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
       launcher.setMainClass(klass)
       launcher.setAppResource(fakeSparkJar.getAbsolutePath())
     }
-    launcher.setSparkHome(sys.props("spark.test.home"))
+    launcher
+      .setSparkHome(sys.props("spark.test.home"))
       .setMaster("yarn")
       .setDeployMode(deployMode)
       .setConf(EXECUTOR_INSTANCES.key, "1")
-      .setConf(SparkLauncher.DRIVER_DEFAULT_JAVA_OPTIONS,
+      .setConf(
+        SparkLauncher.DRIVER_DEFAULT_JAVA_OPTIONS,
         s"-Djava.net.preferIPv6Addresses=${Utils.preferIPv6}")
       .setPropertiesFile(propsFile)
       .addAppArgs(appArgs.toArray: _*)
@@ -223,8 +227,8 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
   /**
    * This is a workaround for an issue with yarn-cluster mode: the Client class will not provide
    * any sort of error when the job process finishes successfully, but the job itself fails. So
-   * the tests enforce that something is written to a file after everything is ok to indicate
-   * that the job succeeded.
+   * the tests enforce that something is written to a file after everything is ok to indicate that
+   * the job succeeded.
    */
   protected def checkResult(
       finalState: SparkAppHandle.State,
@@ -236,8 +240,8 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
     // an error message
     val output = new Object() {
       override def toString: String = outFile
-          .map((f: File) => java.nio.file.Files.readString(f.toPath))
-          .getOrElse("(stdout/stderr was not captured)")
+        .map((f: File) => java.nio.file.Files.readString(f.toPath))
+        .getOrElse("(stdout/stderr was not captured)")
     }
     assert(finalState === SparkAppHandle.State.FINISHED, output)
     val resultString = Files.readString(result.toPath)
@@ -257,8 +261,8 @@ abstract class BaseYarnClusterSuite extends SparkFunSuite with Matchers {
     val testClasspath = new TestClasspathBuilder()
       .buildClassPath(
         logConfDir.getAbsolutePath() +
-        File.pathSeparator +
-        extraClassPath.mkString(File.pathSeparator))
+          File.pathSeparator +
+          extraClassPath.mkString(File.pathSeparator))
       .asScala
       .mkString(File.pathSeparator)
 

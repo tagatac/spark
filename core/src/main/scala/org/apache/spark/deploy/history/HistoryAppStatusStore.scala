@@ -25,10 +25,9 @@ import org.apache.spark.status.AppStatusStore
 import org.apache.spark.status.api.v1
 import org.apache.spark.util.kvstore.KVStore
 
-private[spark] class HistoryAppStatusStore(
-    conf: SparkConf,
-    store: KVStore)
-  extends AppStatusStore(store, None) with Logging {
+private[spark] class HistoryAppStatusStore(conf: SparkConf, store: KVStore)
+    extends AppStatusStore(store, None)
+    with Logging {
 
   private val logUrlPattern: Option[String] = {
     val appInfo = super.applicationInfo()
@@ -68,14 +67,38 @@ private[spark] class HistoryAppStatusStore(
   private def replaceExecutorLogs(
       source: v1.ExecutorSummary,
       newExecutorLogs: Map[String, String]): v1.ExecutorSummary = {
-    new v1.ExecutorSummary(source.id, source.hostPort, source.isActive, source.rddBlocks,
-      source.memoryUsed, source.diskUsed, source.totalCores, source.maxTasks, source.activeTasks,
-      source.failedTasks, source.completedTasks, source.totalTasks, source.totalDuration,
-      source.totalGCTime, source.totalInputBytes, source.totalShuffleRead,
-      source.totalShuffleWrite, source.isBlacklisted, source.maxMemory, source.addTime,
-      source.removeTime, source.removeReason, newExecutorLogs, source.memoryMetrics,
-      source.blacklistedInStages, source.peakMemoryMetrics, source.attributes, source.resources,
-      source.resourceProfileId, source.isExcluded, source.excludedInStages)
+    new v1.ExecutorSummary(
+      source.id,
+      source.hostPort,
+      source.isActive,
+      source.rddBlocks,
+      source.memoryUsed,
+      source.diskUsed,
+      source.totalCores,
+      source.maxTasks,
+      source.activeTasks,
+      source.failedTasks,
+      source.completedTasks,
+      source.totalTasks,
+      source.totalDuration,
+      source.totalGCTime,
+      source.totalInputBytes,
+      source.totalShuffleRead,
+      source.totalShuffleWrite,
+      source.isBlacklisted,
+      source.maxMemory,
+      source.addTime,
+      source.removeTime,
+      source.removeReason,
+      newExecutorLogs,
+      source.memoryMetrics,
+      source.blacklistedInStages,
+      source.peakMemoryMetrics,
+      source.attributes,
+      source.resources,
+      source.resourceProfileId,
+      source.isExcluded,
+      source.excludedInStages)
   }
 
 }

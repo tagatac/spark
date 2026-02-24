@@ -27,7 +27,6 @@ import org.apache.spark.sql.classic.ClassicConversions.castToImpl
 import org.apache.spark.sql.sources.{BaseRelation, TableScan}
 import org.apache.spark.sql.types.StructType
 
-
 private[kafka010] class KafkaRelation(
     override val sqlContext: SQLContext,
     strategy: ConsumerStrategy,
@@ -37,16 +36,21 @@ private[kafka010] class KafkaRelation(
     includeHeaders: Boolean,
     startingOffsets: KafkaOffsetRangeLimit,
     endingOffsets: KafkaOffsetRangeLimit)
-  extends BaseRelation with TableScan with Logging {
-  assert(startingOffsets != LatestOffsetRangeLimit,
+    extends BaseRelation
+    with TableScan
+    with Logging {
+  assert(
+    startingOffsets != LatestOffsetRangeLimit,
     "Starting offset not allowed to be set to latest offsets.")
-  assert(endingOffsets != EarliestOffsetRangeLimit,
+  assert(
+    endingOffsets != EarliestOffsetRangeLimit,
     "Ending offset not allowed to be set to earliest offsets.")
 
-  private val pollTimeoutMs = sourceOptions.getOrElse(
-    KafkaSourceProvider.CONSUMER_POLL_TIMEOUT,
-    (sqlContext.sparkContext.conf.get(NETWORK_TIMEOUT) * 1000L).toString
-  ).toLong
+  private val pollTimeoutMs = sourceOptions
+    .getOrElse(
+      KafkaSourceProvider.CONSUMER_POLL_TIMEOUT,
+      (sqlContext.sparkContext.conf.get(NETWORK_TIMEOUT) * 1000L).toString)
+    .toLong
 
   private val converter = new KafkaRecordToRowConverter()
 
@@ -65,11 +69,12 @@ private[kafka010] class KafkaRelation(
       driverGroupIdPrefix = s"$uniqueGroupId-driver")
 
     // Leverage the KafkaReader to obtain the relevant partition offsets
-    val offsetRanges: Seq[KafkaOffsetRange] = try {
-      kafkaOffsetReader.getOffsetRangesFromUnresolvedOffsets(startingOffsets, endingOffsets)
-    } finally {
-      kafkaOffsetReader.close()
-    }
+    val offsetRanges: Seq[KafkaOffsetRange] =
+      try {
+        kafkaOffsetReader.getOffsetRangesFromUnresolvedOffsets(startingOffsets, endingOffsets)
+      } finally {
+        kafkaOffsetReader.close()
+      }
 
     logInfo(log"GetBatch generating RDD of offset range: " +
       log"${MDC(TOPIC_PARTITIONS, offsetRanges.sortBy(_.topicPartition.toString).mkString(", "))}")
@@ -83,8 +88,11 @@ private[kafka010] class KafkaRelation(
       converter.toInternalRowWithoutHeaders
     }
     val rdd = new KafkaSourceRDD(
-      sqlContext.sparkContext, executorKafkaParams, offsetRanges,
-      pollTimeoutMs, failOnDataLoss).map(toInternalRow)
+      sqlContext.sparkContext,
+      executorKafkaParams,
+      offsetRanges,
+      pollTimeoutMs,
+      failOnDataLoss).map(toInternalRow)
     sqlContext.internalCreateDataFrame(rdd.setName("kafka"), schema).rdd
   }
 

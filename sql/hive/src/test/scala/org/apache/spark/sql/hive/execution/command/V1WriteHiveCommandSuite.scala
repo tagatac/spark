@@ -24,7 +24,9 @@ import org.apache.spark.sql.hive.HiveUtils._
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 
 class V1WriteHiveCommandSuite
-    extends QueryTest with TestHiveSingleton with V1WriteCommandSuiteBase  {
+    extends QueryTest
+    with TestHiveSingleton
+    with V1WriteCommandSuiteBase {
 
   def withConvertMetastore(testFunc: Boolean => Any): Unit = {
     Seq(true, false).foreach { enabled =>
@@ -54,9 +56,10 @@ class V1WriteHiveCommandSuite
         withTable("t") {
           withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
             executeAndCheckOrdering(
-              hasLogicalSort = enabled, orderingMatched = enabled, hasEmpty2Null = enabled) {
-              sql(
-                """
+              hasLogicalSort = enabled,
+              orderingMatched = enabled,
+              hasEmpty2Null = enabled) {
+              sql("""
                   |CREATE TABLE t STORED AS PARQUET
                   |PARTITIONED BY (k)
                   |AS SELECT * FROM t0
@@ -72,15 +75,16 @@ class V1WriteHiveCommandSuite
     withConvertMetastore { _ =>
       withPlannedWrite { enabled =>
         withTable("t") {
-          sql(
-            """
+          sql("""
               |CREATE TABLE t (i INT, j INT) STORED AS PARQUET
               |PARTITIONED BY (k STRING)
               |CLUSTERED BY (i, j) SORTED BY (j) INTO 2 BUCKETS
               |""".stripMargin)
           withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
             executeAndCheckOrdering(
-              hasLogicalSort = enabled, orderingMatched = enabled, hasEmpty2Null = enabled) {
+              hasLogicalSort = enabled,
+              orderingMatched = enabled,
+              hasEmpty2Null = enabled) {
               sql("INSERT INTO t SELECT * FROM t0")
             }
           }
@@ -94,14 +98,15 @@ class V1WriteHiveCommandSuite
       withPlannedWrite { enabled =>
         withTable("t") {
           withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
-            sql(
-              """
+            sql("""
                 |CREATE TABLE t STORED AS PARQUET
                 |PARTITIONED BY (k)
                 |AS SELECT * FROM t0
                 |""".stripMargin)
             executeAndCheckOrdering(
-              hasLogicalSort = enabled, orderingMatched = enabled, hasEmpty2Null = enabled) {
+              hasLogicalSort = enabled,
+              orderingMatched = enabled,
+              hasEmpty2Null = enabled) {
               sql("INSERT OVERWRITE t SELECT j AS i, i AS j, k FROM t0")
             }
           }
@@ -114,8 +119,7 @@ class V1WriteHiveCommandSuite
     withConvertMetastore { _ =>
       withPlannedWrite { enabled =>
         withTable("t") {
-          sql(
-            """
+          sql("""
               |CREATE TABLE t (i INT, j INT) STORED AS PARQUET
               |PARTITIONED BY (k STRING)
               |""".stripMargin)
@@ -133,17 +137,16 @@ class V1WriteHiveCommandSuite
       withPlannedWrite { enabled =>
         withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
           withTable("t") {
-            sql(
-              """
+            sql("""
                 |CREATE TABLE t(i INT, j INT, k STRING) STORED AS PARQUET
                 |PARTITIONED BY (k)
                 |""".stripMargin)
             // Skip checking orderingMatched temporarily to avoid touching `FileFormatWriter`,
             // see details at https://github.com/apache/spark/pull/52584#issuecomment-3407716019
             executeAndCheckOrderingAndCustomValidate(
-              hasLogicalSort = true, orderingMatched = None) {
-              sql(
-                """
+              hasLogicalSort = true,
+              orderingMatched = None) {
+              sql("""
                   |INSERT OVERWRITE t
                   |SELECT i, j, '0' as k FROM t0 SORT BY k, i
                   |""".stripMargin)

@@ -30,11 +30,12 @@ import org.apache.spark.rdd.util.PeriodicRDDCheckpointer
  *
  * Unlike the original Pregel API, the GraphX Pregel API factors the sendMessage computation over
  * edges, enables the message sending computation to read both vertex attributes, and constrains
- * messages to the graph structure.  These changes allow for substantially more efficient
+ * messages to the graph structure. These changes allow for substantially more efficient
  * distributed execution while also exposing greater flexibility for graph-based computation.
  *
- * @example We can use the Pregel abstraction to implement PageRank:
- * {{{
+ * @example
+ *   We can use the Pregel abstraction to implement PageRank:
+ *   {{{
  * val pagerankGraph: Graph[Double, Double] = graph
  *   // Associate the degree with each vertex
  *   .outerJoinVertices(graph.outDegrees) {
@@ -54,89 +55,89 @@ import org.apache.spark.rdd.util.PeriodicRDDCheckpointer
  * // Execute Pregel for a fixed number of iterations.
  * Pregel(pagerankGraph, initialMessage, numIter)(
  *   vertexProgram, sendMessage, messageCombiner)
- * }}}
- *
+ *   }}}
  */
 object Pregel extends Logging {
 
   /**
-   * Execute a Pregel-like iterative vertex-parallel abstraction.  The
-   * user-defined vertex-program `vprog` is executed in parallel on
-   * each vertex receiving any inbound messages and computing a new
-   * value for the vertex.  The `sendMsg` function is then invoked on
-   * all out-edges and is used to compute an optional message to the
-   * destination vertex. The `mergeMsg` function is a commutative
-   * associative function used to combine messages destined to the
-   * same vertex.
+   * Execute a Pregel-like iterative vertex-parallel abstraction. The user-defined vertex-program
+   * `vprog` is executed in parallel on each vertex receiving any inbound messages and computing a
+   * new value for the vertex. The `sendMsg` function is then invoked on all out-edges and is used
+   * to compute an optional message to the destination vertex. The `mergeMsg` function is a
+   * commutative associative function used to combine messages destined to the same vertex.
    *
-   * On the first iteration all vertices receive the `initialMsg` and
-   * on subsequent iterations if a vertex does not receive a message
-   * then the vertex-program is not invoked.
+   * On the first iteration all vertices receive the `initialMsg` and on subsequent iterations if
+   * a vertex does not receive a message then the vertex-program is not invoked.
    *
-   * This function iterates until there are no remaining messages, or
-   * for `maxIterations` iterations.
+   * This function iterates until there are no remaining messages, or for `maxIterations`
+   * iterations.
    *
-   * @tparam VD the vertex data type
-   * @tparam ED the edge data type
-   * @tparam A the Pregel message type
+   * @tparam VD
+   *   the vertex data type
+   * @tparam ED
+   *   the edge data type
+   * @tparam A
+   *   the Pregel message type
    *
-   * @param graph the input graph.
+   * @param graph
+   *   the input graph.
    *
-   * @param initialMsg the message each vertex will receive at the first
-   * iteration
+   * @param initialMsg
+   *   the message each vertex will receive at the first iteration
    *
-   * @param maxIterations the maximum number of iterations to run for
+   * @param maxIterations
+   *   the maximum number of iterations to run for
    *
-   * @param activeDirection the direction of edges incident to a vertex that received a message in
-   * the previous round on which to run `sendMsg`. For example, if this is `EdgeDirection.Out`, only
-   * out-edges of vertices that received a message in the previous round will run. The default is
-   * `EdgeDirection.Either`, which will run `sendMsg` on edges where either side received a message
-   * in the previous round. If this is `EdgeDirection.Both`, `sendMsg` will only run on edges where
-   * *both* vertices received a message.
+   * @param activeDirection
+   *   the direction of edges incident to a vertex that received a message in the previous round
+   *   on which to run `sendMsg`. For example, if this is `EdgeDirection.Out`, only out-edges of
+   *   vertices that received a message in the previous round will run. The default is
+   *   `EdgeDirection.Either`, which will run `sendMsg` on edges where either side received a
+   *   message in the previous round. If this is `EdgeDirection.Both`, `sendMsg` will only run on
+   *   edges where *both* vertices received a message.
    *
-   * @param vprog the user-defined vertex program which runs on each
-   * vertex and receives the inbound message and computes a new vertex
-   * value.  On the first iteration the vertex program is invoked on
-   * all vertices and is passed the default message.  On subsequent
-   * iterations the vertex program is only invoked on those vertices
-   * that receive messages.
+   * @param vprog
+   *   the user-defined vertex program which runs on each vertex and receives the inbound message
+   *   and computes a new vertex value. On the first iteration the vertex program is invoked on
+   *   all vertices and is passed the default message. On subsequent iterations the vertex program
+   *   is only invoked on those vertices that receive messages.
    *
-   * @param sendMsg a user supplied function that is applied to out
-   * edges of vertices that received messages in the current
-   * iteration
+   * @param sendMsg
+   *   a user supplied function that is applied to out edges of vertices that received messages in
+   *   the current iteration
    *
-   * @param mergeMsg a user supplied function that takes two incoming
-   * messages of type A and merges them into a single message of type
-   * A.  ''This function must be commutative and associative and
-   * ideally the size of A should not increase.''
+   * @param mergeMsg
+   *   a user supplied function that takes two incoming messages of type A and merges them into a
+   *   single message of type A. ''This function must be commutative and associative and ideally
+   *   the size of A should not increase.''
    *
-   * @return the resulting graph at the end of the computation
-   *
+   * @return
+   *   the resulting graph at the end of the computation
    */
-  def apply[VD: ClassTag, ED: ClassTag, A: ClassTag]
-     (graph: Graph[VD, ED],
+  def apply[VD: ClassTag, ED: ClassTag, A: ClassTag](
+      graph: Graph[VD, ED],
       initialMsg: A,
       maxIterations: Int = Int.MaxValue,
-      activeDirection: EdgeDirection = EdgeDirection.Either)
-     (vprog: (VertexId, VD, A) => VD,
+      activeDirection: EdgeDirection = EdgeDirection.Either)(
+      vprog: (VertexId, VD, A) => VD,
       sendMsg: EdgeTriplet[VD, ED] => Iterator[(VertexId, A)],
-      mergeMsg: (A, A) => A)
-    : Graph[VD, ED] =
-  {
-    require(maxIterations > 0, s"Maximum number of iterations must be greater than 0," +
-      s" but got ${maxIterations}")
+      mergeMsg: (A, A) => A): Graph[VD, ED] = {
+    require(
+      maxIterations > 0,
+      s"Maximum number of iterations must be greater than 0," +
+        s" but got ${maxIterations}")
 
     val checkpointInterval = graph.vertices.sparkContext.getReadOnlyConf
       .getInt("spark.graphx.pregel.checkpointInterval", -1)
     var g = graph.mapVertices((vid, vdata) => vprog(vid, vdata, initialMsg))
-    val graphCheckpointer = new PeriodicGraphCheckpointer[VD, ED](
-      checkpointInterval, graph.vertices.sparkContext)
+    val graphCheckpointer =
+      new PeriodicGraphCheckpointer[VD, ED](checkpointInterval, graph.vertices.sparkContext)
     graphCheckpointer.update(g)
 
     // compute the messages
     var messages = GraphXUtils.mapReduceTriplets(g, sendMsg, mergeMsg)
-    val messageCheckpointer = new PeriodicRDDCheckpointer[(VertexId, A)](
-      checkpointInterval, graph.vertices.sparkContext)
+    val messageCheckpointer =
+      new PeriodicRDDCheckpointer[(VertexId, A)](checkpointInterval, graph.vertices.sparkContext)
     messageCheckpointer.update(messages.asInstanceOf[RDD[(VertexId, A)]])
     var isActiveMessagesNonEmpty = !messages.isEmpty()
 
@@ -153,8 +154,8 @@ object Pregel extends Logging {
       // Send new messages, skipping edges where neither side received a message. We must cache
       // messages so it can be materialized on the next line, allowing us to uncache the previous
       // iteration.
-      messages = GraphXUtils.mapReduceTriplets(
-        g, sendMsg, mergeMsg, Some((oldMessages, activeDirection)))
+      messages =
+        GraphXUtils.mapReduceTriplets(g, sendMsg, mergeMsg, Some((oldMessages, activeDirection)))
       // The call to count() materializes `messages` and the vertices of `g`. This hides oldMessages
       // (depended on by the vertices of g) and the vertices of prevG (depended on by oldMessages
       // and the vertices of g).

@@ -23,9 +23,12 @@ import scala.reflect.classTag
 /**
  * Base class representing a log line.
  *
- * @param eventTime timestamp in milliseconds when the log is written
- * @param sequenceId sequence ID of the log line
- * @param message log message
+ * @param eventTime
+ *   timestamp in milliseconds when the log is written
+ * @param sequenceId
+ *   sequence ID of the log line
+ * @param message
+ *   log message
  */
 trait LogLine {
   val eventTime: Long
@@ -34,7 +37,7 @@ trait LogLine {
 }
 
 object LogLine {
-  def getClassTag(logBlockType: LogBlockType.LogBlockType): ClassTag[_<:LogLine] =
+  def getClassTag(logBlockType: LogBlockType.LogBlockType): ClassTag[_ <: LogLine] =
     logBlockType match {
       case LogBlockType.TEST =>
         classTag[TestLogLine]
@@ -45,9 +48,6 @@ object LogLine {
     }
 }
 
-case class TestLogLine(eventTime: Long, sequenceId: Long, message: String)
-  extends LogLine {
-}
+case class TestLogLine(eventTime: Long, sequenceId: Long, message: String) extends LogLine {}
 
-case class PythonWorkerLogLine(eventTime: Long, sequenceId: Long, message: String)
-  extends LogLine
+case class PythonWorkerLogLine(eventTime: Long, sequenceId: Long, message: String) extends LogLine

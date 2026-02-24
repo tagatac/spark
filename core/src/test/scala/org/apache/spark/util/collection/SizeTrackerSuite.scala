@@ -91,9 +91,11 @@ class SizeTrackerSuite extends SparkFunSuite {
 
   def expectWithinError(obj: AnyRef, estimatedSize: Long, error: Double): Unit = {
     val betterEstimatedSize = SizeEstimator.estimate(obj)
-    assert(betterEstimatedSize * (1 - error) < estimatedSize,
+    assert(
+      betterEstimatedSize * (1 - error) < estimatedSize,
       s"Estimated size $estimatedSize was less than expected size $betterEstimatedSize")
-    assert(betterEstimatedSize * (1 + 2 * error) > estimatedSize,
+    assert(
+      betterEstimatedSize * (1 + 2 * error) > estimatedSize,
       s"Estimated size $estimatedSize was greater than expected size $betterEstimatedSize")
   }
 }
@@ -118,10 +120,8 @@ private object SizeTrackerSuite {
   /**
    * Speed test for SizeTrackingVector.
    *
-   * Results for 100000 elements (possibly non-deterministic):
-   *   PrimitiveVector  15 ms
-   *   SizeTracker      51 ms
-   *   SizeEstimator    2000 ms
+   * Results for 100000 elements (possibly non-deterministic): PrimitiveVector 15 ms SizeTracker
+   * 51 ms SizeEstimator 2000 ms
    */
   def vectorSpeedTest(numElements: Int): Unit = {
     val baseTimes = for (i <- 0 until 10) yield time {
@@ -150,10 +150,8 @@ private object SizeTrackerSuite {
   /**
    * Speed test for SizeTrackingAppendOnlyMap.
    *
-   * Results for 100000 elements (possibly non-deterministic):
-   *   AppendOnlyMap  30 ms
-   *   SizeTracker    41 ms
-   *   SizeEstimator  1666 ms
+   * Results for 100000 elements (possibly non-deterministic): AppendOnlyMap 30 ms SizeTracker 41
+   * ms SizeEstimator 1666 ms
    */
   def mapSpeedTest(numElements: Int): Unit = {
     val baseTimes = for (i <- 0 until 10) yield time {

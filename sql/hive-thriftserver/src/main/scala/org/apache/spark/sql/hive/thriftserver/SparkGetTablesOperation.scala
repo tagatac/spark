@@ -35,12 +35,18 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTableType._
 /**
  * Spark's own GetTablesOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
- * @param catalogName catalog name. null if not applicable
- * @param schemaName database name, null or a concrete database name
- * @param tableName table name pattern
- * @param tableTypes list of allowed table types, e.g. "TABLE", "VIEW"
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
+ * @param catalogName
+ *   catalog name. null if not applicable
+ * @param schemaName
+ *   database name, null or a concrete database name
+ * @param tableName
+ *   table name pattern
+ * @param tableTypes
+ *   list of allowed table types, e.g. "TABLE", "VIEW"
  */
 private[hive] class SparkGetTablesOperation(
     val session: SparkSession,
@@ -49,9 +55,9 @@ private[hive] class SparkGetTablesOperation(
     schemaName: String,
     tableName: String,
     tableTypes: JList[String])
-  extends GetTablesOperation(parentSession, catalogName, schemaName, tableName, tableTypes)
-  with SparkOperation
-  with Logging {
+    extends GetTablesOperation(parentSession, catalogName, schemaName, tableName, tableTypes)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     // Do not change cmdStr. It's used for Hive auditing and authorization.
@@ -61,11 +67,12 @@ private[hive] class SparkGetTablesOperation(
 
     val catalogNameStr = if (catalogName == null) "null" else catalogName
     val schemaNameStr = if (schemaName == null) "null" else schemaName
-    logInfo(log"Listing tables 'catalog: ${MDC(CATALOG_NAME, catalogNameStr)}, " +
-      log"schemaPattern: ${MDC(DATABASE_NAME, schemaNameStr)}, " +
-      log"tableTypes: ${MDC(TABLE_TYPES, tableTypesStr)}, " +
-      log"tableName: ${MDC(TABLE_NAME, tableName)}' " +
-      log"with ${MDC(STATEMENT_ID, statementId)}")
+    logInfo(
+      log"Listing tables 'catalog: ${MDC(CATALOG_NAME, catalogNameStr)}, " +
+        log"schemaPattern: ${MDC(DATABASE_NAME, schemaNameStr)}, " +
+        log"tableTypes: ${MDC(TABLE_TYPES, tableTypesStr)}, " +
+        log"tableName: ${MDC(TABLE_NAME, tableName)}' " +
+        log"with ${MDC(STATEMENT_ID, statementId)}")
     setState(OperationState.RUNNING)
 
     val schemaPattern = convertSchemaPattern(schemaName)
@@ -121,12 +128,7 @@ private[hive] class SparkGetTablesOperation(
       tableName: String,
       tableType: String,
       comment: Option[String]): Unit = {
-    val rowData = Array[AnyRef](
-      "",
-      dbName,
-      tableName,
-      tableType,
-      comment.getOrElse(""))
+    val rowData = Array[AnyRef]("", dbName, tableName, tableType, comment.getOrElse(""))
     // Since HIVE-7575(Hive 2.0.0), adds 5 additional columns to the ResultSet of GetTables.
     rowSet.addRow(rowData ++ Array(null, null, null, null, null))
   }

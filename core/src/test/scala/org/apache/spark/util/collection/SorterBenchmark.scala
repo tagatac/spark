@@ -24,8 +24,7 @@ import org.apache.spark.benchmark.{Benchmark, BenchmarkBase}
 import org.apache.spark.util.random.XORShiftRandom
 
 /**
- * Benchmark for o.a.s.util.collection.Sorter.
- * To run this benchmark:
+ * Benchmark for o.a.s.util.collection.Sorter. To run this benchmark:
  * {{{
  *   1. without sbt:
  *      bin/spark-submit --class <this class> <spark core test jar>
@@ -34,7 +33,7 @@ import org.apache.spark.util.random.XORShiftRandom
  *      SPARK_GENERATE_BENCHMARK_FILES=1 build/sbt "core/Test/runMain <this class>"
  *      Results will be written to "benchmarks/SorterBenchmark-results.txt".
  * }}}
- * */
+ */
 object SorterBenchmark extends BenchmarkBase {
 
   def keyValuePairsSortBenchmark(): Unit = {
@@ -52,8 +51,10 @@ object SorterBenchmark extends BenchmarkBase {
       val kvTupleArray = new Array[AnyRef](numElements)
       System.arraycopy(kvTuples, 0, kvTupleArray, 0, numElements)
       timer.startTiming()
-      util.Arrays.sort(kvTupleArray, (x: AnyRef, y: AnyRef) =>
-        x.asInstanceOf[(JFloat, _)]._1.compareTo(y.asInstanceOf[(JFloat, _)]._1))
+      util.Arrays.sort(
+        kvTupleArray,
+        (x: AnyRef, y: AnyRef) =>
+          x.asInstanceOf[(JFloat, _)]._1.compareTo(y.asInstanceOf[(JFloat, _)]._1))
       timer.stopTiming()
     }
 
@@ -61,8 +62,10 @@ object SorterBenchmark extends BenchmarkBase {
       val kvTupleArray = new Array[AnyRef](numElements)
       System.arraycopy(kvTuples, 0, kvTupleArray, 0, numElements)
       timer.startTiming()
-      util.Arrays.parallelSort(kvTupleArray, (x: AnyRef, y: AnyRef) =>
-        x.asInstanceOf[(JFloat, _)]._1.compareTo(y.asInstanceOf[(JFloat, _)]._1))
+      util.Arrays.parallelSort(
+        kvTupleArray,
+        (x: AnyRef, y: AnyRef) =>
+          x.asInstanceOf[(JFloat, _)]._1.compareTo(y.asInstanceOf[(JFloat, _)]._1))
       timer.stopTiming()
     }
 
@@ -190,8 +193,12 @@ object SorterBenchmark extends BenchmarkBase {
     }
 
     /** Copy a range of elements starting at src(srcPos) to dest, starting at destPos. */
-    override def copyRange(src: Array[Int], srcPos: Int,
-        dst: Array[Int], dstPos: Int, length: Int): Unit = {
+    override def copyRange(
+        src: Array[Int],
+        srcPos: Int,
+        dst: Array[Int],
+        dstPos: Int,
+        length: Int): Unit = {
       System.arraycopy(src, srcPos, dst, dstPos, length)
     }
 

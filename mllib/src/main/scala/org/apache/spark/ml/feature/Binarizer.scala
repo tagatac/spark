@@ -36,25 +36,29 @@ import org.apache.spark.util.ArrayImplicits._
 /**
  * Binarize a column of continuous features given a threshold.
  *
- * Since 3.0.0,
- * `Binarize` can map multiple columns at once by setting the `inputCols` parameter. Note that
- * when both the `inputCol` and `inputCols` parameters are set, an Exception will be thrown. The
- * `threshold` parameter is used for single column usage, and `thresholds` is for multiple
- * columns.
+ * Since 3.0.0, `Binarize` can map multiple columns at once by setting the `inputCols` parameter.
+ * Note that when both the `inputCol` and `inputCols` parameters are set, an Exception will be
+ * thrown. The `threshold` parameter is used for single column usage, and `thresholds` is for
+ * multiple columns.
  */
 @Since("1.4.0")
 final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
-  extends Transformer with HasThreshold with HasThresholds with HasInputCol with HasOutputCol
-    with HasInputCols with HasOutputCols with DefaultParamsWritable {
+    extends Transformer
+    with HasThreshold
+    with HasThresholds
+    with HasInputCol
+    with HasOutputCol
+    with HasInputCols
+    with HasOutputCols
+    with DefaultParamsWritable {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("binarizer"))
 
   /**
-   * Param for threshold used to binarize continuous features.
-   * The features greater than the threshold, will be binarized to 1.0.
-   * The features equal to or less than the threshold, will be binarized to 0.0.
-   * Default: 0.0
+   * Param for threshold used to binarize continuous features. The features greater than the
+   * threshold, will be binarized to 1.0. The features equal to or less than the threshold, will
+   * be binarized to 0.0. Default: 0.0
    * @group param
    */
   @Since("1.4.0")
@@ -68,17 +72,20 @@ final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   setDefault(threshold -> 0.0)
 
   /**
-   * Array of threshold used to binarize continuous features.
-   * This is for multiple columns input. If transforming multiple columns and thresholds is
-   * not set, but threshold is set, then threshold will be applied across all columns.
+   * Array of threshold used to binarize continuous features. This is for multiple columns input.
+   * If transforming multiple columns and thresholds is not set, but threshold is set, then
+   * threshold will be applied across all columns.
    *
    * @group param
    */
   @Since("3.0.0")
-  override val thresholds: DoubleArrayParam = new DoubleArrayParam(this, "thresholds", "Array of " +
-    "threshold used to binarize continuous features. This is for multiple columns input. " +
-    "If transforming multiple columns and thresholds is not set, but threshold is set, " +
-    "then threshold will be applied across all columns.")
+  override val thresholds: DoubleArrayParam = new DoubleArrayParam(
+    this,
+    "thresholds",
+    "Array of " +
+      "threshold used to binarize continuous features. This is for multiple columns input. " +
+      "If transforming multiple columns and thresholds is not set, but threshold is set, " +
+      "then threshold will be applied across all columns.")
 
   /** @group setParam */
   @Since("3.0.0")
@@ -107,11 +114,15 @@ final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
     val (inputColNames, outputColNames, tds) =
       if (isSet(inputCols)) {
         if (isSet(thresholds)) {
-          ($(inputCols).toImmutableArraySeq,
-            $(outputCols).toImmutableArraySeq, $(thresholds).toImmutableArraySeq)
+          (
+            $(inputCols).toImmutableArraySeq,
+            $(outputCols).toImmutableArraySeq,
+            $(thresholds).toImmutableArraySeq)
         } else {
-          ($(inputCols).toImmutableArraySeq,
-            $(outputCols).toImmutableArraySeq, Seq.fill($(inputCols).length)($(threshold)))
+          (
+            $(inputCols).toImmutableArraySeq,
+            $(outputCols).toImmutableArraySeq,
+            Seq.fill($(inputCols).length)($(threshold)))
         }
       } else {
         (Seq($(inputCol)), Seq($(outputCol)), Seq($(threshold)))
@@ -136,14 +147,16 @@ final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 
             val idxArray = indices.result()
             val valArray = values.result()
-            Vectors.sparse(vector.size, idxArray, valArray)
+            Vectors
+              .sparse(vector.size, idxArray, valArray)
               .compressedWithNNZ(idxArray.length)
           }.apply(col(colName))
 
         case _: VectorUDT if td < 0 =>
-          logWarning(log"Binarization operations on sparse dataset with negative threshold " +
-            log"${MDC(LogKeys.THRESHOLD, td)} will build a dense output, so take care when " +
-            log"applying to sparse input.")
+          logWarning(
+            log"Binarization operations on sparse dataset with negative threshold " +
+              log"${MDC(LogKeys.THRESHOLD, td)} will build a dense output, so take care when " +
+              log"applying to sparse input.")
           udf { vector: Vector =>
             val values = Array.fill(vector.size)(1.0)
             var nnz = vector.size
@@ -165,28 +178,29 @@ final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 
   @Since("1.4.0")
   override def transformSchema(schema: StructType): StructType = {
-    ParamValidators.checkSingleVsMultiColumnParams(this, Seq(outputCol),
-      Seq(outputCols))
+    ParamValidators.checkSingleVsMultiColumnParams(this, Seq(outputCol), Seq(outputCols))
 
     if (isSet(inputCol)) {
-      require(!isSet(thresholds),
-        s"thresholds can't be set for single-column Binarizer.")
+      require(!isSet(thresholds), s"thresholds can't be set for single-column Binarizer.")
     }
 
     if (isSet(inputCols)) {
-      require(getInputCols.length == getOutputCols.length,
+      require(
+        getInputCols.length == getOutputCols.length,
         s"Binarizer $this has mismatched Params " +
           s"for multi-column transform. Params (inputCols, outputCols) should have " +
           s"equal lengths, but they have different lengths: " +
           s"(${getInputCols.length}, ${getOutputCols.length}).")
       if (isSet(thresholds)) {
-        require(getInputCols.length == getThresholds.length,
+        require(
+          getInputCols.length == getThresholds.length,
           s"Binarizer $this has mismatched Params " +
             s"for multi-column transform. Params (inputCols, outputCols, thresholds) " +
             s"should have equal lengths, but they have different lengths: " +
             s"(${getInputCols.length}, ${getOutputCols.length}, ${getThresholds.length}).")
-        require(!isSet(threshold),
-          s"exactly one of threshold, thresholds Params to be set, but both are set." )
+        require(
+          !isSet(threshold),
+          s"exactly one of threshold, thresholds Params to be set, but both are set.")
       }
     }
 
@@ -198,25 +212,26 @@ final class Binarizer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 
     var outputFields = schema.fields
     inputColNames.zip(outputColNames).foreach { case (inputColName, outputColName) =>
-      require(!schema.fieldNames.contains(outputColName),
+      require(
+        !schema.fieldNames.contains(outputColName),
         s"Output column $outputColName already exists.")
 
-      val inputType = try {
-        SchemaUtils.getSchemaFieldType(schema, inputColName)
-      } catch {
-        case e: SparkIllegalArgumentException if e.getCondition == "FIELD_NOT_FOUND" =>
-          throw new SparkException(s"Input column $inputColName does not exist.")
-        case e: Exception =>
-          throw e
-      }
+      val inputType =
+        try {
+          SchemaUtils.getSchemaFieldType(schema, inputColName)
+        } catch {
+          case e: SparkIllegalArgumentException if e.getCondition == "FIELD_NOT_FOUND" =>
+            throw new SparkException(s"Input column $inputColName does not exist.")
+          case e: Exception =>
+            throw e
+        }
 
       val outputField = inputType match {
         case DoubleType =>
           BinaryAttribute.defaultAttr.withName(outputColName).toStructField()
         case _: VectorUDT =>
-          val size = AttributeGroup.fromStructField(
-            SchemaUtils.getSchemaField(schema, inputColName)
-          ).size
+          val size =
+            AttributeGroup.fromStructField(SchemaUtils.getSchemaField(schema, inputColName)).size
           if (size < 0) {
             StructField(outputColName, new VectorUDT)
           } else {

@@ -40,8 +40,7 @@ private[spark] trait SecretsTestsSuite { k8sSuite: KubernetesSuite =>
     val envSecretData = Map(ENV_SECRET_KEY_1 -> secUsername, ENV_SECRET_KEY_2 -> secPassword)
     sb.addToData(envSecretData.asJava)
     val envSecret = sb.build()
-    val sec = kubernetesTestComponents
-      .kubernetesClient
+    val sec = kubernetesTestComponents.kubernetesClient
       .secrets()
       .inNamespace(kubernetesTestComponents.namespace)
       .resource(envSecret)
@@ -49,8 +48,7 @@ private[spark] trait SecretsTestsSuite { k8sSuite: KubernetesSuite =>
   }
 
   private def deleteTestSecret(): Unit = {
-    kubernetesTestComponents
-      .kubernetesClient
+    kubernetesTestComponents.kubernetesClient
       .secrets()
       .inNamespace(kubernetesTestComponents.namespace)
       .withName(ENV_SECRET_NAME)
@@ -68,9 +66,11 @@ private[spark] trait SecretsTestsSuite { k8sSuite: KubernetesSuite =>
         s"spark.kubernetes.driver.secretKeyRef.${ENV_SECRET_KEY_2_CAP}",
         s"$ENV_SECRET_NAME:${ENV_SECRET_KEY_2}")
       .set(s"spark.kubernetes.executor.secrets.$ENV_SECRET_NAME", SECRET_MOUNT_PATH)
-      .set(s"spark.kubernetes.executor.secretKeyRef.${ENV_SECRET_KEY_1_CAP}",
+      .set(
+        s"spark.kubernetes.executor.secretKeyRef.${ENV_SECRET_KEY_1_CAP}",
         s"${ENV_SECRET_NAME}:$ENV_SECRET_KEY_1")
-      .set(s"spark.kubernetes.executor.secretKeyRef.${ENV_SECRET_KEY_2_CAP}",
+      .set(
+        s"spark.kubernetes.executor.secretKeyRef.${ENV_SECRET_KEY_2_CAP}",
         s"${ENV_SECRET_NAME}:$ENV_SECRET_KEY_2")
     try {
       runSparkPiAndVerifyCompletion(
@@ -101,13 +101,13 @@ private[spark] trait SecretsTestsSuite { k8sSuite: KubernetesSuite =>
       assert(!env.isEmpty)
       env
     }
-    env.toString should include (s"${ENV_SECRET_KEY_1_CAP}=$ENV_SECRET_VALUE_1")
-    env.toString should include (s"${ENV_SECRET_KEY_2_CAP}=$ENV_SECRET_VALUE_2")
+    env.toString should include(s"${ENV_SECRET_KEY_1_CAP}=$ENV_SECRET_VALUE_1")
+    env.toString should include(s"${ENV_SECRET_KEY_2_CAP}=$ENV_SECRET_VALUE_2")
 
     // Make sure our secret files are mounted correctly
     val files = Utils.executeCommand("ls", s"$SECRET_MOUNT_PATH")
-    files should include (ENV_SECRET_KEY_1)
-    files should include (ENV_SECRET_KEY_2)
+    files should include(ENV_SECRET_KEY_1)
+    files should include(ENV_SECRET_KEY_2)
     // Validate the contents
     val fileUsernameContents = Utils
       .executeCommand("cat", s"$SECRET_MOUNT_PATH/$ENV_SECRET_KEY_1")

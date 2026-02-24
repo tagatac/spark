@@ -64,7 +64,6 @@ private[spark] object PythonWorkerUtils extends Logging {
     writeUTF(pythonVer, dataOut)
   }
 
-
   /**
    * Write the task context information to the data output stream.
    *
@@ -75,7 +74,8 @@ private[spark] object PythonWorkerUtils extends Logging {
       connInfo: Either[String, Int],
       secret: Option[String],
       dataOut: DataOutputStream): Unit = {
-    val json = Serialization.write(Map(
+    val json = Serialization.write(
+      Map(
         "isBarrier" -> context.isInstanceOf[BarrierTaskContext],
         "connInfo" -> connInfo.merge,
         "secret" -> secret.orNull,
@@ -85,13 +85,9 @@ private[spark] object PythonWorkerUtils extends Logging {
         "taskAttemptId" -> context.taskAttemptId(),
         "cpus" -> context.cpus(),
         "resources" -> context.resources().map { case (k, v) =>
-          k -> Map(
-            "name" -> v.name,
-            "addresses" -> v.addresses
-          )
+          k -> Map("name" -> v.name, "addresses" -> v.addresses)
         },
-        "localProperties" -> context.getLocalProperties.asScala.toMap
-      ))
+        "localProperties" -> context.getLocalProperties.asScala.toMap))
     writeUTF(json, dataOut)
   }
 
@@ -105,9 +101,11 @@ private[spark] object PythonWorkerUtils extends Logging {
       pythonIncludes: Set[String],
       dataOut: DataOutputStream): Unit = {
     // sparkFilesDir
-    val root = jobArtifactUUID.map { uuid =>
-      new File(SparkFiles.getRootDirectory(), uuid).getAbsolutePath
-    }.getOrElse(SparkFiles.getRootDirectory())
+    val root = jobArtifactUUID
+      .map { uuid =>
+        new File(SparkFiles.getRootDirectory(), uuid).getAbsolutePath
+      }
+      .getOrElse(SparkFiles.getRootDirectory())
     writeUTF(root, dataOut)
 
     // Python includes (*.zip and *.egg files)

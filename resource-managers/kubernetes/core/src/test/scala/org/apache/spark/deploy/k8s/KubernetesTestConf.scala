@@ -114,23 +114,27 @@ object KubernetesTestConf {
     volumes.foreach { case spec =>
       val (vtype, configs) = spec.volumeConf match {
         case KubernetesHostPathVolumeConf(hostPath, volumeType) =>
-          (KUBERNETES_VOLUMES_HOSTPATH_TYPE, Map(
-            KUBERNETES_VOLUMES_OPTIONS_PATH_KEY -> hostPath,
-            KUBERNETES_VOLUMES_OPTIONS_TYPE_KEY -> volumeType))
+          (
+            KUBERNETES_VOLUMES_HOSTPATH_TYPE,
+            Map(
+              KUBERNETES_VOLUMES_OPTIONS_PATH_KEY -> hostPath,
+              KUBERNETES_VOLUMES_OPTIONS_TYPE_KEY -> volumeType))
 
         case KubernetesPVCVolumeConf(claimName, storageClass, sizeLimit, labels, annotations) =>
-          val sconf = storageClass
-            .map { s => (KUBERNETES_VOLUMES_OPTIONS_CLAIM_STORAGE_CLASS_KEY, s) }.toMap
+          val sconf = storageClass.map { s =>
+            (KUBERNETES_VOLUMES_OPTIONS_CLAIM_STORAGE_CLASS_KEY, s)
+          }.toMap
           val lconf = sizeLimit.map { l => (KUBERNETES_VOLUMES_OPTIONS_SIZE_LIMIT_KEY, l) }.toMap
           val llabels = labels match {
-            case Some(value) => value.map { case(k, v) => s"label.$k" -> v }
+            case Some(value) => value.map { case (k, v) => s"label.$k" -> v }
             case None => Map()
           }
           val aannotations = annotations match {
             case Some(value) => value.map { case (k, v) => s"annotation.$k" -> v }
             case None => Map()
           }
-          (KUBERNETES_VOLUMES_PVC_TYPE,
+          (
+            KUBERNETES_VOLUMES_PVC_TYPE,
             Map(KUBERNETES_VOLUMES_OPTIONS_CLAIM_NAME_KEY -> claimName) ++
               sconf ++ lconf ++ llabels ++ aannotations)
 
@@ -140,21 +144,26 @@ object KubernetesTestConf {
           (KUBERNETES_VOLUMES_EMPTYDIR_TYPE, mconf ++ lconf)
 
         case KubernetesNFSVolumeConf(path, server) =>
-          (KUBERNETES_VOLUMES_NFS_TYPE, Map(
-            KUBERNETES_VOLUMES_OPTIONS_PATH_KEY -> path,
-            KUBERNETES_VOLUMES_OPTIONS_SERVER_KEY -> server))
+          (
+            KUBERNETES_VOLUMES_NFS_TYPE,
+            Map(
+              KUBERNETES_VOLUMES_OPTIONS_PATH_KEY -> path,
+              KUBERNETES_VOLUMES_OPTIONS_SERVER_KEY -> server))
       }
 
       conf.set(key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_PATH_KEY), spec.mountPath)
       if (spec.mountSubPath.nonEmpty) {
-        conf.set(key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_SUBPATH_KEY),
+        conf.set(
+          key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_SUBPATH_KEY),
           spec.mountSubPath)
       }
       if (spec.mountSubPathExpr.nonEmpty) {
-        conf.set(key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_SUBPATHEXPR_KEY),
+        conf.set(
+          key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_SUBPATHEXPR_KEY),
           spec.mountSubPathExpr)
       }
-      conf.set(key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_READONLY_KEY),
+      conf.set(
+        key(vtype, spec.volumeName, KUBERNETES_VOLUMES_MOUNT_READONLY_KEY),
         spec.mountReadOnly.toString)
       configs.foreach { case (k, v) =>
         conf.set(key(vtype, spec.volumeName, k), v)

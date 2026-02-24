@@ -32,17 +32,15 @@ import org.apache.spark.annotation.Since
 import org.apache.spark.internal.config
 
 /**
- * A general format for reading whole files in as streams, byte arrays,
- * or other functions to be added
+ * A general format for reading whole files in as streams, byte arrays, or other functions to be
+ * added
  */
-private[spark] abstract class StreamFileInputFormat[T]
-  extends CombineFileInputFormat[String, T]
-{
+private[spark] abstract class StreamFileInputFormat[T] extends CombineFileInputFormat[String, T] {
   override protected def isSplitable(context: JobContext, file: Path): Boolean = false
 
   /**
-   * Allow minPartitions set by end-user in order to keep compatibility with old Hadoop API
-   * which is set through setMaxSplitSize
+   * Allow minPartitions set by end-user in order to keep compatibility with old Hadoop API which
+   * is set through setMaxSplitSize
    */
   def setMinPartitions(sc: SparkContext, context: JobContext, minPartitions: Int): Unit = {
     val defaultMaxSplitBytes = sc.conf.get(config.FILES_MAX_PARTITION_BYTES)
@@ -67,19 +65,21 @@ private[spark] abstract class StreamFileInputFormat[T]
     super.setMaxSplitSize(maxSplitSize)
   }
 
-  def createRecordReader(split: InputSplit, taContext: TaskAttemptContext): RecordReader[String, T]
+  def createRecordReader(
+      split: InputSplit,
+      taContext: TaskAttemptContext): RecordReader[String, T]
 
 }
 
 /**
- * An abstract class of [[org.apache.hadoop.mapreduce.RecordReader RecordReader]]
- * to reading files out as streams
+ * An abstract class of [[org.apache.hadoop.mapreduce.RecordReader RecordReader]] to reading files
+ * out as streams
  */
 private[spark] abstract class StreamBasedRecordReader[T](
     split: CombineFileSplit,
     context: TaskAttemptContext,
     index: Integer)
-  extends RecordReader[String, T] {
+    extends RecordReader[String, T] {
 
   // True means the current file has been processed, then skip it.
   private var processed = false
@@ -110,8 +110,10 @@ private[spark] abstract class StreamBasedRecordReader[T](
 
   /**
    * Parse the stream (and close it afterwards) and return the value as in type T
-   * @param inStream the stream to be read in
-   * @return the data formatted as
+   * @param inStream
+   *   the stream to be read in
+   * @return
+   *   the data formatted as
    */
   def parseStream(inStream: PortableDataStream): T
 }
@@ -123,7 +125,7 @@ private[spark] class StreamRecordReader(
     split: CombineFileSplit,
     context: TaskAttemptContext,
     index: Integer)
-  extends StreamBasedRecordReader[PortableDataStream](split, context, index) {
+    extends StreamBasedRecordReader[PortableDataStream](split, context, index) {
 
   def parseStream(inStream: PortableDataStream): PortableDataStream = inStream
 }
@@ -132,24 +134,26 @@ private[spark] class StreamRecordReader(
  * The format for the PortableDataStream files
  */
 private[spark] class StreamInputFormat extends StreamFileInputFormat[PortableDataStream] {
-  override def createRecordReader(split: InputSplit, taContext: TaskAttemptContext)
-    : CombineFileRecordReader[String, PortableDataStream] = {
+  override def createRecordReader(
+      split: InputSplit,
+      taContext: TaskAttemptContext): CombineFileRecordReader[String, PortableDataStream] = {
     new CombineFileRecordReader[String, PortableDataStream](
-      split.asInstanceOf[CombineFileSplit], taContext, classOf[StreamRecordReader])
+      split.asInstanceOf[CombineFileSplit],
+      taContext,
+      classOf[StreamRecordReader])
   }
 }
 
 /**
- * A class that allows DataStreams to be serialized and moved around by not creating them
- * until they need to be read
- * @note TaskAttemptContext is not serializable resulting in the confBytes construct
- * @note CombineFileSplit is not serializable resulting in the splitBytes construct
+ * A class that allows DataStreams to be serialized and moved around by not creating them until
+ * they need to be read
+ * @note
+ *   TaskAttemptContext is not serializable resulting in the confBytes construct
+ * @note
+ *   CombineFileSplit is not serializable resulting in the splitBytes construct
  */
-class PortableDataStream(
-    isplit: CombineFileSplit,
-    context: TaskAttemptContext,
-    index: Integer)
-  extends Serializable {
+class PortableDataStream(isplit: CombineFileSplit, context: TaskAttemptContext, index: Integer)
+    extends Serializable {
 
   private val confBytes = {
     val baos = new ByteArrayOutputStream()
@@ -176,6 +180,7 @@ class PortableDataStream(
     nconf.readFields(new DataInputStream(bais))
     nconf
   }
+
   /**
    * Calculate the path name independently of opening the file
    */
@@ -185,8 +190,8 @@ class PortableDataStream(
   }
 
   /**
-   * Create a new DataInputStream from the split and context. The user of this method is responsible
-   * for closing the stream after usage.
+   * Create a new DataInputStream from the split and context. The user of this method is
+   * responsible for closing the stream after usage.
    */
   @Since("1.2.0")
   def open(): DataInputStream = {
@@ -214,4 +219,3 @@ class PortableDataStream(
   @Since("2.2.0")
   def getConfiguration: Configuration = conf
 }
-

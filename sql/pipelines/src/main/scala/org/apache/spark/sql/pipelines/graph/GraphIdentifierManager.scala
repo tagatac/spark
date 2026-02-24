@@ -38,13 +38,14 @@ object GraphIdentifierManager {
 
   /**
    * Fully qualify (if needed) the user-specified identifier used to reference datasets, and
-   * categorizing the dataset we're referencing (i.e. dataset from this pipeline or dataset that is
-   * external to this pipeline).
+   * categorizing the dataset we're referencing (i.e. dataset from this pipeline or dataset that
+   * is external to this pipeline).
    *
    * Returns whether the input dataset should be read as a dataset and also the qualified
    * identifier.
    *
-   * @param rawInputName the user-specified name when referencing datasets.
+   * @param rawInputName
+   *   the user-specified name when referencing datasets.
    */
   def parseAndQualifyInputIdentifier(
       context: FlowAnalysisContext,
@@ -53,13 +54,12 @@ object GraphIdentifierManager {
   }
 
   /**
-   * Resolve dataset reads that happens inside the dataset query definition (i.e., inside
-   * the @materialized_view() annotation in Python).
+   * Resolve dataset reads that happens inside the dataset query definition (i.e., inside the @materialized_view()
+   * annotation in Python).
    */
   private def resolveDatasetReadInsideQueryDefinition(
       context: FlowAnalysisContext,
-      rawInputName: String
-  ): DatasetIdentifier = {
+      rawInputName: String): DatasetIdentifier = {
     // After identifier is pre-processed, we first check whether we're referencing a
     // single-part-name dataset (e.g., temp view). If so, don't fully qualified the identifier
     // and directly read from it, because single-part-name datasets always out-mask other
@@ -86,8 +86,7 @@ object GraphIdentifierManager {
       val fullyQualifiedInputIdentifier = fullyQualifyIdentifier(
         maybeFullyQualifiedIdentifier = inputIdentifier,
         currentCatalog = context.queryContext.currentCatalog,
-        currentDatabase = context.queryContext.currentDatabase
-      )
+        currentDatabase = context.queryContext.currentDatabase)
       assertIsFullyQualifiedForRead(identifier = fullyQualifiedInputIdentifier)
 
       if (isInternalDataset(fullyQualifiedInputIdentifier)) {
@@ -99,7 +98,8 @@ object GraphIdentifierManager {
   }
 
   /**
-   * @param rawDatasetIdentifier the dataset identifier specified by the user.
+   * @param rawDatasetIdentifier
+   *   the dataset identifier specified by the user.
    */
   @throws[AnalysisException]
   private def parseAndValidatePipelineDatasetIdentifier(
@@ -110,23 +110,22 @@ object GraphIdentifierManager {
   /**
    * Parses the table identifier from the raw table identifier and fully qualifies it.
    *
-   * @param rawTableIdentifier the raw table identifier
-   * @return the parsed table identifier
+   * @param rawTableIdentifier
+   *   the raw table identifier
+   * @return
+   *   the parsed table identifier
    */
   @throws[AnalysisException]
   def parseAndQualifyTableIdentifier(
       rawTableIdentifier: TableIdentifier,
       currentCatalog: Option[String],
-      currentDatabase: Option[String]
-  ): InternalDatasetIdentifier = {
-    val pipelineDatasetIdentifier = parseAndValidatePipelineDatasetIdentifier(
-      rawDatasetIdentifier = rawTableIdentifier
-    )
+      currentDatabase: Option[String]): InternalDatasetIdentifier = {
+    val pipelineDatasetIdentifier =
+      parseAndValidatePipelineDatasetIdentifier(rawDatasetIdentifier = rawTableIdentifier)
     val fullyQualifiedTableIdentifier = fullyQualifyIdentifier(
       maybeFullyQualifiedIdentifier = pipelineDatasetIdentifier.identifier,
       currentCatalog = currentCatalog,
-      currentDatabase = currentDatabase
-    )
+      currentDatabase = currentDatabase)
     // assert the identifier is properly fully qualified
     assertIsFullyQualifiedForCreate(fullyQualifiedTableIdentifier)
     InternalDatasetIdentifier(identifier = fullyQualifiedTableIdentifier)
@@ -135,21 +134,21 @@ object GraphIdentifierManager {
   /**
    * Parses and validates the view identifier from the raw view identifier for temporary views.
    *
-   * @param rawViewIdentifier the raw view identifier
-   * @return the parsed view identifier
+   * @param rawViewIdentifier
+   *   the raw view identifier
+   * @return
+   *   the parsed view identifier
    */
   @throws[AnalysisException]
   def parseAndValidateTemporaryViewIdentifier(
       rawViewIdentifier: TableIdentifier): TableIdentifier = {
-    val internalDatasetIdentifier = parseAndValidatePipelineDatasetIdentifier(
-      rawDatasetIdentifier = rawViewIdentifier
-    )
+    val internalDatasetIdentifier =
+      parseAndValidatePipelineDatasetIdentifier(rawDatasetIdentifier = rawViewIdentifier)
     // Temporary views are not persisted to the catalog in use, therefore should not be qualified.
     if (!isSinglePartIdentifier(internalDatasetIdentifier.identifier)) {
       throw new AnalysisException(
         "MULTIPART_TEMPORARY_VIEW_NAME_NOT_SUPPORTED",
-        Map("viewName" -> rawViewIdentifier.unquotedString)
-      )
+        Map("viewName" -> rawViewIdentifier.unquotedString))
     }
     internalDatasetIdentifier.identifier
   }
@@ -157,20 +156,20 @@ object GraphIdentifierManager {
   /**
    * Parses and validates the sink identifier from the raw sink identifier.
    *
-   * @param rawSinkIdentifier the raw view identifier
-   * @return the parsed sink identifier
+   * @param rawSinkIdentifier
+   *   the raw view identifier
+   * @return
+   *   the parsed sink identifier
    */
   @throws[AnalysisException]
   def parseAndValidateSinkIdentifier(rawSinkIdentifier: TableIdentifier): TableIdentifier = {
-    val internalDatasetIdentifier = parseAndValidatePipelineDatasetIdentifier(
-      rawDatasetIdentifier = rawSinkIdentifier
-    )
+    val internalDatasetIdentifier =
+      parseAndValidatePipelineDatasetIdentifier(rawDatasetIdentifier = rawSinkIdentifier)
     // Sinks are not persisted to the catalog in use, therefore should not be qualified.
     if (!isSinglePartIdentifier(internalDatasetIdentifier.identifier)) {
       throw new AnalysisException(
         "MULTIPART_SINK_NAME_NOT_SUPPORTED",
-        Map("viewName" -> rawSinkIdentifier.unquotedString)
-      )
+        Map("viewName" -> rawSinkIdentifier.unquotedString))
     }
     internalDatasetIdentifier.identifier
   }
@@ -178,24 +177,26 @@ object GraphIdentifierManager {
   /**
    * Parses and validates the view identifier from the raw view identifier for persisted views.
    *
-   * @param rawViewIdentifier the raw view identifier
-   * @param currentCatalog the catalog
-   * @param currentDatabase the schema
-   * @return the parsed view identifier
+   * @param rawViewIdentifier
+   *   the raw view identifier
+   * @param currentCatalog
+   *   the catalog
+   * @param currentDatabase
+   *   the schema
+   * @return
+   *   the parsed view identifier
    */
   def parseAndValidatePersistedViewIdentifier(
       rawViewIdentifier: TableIdentifier,
       currentCatalog: Option[String],
       currentDatabase: Option[String]): TableIdentifier = {
-    val internalDatasetIdentifier = parseAndValidatePipelineDatasetIdentifier(
-      rawDatasetIdentifier = rawViewIdentifier
-    )
+    val internalDatasetIdentifier =
+      parseAndValidatePipelineDatasetIdentifier(rawDatasetIdentifier = rawViewIdentifier)
     // Persisted views have fully qualified names
     val fullyQualifiedViewIdentifier = fullyQualifyIdentifier(
       maybeFullyQualifiedIdentifier = internalDatasetIdentifier.identifier,
       currentCatalog = currentCatalog,
-      currentDatabase = currentDatabase
-    )
+      currentDatabase = currentDatabase)
     // assert the identifier is properly fully qualified
     assertIsFullyQualifiedForCreate(fullyQualifiedViewIdentifier)
     fullyQualifiedViewIdentifier
@@ -204,24 +205,23 @@ object GraphIdentifierManager {
   /**
    * Parses the flow identifier from the raw flow identifier and fully qualify it.
    *
-   * @param rawFlowIdentifier the raw flow identifier
-   * @return the parsed flow identifier
+   * @param rawFlowIdentifier
+   *   the raw flow identifier
+   * @return
+   *   the parsed flow identifier
    */
   @throws[AnalysisException]
   def parseAndQualifyFlowIdentifier(
       rawFlowIdentifier: TableIdentifier,
       currentCatalog: Option[String],
-      currentDatabase: Option[String]
-  ): InternalDatasetIdentifier = {
-    val internalDatasetIdentifier = parseAndValidatePipelineDatasetIdentifier(
-      rawDatasetIdentifier = rawFlowIdentifier
-    )
+      currentDatabase: Option[String]): InternalDatasetIdentifier = {
+    val internalDatasetIdentifier =
+      parseAndValidatePipelineDatasetIdentifier(rawDatasetIdentifier = rawFlowIdentifier)
 
     val fullyQualifiedFlowIdentifier = fullyQualifyIdentifier(
       maybeFullyQualifiedIdentifier = internalDatasetIdentifier.identifier,
       currentCatalog = currentCatalog,
-      currentDatabase = currentDatabase
-    )
+      currentDatabase = currentDatabase)
 
     // assert the identifier is properly fully qualified
     assertIsFullyQualifiedForCreate(fullyQualifiedFlowIdentifier)
@@ -232,9 +232,8 @@ object GraphIdentifierManager {
   sealed trait DatasetIdentifier
 
   /** Represents the identifier for a dataset that is defined by the current pipeline. */
-  case class InternalDatasetIdentifier private (
-      identifier: TableIdentifier
-  ) extends DatasetIdentifier
+  case class InternalDatasetIdentifier private (identifier: TableIdentifier)
+      extends DatasetIdentifier
 
   /** Represents the identifier for a dataset that is external to the current pipeline. */
   case class ExternalDatasetIdentifier(identifier: TableIdentifier) extends DatasetIdentifier
@@ -245,8 +244,10 @@ object IdentifierHelper {
   /**
    * Returns the quoted string for the name parts.
    *
-   * @param nameParts the dataset name parts.
-   * @return the quoted string for the name parts.
+   * @param nameParts
+   *   the dataset name parts.
+   * @return
+   *   the quoted string for the name parts.
    */
   def toQuotedString(nameParts: Seq[String]): String = {
     toTableIdentifier(nameParts).quotedString
@@ -255,8 +256,10 @@ object IdentifierHelper {
   /**
    * Returns the table identifier constructed from the name parts.
    *
-   * @param nameParts the dataset name parts.
-   * @return the table identifier constructed from the name parts.
+   * @param nameParts
+   *   the dataset name parts.
+   * @return
+   *   the table identifier constructed from the name parts.
    */
   @throws[UnsupportedOperationException]
   def toTableIdentifier(nameParts: Seq[String]): TableIdentifier = {
@@ -267,20 +270,20 @@ object IdentifierHelper {
         TableIdentifier(
           table = nameParts(2),
           database = Option(nameParts(1)),
-          catalog = Option(nameParts.head)
-        )
+          catalog = Option(nameParts.head))
       case _ =>
         throw new UnsupportedOperationException(
-          s"4+ part table identifier ${nameParts.mkString(".")} is not supported."
-        )
+          s"4+ part table identifier ${nameParts.mkString(".")} is not supported.")
     }
   }
 
   /**
    * Returns the table identifier constructed from the logical plan.
    *
-   * @param table the logical plan.
-   * @return the table identifier constructed from the logical plan.
+   * @param table
+   *   the logical plan.
+   * @return
+   *   the table identifier constructed from the logical plan.
    */
   def toTableIdentifier(table: LogicalPlan): TableIdentifier = {
     val parts = table match {
@@ -293,14 +296,14 @@ object IdentifierHelper {
     toTableIdentifier(parts)
   }
 
-  /** Return whether the input identifier is a single-part identifier.  */
+  /** Return whether the input identifier is a single-part identifier. */
   def isSinglePartIdentifier(identifier: TableIdentifier): Boolean = {
     identifier.database.isEmpty && identifier.catalog.isEmpty
   }
 
   /**
-   * Return true if the identifier should be resolved as a path-based reference
-   * (i.e., `datasource`.`path`).
+   * Return true if the identifier should be resolved as a path-based reference (i.e.,
+   * `datasource`.`path`).
    */
   def isPathIdentifier(spark: SparkSession, identifier: TableIdentifier): Boolean = {
     if (identifier.nameParts.length != 2) {
@@ -326,12 +329,10 @@ object IdentifierHelper {
   def fullyQualifyIdentifier(
       maybeFullyQualifiedIdentifier: TableIdentifier,
       currentCatalog: Option[String],
-      currentDatabase: Option[String]
-  ): TableIdentifier = {
+      currentDatabase: Option[String]): TableIdentifier = {
     maybeFullyQualifiedIdentifier.copy(
       database = maybeFullyQualifiedIdentifier.database.orElse(currentDatabase),
-      catalog = maybeFullyQualifiedIdentifier.catalog.orElse(currentCatalog)
-    )
+      catalog = maybeFullyQualifiedIdentifier.catalog.orElse(currentCatalog))
   }
 
   /** Assert whether the identifier is properly fully qualified when creating a dataset. */
@@ -339,8 +340,7 @@ object IdentifierHelper {
     assert(
       identifier.catalog.isDefined && identifier.database.isDefined,
       s"Dataset identifier $identifier is not properly fully qualified, expect a " +
-      s"three-part-name <catalog>.<schema>.<table>"
-    )
+        s"three-part-name <catalog>.<schema>.<table>")
   }
 
   /** Assert whether the identifier is properly qualified when reading a dataset in a pipeline. */
@@ -348,7 +348,6 @@ object IdentifierHelper {
     assert(
       identifier.catalog.isDefined && identifier.database.isDefined,
       s"Failed to reference dataset $identifier, expect a " +
-      s"three-part-name <catalog>.<schema>.<table>"
-    )
+        s"three-part-name <catalog>.<schema>.<table>")
   }
 }

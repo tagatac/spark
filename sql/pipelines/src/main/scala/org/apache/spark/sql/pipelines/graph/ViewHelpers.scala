@@ -26,13 +26,11 @@ object ViewHelpers {
     graph.persistedViews.map { v =>
       require(
         graph.flowsTo.contains(v.identifier),
-        s"No flows to view ${v.identifier} were found"
-      )
+        s"No flows to view ${v.identifier} were found")
       val flowsToView = graph.resolvedFlowsTo(v.identifier)
       require(
         flowsToView.size == 1,
-        s"Expected a single flow to the view, found ${flowsToView.size} flows to ${v.identifier}"
-      )
+        s"Expected a single flow to the view, found ${flowsToView.size} flows to ${v.identifier}")
       (v.identifier, flowsToView.head)
     }.toMap
   }

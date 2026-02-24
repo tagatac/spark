@@ -103,8 +103,7 @@ private[sql] class ProtobufSerializer(
         }
       case (LongType, LONG) =>
         (getter, ordinal) => getter.getLong(ordinal)
-      case (DecimalType(), LONG)
-        if fieldDescriptor.getLiteType == WireFormat.FieldType.UINT64 =>
+      case (DecimalType(), LONG) if fieldDescriptor.getLiteType == WireFormat.FieldType.UINT64 =>
         (getter, ordinal) => {
           getter.getDecimal(ordinal, 20, 0).toUnscaledLong
         }
@@ -186,49 +185,40 @@ private[sql] class ProtobufSerializer(
 
       // Handle serializing primitives back into well known wrapper types.
       case (BooleanType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == BoolValue.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          BoolValue.of(getter.getBoolean(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == BoolValue.getDescriptor.getFullName =>
+        (getter, ordinal) => BoolValue.of(getter.getBoolean(ordinal))
 
       case (IntegerType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == Int32Value.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          Int32Value.of(getter.getInt(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == Int32Value.getDescriptor.getFullName =>
+        (getter, ordinal) => Int32Value.of(getter.getInt(ordinal))
 
       case (IntegerType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          UInt32Value.of(getter.getInt(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName =>
+        (getter, ordinal) => UInt32Value.of(getter.getInt(ordinal))
 
       case (LongType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == Int64Value.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          Int64Value.of(getter.getLong(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == Int64Value.getDescriptor.getFullName =>
+        (getter, ordinal) => Int64Value.of(getter.getLong(ordinal))
 
       case (LongType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          UInt64Value.of(getter.getLong(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName =>
+        (getter, ordinal) => UInt64Value.of(getter.getLong(ordinal))
 
       case (StringType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == StringValue.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          StringValue.of(getter.getUTF8String(ordinal).toString)
+          if fieldDescriptor.getMessageType.getFullName == StringValue.getDescriptor.getFullName =>
+        (getter, ordinal) => StringValue.of(getter.getUTF8String(ordinal).toString)
 
       case (BinaryType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == BytesValue.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          BytesValue.of(ByteString.copyFrom(getter.getBinary(ordinal)))
+          if fieldDescriptor.getMessageType.getFullName == BytesValue.getDescriptor.getFullName =>
+        (getter, ordinal) => BytesValue.of(ByteString.copyFrom(getter.getBinary(ordinal)))
 
       case (FloatType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == FloatValue.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          FloatValue.of(getter.getFloat(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == FloatValue.getDescriptor.getFullName =>
+        (getter, ordinal) => FloatValue.of(getter.getFloat(ordinal))
 
       case (DoubleType, MESSAGE)
-        if fieldDescriptor.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName =>
-        (getter, ordinal) =>
-          DoubleValue.of(getter.getDouble(ordinal))
+          if fieldDescriptor.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName =>
+        (getter, ordinal) => DoubleValue.of(getter.getDouble(ordinal))
 
       case (st: StructType, MESSAGE) =>
         val structConverter =
@@ -291,8 +281,11 @@ private[sql] class ProtobufSerializer(
       case (DayTimeIntervalType(startField, endField), MESSAGE) =>
         (getter, ordinal) =>
           val dayTimeIntervalString =
-            IntervalUtils.toDayTimeIntervalString(getter.getLong(ordinal)
-              , ANSI_STYLE, startField, endField)
+            IntervalUtils.toDayTimeIntervalString(
+              getter.getLong(ordinal),
+              ANSI_STYLE,
+              startField,
+              endField)
           val calendarInterval = IntervalUtils.fromIntervalString(dayTimeIntervalString)
 
           val millis = DateTimeUtils.microsToMillis(calendarInterval.microseconds)

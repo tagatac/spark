@@ -48,16 +48,17 @@ private[spark] class AppStatusStore(
     try {
       // The ApplicationInfo may not be available when Spark is starting up.
       Utils.tryWithResource(
-        store.view(classOf[ApplicationInfoWrapper])
+        store
+          .view(classOf[ApplicationInfoWrapper])
           .max(1)
-          .closeableIterator()
-      ) { it =>
+          .closeableIterator()) { it =>
         it.next().info
       }
     } catch {
       case _: NoSuchElementException =>
-        throw new NoSuchElementException("Failed to get the application information. " +
-          "If you are starting up Spark, please wait a while until it's ready.")
+        throw new NoSuchElementException(
+          "Failed to get the application information. " +
+            "If you are starting up Spark, please wait a while until it's ready.")
     }
   }
 
@@ -97,7 +98,8 @@ private[spark] class AppStatusStore(
     } else {
       base
     }
-    KVUtils.mapToSeq(filtered)(_.info)
+    KVUtils
+      .mapToSeq(filtered)(_.info)
       .filter(_.id != FALLBACK_BLOCK_MANAGER_ID.executorId)
       .map(replaceExec)
   }
@@ -110,18 +112,42 @@ private[spark] class AppStatusStore(
     }
   }
 
-  private def replaceDriverGcTime(source: v1.ExecutorSummary,
-    totalGcTime: Option[Long], totalAppTime: Option[Long]): v1.ExecutorSummary = {
-    new v1.ExecutorSummary(source.id, source.hostPort, source.isActive, source.rddBlocks,
-      source.memoryUsed, source.diskUsed, source.totalCores, source.maxTasks, source.activeTasks,
-      source.failedTasks, source.completedTasks, source.totalTasks,
+  private def replaceDriverGcTime(
+      source: v1.ExecutorSummary,
+      totalGcTime: Option[Long],
+      totalAppTime: Option[Long]): v1.ExecutorSummary = {
+    new v1.ExecutorSummary(
+      source.id,
+      source.hostPort,
+      source.isActive,
+      source.rddBlocks,
+      source.memoryUsed,
+      source.diskUsed,
+      source.totalCores,
+      source.maxTasks,
+      source.activeTasks,
+      source.failedTasks,
+      source.completedTasks,
+      source.totalTasks,
       totalAppTime.getOrElse(source.totalDuration),
       totalGcTime.getOrElse(source.totalGCTime),
-      source.totalInputBytes, source.totalShuffleRead,
-      source.totalShuffleWrite, source.isBlacklisted, source.maxMemory, source.addTime,
-      source.removeTime, source.removeReason, source.executorLogs, source.memoryMetrics,
-      source.blacklistedInStages, source.peakMemoryMetrics, source.attributes, source.resources,
-      source.resourceProfileId, source.isExcluded, source.excludedInStages)
+      source.totalInputBytes,
+      source.totalShuffleRead,
+      source.totalShuffleWrite,
+      source.isBlacklisted,
+      source.maxMemory,
+      source.addTime,
+      source.removeTime,
+      source.removeReason,
+      source.executorLogs,
+      source.memoryMetrics,
+      source.blacklistedInStages,
+      source.peakMemoryMetrics,
+      source.attributes,
+      source.resources,
+      source.resourceProfileId,
+      source.isExcluded,
+      source.excludedInStages)
   }
 
   private def extractGcTime(source: v1.ExecutorSummary): Option[Long] = {
@@ -173,11 +199,11 @@ private[spark] class AppStatusStore(
   }
 
   def stageList(
-    statuses: JList[v1.StageStatus],
-    details: Boolean = false,
-    withSummaries: Boolean = false,
-    unsortedQuantiles: Array[Double] = Array.empty,
-    taskStatus: JList[v1.TaskStatus] = List().asJava): Seq[v1.StageData] = {
+      statuses: JList[v1.StageStatus],
+      details: Boolean = false,
+      withSummaries: Boolean = false,
+      unsortedQuantiles: Array[Double] = Array.empty,
+      taskStatus: JList[v1.TaskStatus] = List().asJava): Seq[v1.StageData] = {
     val quantiles = unsortedQuantiles.sorted
     val it = KVUtils.mapToSeq(store.view(classOf[StageDataWrapper]).reverse())(_.info)
     val ret = if (statuses != null && !statuses.isEmpty()) {
@@ -187,26 +213,39 @@ private[spark] class AppStatusStore(
     }
 
     ret.map { s =>
-      newStageData(s, withDetail = details, taskStatus = taskStatus,
-        withSummaries = withSummaries, unsortedQuantiles = quantiles)
+      newStageData(
+        s,
+        withDetail = details,
+        taskStatus = taskStatus,
+        withSummaries = withSummaries,
+        unsortedQuantiles = quantiles)
     }
   }
 
   def stageData(
-    stageId: Int,
-    details: Boolean = false,
-    taskStatus: JList[v1.TaskStatus] = List().asJava,
-    withSummaries: Boolean = false,
-    unsortedQuantiles: Array[Double] = Array.empty[Double]): Seq[v1.StageData] = {
-    KVUtils.mapToSeq(store.view(classOf[StageDataWrapper]).index("stageId")
-      .first(stageId).last(stageId)) { s =>
-      newStageData(s.info, withDetail = details, taskStatus = taskStatus,
-        withSummaries = withSummaries, unsortedQuantiles = unsortedQuantiles)
+      stageId: Int,
+      details: Boolean = false,
+      taskStatus: JList[v1.TaskStatus] = List().asJava,
+      withSummaries: Boolean = false,
+      unsortedQuantiles: Array[Double] = Array.empty[Double]): Seq[v1.StageData] = {
+    KVUtils.mapToSeq(
+      store
+        .view(classOf[StageDataWrapper])
+        .index("stageId")
+        .first(stageId)
+        .last(stageId)) { s =>
+      newStageData(
+        s.info,
+        withDetail = details,
+        taskStatus = taskStatus,
+        withSummaries = withSummaries,
+        unsortedQuantiles = unsortedQuantiles)
     }
   }
 
   def lastStageAttempt(stageId: Int): v1.StageData = {
-    val it = store.view(classOf[StageDataWrapper])
+    val it = store
+      .view(classOf[StageDataWrapper])
       .index("stageId")
       .reverse()
       .first(stageId)
@@ -224,15 +263,20 @@ private[spark] class AppStatusStore(
   }
 
   def stageAttempt(
-      stageId: Int, stageAttemptId: Int,
+      stageId: Int,
+      stageAttemptId: Int,
       details: Boolean = false,
       taskStatus: JList[v1.TaskStatus] = List().asJava,
       withSummaries: Boolean = false,
       unsortedQuantiles: Array[Double] = Array.empty[Double]): (v1.StageData, Seq[Int]) = {
     val stageKey = Array(stageId, stageAttemptId)
     val stageDataWrapper = store.read(classOf[StageDataWrapper], stageKey)
-    val stage = newStageData(stageDataWrapper.info, withDetail = details, taskStatus = taskStatus,
-      withSummaries = withSummaries, unsortedQuantiles = unsortedQuantiles)
+    val stage = newStageData(
+      stageDataWrapper.info,
+      withDetail = details,
+      taskStatus = taskStatus,
+      withSummaries = withSummaries,
+      unsortedQuantiles = unsortedQuantiles)
     (stage, stageDataWrapper.jobIds.toSeq)
   }
 
@@ -245,12 +289,12 @@ private[spark] class AppStatusStore(
   }
 
   /**
-   * Calculates a summary of the task metrics for the given stage attempt, returning the
-   * requested quantiles for the recorded metrics.
+   * Calculates a summary of the task metrics for the given stage attempt, returning the requested
+   * quantiles for the recorded metrics.
    *
-   * This method can be expensive if the requested quantiles are not cached; the method
-   * will only cache certain quantiles (every 0.05 step), so it's recommended to stick to
-   * those to avoid expensive scans of all task data.
+   * This method can be expensive if the requested quantiles are not cached; the method will only
+   * cache certain quantiles (every 0.05 step), so it's recommended to stick to those to avoid
+   * expensive scans of all task data.
    */
   def taskSummary(
       stageId: Int,
@@ -264,12 +308,12 @@ private[spark] class AppStatusStore(
     // cheaper for disk stores (avoids deserialization).
     val count = {
       Utils.tryWithResource(
-        store.view(classOf[TaskDataWrapper])
+        store
+          .view(classOf[TaskDataWrapper])
           .parent(stageKey)
           .index(TaskIndexNames.EXEC_RUN_TIME)
           .first(0L)
-          .closeableIterator()
-      ) { it =>
+          .closeableIterator()) { it =>
         var _count = 0L
         while (it.hasNext()) {
           _count += 1
@@ -310,12 +354,10 @@ private[spark] class AppStatusStore(
         peakExecutionMemory = toValues(_.peakExecutionMemory),
         memoryBytesSpilled = toValues(_.memoryBytesSpilled),
         diskBytesSpilled = toValues(_.diskBytesSpilled),
-        inputMetrics = new v1.InputMetricDistributions(
-          toValues(_.bytesRead),
-          toValues(_.recordsRead)),
-        outputMetrics = new v1.OutputMetricDistributions(
-          toValues(_.bytesWritten),
-          toValues(_.recordsWritten)),
+        inputMetrics =
+          new v1.InputMetricDistributions(toValues(_.bytesRead), toValues(_.recordsRead)),
+        outputMetrics =
+          new v1.OutputMetricDistributions(toValues(_.bytesWritten), toValues(_.recordsWritten)),
         shuffleReadMetrics = new v1.ShuffleReadMetricDistributions(
           toValues(_.shuffleReadBytes),
           toValues(_.shuffleRecordsRead),
@@ -351,12 +393,12 @@ private[spark] class AppStatusStore(
 
     def scanTasks(index: String)(fn: TaskDataWrapper => Long): IndexedSeq[Double] = {
       Utils.tryWithResource(
-        store.view(classOf[TaskDataWrapper])
+        store
+          .view(classOf[TaskDataWrapper])
           .parent(stageKey)
           .index(index)
           .first(0L)
-          .closeableIterator()
-      ) { it =>
+          .closeableIterator()) { it =>
         var last = Double.NaN
         var currentIdx = -1L
         indices.map { idx =>
@@ -422,15 +464,15 @@ private[spark] class AppStatusStore(
         scanTasks(TaskIndexNames.SHUFFLE_TOTAL_BLOCKS) { m =>
           m.shuffleLocalBlocksFetched + m.shuffleRemoteBlocksFetched
         },
-        scanTasks(TaskIndexNames.SHUFFLE_REMOTE_REQS_DURATION) {
-          t => t.shuffleRemoteReqsDuration
+        scanTasks(TaskIndexNames.SHUFFLE_REMOTE_REQS_DURATION) { t =>
+          t.shuffleRemoteReqsDuration
         },
         new v1.ShufflePushReadMetricDistributions(
           scanTasks(TaskIndexNames.SHUFFLE_PUSH_CORRUPT_MERGED_BLOCK_CHUNKS) { t =>
             t.shuffleCorruptMergedBlockChunks
           },
-          scanTasks(TaskIndexNames.SHUFFLE_PUSH_MERGED_FETCH_FALLBACK_COUNT) {
-            t => t.shuffleMergedFetchFallbackCount
+          scanTasks(TaskIndexNames.SHUFFLE_PUSH_MERGED_FETCH_FALLBACK_COUNT) { t =>
+            t.shuffleMergedFetchFallbackCount
           },
           scanTasks(TaskIndexNames.SHUFFLE_PUSH_MERGED_REMOTE_BLOCKS) { t =>
             t.shuffleMergedRemoteBlocksFetched
@@ -453,16 +495,20 @@ private[spark] class AppStatusStore(
           scanTasks(TaskIndexNames.SHUFFLE_PUSH_MERGED_REMOTE_REQS_DURATION) { t =>
             t.shuffleMergedRemoteReqDuration
           })),
-        shuffleWriteMetrics = new v1.ShuffleWriteMetricDistributions(
-          scanTasks(TaskIndexNames.SHUFFLE_WRITE_SIZE) { t => t.shuffleBytesWritten },
-          scanTasks(TaskIndexNames.SHUFFLE_WRITE_RECORDS) { t => t.shuffleRecordsWritten },
-          scanTasks(TaskIndexNames.SHUFFLE_WRITE_TIME) { t => t.shuffleWriteTime }))
+      shuffleWriteMetrics = new v1.ShuffleWriteMetricDistributions(
+        scanTasks(TaskIndexNames.SHUFFLE_WRITE_SIZE) { t => t.shuffleBytesWritten },
+        scanTasks(TaskIndexNames.SHUFFLE_WRITE_RECORDS) { t => t.shuffleRecordsWritten },
+        scanTasks(TaskIndexNames.SHUFFLE_WRITE_TIME) { t => t.shuffleWriteTime }))
 
     // Go through the computed quantiles and cache the values that match the caching criteria.
     computedQuantiles.quantiles.zipWithIndex
       .filter { case (q, _) => quantiles.contains(q) && shouldCacheQuantile(q) }
       .foreach { case (q, idx) =>
-        val cached = new CachedQuantile(stageId, stageAttemptId, quantileToString(q), count,
+        val cached = new CachedQuantile(
+          stageId,
+          stageAttemptId,
+          quantileToString(q),
+          count,
           duration = computedQuantiles.duration(idx),
           executorDeserializeTime = computedQuantiles.executorDeserializeTime(idx),
           executorDeserializeCpuTime = computedQuantiles.executorDeserializeCpuTime(idx),
@@ -476,23 +522,22 @@ private[spark] class AppStatusStore(
           peakExecutionMemory = computedQuantiles.peakExecutionMemory(idx),
           memoryBytesSpilled = computedQuantiles.memoryBytesSpilled(idx),
           diskBytesSpilled = computedQuantiles.diskBytesSpilled(idx),
-
           bytesRead = computedQuantiles.inputMetrics.bytesRead(idx),
           recordsRead = computedQuantiles.inputMetrics.recordsRead(idx),
-
           bytesWritten = computedQuantiles.outputMetrics.bytesWritten(idx),
           recordsWritten = computedQuantiles.outputMetrics.recordsWritten(idx),
-
           shuffleReadBytes = computedQuantiles.shuffleReadMetrics.readBytes(idx),
           shuffleRecordsRead = computedQuantiles.shuffleReadMetrics.readRecords(idx),
           shuffleRemoteBlocksFetched =
             computedQuantiles.shuffleReadMetrics.remoteBlocksFetched(idx),
-          shuffleLocalBlocksFetched = computedQuantiles.shuffleReadMetrics.localBlocksFetched(idx),
+          shuffleLocalBlocksFetched =
+            computedQuantiles.shuffleReadMetrics.localBlocksFetched(idx),
           shuffleFetchWaitTime = computedQuantiles.shuffleReadMetrics.fetchWaitTime(idx),
           shuffleRemoteBytesRead = computedQuantiles.shuffleReadMetrics.remoteBytesRead(idx),
           shuffleRemoteBytesReadToDisk =
             computedQuantiles.shuffleReadMetrics.remoteBytesReadToDisk(idx),
-          shuffleTotalBlocksFetched = computedQuantiles.shuffleReadMetrics.totalBlocksFetched(idx),
+          shuffleTotalBlocksFetched =
+            computedQuantiles.shuffleReadMetrics.totalBlocksFetched(idx),
           shuffleCorruptMergedBlockChunks =
             computedQuantiles.shuffleReadMetrics.shufflePushReadMetricsDist
               .corruptMergedBlockChunks(idx),
@@ -522,7 +567,6 @@ private[spark] class AppStatusStore(
           shuffleMergedRemoteReqsDuration =
             computedQuantiles.shuffleReadMetrics.shufflePushReadMetricsDist
               .remoteMergedReqsDuration(idx),
-
           shuffleWriteBytes = computedQuantiles.shuffleWriteMetrics.writeBytes(idx),
           shuffleWriteRecords = computedQuantiles.shuffleWriteMetrics.writeRecords(idx),
           shuffleWriteTime = computedQuantiles.shuffleWriteMetrics.writeTime(idx))
@@ -533,8 +577,8 @@ private[spark] class AppStatusStore(
   }
 
   /**
-   * Whether to cache information about a specific metric quantile. We cache quantiles at every 0.05
-   * step, which covers the default values used both in the API and in the stages page.
+   * Whether to cache information about a specific metric quantile. We cache quantiles at every
+   * 0.05 step, which covers the default values used both in the API and in the stages page.
    */
   private def shouldCacheQuantile(q: Double): Boolean = (math.round(q * 100) % 5) == 0
 
@@ -542,8 +586,14 @@ private[spark] class AppStatusStore(
 
   def taskList(stageId: Int, stageAttemptId: Int, maxTasks: Int): Seq[v1.TaskData] = {
     val stageKey = Array(stageId, stageAttemptId)
-    val taskDataWrapperSeq = KVUtils.viewToSeq(store.view(classOf[TaskDataWrapper]).index("stage")
-      .first(stageKey).last(stageKey).reverse().max(maxTasks))
+    val taskDataWrapperSeq = KVUtils.viewToSeq(
+      store
+        .view(classOf[TaskDataWrapper])
+        .index("stage")
+        .first(stageKey)
+        .last(stageKey)
+        .reverse()
+        .max(maxTasks))
     constructTaskDataList(taskDataWrapperSeq).reverse
   }
 
@@ -597,10 +647,16 @@ private[spark] class AppStatusStore(
 
   def executorSummary(stageId: Int, attemptId: Int): Map[String, v1.ExecutorStageSummary] = {
     val stageKey = Array(stageId, attemptId)
-    KVUtils.mapToSeq(store.view(classOf[ExecutorStageSummaryWrapper])
-      .index("stage").first(stageKey).last(stageKey)) { exec =>
-      (exec.executorId -> exec.info)
-    }.toMap
+    KVUtils
+      .mapToSeq(
+        store
+          .view(classOf[ExecutorStageSummaryWrapper])
+          .index("stage")
+          .first(stageKey)
+          .last(stageKey)) { exec =>
+        (exec.executorId -> exec.info)
+      }
+      .toMap
   }
 
   def speculationSummary(stageId: Int, attemptId: Int): Option[v1.SpeculationStageSummary] = {
@@ -609,7 +665,8 @@ private[spark] class AppStatusStore(
   }
 
   def rddList(cachedOnly: Boolean = true): Seq[v1.RDDStorageInfo] = {
-    KVUtils.mapToSeq(store.view(classOf[RDDStorageInfoWrapper]))(_.info)
+    KVUtils
+      .mapToSeq(store.view(classOf[RDDStorageInfoWrapper]))(_.info)
       .filter { rdd =>
         !cachedOnly || rdd.numCachedPartitions > 0
       }
@@ -628,20 +685,20 @@ private[spark] class AppStatusStore(
   }
 
   def newStageData(
-    stage: v1.StageData,
-    withDetail: Boolean = false,
-    taskStatus: JList[v1.TaskStatus] = List().asJava,
-    withSummaries: Boolean = false,
-    unsortedQuantiles: Array[Double] = Array.empty[Double]): v1.StageData = {
+      stage: v1.StageData,
+      withDetail: Boolean = false,
+      taskStatus: JList[v1.TaskStatus] = List().asJava,
+      withSummaries: Boolean = false,
+      unsortedQuantiles: Array[Double] = Array.empty[Double]): v1.StageData = {
     if (!withDetail && !withSummaries) {
       stage
     } else {
       val quantiles = unsortedQuantiles.sorted
       val tasks: Option[Map[Long, v1.TaskData]] = if (withDetail) {
         val tasks =
-          taskList(stage.stageId, stage.attemptId, 0, Int.MaxValue, None, false, taskStatus)
-            .map { t => (t.taskId, t) }
-            .toMap
+          taskList(stage.stageId, stage.attemptId, 0, Int.MaxValue, None, false, taskStatus).map {
+            t => (t.taskId, t)
+          }.toMap
         Some(tasks)
       } else {
         None
@@ -737,39 +794,41 @@ private[spark] class AppStatusStore(
   }
 
   def stageExecutorSummary(
-    stageId: Int,
-    stageAttemptId: Int,
-    unsortedQuantiles: Array[Double]): Option[v1.ExecutorMetricsDistributions] = {
+      stageId: Int,
+      stageAttemptId: Int,
+      unsortedQuantiles: Array[Double]): Option[v1.ExecutorMetricsDistributions] = {
     val quantiles = unsortedQuantiles.sorted
     val summary = executorSummary(stageId, stageAttemptId)
     if (summary.isEmpty) {
       None
     } else {
       val values = summary.values.toIndexedSeq
-      Some(new v1.ExecutorMetricsDistributions(
-        quantiles = quantiles.toImmutableArraySeq,
-        taskTime = getQuantilesValue(values.map(_.taskTime.toDouble).sorted, quantiles),
-        failedTasks = getQuantilesValue(values.map(_.failedTasks.toDouble).sorted, quantiles),
-        succeededTasks = getQuantilesValue(values.map(_.succeededTasks.toDouble).sorted, quantiles),
-        killedTasks = getQuantilesValue(values.map(_.killedTasks.toDouble).sorted, quantiles),
-        inputBytes = getQuantilesValue(values.map(_.inputBytes.toDouble).sorted, quantiles),
-        inputRecords = getQuantilesValue(values.map(_.inputRecords.toDouble).sorted, quantiles),
-        outputBytes = getQuantilesValue(values.map(_.outputBytes.toDouble).sorted, quantiles),
-        outputRecords = getQuantilesValue(values.map(_.outputRecords.toDouble).sorted, quantiles),
-        shuffleRead = getQuantilesValue(values.map(_.shuffleRead.toDouble).sorted, quantiles),
-        shuffleReadRecords =
-          getQuantilesValue(values.map(_.shuffleReadRecords.toDouble).sorted, quantiles),
-        shuffleWrite = getQuantilesValue(values.map(_.shuffleWrite.toDouble).sorted, quantiles),
-        shuffleWriteRecords =
-          getQuantilesValue(values.map(_.shuffleWriteRecords.toDouble).sorted, quantiles),
-        memoryBytesSpilled =
-          getQuantilesValue(values.map(_.memoryBytesSpilled.toDouble).sorted, quantiles),
-        diskBytesSpilled =
-          getQuantilesValue(values.map(_.diskBytesSpilled.toDouble).sorted, quantiles),
-        peakMemoryMetrics =
-          new v1.ExecutorPeakMetricsDistributions(quantiles.toImmutableArraySeq,
-            values.flatMap(_.peakMemoryMetrics))
-      ))
+      Some(
+        new v1.ExecutorMetricsDistributions(
+          quantiles = quantiles.toImmutableArraySeq,
+          taskTime = getQuantilesValue(values.map(_.taskTime.toDouble).sorted, quantiles),
+          failedTasks = getQuantilesValue(values.map(_.failedTasks.toDouble).sorted, quantiles),
+          succeededTasks =
+            getQuantilesValue(values.map(_.succeededTasks.toDouble).sorted, quantiles),
+          killedTasks = getQuantilesValue(values.map(_.killedTasks.toDouble).sorted, quantiles),
+          inputBytes = getQuantilesValue(values.map(_.inputBytes.toDouble).sorted, quantiles),
+          inputRecords = getQuantilesValue(values.map(_.inputRecords.toDouble).sorted, quantiles),
+          outputBytes = getQuantilesValue(values.map(_.outputBytes.toDouble).sorted, quantiles),
+          outputRecords =
+            getQuantilesValue(values.map(_.outputRecords.toDouble).sorted, quantiles),
+          shuffleRead = getQuantilesValue(values.map(_.shuffleRead.toDouble).sorted, quantiles),
+          shuffleReadRecords =
+            getQuantilesValue(values.map(_.shuffleReadRecords.toDouble).sorted, quantiles),
+          shuffleWrite = getQuantilesValue(values.map(_.shuffleWrite.toDouble).sorted, quantiles),
+          shuffleWriteRecords =
+            getQuantilesValue(values.map(_.shuffleWriteRecords.toDouble).sorted, quantiles),
+          memoryBytesSpilled =
+            getQuantilesValue(values.map(_.memoryBytesSpilled.toDouble).sorted, quantiles),
+          diskBytesSpilled =
+            getQuantilesValue(values.map(_.diskBytesSpilled.toDouble).sorted, quantiles),
+          peakMemoryMetrics = new v1.ExecutorPeakMetricsDistributions(
+            quantiles.toImmutableArraySeq,
+            values.flatMap(_.peakMemoryMetrics))))
     }
   }
 
@@ -807,8 +866,9 @@ private[spark] class AppStatusStore(
       store.read(classOf[AppSummary], classOf[AppSummary].getName())
     } catch {
       case _: NoSuchElementException =>
-        throw new NoSuchElementException("Failed to get the application summary. " +
-          "If you are starting up Spark, please wait a while until it's ready.")
+        throw new NoSuchElementException(
+          "Failed to get the application summary. " +
+            "If you are starting up Spark, please wait a while until it's ready.")
     }
   }
 
@@ -825,21 +885,32 @@ private[spark] class AppStatusStore(
     val executorIdToLogs = new HashMap[String, Map[String, String]]()
     taskDataWrapperIter.map { taskDataWrapper =>
       val taskDataOld: v1.TaskData = taskDataWrapper.toApi
-      val executorLogs = executorIdToLogs.getOrElseUpdate(taskDataOld.executorId, {
-        try {
-          executorSummary(taskDataOld.executorId).executorLogs
-        } catch {
-          case e: NoSuchElementException =>
-            Map.empty
-        }
-      })
+      val executorLogs = executorIdToLogs.getOrElseUpdate(
+        taskDataOld.executorId, {
+          try {
+            executorSummary(taskDataOld.executorId).executorLogs
+          } catch {
+            case e: NoSuchElementException =>
+              Map.empty
+          }
+        })
 
-      new v1.TaskData(taskDataOld.taskId, taskDataOld.index,
-        taskDataOld.attempt, taskDataOld.partitionId,
-        taskDataOld.launchTime, taskDataOld.resultFetchStart,
-        taskDataOld.duration, taskDataOld.executorId, taskDataOld.host, taskDataOld.status,
-        taskDataOld.taskLocality, taskDataOld.speculative, taskDataOld.accumulatorUpdates,
-        taskDataOld.errorMessage, taskDataOld.taskMetrics,
+      new v1.TaskData(
+        taskDataOld.taskId,
+        taskDataOld.index,
+        taskDataOld.attempt,
+        taskDataOld.partitionId,
+        taskDataOld.launchTime,
+        taskDataOld.resultFetchStart,
+        taskDataOld.duration,
+        taskDataOld.executorId,
+        taskDataOld.host,
+        taskDataOld.status,
+        taskDataOld.taskLocality,
+        taskDataOld.speculative,
+        taskDataOld.accumulatorUpdates,
+        taskDataOld.errorMessage,
+        taskDataOld.taskMetrics,
         executorLogs,
         AppStatusUtils.schedulerDelay(taskDataOld),
         AppStatusUtils.gettingResultTime(taskDataOld))
@@ -871,7 +942,8 @@ private[spark] object AppStatusStore extends Logging {
     }
 
     val storePath =
-      conf.get(LIVE_UI_LOCAL_STORE_DIR)
+      conf
+        .get(LIVE_UI_LOCAL_STORE_DIR)
         .orElse(sys.env.get("LIVE_UI_LOCAL_STORE_DIR")) // the ENV variable is for testing purpose
         .flatMap(createStorePath)
     val kvStore = KVUtils.createKVStore(storePath, live = true, conf)

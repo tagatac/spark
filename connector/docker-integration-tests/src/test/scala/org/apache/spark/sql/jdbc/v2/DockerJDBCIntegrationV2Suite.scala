@@ -35,34 +35,51 @@ abstract class DockerJDBCIntegrationV2Suite extends DockerJDBCIntegrationSuite {
    */
   override def dataPreparation(connection: Connection): Unit = {
     tablePreparation(connection)
-    connection.prepareStatement("INSERT INTO employee VALUES (1, 'amy', 10000, 1000)")
+    connection
+      .prepareStatement("INSERT INTO employee VALUES (1, 'amy', 10000, 1000)")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO employee VALUES (2, 'alex', 12000, 1200)")
+    connection
+      .prepareStatement("INSERT INTO employee VALUES (2, 'alex', 12000, 1200)")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO employee VALUES (1, 'cathy', 9000, 1200)")
+    connection
+      .prepareStatement("INSERT INTO employee VALUES (1, 'cathy', 9000, 1200)")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO employee VALUES (2, 'david', 10000, 1300)")
+    connection
+      .prepareStatement("INSERT INTO employee VALUES (2, 'david', 10000, 1300)")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO employee VALUES (6, 'jen', 12000, 1200)")
+    connection
+      .prepareStatement("INSERT INTO employee VALUES (6, 'jen', 12000, 1200)")
       .executeUpdate()
 
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_quote''_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_quote''_present')")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_quote_not_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_quote_not_present')")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_percent%_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_percent%_present')")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_percent_not_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_percent_not_present')")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_underscore_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_underscore_present')")
       .executeUpdate()
-    connection.prepareStatement("INSERT INTO pattern_testing_table "
-        + "VALUES ('special_character_underscorenot_present')")
+    connection
+      .prepareStatement(
+        "INSERT INTO pattern_testing_table "
+          + "VALUES ('special_character_underscorenot_present')")
       .executeUpdate()
   }
 

@@ -249,7 +249,8 @@ class CustomJavaSerializer(conf: SparkConf) extends JavaSerializer(conf) {
 }
 
 class SerializationStreamWithCloseDetecting(serializationStream: SerializationStream)
-    extends SerializationStream with CloseDetecting {
+    extends SerializationStream
+    with CloseDetecting {
 
   override def close(): Unit = {
     isClosed = true

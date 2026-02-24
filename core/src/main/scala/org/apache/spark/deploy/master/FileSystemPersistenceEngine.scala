@@ -29,19 +29,21 @@ import org.apache.spark.serializer.{DeserializationStream, SerializationStream, 
 import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
-
 /**
- * Stores data in a single on-disk directory with one file per application and worker.
- * Files are deleted when applications and workers are removed.
+ * Stores data in a single on-disk directory with one file per application and worker. Files are
+ * deleted when applications and workers are removed.
  *
- * @param dir Directory to store files. Created if non-existent.
- * @param serializer Used to serialize our objects.
+ * @param dir
+ *   Directory to store files. Created if non-existent.
+ * @param serializer
+ *   Used to serialize our objects.
  */
 private[master] class FileSystemPersistenceEngine(
     val dir: String,
     val serializer: Serializer,
     val codec: Option[CompressionCodec] = None)
-  extends PersistenceEngine with Logging {
+    extends PersistenceEngine
+    with Logging {
 
   try {
     Files.createDirectories(Paths.get(dir))

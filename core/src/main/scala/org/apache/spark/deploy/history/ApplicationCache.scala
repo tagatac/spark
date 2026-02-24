@@ -40,14 +40,18 @@ import org.apache.spark.util.Clock
  * Applications are cached for as long as there is capacity for them. See [[LoadedAppUI]] for a
  * discussion of the UI lifecycle.
  *
- * @param operations implementation of record access operations
- * @param retainedApplications number of retained applications
- * @param clock time source
+ * @param operations
+ *   implementation of record access operations
+ * @param retainedApplications
+ *   number of retained applications
+ * @param clock
+ *   time source
  */
 private[history] class ApplicationCache(
     val operations: ApplicationCacheOperations,
     val retainedApplications: Int,
-    val clock: Clock) extends Logging {
+    val clock: Clock)
+    extends Logging {
 
   /**
    * Keep track of SparkUIs in [[ApplicationCache#appCache]] and SparkUIs removed from
@@ -75,7 +79,8 @@ private[history] class ApplicationCache(
 
     /**
      * Removal event notifies the provider to detach the UI.
-     * @param rm removal notification
+     * @param rm
+     *   removal notification
      */
     override def onRemoval(rm: RemovalNotification[CacheKey, CacheEntry]): Unit = try {
       metrics.evictionCount.inc()
@@ -88,10 +93,11 @@ private[history] class ApplicationCache(
   }
 
   private val appCache: LoadingCache[CacheKey, CacheEntry] = {
-    CacheBuilder.newBuilder()
-        .maximumSize(retainedApplications)
-        .removalListener(removalListener)
-        .build(appLoader)
+    CacheBuilder
+      .newBuilder()
+      .maximumSize(retainedApplications)
+      .removalListener(removalListener)
+      .build(appLoader)
   }
 
   /**
@@ -154,20 +160,23 @@ private[history] class ApplicationCache(
   }
 
   /**
-   * Load the Spark UI via [[ApplicationCacheOperations.getAppUI()]],
-   * then attach it to the web UI via [[ApplicationCacheOperations.attachSparkUI()]].
+   * Load the Spark UI via [[ApplicationCacheOperations.getAppUI()]], then attach it to the web UI
+   * via [[ApplicationCacheOperations.attachSparkUI()]].
    *
-   * If the application is incomplete, it has the [[ApplicationCacheCheckFilter]]
-   * added as a filter to the HTTP requests, so that queries on the UI will trigger
-   * update checks.
+   * If the application is incomplete, it has the [[ApplicationCacheCheckFilter]] added as a
+   * filter to the HTTP requests, so that queries on the UI will trigger update checks.
    *
-   * The generated entry contains the UI and the current timestamp.
-   * The timer [[metrics.loadTimer]] tracks the time taken to load the UI.
+   * The generated entry contains the UI and the current timestamp. The timer
+   * [[metrics.loadTimer]] tracks the time taken to load the UI.
    *
-   * @param appId application ID
-   * @param attemptId optional attempt ID
-   * @return the cache entry
-   * @throws NoSuchElementException if there is no matching element
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   optional attempt ID
+   * @return
+   *   the cache entry
+   * @throws NoSuchElementException
+   *   if there is no matching element
    */
   @throws[NoSuchElementException]
   private def loadApplicationEntry(appId: String, attemptId: Option[String]): CacheEntry = {
@@ -184,7 +193,8 @@ private[history] class ApplicationCache(
           metrics.lookupFailureCount.inc()
           // guava's cache logs via java.util log, so is of limited use. Hence: our own message
           logInfo(log"Failed to load application attempt " + application)
-          throw new NoSuchElementException(s"no application with application Id '$appId'" +
+          throw new NoSuchElementException(
+            s"no application with application Id '$appId'" +
               attemptId.map { id => s" attemptId '$id'" }.getOrElse(" and no attempt Id"))
       }
     }
@@ -206,16 +216,18 @@ private[history] class ApplicationCache(
 
   /**
    * String operator dumps the cache entries and metrics.
-   * @return a string value, primarily for testing and diagnostics
+   * @return
+   *   a string value, primarily for testing and diagnostics
    */
   override def toString: String = {
-    val sb = new StringBuilder(s"ApplicationCache(" +
-          s" retainedApplications= $retainedApplications)")
+    val sb = new StringBuilder(
+      s"ApplicationCache(" +
+        s" retainedApplications= $retainedApplications)")
     sb.append(s"; time= ${clock.getTimeMillis()}")
     sb.append(s"; entry count= ${appCache.size()}\n")
     sb.append("----\n")
-    appCache.asMap().asScala.foreach {
-      case(key, entry) => sb.append(s"  $key -> $entry\n")
+    appCache.asMap().asScala.foreach { case (key, entry) =>
+      sb.append(s"  $key -> $entry\n")
     }
     sb.append("----\n")
     sb.append(metrics)
@@ -225,8 +237,10 @@ private[history] class ApplicationCache(
 
   /**
    * Register a filter for the web UI which checks for updates to the given app/attempt
-   * @param key consisted of appId and attemptId
-   * @param loadedUI Spark UI to attach filters to
+   * @param key
+   *   consisted of appId and attemptId
+   * @param loadedUI
+   *   Spark UI to attach filters to
    */
   private def registerFilter(key: CacheKey, loadedUI: LoadedAppUI): Unit = {
     require(loadedUI != null)
@@ -246,13 +260,12 @@ private[history] class ApplicationCache(
 /**
  * An entry in the cache.
  *
- * @param loadedUI Spark UI
- * @param completed Flag to indicated that the application has completed (and so
- *                 does not need refreshing).
+ * @param loadedUI
+ *   Spark UI
+ * @param completed
+ *   Flag to indicated that the application has completed (and so does not need refreshing).
  */
-private[history] final class CacheEntry(
-    val loadedUI: LoadedAppUI,
-    val completed: Boolean) {
+private[history] final class CacheEntry(val loadedUI: LoadedAppUI, val completed: Boolean) {
 
   /** string value is for test assertions */
   override def toString: String = {
@@ -261,10 +274,12 @@ private[history] final class CacheEntry(
 }
 
 /**
- * Cache key: compares on `appId` and then, if non-empty, `attemptId`.
- * The [[hashCode()]] function uses the same fields.
- * @param appId application ID
- * @param attemptId attempt ID
+ * Cache key: compares on `appId` and then, if non-empty, `attemptId`. The [[hashCode()]] function
+ * uses the same fields.
+ * @param appId
+ *   application ID
+ * @param attemptId
+ *   attempt ID
  */
 private[history] final case class CacheKey(appId: String, attemptId: Option[String]) {
 
@@ -275,7 +290,8 @@ private[history] final case class CacheKey(appId: String, attemptId: Option[Stri
 
 /**
  * Metrics of the cache
- * @param prefix prefix to register all entries under
+ * @param prefix
+ *   prefix to register all entries under
  */
 private[history] class CacheMetrics(prefix: String) extends Source {
 
@@ -310,25 +326,32 @@ private[history] class CacheMetrics(prefix: String) extends Source {
 }
 
 /**
- * API for cache events. That is: loading an App UI; and for
- * attaching/detaching the UI to and from the Web UI.
+ * API for cache events. That is: loading an App UI; and for attaching/detaching the UI to and
+ * from the Web UI.
  */
 private[history] trait ApplicationCacheOperations {
 
   /**
    * Get the application UI and the probe needed to see if it has been updated.
-   * @param appId application ID
-   * @param attemptId attempt ID
-   * @return If found, the Spark UI and any history information to be used in the cache
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   attempt ID
+   * @return
+   *   If found, the Spark UI and any history information to be used in the cache
    */
   def getAppUI(appId: String, attemptId: Option[String]): Option[LoadedAppUI]
 
   /**
    * Attach a reconstructed UI.
-   * @param appId application ID
-   * @param attemptId attempt ID
-   * @param ui UI
-   * @param completed flag to indicate that the UI has completed
+   * @param appId
+   *   application ID
+   * @param attemptId
+   *   attempt ID
+   * @param ui
+   *   UI
+   * @param completed
+   *   flag to indicate that the UI has completed
    */
   def attachSparkUI(
       appId: String,
@@ -339,48 +362,50 @@ private[history] trait ApplicationCacheOperations {
   /**
    * Detach a Spark UI.
    *
-   * @param ui Spark UI
+   * @param ui
+   *   Spark UI
    */
   def detachSparkUI(appId: String, attemptId: Option[String], ui: SparkUI): Unit
 
 }
 
 /**
- * This is a servlet filter which intercepts HTTP requests on application UIs and
- * triggers checks for updated data.
+ * This is a servlet filter which intercepts HTTP requests on application UIs and triggers checks
+ * for updated data.
  *
- * If the application cache indicates that the application has been updated,
- * the filter returns a 302 redirect to the caller, asking them to re-request the web
- * page.
+ * If the application cache indicates that the application has been updated, the filter returns a
+ * 302 redirect to the caller, asking them to re-request the web page.
  *
- * Because the application cache will detach and then re-attach the UI, when the caller
- * repeats that request, it will now pick up the newly-updated web application.
+ * Because the application cache will detach and then re-attach the UI, when the caller repeats
+ * that request, it will now pick up the newly-updated web application.
  *
- * This does require the caller to handle 302 requests. Because of the ambiguity
- * in how POST and PUT operations are responded to (that is, should a 307 be
- * processed directly), the filter <i>does not</i> filter those requests.
- * As the current web UIs are read-only, this is not an issue. If it were ever to
- * support more HTTP verbs, then some support may be required. Perhaps, rather
- * than sending a redirect, simply updating the value so that the <i>next</i>
- * request will pick it up.
+ * This does require the caller to handle 302 requests. Because of the ambiguity in how POST and
+ * PUT operations are responded to (that is, should a 307 be processed directly), the filter
+ * <i>does not</i> filter those requests. As the current web UIs are read-only, this is not an
+ * issue. If it were ever to support more HTTP verbs, then some support may be required. Perhaps,
+ * rather than sending a redirect, simply updating the value so that the <i>next</i> request will
+ * pick it up.
  *
- * Implementation note: there's some abuse of a shared global entry here because
- * the configuration data passed to the servlet is just a string:string map.
+ * Implementation note: there's some abuse of a shared global entry here because the configuration
+ * data passed to the servlet is just a string:string map.
  */
 private[history] class ApplicationCacheCheckFilter(
     key: CacheKey,
     loadedUI: LoadedAppUI,
     cache: ApplicationCache)
-  extends Filter with Logging {
+    extends Filter
+    with Logging {
 
   /**
-   * Filter the request.
-   * Either the caller is given a 302 redirect to the current URL, or the
+   * Filter the request. Either the caller is given a 302 redirect to the current URL, or the
    * request is passed on to the SparkUI servlets.
    *
-   * @param request HttpServletRequest
-   * @param response HttpServletResponse
-   * @param chain the rest of the request chain
+   * @param request
+   *   HttpServletRequest
+   * @param response
+   *   HttpServletResponse
+   * @param chain
+   *   the rest of the request chain
    */
   override def doFilter(
       request: ServletRequest,

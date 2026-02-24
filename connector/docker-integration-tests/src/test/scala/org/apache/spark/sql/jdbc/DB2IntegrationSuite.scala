@@ -45,36 +45,54 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
     conn.prepareStatement("INSERT INTO tbl VALUES (42,'fred')").executeUpdate()
     conn.prepareStatement("INSERT INTO tbl VALUES (17,'dave')").executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE numbers ( small SMALLINT, med INTEGER, big BIGINT, "
-      + "deci DECIMAL(31,20), flt FLOAT, dbl DOUBLE, real REAL, "
-      + "decflt DECFLOAT, decflt16 DECFLOAT(16), decflt34 DECFLOAT(34))").executeUpdate()
-    conn.prepareStatement("INSERT INTO numbers VALUES (17, 77777, 922337203685477580, "
-      + "123456745.56789012345000000000, 42.75, 5.4E-70, "
-      + "3.4028234663852886e+38, 4.2999, DECFLOAT('9.999999999999999E19', 16), "
-      + "DECFLOAT('1234567891234567.123456789123456789', 34))").executeUpdate()
+    conn
+      .prepareStatement(
+        "CREATE TABLE numbers ( small SMALLINT, med INTEGER, big BIGINT, "
+          + "deci DECIMAL(31,20), flt FLOAT, dbl DOUBLE, real REAL, "
+          + "decflt DECFLOAT, decflt16 DECFLOAT(16), decflt34 DECFLOAT(34))")
+      .executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO numbers VALUES (17, 77777, 922337203685477580, "
+          + "123456745.56789012345000000000, 42.75, 5.4E-70, "
+          + "3.4028234663852886e+38, 4.2999, DECFLOAT('9.999999999999999E19', 16), "
+          + "DECFLOAT('1234567891234567.123456789123456789', 34))")
+      .executeUpdate()
 
     conn.prepareStatement("CREATE TABLE dates (d DATE, t TIME, ts TIMESTAMP )").executeUpdate()
-    conn.prepareStatement("INSERT INTO dates VALUES ('1991-11-09', '13:31:24', "
-      + "'2009-02-13 23:31:30')").executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO dates VALUES ('1991-11-09', '13:31:24', "
+          + "'2009-02-13 23:31:30')")
+      .executeUpdate()
 
     // TODO: Test locale conversion for strings.
-    conn.prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c CLOB, d BLOB, e XML)")
+    conn
+      .prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c CLOB, d BLOB, e XML)")
       .executeUpdate()
-    conn.prepareStatement("INSERT INTO strings VALUES ('the', 'quick', 'brown', BLOB('fox'),"
-      + "'<cinfo cid=\"10\"><name>Kathy</name></cinfo>')").executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO strings VALUES ('the', 'quick', 'brown', BLOB('fox'),"
+          + "'<cinfo cid=\"10\"><name>Kathy</name></cinfo>')")
+      .executeUpdate()
 
     conn.prepareStatement("CREATE TABLE booleans (a BOOLEAN)").executeUpdate()
     conn.prepareStatement("INSERT INTO booleans VALUES (true)").executeUpdate()
     // VARGRAPHIC
-    conn.prepareStatement("CREATE TABLE graphics (a GRAPHIC(16), b VARGRAPHIC(16))")
+    conn
+      .prepareStatement("CREATE TABLE graphics (a GRAPHIC(16), b VARGRAPHIC(16))")
       .executeUpdate()
     conn.prepareStatement("INSERT INTO graphics VALUES ('a', 'b')").executeUpdate()
     // CHAR(n) FOR BIT DATA
-    conn.prepareStatement("CREATE TABLE binarys (" +
-      "a CHAR(10) FOR BIT DATA, b VARCHAR(10) FOR BIT DATA, c BINARY(10), d VARBINARY(10))")
+    conn
+      .prepareStatement(
+        "CREATE TABLE binarys (" +
+          "a CHAR(10) FOR BIT DATA, b VARCHAR(10) FOR BIT DATA, c BINARY(10), d VARBINARY(10))")
       .executeUpdate()
-    conn.prepareStatement("INSERT INTO binarys VALUES (" +
-        "'ABC', 'ABC', BINARY('ABC', 10), VARBINARY('ABC', 10))")
+    conn
+      .prepareStatement(
+        "INSERT INTO binarys VALUES (" +
+          "'ABC', 'ABC', BINARY('ABC', 10), VARBINARY('ABC', 10))")
       .executeUpdate()
   }
 
@@ -120,7 +138,7 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
         val bd = new BigDecimal("123456745.56789012345000000000")
         assert(rows(0).getAs[BigDecimal](3).equals(bd))
         assert(rows(0).getDouble(4) == 42.75)
-        assert(rows(0).getDouble(5) == 5.4E-70)
+        assert(rows(0).getDouble(5) == 5.4e-70)
         assert(rows(0).getFloat(6) == 3.4028234663852886e+38)
         assert(rows(0).getDecimal(7) == new BigDecimal("4.299900000000000000"))
         assert(rows(0).getDecimal(8) == new BigDecimal("99999999999999990000.000000000000000000"))
@@ -164,9 +182,17 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
 
   test("Basic write test") {
     // cast decflt column with precision value of 38 to DB2 max decimal precision value of 31.
-    val df1 = spark.read.jdbc(jdbcUrl, "numbers", new Properties)
-      .selectExpr("small", "med", "big", "deci", "flt", "dbl", "real",
-      "cast(decflt as decimal(31, 5)) as decflt")
+    val df1 = spark.read
+      .jdbc(jdbcUrl, "numbers", new Properties)
+      .selectExpr(
+        "small",
+        "med",
+        "big",
+        "deci",
+        "flt",
+        "dbl",
+        "real",
+        "cast(decflt as decimal(31, 5)) as decflt")
     val df2 = spark.read.jdbc(jdbcUrl, "dates", new Properties)
     val df3 = spark.read.jdbc(jdbcUrl, "strings", new Properties)
     df1.write.jdbc(jdbcUrl, "numberscopy", new Properties)
@@ -183,24 +209,21 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("query JDBC option") {
-    val expectedResult = Set(
-      (42, "fred"),
-      (17, "dave")
-    ).map { case (x, y) =>
+    val expectedResult = Set((42, "fred"), (17, "dave")).map { case (x, y) =>
       Row(Integer.valueOf(x), String.valueOf(y))
     }
 
     val query = "SELECT x, y FROM tbl WHERE x > 10"
     // query option to pass on the query string.
-    val df = spark.read.format("jdbc")
+    val df = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", query)
       .load()
     assert(df.collect().toSet === expectedResult)
 
     // query option in the create table path.
-    sql(
-      s"""
+    sql(s"""
          |CREATE OR REPLACE TEMPORARY VIEW queryOption
          |USING org.apache.spark.sql.jdbc
          |OPTIONS (url '$jdbcUrl', query '$query')
@@ -209,10 +232,7 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
   }
 
   test("SPARK-30062") {
-    val expectedResult = Set(
-      (42, "fred"),
-      (17, "dave")
-    ).map { case (x, y) =>
+    val expectedResult = Set((42, "fred"), (17, "dave")).map { case (x, y) =>
       Row(Integer.valueOf(x), String.valueOf(y))
     }
     val df = spark.read.jdbc(jdbcUrl, "tbl", new Properties)
@@ -220,7 +240,9 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
       df.write.mode(SaveMode.Append).jdbc(jdbcUrl, "tblcopy", new Properties)
     }
     assert(spark.read.jdbc(jdbcUrl, "tblcopy", new Properties).count() === 6)
-    df.write.mode(SaveMode.Overwrite).option("truncate", true)
+    df.write
+      .mode(SaveMode.Overwrite)
+      .option("truncate", true)
       .jdbc(jdbcUrl, "tblcopy", new Properties)
     val actual = spark.read.jdbc(jdbcUrl, "tblcopy", new Properties).collect()
     assert(actual.length === 2)
@@ -269,15 +291,18 @@ class DB2IntegrationSuite extends SharedJDBCIntegrationSuite {
     checkAnswer(df, Row("a".padTo(16, ' '), "b"))
     // the padding happens in the source not because of reading as char type
     assert(!df.schema.exists {
-      _.metadata.contains(CharVarcharUtils.CHAR_VARCHAR_TYPE_STRING_METADATA_KEY) })
+      _.metadata.contains(CharVarcharUtils.CHAR_VARCHAR_TYPE_STRING_METADATA_KEY)
+    })
   }
 
   test("SPARK-48269: binary types") {
     val df = spark.read.jdbc(jdbcUrl, "binarys", new Properties)
-    checkAnswer(df, Row(
-      "ABC".padTo(10, ' ').getBytes,
-      "ABC".getBytes,
-      "ABC".getBytes ++ Array.fill(7)(0),
-      "ABC".getBytes))
+    checkAnswer(
+      df,
+      Row(
+        "ABC".padTo(10, ' ').getBytes,
+        "ABC".getBytes,
+        "ABC".getBytes ++ Array.fill(7)(0),
+        "ABC".getBytes))
   }
 }

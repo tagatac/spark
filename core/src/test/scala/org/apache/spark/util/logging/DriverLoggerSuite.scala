@@ -30,7 +30,7 @@ import org.apache.spark.util.Utils
 
 class DriverLoggerSuite extends SparkFunSuite with LocalSparkContext {
 
-  private var rootDfsDir : File = _
+  private var rootDfsDir: File = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -59,14 +59,16 @@ class DriverLoggerSuite extends SparkFunSuite with LocalSparkContext {
 
     sc.stop()
     assert(!driverLogsDir.exists())
-    val dfsFile = Utils.getFile(sc.getConf.get(DRIVER_LOG_DFS_DIR).get,
+    val dfsFile = Utils.getFile(
+      sc.getConf.get(DRIVER_LOG_DFS_DIR).get,
       app_id + DriverLogger.DRIVER_LOG_FILE_SUFFIX)
     assert(dfsFile.exists())
     assert(dfsFile.length() > 0)
   }
 
-  test("SPARK-40901: driver logs are persisted locally and synced to dfs when log " +
-    "dir is absolute URI") {
+  test(
+    "SPARK-40901: driver logs are persisted locally and synced to dfs when log " +
+      "dir is absolute URI") {
     val sparkConf = new SparkConf()
     sparkConf.set(DRIVER_LOG_DFS_DIR, "file://" + rootDfsDir.getAbsolutePath())
     val sc = getSparkContext(sparkConf)
@@ -85,15 +87,17 @@ class DriverLoggerSuite extends SparkFunSuite with LocalSparkContext {
     sc.stop()
     assert(!driverLogsDir.exists())
     assert(sc.getConf.get(DRIVER_LOG_DFS_DIR).get.startsWith("file:///"))
-    val dfsFile = new Path(sc.getConf.get(DRIVER_LOG_DFS_DIR).get +
-      "/" + app_id + DriverLogger.DRIVER_LOG_FILE_SUFFIX)
+    val dfsFile = new Path(
+      sc.getConf.get(DRIVER_LOG_DFS_DIR).get +
+        "/" + app_id + DriverLogger.DRIVER_LOG_FILE_SUFFIX)
     val dfsFileStatus = dfsFile.getFileSystem(sc.hadoopConfiguration).getFileStatus(dfsFile)
 
     assert(dfsFileStatus.isFile)
     assert(dfsFileStatus.getLen > 0)
   }
 
-  test("SPARK-44214: DriverLogger.apply returns None when only spark.driver.log.localDir exists") {
+  test(
+    "SPARK-44214: DriverLogger.apply returns None when only spark.driver.log.localDir exists") {
     val sparkConf = new SparkConf()
     assert(DriverLogger(sparkConf).isEmpty)
     withTempDir { dir =>
@@ -115,4 +119,3 @@ class DriverLoggerSuite extends SparkFunSuite with LocalSparkContext {
   }
 
 }
-

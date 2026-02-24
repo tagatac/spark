@@ -42,9 +42,7 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
   test("roundtrip in to_avro and from_avro - int and string") {
     val df = spark.range(10).select($"id", $"id".cast("string").as("str"))
 
-    val avroDF = df.select(
-      functions.to_avro($"id").as("a"),
-      functions.to_avro($"str").as("b"))
+    val avroDF = df.select(functions.to_avro($"id").as("a"), functions.to_avro($"str").as("b"))
     val avroTypeLong = s"""
       |{
       |  "type": "int",
@@ -57,9 +55,11 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       |  "name": "str"
       |}
     """.stripMargin
-    checkAnswer(avroDF.select(
-      functions.from_avro($"a", avroTypeLong),
-      functions.from_avro($"b", avroTypeStr)), df)
+    checkAnswer(
+      avroDF.select(
+        functions.from_avro($"a", avroTypeLong),
+        functions.from_avro($"b", avroTypeStr)),
+      df)
   }
 
   test("roundtrip in to_avro and from_avro - struct") {
@@ -75,8 +75,7 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       |  ]
       |}
     """.stripMargin
-    checkAnswer(avroStructDF.select(
-      functions.from_avro($"avro", avroTypeStruct)), df)
+    checkAnswer(avroStructDF.select(functions.from_avro($"avro", avroTypeStruct)), df)
   }
 
   test("handle invalid input in from_avro") {
@@ -95,29 +94,27 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
     """.stripMargin
 
     intercept[SparkException] {
-      avroStructDF.select(
-        functions.from_avro(
-          $"avro", avroTypeStruct, Map("mode" -> "FAILFAST").asJava)).collect()
+      avroStructDF
+        .select(functions.from_avro($"avro", avroTypeStruct, Map("mode" -> "FAILFAST").asJava))
+        .collect()
     }
 
     // For PERMISSIVE mode, the result should be row of null columns.
     val expected = (0 until count).map(_ => Row(Row(null, null)))
     checkAnswer(
       avroStructDF.select(
-       functions.from_avro(
-          $"avro", avroTypeStruct, Map("mode" -> "PERMISSIVE").asJava)),
+        functions.from_avro($"avro", avroTypeStruct, Map("mode" -> "PERMISSIVE").asJava)),
       expected)
 
     checkError(
       exception = intercept[AnalysisException] {
-        avroStructDF.select(
-          functions.from_avro(
-            $"avro", avroTypeStruct, Map("mode" -> "DROPMALFORMED").asJava)).collect()
+        avroStructDF
+          .select(
+            functions.from_avro($"avro", avroTypeStruct, Map("mode" -> "DROPMALFORMED").asJava))
+          .collect()
       },
       condition = "PARSE_MODE_UNSUPPORTED",
-      parameters = Map(
-        "funcName" -> "`from_avro`",
-        "mode" -> "DROPMALFORMED"))
+      parameters = Map("funcName" -> "`from_avro`", "mode" -> "DROPMALFORMED"))
   }
 
   test("roundtrip in to_avro and from_avro - array with null") {
@@ -135,7 +132,8 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       |  }, "null" ]
       |}, "null" ]
     """.stripMargin
-    val readBackOne = dfOne.select(functions.to_avro($"array").as("avro"))
+    val readBackOne = dfOne
+      .select(functions.to_avro($"array").as("avro"))
       .select(functions.from_avro($"avro", avroTypeArrStruct).as("array"))
     checkAnswer(dfOne, readBackOne)
   }
@@ -164,20 +162,21 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
     // This bug is hit when the rule `ConvertToLocalRelation` is run. But the rule was excluded
     // in `SharedSparkSession`.
     withSQLConf(SQLConf.OPTIMIZER_EXCLUDED_RULES.key -> "") {
-      val df = Seq("one", "two", "three", "four").map(generateBinary(_, simpleSchema))
+      val df = Seq("one", "two", "three", "four")
+        .map(generateBinary(_, simpleSchema))
         .toDF()
-        .withColumn("value",
-          functions.from_avro(col("value"), simpleSchema))
+        .withColumn("value", functions.from_avro(col("value"), simpleSchema))
 
       assert(df.queryExecution.executedPlan.isInstanceOf[LocalTableScanExec])
-      assert(df.collect().map(_.get(0)) === Seq(Row("one"), Row("two"), Row("three"), Row("four")))
+      assert(
+        df.collect().map(_.get(0)) === Seq(Row("one"), Row("two"), Row("three"), Row("four")))
     }
   }
 
   test("SPARK-27506: roundtrip in to_avro and from_avro with different compatible schemas") {
-    val df = spark.range(10).select(
-      struct($"id".as("col1"), $"id".cast("string").as("col2")).as("struct")
-    )
+    val df = spark
+      .range(10)
+      .select(struct($"id".as("col1"), $"id".cast("string").as("col2")).as("struct"))
     val avroStructDF = df.select(functions.to_avro($"struct").as("avro"))
     val actualAvroSchema =
       s"""
@@ -204,16 +203,15 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
          |}
          |""".stripMargin
 
-    val expected = spark.range(10).select(
-      struct($"id".as("col1"), $"id".cast("string").as("col2"), lit("").as("col3")).as("struct")
-    )
+    val expected = spark
+      .range(10)
+      .select(struct($"id".as("col1"), $"id".cast("string").as("col2"), lit("").as("col3"))
+        .as("struct"))
 
     checkAnswer(
       avroStructDF.select(
-        functions.from_avro(
-          $"avro",
-          actualAvroSchema,
-          Map("avroSchema" -> evolvedAvroSchema).asJava)),
+        functions
+          .from_avro($"avro", actualAvroSchema, Map("avroSchema" -> evolvedAvroSchema).asJava)),
       expected)
   }
 
@@ -230,8 +228,7 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       |}
     """.stripMargin
     val avroStructDF = df.select(functions.to_avro($"struct", avroTypeStruct).as("avro"))
-    checkAnswer(avroStructDF.select(
-      functions.from_avro($"avro", avroTypeStruct)), df)
+    checkAnswer(avroStructDF.select(functions.from_avro($"avro", avroTypeStruct)), df)
   }
 
   test("to_avro optional union Avro schema") {
@@ -248,20 +245,29 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
         |}
       """.stripMargin
       val avroStructDF = df.select(functions.to_avro($"struct", avroTypeStruct).as("avro"))
-      checkAnswer(avroStructDF.select(
-        functions.from_avro($"avro", avroTypeStruct)), df)
+      checkAnswer(avroStructDF.select(functions.from_avro($"avro", avroTypeStruct)), df)
     }
   }
 
   test("to_avro complex union Avro schema") {
-    val df = Seq((Some(1), None), (None, Some("a"))).toDF()
+    val df = Seq((Some(1), None), (None, Some("a")))
+      .toDF()
       .select(struct(struct($"_1".as("member0"), $"_2".as("member1")).as("u")).as("struct"))
-    val avroTypeStruct = SchemaBuilder.record("struct").fields()
-      .name("u").`type`().unionOf().intType().and().stringType().endUnion().noDefault()
-      .endRecord().toString
+    val avroTypeStruct = SchemaBuilder
+      .record("struct")
+      .fields()
+      .name("u")
+      .`type`()
+      .unionOf()
+      .intType()
+      .and()
+      .stringType()
+      .endUnion()
+      .noDefault()
+      .endRecord()
+      .toString
     val avroStructDF = df.select(functions.to_avro($"struct", avroTypeStruct).as("avro"))
-    checkAnswer(avroStructDF.select(
-      functions.from_avro($"avro", avroTypeStruct)), df)
+    checkAnswer(avroStructDF.select(functions.from_avro($"avro", avroTypeStruct)), df)
   }
 
   test("SPARK-39775: Disable validate default values when parsing Avro schemas") {
@@ -278,7 +284,9 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
     val avroOptions = AvroOptions(options)
     val avroSchema = avroOptions.schema.get
     val sparkSchema = SchemaConverters
-      .toSqlType(avroSchema, avroOptions.useStableIdForUnionType,
+      .toSqlType(
+        avroSchema,
+        avroOptions.useStableIdForUnionType,
         avroOptions.stableIdPrefixForUnionType)
       .dataType
       .asInstanceOf[StructType]
@@ -293,7 +301,9 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       checkAnswer(spark.read.schema(sparkSchema).format("avro").load(dir.getCanonicalPath), df)
 
       val msg = intercept[SparkException] {
-        spark.read.option("avroSchema", avroTypeStruct).format("avro")
+        spark.read
+          .option("avroSchema", avroTypeStruct)
+          .format("avro")
           .load(dir.getCanonicalPath)
           .collect()
       }.getCause.getMessage
@@ -303,8 +313,7 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
 
   test("SPARK-48545: from_avro and to_avro SQL functions") {
     withTable("t") {
-      sql(
-        """
+      sql("""
           |create table t as
           |  select named_struct('u', named_struct('member0', member0, 'member1', member1)) as s
           |  from values (1, null), (null,  'a') tab(member0, member1)
@@ -328,47 +337,38 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       assert(avroResult != null)
       checkAnswer(
         spark.sql(s"select from_avro(result, '$jsonFormatSchema', map()).u from ($toAvroSql)"),
-        Seq(Row(Row(1, null)),
-          Row(Row(null, "a"))))
+        Seq(Row(Row(1, null)), Row(Row(null, "a"))))
       // The 'jsonFormatSchema' argument of the 'to_avro' function is optional.
-      checkAnswer(
-        spark.sql(s"select length(to_avro(s)) > 0 from t"),
-        Seq(Row(true), Row(true)))
+      checkAnswer(spark.sql(s"select length(to_avro(s)) > 0 from t"), Seq(Row(true), Row(true)))
 
       // Negative tests.
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |select to_avro(s, 42) as result from t
              |""".stripMargin)),
         condition = "DATATYPE_MISMATCH.TYPE_CHECK_FAILURE_WITH_HINT",
-        parameters = Map("sqlExpr" -> "\"to_avro(s, 42)\"",
+        parameters = Map(
+          "sqlExpr" -> "\"to_avro(s, 42)\"",
           "msg" -> ("The second argument of the TO_AVRO SQL function must be a constant string " +
             "containing the JSON representation of the schema to use for converting the value to " +
             "AVRO format"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = "to_avro(s, 42)",
-          start = 8,
-          stop = 21)))
+        queryContext = Array(ExpectedContext(fragment = "to_avro(s, 42)", start = 8, stop = 21)))
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |select from_avro(s, 42, '') as result from t
              |""".stripMargin)),
         condition = "DATATYPE_MISMATCH.TYPE_CHECK_FAILURE_WITH_HINT",
-        parameters = Map("sqlExpr" -> "\"from_avro(s, 42, )\"",
+        parameters = Map(
+          "sqlExpr" -> "\"from_avro(s, 42, )\"",
           "msg" -> ("The second argument of the FROM_AVRO SQL function must be a constant string " +
             "containing the JSON representation of the schema to use for converting the value " +
             "from AVRO format"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = "from_avro(s, 42, '')",
-          start = 8,
-          stop = 27)))
+        queryContext =
+          Array(ExpectedContext(fragment = "from_avro(s, 42, '')", start = 8, stop = 27)))
       checkError(
-        exception = intercept[AnalysisException](sql(
-          s"""
+        exception = intercept[AnalysisException](sql(s"""
              |select from_avro(s, '$jsonFormatSchema', 42) as result from t
              |""".stripMargin)),
         condition = "DATATYPE_MISMATCH.TYPE_CHECK_FAILURE_WITH_HINT",
@@ -379,22 +379,25 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
             "strings to strings containing the options to use for converting the value " +
             "from AVRO format"),
           "hint" -> ""),
-        queryContext = Array(ExpectedContext(
-          fragment = s"from_avro(s, '$jsonFormatSchema', 42)",
-          start = 8,
-          stop = 138)))
+        queryContext = Array(
+          ExpectedContext(
+            fragment = s"from_avro(s, '$jsonFormatSchema', 42)",
+            start = 8,
+            stop = 138)))
     }
   }
 
-
   test("roundtrip in to_avro and from_avro - recursive schema") {
     val catalystSchema =
-      StructType(Seq(
-        StructField("Id", IntegerType),
-        StructField("Name", StructType(Seq(
+      StructType(
+        Seq(
           StructField("Id", IntegerType),
-          StructField("Name", StructType(Seq(
-            StructField("Id", IntegerType)))))))))
+          StructField(
+            "Name",
+            StructType(
+              Seq(
+                StructField("Id", IntegerType),
+                StructField("Name", StructType(Seq(StructField("Id", IntegerType)))))))))
 
     val avroSchema = s"""
                         |{
@@ -407,14 +410,17 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
                         |}
     """.stripMargin
 
-    val df = spark.createDataFrame(
-      spark.sparkContext.parallelize(Seq(Row(2, Row(3, Row(4))), Row(1, null))),
-      catalystSchema).select(struct("Id", "Name").as("struct"))
+    val df = spark
+      .createDataFrame(
+        spark.sparkContext.parallelize(Seq(Row(2, Row(3, Row(4))), Row(1, null))),
+        catalystSchema)
+      .select(struct("Id", "Name").as("struct"))
 
     val avroStructDF = df.select(functions.to_avro($"struct", avroSchema).as("avro"))
-    checkAnswer(avroStructDF.select(
-      functions.from_avro($"avro", avroSchema, Map(
-        "recursiveFieldMaxDepth" -> "3").asJava)), df)
+    checkAnswer(
+      avroStructDF.select(
+        functions.from_avro($"avro", avroSchema, Map("recursiveFieldMaxDepth" -> "3").asJava)),
+      df)
   }
 
   private def serialize(record: GenericRecord, avroSchema: String): Array[Byte] = {
@@ -599,10 +605,11 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
         .set("country", "usb")
         .build()
       Seq(person1, person2)
-        .map(p => (
-          p.get(0).asInstanceOf[String],
-          p.get(1).asInstanceOf[Int],
-          p.get(2).asInstanceOf[String]))
+        .map(p =>
+          (
+            p.get(0).asInstanceOf[String],
+            p.get(1).asInstanceOf[Int],
+            p.get(2).asInstanceOf[String]))
         .toDF("name", "age", "country")
         .select(Fns.to_avro(struct($"name", $"age", $"country"), avroSchema).as("data"))
         .repartition(1)
@@ -651,7 +658,8 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
         |    {"name": "country", "type": "string"}
         |  ]
         |}""".stripMargin
-    checkAnswer(df.select(functions.schema_of_avro(avroStructType)),
+    checkAnswer(
+      df.select(functions.schema_of_avro(avroStructType)),
       Row("STRUCT<name: STRING NOT NULL, age: INT NOT NULL, country: STRING NOT NULL>"))
 
     val avroMultiType =
@@ -663,7 +671,8 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
         |     {"name": "u", "type": ["int", "string"]}
         |  ]
         |}""".stripMargin
-    checkAnswer(df.select(functions.schema_of_avro(avroMultiType)),
+    checkAnswer(
+      df.select(functions.schema_of_avro(avroMultiType)),
       Row("STRUCT<u: STRUCT<member0: INT, member1: STRING> NOT NULL>"))
   }
 
@@ -739,8 +748,7 @@ class AvroFunctionsSuite extends QueryTest with SharedSparkSession {
       |}
     """.stripMargin
 
-    val readBack = avroStructDF.select(
-      from_avro($"avro", avroStructSchema).as("schedule"))
+    val readBack = avroStructDF.select(from_avro($"avro", avroStructSchema).as("schedule"))
     checkAnswer(readBack, df)
   }
 }

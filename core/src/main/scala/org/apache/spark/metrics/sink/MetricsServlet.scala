@@ -29,8 +29,8 @@ import org.eclipse.jetty.ee10.servlet.ServletContextHandler
 import org.apache.spark.SparkConf
 import org.apache.spark.ui.JettyUtils._
 
-private[spark] class MetricsServlet(
-    val property: Properties, val registry: MetricRegistry) extends Sink {
+private[spark] class MetricsServlet(val property: Properties, val registry: MetricRegistry)
+    extends Sink {
 
   val SERVLET_KEY_PATH = "path"
   val SERVLET_KEY_SAMPLE = "sample"
@@ -39,7 +39,8 @@ private[spark] class MetricsServlet(
 
   val servletPath = property.getProperty(SERVLET_KEY_PATH)
 
-  val servletShowSample = Option(property.getProperty(SERVLET_KEY_SAMPLE)).map(_.toBoolean)
+  val servletShowSample = Option(property.getProperty(SERVLET_KEY_SAMPLE))
+    .map(_.toBoolean)
     .getOrElse(SERVLET_DEFAULT_SAMPLE)
 
   val mapper = new ObjectMapper().registerModule(
@@ -47,18 +48,19 @@ private[spark] class MetricsServlet(
 
   def getHandlers(conf: SparkConf): Array[ServletContextHandler] = {
     Array[ServletContextHandler](
-      createServletHandler(servletPath,
-        new ServletParams(request => getMetricsSnapshot(request), "text/json"), conf)
-    )
+      createServletHandler(
+        servletPath,
+        new ServletParams(request => getMetricsSnapshot(request), "text/json"),
+        conf))
   }
 
   def getMetricsSnapshot(request: HttpServletRequest): String = {
     mapper.writeValueAsString(registry)
   }
 
-  override def start(): Unit = { }
+  override def start(): Unit = {}
 
-  override def stop(): Unit = { }
+  override def stop(): Unit = {}
 
-  override def report(): Unit = { }
+  override def report(): Unit = {}
 }

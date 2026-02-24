@@ -29,8 +29,8 @@ import org.apache.spark.internal.config._
 import org.apache.spark.util.Utils
 
 /**
- * An asynchronous queue for events. All events posted to this queue will be delivered to the child
- * listeners in a separate thread.
+ * An asynchronous queue for events. All events posted to this queue will be delivered to the
+ * child listeners in a separate thread.
  *
  * Delivery will only begin when the `start()` method is called. The `stop()` method should be
  * called when no more events need to be delivered.
@@ -40,8 +40,8 @@ private class AsyncEventQueue(
     conf: SparkConf,
     metrics: LiveListenerBusMetrics,
     bus: LiveListenerBus)
-  extends SparkListenerBus
-  with Logging {
+    extends SparkListenerBus
+    with Logging {
 
   import AsyncEventQueue._
 
@@ -51,10 +51,13 @@ private class AsyncEventQueue(
   // if no such conf is specified, use the value specified in
   // LISTENER_BUS_EVENT_QUEUE_CAPACITY
   private[scheduler] def capacity: Int = {
-    val queueSize = conf.getInt(s"$LISTENER_BUS_EVENT_QUEUE_PREFIX.$name.capacity",
+    val queueSize = conf.getInt(
+      s"$LISTENER_BUS_EVENT_QUEUE_PREFIX.$name.capacity",
       conf.get(LISTENER_BUS_EVENT_QUEUE_CAPACITY))
-    assert(queueSize > 0, s"capacity for event queue $name must be greater than 0, " +
-      s"but $queueSize is configured.")
+    assert(
+      queueSize > 0,
+      s"capacity for event queue $name must be greater than 0, " +
+        s"but $queueSize is configured.")
     queueSize
   }
 
@@ -87,9 +90,11 @@ private class AsyncEventQueue(
   // Remove the queue size gauge first, in case it was created by a previous incarnation of
   // this queue that was removed from the listener bus.
   metrics.metricRegistry.remove(s"queue.$name.size")
-  metrics.metricRegistry.register(s"queue.$name.size", new Gauge[Int] {
-    override def getValue: Int = eventQueue.size()
-  })
+  metrics.metricRegistry.register(
+    s"queue.$name.size",
+    new Gauge[Int] {
+      override def getValue: Int = eventQueue.size()
+    })
 
   private val dispatchThread = new Thread(s"spark-listener-group-$name") {
     setDaemon(true)
@@ -114,13 +119,15 @@ private class AsyncEventQueue(
   }
 
   override protected def getTimer(listener: SparkListenerInterface): Option[Timer] = {
-    metrics.getTimerForListenerClass(listener.getClass.asSubclass(classOf[SparkListenerInterface]))
+    metrics.getTimerForListenerClass(
+      listener.getClass.asSubclass(classOf[SparkListenerInterface]))
   }
 
   /**
    * Start an asynchronous thread to dispatch events to the underlying listeners.
    *
-   * @param sc Used to stop the SparkContext in case the async dispatcher fails.
+   * @param sc
+   *   Used to stop the SparkContext in case the async dispatcher fails.
    */
   private[scheduler] def start(sc: SparkContext): Unit = {
     if (started.compareAndSet(false, true)) {
@@ -170,9 +177,10 @@ private class AsyncEventQueue(
     droppedEventsCounter.incrementAndGet()
     if (logDroppedEvent.compareAndSet(false, true)) {
       // Only log the following message once to avoid duplicated annoying logs.
-      logError(log"Dropping event from queue ${MDC(EVENT_QUEUE, name)}. " +
-        log"This likely means one of the listeners is too slow and cannot keep up with " +
-        log"the rate at which tasks are being started by the scheduler.")
+      logError(
+        log"Dropping event from queue ${MDC(EVENT_QUEUE, name)}. " +
+          log"This likely means one of the listeners is too slow and cannot keep up with " +
+          log"the rate at which tasks are being started by the scheduler.")
     }
     logTrace(s"Dropping event $event")
 
@@ -187,9 +195,11 @@ private class AsyncEventQueue(
       if (lastReportTimestamp.compareAndSet(lastReportTime, curTime)) {
         val previous = new java.util.Date(lastReportTime)
         lastDroppedEventsCounter = droppedEventsCount
-        logWarning(log"Dropped ${MDC(NUM_EVENTS, droppedCountIncreased)} events from " +
-          log"${MDC(EVENT_NAME, name)} since " +
-          (if (lastReportTime == 0) log"the application started" else log"${MDC(TIME, previous)}"))
+        logWarning(
+          log"Dropped ${MDC(NUM_EVENTS, droppedCountIncreased)} events from " +
+            log"${MDC(EVENT_NAME, name)} since " +
+            (if (lastReportTime == 0) log"the application started"
+             else log"${MDC(TIME, previous)}"))
       }
     }
   }
@@ -197,7 +207,8 @@ private class AsyncEventQueue(
   /**
    * For testing only. Wait until there are no more events in the queue.
    *
-   * @return true if the queue is empty.
+   * @return
+   *   true if the queue is empty.
    */
   def waitUntilEmpty(deadline: Long): Boolean = {
     while (eventCount.get() != 0) {
@@ -219,7 +230,7 @@ private class AsyncEventQueue(
 
 private object AsyncEventQueue {
 
-  val POISON_PILL = new SparkListenerEvent() { }
+  val POISON_PILL = new SparkListenerEvent() {}
 
   val LOGGING_INTERVAL = 60 * 1000
 }

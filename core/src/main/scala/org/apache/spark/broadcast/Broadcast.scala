@@ -33,9 +33,9 @@ import org.apache.spark.util.Utils
  * communication cost.
  *
  * Broadcast variables are created from a variable `v` by calling
- * [[org.apache.spark.SparkContext#broadcast]].
- * The broadcast variable is a wrapper around `v`, and its value can be accessed by calling the
- * `value` method. The interpreter session below shows this:
+ * [[org.apache.spark.SparkContext#broadcast]]. The broadcast variable is a wrapper around `v`,
+ * and its value can be accessed by calling the `value` method. The interpreter session below
+ * shows this:
  *
  * {{{
  * scala> val broadcastVar = sc.broadcast(Array(1, 2, 3))
@@ -46,19 +46,21 @@ import org.apache.spark.util.Utils
  * }}}
  *
  * After the broadcast variable is created, it should be used instead of the value `v` in any
- * functions run on the cluster so that `v` is not shipped to the nodes more than once.
- * In addition, the object `v` should not be modified after it is broadcast in order to ensure
- * that all nodes get the same value of the broadcast variable (e.g. if the variable is shipped
- * to a new node later).
+ * functions run on the cluster so that `v` is not shipped to the nodes more than once. In
+ * addition, the object `v` should not be modified after it is broadcast in order to ensure that
+ * all nodes get the same value of the broadcast variable (e.g. if the variable is shipped to a
+ * new node later).
  *
- * @param id A unique identifier for the broadcast variable.
- * @tparam T Type of the data contained in the broadcast variable.
+ * @param id
+ *   A unique identifier for the broadcast variable.
+ * @tparam T
+ *   Type of the data contained in the broadcast variable.
  */
 abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable with Logging {
 
   /**
-   * Flag signifying whether the broadcast variable is valid
-   * (that is, not already destroyed) or not.
+   * Flag signifying whether the broadcast variable is valid (that is, not already destroyed) or
+   * not.
    */
   @volatile private var _isValid = true
 
@@ -71,43 +73,45 @@ abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable with Lo
   }
 
   /**
-   * Asynchronously delete cached copies of this broadcast on the executors.
-   * If the broadcast is used after this is called, it will need to be re-sent to each executor.
+   * Asynchronously delete cached copies of this broadcast on the executors. If the broadcast is
+   * used after this is called, it will need to be re-sent to each executor.
    */
   def unpersist(): Unit = {
     unpersist(blocking = false)
   }
 
   /**
-   * Delete cached copies of this broadcast on the executors. If the broadcast is used after
-   * this is called, it will need to be re-sent to each executor.
-   * @param blocking Whether to block until unpersisting has completed
+   * Delete cached copies of this broadcast on the executors. If the broadcast is used after this
+   * is called, it will need to be re-sent to each executor.
+   * @param blocking
+   *   Whether to block until unpersisting has completed
    */
   def unpersist(blocking: Boolean): Unit = {
     assertValid()
     doUnpersist(blocking)
   }
 
-
   /**
-   * Destroy all data and metadata related to this broadcast variable. Use this with caution;
-   * once a broadcast variable has been destroyed, it cannot be used again.
+   * Destroy all data and metadata related to this broadcast variable. Use this with caution; once
+   * a broadcast variable has been destroyed, it cannot be used again.
    */
   def destroy(): Unit = {
     destroy(blocking = false)
   }
 
   /**
-   * Destroy all data and metadata related to this broadcast variable. Use this with caution;
-   * once a broadcast variable has been destroyed, it cannot be used again.
-   * @param blocking Whether to block until destroy has completed
+   * Destroy all data and metadata related to this broadcast variable. Use this with caution; once
+   * a broadcast variable has been destroyed, it cannot be used again.
+   * @param blocking
+   *   Whether to block until destroy has completed
    */
   private[spark] def destroy(blocking: Boolean): Unit = {
     assertValid()
     _isValid = false
     _destroySite = Utils.getCallSite().shortForm
-    logInfo(log"Destroying ${MDC(LogKeys.BROADCAST, toString)} " +
-      log"(from ${MDC(LogKeys.CALL_SITE_SHORT_FORM, _destroySite)})")
+    logInfo(
+      log"Destroying ${MDC(LogKeys.BROADCAST, toString)} " +
+        log"(from ${MDC(LogKeys.CALL_SITE_SHORT_FORM, _destroySite)})")
     doDestroy(blocking)
   }
 
@@ -120,8 +124,8 @@ abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable with Lo
   }
 
   /**
-   * Actually get the broadcasted value. Concrete implementations of Broadcast class must
-   * define their own way to get the value.
+   * Actually get the broadcasted value. Concrete implementations of Broadcast class must define
+   * their own way to get the value.
    */
   protected def getValue(): T
 
@@ -132,9 +136,8 @@ abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable with Lo
   protected def doUnpersist(blocking: Boolean): Unit
 
   /**
-   * Actually destroy all data and metadata related to this broadcast variable.
-   * Implementation of Broadcast class must define their own logic to destroy their own
-   * state.
+   * Actually destroy all data and metadata related to this broadcast variable. Implementation of
+   * Broadcast class must define their own logic to destroy their own state.
    */
   protected def doDestroy(blocking: Boolean): Unit
 

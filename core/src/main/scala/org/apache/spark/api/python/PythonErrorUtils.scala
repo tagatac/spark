@@ -22,12 +22,11 @@ import java.util
 import org.apache.spark.{BreakingChangeInfo, QueryContext, SparkThrowable}
 
 /**
- * Utility object that provides convenient accessors for extracting
- * detailed information from a [[SparkThrowable]] instance.
+ * Utility object that provides convenient accessors for extracting detailed information from a
+ * [[SparkThrowable]] instance.
  *
- * This object is primarily used in PySpark
- * to retrieve structured error metadata because Py4J does not work
- * with default methods.
+ * This object is primarily used in PySpark to retrieve structured error metadata because Py4J
+ * does not work with default methods.
  */
 private[spark] object PythonErrorUtils {
   def getCondition(e: SparkThrowable): String = e.getCondition

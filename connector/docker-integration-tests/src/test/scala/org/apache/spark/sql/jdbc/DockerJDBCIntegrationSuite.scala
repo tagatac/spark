@@ -43,6 +43,7 @@ import org.apache.spark.util.{DockerUtils, Utils}
 import org.apache.spark.util.Utils.timeStringAsSeconds
 
 abstract class DatabaseOnDocker {
+
   /**
    * The docker image to be pulled.
    */
@@ -82,8 +83,8 @@ abstract class DatabaseOnDocker {
    * Optional entry point when container starts
    *
    * Startup process is a parameter of entry point. This may or may not be considered during
-   * startup. Prefer entry point to startup process when you need a command always to be executed or
-   * you want to change the initialization order.
+   * startup. Prefer entry point to startup process when you need a command always to be executed
+   * or you want to change the initialization order.
    */
   def getEntryPoint: Option[String] = None
 
@@ -101,7 +102,10 @@ abstract class DatabaseOnDocker {
 }
 
 abstract class DockerJDBCIntegrationSuite
-  extends QueryTest with SharedSparkSession with Eventually with DockerIntegrationFunSuite {
+    extends QueryTest
+    with SharedSparkSession
+    with Eventually
+    with DockerIntegrationFunSuite {
 
   protected val dockerIp = DockerUtils.getDockerIp()
   val db: DatabaseOnDocker
@@ -164,7 +168,8 @@ abstract class DockerJDBCIntegrationSuite
           }
 
           val (success, time) = Utils.timeTakenMs(
-            docker.pullImageCmd(db.imageName)
+            docker
+              .pullImageCmd(db.imageName)
               .exec(callback)
               .awaitCompletion(imagePullTimeout, TimeUnit.SECONDS))
 
@@ -192,12 +197,12 @@ abstract class DockerJDBCIntegrationSuite
       db.beforeContainerStart(hostConfig, containerConfig)
 
       // Create the database container:
-      val createContainerCmd = docker.createContainerCmd(db.imageName)
+      val createContainerCmd = docker
+        .createContainerCmd(db.imageName)
         .withHostConfig(hostConfig)
         .withExposedPorts(ExposedPort.tcp(db.jdbcPort))
         .withEnv(db.env.map { case (k, v) => s"$k=$v" }.toList.asJava)
         .withNetworkDisabled(false)
-
 
       db.getEntryPoint.foreach(ep => createContainerCmd.withEntrypoint(ep))
       db.getStartupProcessName.foreach(n => createContainerCmd.withCmd(n))
@@ -223,8 +228,10 @@ abstract class DockerJDBCIntegrationSuite
       }
     } catch {
       case NonFatal(e) =>
-        logError(log"Failed to initialize Docker container for " +
-          log"${MDC(CLASS_NAME, this.getClass.getName)}", e)
+        logError(
+          log"Failed to initialize Docker container for " +
+            log"${MDC(CLASS_NAME, this.getClass.getName)}",
+          e)
         try {
           afterAll()
         } finally {
@@ -270,8 +277,10 @@ abstract class DockerJDBCIntegrationSuite
           val response = docker.inspectContainerCmd(container.getId).exec()
           logWarning(log"Container ${MDC(CONTAINER, container)} already stopped")
           val status = Option(response).map(_.getState.getStatus).getOrElse("unknown")
-          logWarning(log"Could not stop container ${MDC(CONTAINER, container)} " +
-            log"at stage '${MDC(STATUS, status)}'", e)
+          logWarning(
+            log"Could not stop container ${MDC(CONTAINER, container)} " +
+              log"at stage '${MDC(STATUS, status)}'",
+            e)
       } finally {
         logContainerOutput()
         docker.removeContainerCmd(container.getId).exec()
@@ -284,12 +293,13 @@ abstract class DockerJDBCIntegrationSuite
 
   private def logContainerOutput(): Unit = {
     logInfo("\n\n===== CONTAINER LOGS FOR container Id: " + container + " =====")
-    docker.logContainerCmd(container.getId)
+    docker
+      .logContainerCmd(container.getId)
       .withStdOut(true)
       .withStdErr(true)
       .withFollowStream(true)
-      .withSince(0).exec(
-      new ResultCallbackTemplate[ResultCallback[Frame], Frame] {
+      .withSince(0)
+      .exec(new ResultCallbackTemplate[ResultCallback[Frame], Frame] {
         override def onNext(f: Frame): Unit = logInfo(f.toString)
       })
     logInfo("\n\n===== END OF CONTAINER LOGS FOR container Id: " + container + " =====")

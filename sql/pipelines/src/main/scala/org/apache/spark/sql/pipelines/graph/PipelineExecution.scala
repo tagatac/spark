@@ -18,19 +18,14 @@
 package org.apache.spark.sql.pipelines.graph
 
 import org.apache.spark.sql.pipelines.common.RunState
-import org.apache.spark.sql.pipelines.logging.{
-  ConstructPipelineEvent,
-  EventLevel,
-  PipelineEvent,
-  PipelineEventOrigin,
-  RunProgress
-}
+import org.apache.spark.sql.pipelines.logging.{ConstructPipelineEvent, EventLevel, PipelineEvent, PipelineEventOrigin, RunProgress}
 
 /**
  * Executes a [[DataflowGraph]] by resolving the graph, materializing datasets, and running the
  * flows.
  *
- * @param context The context for this pipeline update.
+ * @param context
+ *   The context for this pipeline update.
  */
 class PipelineExecution(context: PipelineUpdateContext) {
 
@@ -54,10 +49,12 @@ class PipelineExecution(context: PipelineUpdateContext) {
 
     // Execute the graph.
     graphExecution = Some(
-      new TriggeredGraphExecution(initializedGraph, context, onCompletion = terminationReason => {
-        context.eventCallback(constructTerminationEvent(terminationReason))
-      })
-    )
+      new TriggeredGraphExecution(
+        initializedGraph,
+        context,
+        onCompletion = terminationReason => {
+          context.eventCallback(constructTerminationEvent(terminationReason))
+        }))
     graphExecution.foreach(_.start())
   }
 
@@ -70,42 +67,30 @@ class PipelineExecution(context: PipelineUpdateContext) {
       case e: Throwable =>
         context.eventCallback(
           ConstructPipelineEvent(
-            origin = PipelineEventOrigin(
-              flowName = None,
-              datasetName = None,
-              sourceCodeLocation = None
-            ),
+            origin =
+              PipelineEventOrigin(flowName = None, datasetName = None, sourceCodeLocation = None),
             message = "Pipeline execution failed.",
             details = RunProgress(RunState.FAILED),
             exception = Option(e),
-            level = EventLevel.ERROR
-          )
-        )
+            level = EventLevel.ERROR))
     }
   }
 
   /** Validates that the pipeline graph can be successfully resolved and validates it. */
   def dryRunPipeline(): Unit = synchronized {
     resolveGraph()
-    context.eventCallback(
-      constructTerminationEvent(RunCompletion())
-    )
+    context.eventCallback(constructTerminationEvent(RunCompletion()))
   }
 
   private def constructTerminationEvent(
-      terminationReason: RunTerminationReason
-  ): PipelineEvent = {
+      terminationReason: RunTerminationReason): PipelineEvent = {
     ConstructPipelineEvent(
-      origin = PipelineEventOrigin(
-        flowName = None,
-        datasetName = None,
-        sourceCodeLocation = None
-      ),
+      origin =
+        PipelineEventOrigin(flowName = None, datasetName = None, sourceCodeLocation = None),
       level = EventLevel.INFO,
       message = terminationReason.message,
       details = RunProgress(terminationReason.terminalState),
-      exception = terminationReason.cause
-    )
+      exception = terminationReason.cause)
   }
 
   private def resolveGraph(): DataflowGraph = {
@@ -124,13 +109,14 @@ class PipelineExecution(context: PipelineUpdateContext) {
   }
 
   /**
-   * Emits FlowProgress.FAILED events for each flow that failed to resolve. Downstream flow failures
-   * (flows that failed to resolve when reading from other flows that also failed to resolve) are
-   * written to the event log first at WARN level, while upstream flow failures which are expected
-   * to be "real" failures are written at ERROR level and come afterwards. This makes the real
-   * errors show up first in the UI.
+   * Emits FlowProgress.FAILED events for each flow that failed to resolve. Downstream flow
+   * failures (flows that failed to resolve when reading from other flows that also failed to
+   * resolve) are written to the event log first at WARN level, while upstream flow failures which
+   * are expected to be "real" failures are written at ERROR level and come afterwards. This makes
+   * the real errors show up first in the UI.
    *
-   * @param e The exception that was raised while executing a stage
+   * @param e
+   *   The exception that was raised while executing a stage
    */
   private def handleInvalidPipeline(e: UnresolvedPipelineException): Unit = {
     e.downstreamFailures.foreach { failure =>
@@ -140,10 +126,8 @@ class PipelineExecution(context: PipelineUpdateContext) {
         flow = flow,
         exception = ex,
         logAsWarn = true,
-        messageOpt = Option(
-          s"Failed to resolve flow due to upstream failure: '${flow.displayName}'."
-        )
-      )
+        messageOpt =
+          Option(s"Failed to resolve flow due to upstream failure: '${flow.displayName}'."))
     }
     e.directFailures.foreach { failure =>
       val (flowIdentifier, ex) = failure
@@ -152,8 +136,7 @@ class PipelineExecution(context: PipelineUpdateContext) {
         flow = flow,
         exception = ex,
         logAsWarn = true,
-        messageOpt = Option(s"Failed to resolve flow: '${flow.displayName}'.")
-      )
+        messageOpt = Option(s"Failed to resolve flow: '${flow.displayName}'."))
     }
   }
 
@@ -162,11 +145,7 @@ class PipelineExecution(context: PipelineUpdateContext) {
    */
   def stopPipeline(): Unit = synchronized {
     graphExecution
-      .getOrElse(
-        throw new IllegalStateException(
-          "Pipeline execution has not started yet."
-        )
-      )
+      .getOrElse(throw new IllegalStateException("Pipeline execution has not started yet."))
       .stop()
   }
 }

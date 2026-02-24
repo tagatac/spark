@@ -64,23 +64,28 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
 
   private def makeStageEvent(stageInfos: Seq[v1.StageData]): Seq[String] = {
     val now = System.currentTimeMillis()
-    stageInfos.sortBy { s =>
-      (s.completionTime.map(_.getTime).getOrElse(now), s.submissionTime.get.getTime)
-    }.takeRight(MAX_TIMELINE_STAGES).map { stage =>
-      val stageId = stage.stageId
-      val attemptId = stage.attemptId
-      val name = stage.name
-      val status = stage.status.toString.toLowerCase(Locale.ROOT)
-      val submissionTime = stage.submissionTime.get.getTime()
-      val completionTime = stage.completionTime.map(_.getTime())
-        .getOrElse(now)
+    stageInfos
+      .sortBy { s =>
+        (s.completionTime.map(_.getTime).getOrElse(now), s.submissionTime.get.getTime)
+      }
+      .takeRight(MAX_TIMELINE_STAGES)
+      .map { stage =>
+        val stageId = stage.stageId
+        val attemptId = stage.attemptId
+        val name = stage.name
+        val status = stage.status.toString.toLowerCase(Locale.ROOT)
+        val submissionTime = stage.submissionTime.get.getTime()
+        val completionTime = stage.completionTime
+          .map(_.getTime())
+          .getOrElse(now)
 
-      // The timeline library treats contents as HTML, so we have to escape them. We need to add
-      // extra layers of escaping in order to embed this in a JavaScript string literal.
-      val escapedName = Utility.escape(name)
-      val jsEscapedNameForTooltip = StringEscapeUtils.escapeEcmaScript(Utility.escape(escapedName))
-      val jsEscapedNameForLabel = StringEscapeUtils.escapeEcmaScript(escapedName)
-      s"""
+        // The timeline library treats contents as HTML, so we have to escape them. We need to add
+        // extra layers of escaping in order to embed this in a JavaScript string literal.
+        val escapedName = Utility.escape(name)
+        val jsEscapedNameForTooltip =
+          StringEscapeUtils.escapeEcmaScript(Utility.escape(escapedName))
+        val jsEscapedNameForLabel = StringEscapeUtils.escapeEcmaScript(escapedName)
+        s"""
          |{
          |  'className': 'stage job-timeline-object ${status}',
          |  'group': 'stages',
@@ -91,26 +96,27 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
          |   'data-title="${jsEscapedNameForTooltip} (Stage ${stageId}.${attemptId})<br>' +
          |   'Status: ${status.toUpperCase(Locale.ROOT)}<br>' +
          |   'Submitted: ${UIUtils.formatDate(submissionTime)}' +
-         |   '${
-                 if (status != "running") {
-                   s"""<br>Completed: ${UIUtils.formatDate(completionTime)}"""
-                 } else {
-                   ""
-                 }
-              }">' +
+         |   '${if (status != "running") {
+            s"""<br>Completed: ${UIUtils.formatDate(completionTime)}"""
+          } else {
+            ""
+          }}">' +
          |    '${jsEscapedNameForLabel} (Stage ${stageId}.${attemptId})</div>',
          |}
        """.stripMargin
-    }
+      }
   }
 
   def makeExecutorEvent(executors: Seq[v1.ExecutorSummary]): Seq[String] = {
     val events = ListBuffer[String]()
-    executors.sortBy { e =>
-      e.removeTime.map(_.getTime).getOrElse(e.addTime.getTime)
-    }.takeRight(MAX_TIMELINE_EXECUTORS).foreach { e =>
-      val addedEvent =
-        s"""
+    executors
+      .sortBy { e =>
+        e.removeTime.map(_.getTime).getOrElse(e.addTime.getTime)
+      }
+      .takeRight(MAX_TIMELINE_EXECUTORS)
+      .foreach { e =>
+        val addedEvent =
+          s"""
            |{
            |  'className': 'executor added',
            |  'group': 'executors',
@@ -122,11 +128,11 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
            |    'data-html="true">Executor ${e.id} added</div>'
            |}
          """.stripMargin
-      events += addedEvent
+        events += addedEvent
 
-      e.removeTime.foreach { removeTime =>
-        val removedEvent =
-          s"""
+        e.removeTime.foreach { removeTime =>
+          val removedEvent =
+            s"""
              |{
              |  'className': 'executor removed',
              |  'group': 'executors',
@@ -135,18 +141,18 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
              |    'data-toggle="tooltip" data-placement="top"' +
              |    'data-title="Executor ${e.id}<br>' +
              |    'Removed at ${UIUtils.formatDate(removeTime)}' +
-             |    '${
-                      e.removeReason.map { reason =>
-                        s"""<br>Reason: ${StringEscapeUtils.escapeEcmaScript(
-                          reason.replace("\n", " "))}"""
-                      }.getOrElse("")
-                   }"' +
+             |    '${e.removeReason
+                .map { reason =>
+                  s"""<br>Reason: ${StringEscapeUtils.escapeEcmaScript(
+                      reason.replace("\n", " "))}"""
+                }
+                .getOrElse("")}"' +
              |    'data-html="true">Executor ${e.id} removed</div>'
              |}
            """.stripMargin
           events += removedEvent
+        }
       }
-    }
     events.toSeq
   }
 
@@ -183,30 +189,30 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
         Event Timeline
       </a>
     </span> ++
-    <div id="job-timeline" class="collapsed">
+      <div id="job-timeline" class="collapsed">
       {
-      if (MAX_TIMELINE_STAGES < stages.size) {
-        <div>
+        if (MAX_TIMELINE_STAGES < stages.size) {
+          <div>
           <strong>
             Only the most recent {MAX_TIMELINE_STAGES} submitted/completed stages
             (of {stages.size} total) are shown.
           </strong>
         </div>
-      } else {
-        Seq.empty
-      }
+        } else {
+          Seq.empty
+        }
       }
       {
-      if (MAX_TIMELINE_EXECUTORS < executors.size) {
-        <div>
+        if (MAX_TIMELINE_EXECUTORS < executors.size) {
+          <div>
           <strong>
             Only the most recent {MAX_TIMELINE_EXECUTORS} added/removed executors
             (of {executors.size} total) are shown.
           </strong>
         </div>
-      } else {
-        Seq.empty
-      }
+        } else {
+          Seq.empty
+        }
       }
       <div class="control-panel">
         <div id="job-timeline-zoom-lock">
@@ -215,9 +221,12 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
         </div>
       </div>
     </div> ++
-    <script type="text/javascript" nonce={CspNonce.get}>
-      {Unparsed(s"drawJobTimeline(${groupJsonArrayAsStr}, ${eventArrayAsStr}, " +
-      s"${appStartTime}, ${UIUtils.getTimeZoneOffset()});")}
+      <script type="text/javascript" nonce={CspNonce.get}>
+      {
+        Unparsed(
+          s"drawJobTimeline(${groupJsonArrayAsStr}, ${eventArrayAsStr}, " +
+            s"${appStartTime}, ${UIUtils.getTimeZoneOffset()});")
+      }
     </script>
   }
 
@@ -231,8 +240,7 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
         <div id="no-info">
           <p>No information to display for job {jobId}</p>
         </div>
-      return UIUtils.headerSparkPage(
-        request, s"Details for Job $jobId", content, parent)
+      return UIUtils.headerSparkPage(request, s"Details for Job $jobId", content, parent)
     }
 
     val isComplete = jobData.status != JobExecutionStatus.RUNNING
@@ -250,12 +258,10 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
           numFailedTasks = 0,
           numKilledTasks = 0,
           numCompletedIndices = 0,
-
           submissionTime = None,
           firstTaskLaunchedTime = None,
           completionTime = None,
           failureReason = None,
-
           executorDeserializeTime = 0L,
           executorDeserializeCpuTime = 0L,
           executorRunTime = 0L,
@@ -291,12 +297,10 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
           shuffleWriteBytes = 0L,
           shuffleWriteTime = 0L,
           shuffleWriteRecords = 0L,
-
           name = "Unknown",
           description = None,
           details = "Unknown",
           schedulingPool = null,
-
           rddIds = Nil,
           accumulatorUpdates = Nil,
           tasks = None,
@@ -341,21 +345,53 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
       }
 
     val activeStagesTable =
-      new StageTableBase(store, request, activeStages.toSeq, "active", "activeStage",
-        parent.basePath, basePath, parent.isFairScheduler,
-        killEnabled = parent.killEnabled, isFailedStage = false)
+      new StageTableBase(
+        store,
+        request,
+        activeStages.toSeq,
+        "active",
+        "activeStage",
+        parent.basePath,
+        basePath,
+        parent.isFairScheduler,
+        killEnabled = parent.killEnabled,
+        isFailedStage = false)
     val pendingOrSkippedStagesTable =
-      new StageTableBase(store, request, pendingOrSkippedStages.toSeq, pendingOrSkippedTableId,
-        "pendingStage", parent.basePath, basePath, parent.isFairScheduler,
-        killEnabled = false, isFailedStage = false)
+      new StageTableBase(
+        store,
+        request,
+        pendingOrSkippedStages.toSeq,
+        pendingOrSkippedTableId,
+        "pendingStage",
+        parent.basePath,
+        basePath,
+        parent.isFairScheduler,
+        killEnabled = false,
+        isFailedStage = false)
     val completedStagesTable =
-      new StageTableBase(store, request, completedStages.toSeq, "completed", "completedStage",
-        parent.basePath, basePath, parent.isFairScheduler,
-        killEnabled = false, isFailedStage = false)
+      new StageTableBase(
+        store,
+        request,
+        completedStages.toSeq,
+        "completed",
+        "completedStage",
+        parent.basePath,
+        basePath,
+        parent.isFairScheduler,
+        killEnabled = false,
+        isFailedStage = false)
     val failedStagesTable =
-      new StageTableBase(store, request, failedStages.toSeq, "failed", "failedStage",
-        parent.basePath, basePath, parent.isFairScheduler,
-        killEnabled = false, isFailedStage = true)
+      new StageTableBase(
+        store,
+        request,
+        failedStages.toSeq,
+        "failed",
+        "failedStage",
+        parent.basePath,
+        basePath,
+        parent.isFairScheduler,
+        killEnabled = false,
+        isFailedStage = true)
 
     val shouldShowActiveStages = activeStages.nonEmpty
     val shouldShowPendingStages = !isComplete && pendingOrSkippedStages.nonEmpty
@@ -379,73 +415,78 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             {JobDataUtil.getFormattedDuration(jobData)}
           </li>
           {
-            if (sqlExecutionId.isDefined) {
-              <li>
+        if (sqlExecutionId.isDefined) {
+          <li>
                 <strong>Associated SQL Query: </strong>
-                {<a href={"%s/SQL/execution/?id=%s".format(
-                  UIUtils.prependBaseUri(request, parent.basePath),
-                  sqlExecutionId.get)
-                }>{sqlExecutionId.get}</a>}
-              </li>
-            }
+                {
+            <a href={
+              "%s/SQL/execution/?id=%s".format(
+                UIUtils.prependBaseUri(request, parent.basePath),
+                sqlExecutionId.get)
+            }>{sqlExecutionId.get}</a>
           }
+              </li>
+        }
+      }
           {
-            if (jobData.jobGroup.isDefined) {
-              <li>
+        if (jobData.jobGroup.isDefined) {
+          <li>
                 <strong>Job Group:</strong>
                 {jobData.jobGroup.get}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowActiveStages) {
-              <li>
+        if (shouldShowActiveStages) {
+          <li>
                 <a href="#active"><strong>Active Stages:</strong></a>
                 {activeStages.size}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowPendingStages) {
-              <li>
+        if (shouldShowPendingStages) {
+          <li>
                 <a href="#pending">
                   <strong>Pending Stages:</strong>
                 </a>{pendingOrSkippedStages.size}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowCompletedStages) {
-              <li>
+        if (shouldShowCompletedStages) {
+          <li>
                 <a href="#completed"><strong>Completed Stages:</strong></a>
                 {completedStages.size}
               </li>
-            }
-          }
+        }
+      }
           {
-            if (shouldShowSkippedStages) {
-            <li>
+        if (shouldShowSkippedStages) {
+          <li>
               <a href="#skipped"><strong>Skipped Stages:</strong></a>
               {pendingOrSkippedStages.size}
             </li>
-          }
-          }
+        }
+      }
           {
-            if (shouldShowFailedStages) {
-              <li>
+        if (shouldShowFailedStages) {
+          <li>
                 <a href="#failed"><strong>Failed Stages:</strong></a>
                 {failedStages.size}
               </li>
-            }
-          }
+        }
+      }
         </ul>
       </div>
 
     var content = summary
     val appStartTime = store.applicationInfo().attempts.head.startTime.getTime()
 
-    content ++= makeTimeline((activeStages ++ completedStages ++ failedStages).toSeq,
-      store.executorList(false), appStartTime)
+    content ++= makeTimeline(
+      (activeStages ++ completedStages ++ failedStages).toSeq,
+      store.executorList(false),
+      appStartTime)
 
     val operationGraphContent = store.asOption(store.operationGraphForJob(jobId)) match {
       case Some(operationGraph) => UIUtils.showDagVizForJob(jobId, operationGraph)
@@ -466,7 +507,7 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             <a>Active Stages ({activeStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-activeStages collapsible-table">
+          <div class="aggregated-activeStages collapsible-table">
           {activeStagesTable.toNodeSeq}
         </div>
     }
@@ -480,7 +521,7 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             <a>Pending Stages ({pendingOrSkippedStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-pendingOrSkippedStages collapsible-table">
+          <div class="aggregated-pendingOrSkippedStages collapsible-table">
           {pendingOrSkippedStagesTable.toNodeSeq}
         </div>
     }
@@ -494,7 +535,7 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             <a>Completed Stages ({completedStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-completedStages collapsible-table">
+          <div class="aggregated-completedStages collapsible-table">
           {completedStagesTable.toNodeSeq}
         </div>
     }
@@ -508,7 +549,7 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             <a>Skipped Stages ({pendingOrSkippedStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-pendingOrSkippedStages collapsible-table">
+          <div class="aggregated-pendingOrSkippedStages collapsible-table">
           {pendingOrSkippedStagesTable.toNodeSeq}
         </div>
     }
@@ -522,11 +563,15 @@ private[ui] class JobPage(parent: JobsTab, store: AppStatusStore) extends WebUIP
             <a>Failed Stages ({failedStages.size})</a>
           </h4>
         </span> ++
-        <div class="aggregated-failedStages collapsible-table">
+          <div class="aggregated-failedStages collapsible-table">
           {failedStagesTable.toNodeSeq}
         </div>
     }
     UIUtils.headerSparkPage(
-      request, s"Details for Job $jobId", content, parent, showVisualization = true)
+      request,
+      s"Details for Job $jobId",
+      content,
+      parent,
+      showVisualization = true)
   }
 }

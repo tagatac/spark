@@ -47,8 +47,8 @@ private[spark] class MetricsConfig(conf: SparkConf) extends Logging {
   }
 
   /**
-   * Load properties from various places, based on precedence
-   * If the same property is set again latter on in the method, it overwrites the previous value
+   * Load properties from various places, based on precedence If the same property is set again
+   * latter on in the method, it overwrites the previous value
    */
   def initialize(): Unit = {
     // Add default properties in case there's no properties file
@@ -79,31 +79,32 @@ private[spark] class MetricsConfig(conf: SparkConf) extends Logging {
     if (perInstanceSubProperties.contains(DEFAULT_PREFIX)) {
       val defaultSubProperties = perInstanceSubProperties(DEFAULT_PREFIX).asScala
       for ((instance, prop) <- perInstanceSubProperties if (instance != DEFAULT_PREFIX);
-           (k, v) <- defaultSubProperties if (prop.get(k) == null)) {
+        (k, v) <- defaultSubProperties if (prop.get(k) == null)) {
         prop.put(k, v)
       }
     }
   }
 
   /**
-   * Take a simple set of properties and a regex that the instance names (part before the first dot)
-   * have to conform to. And, return a map of the first order prefix (before the first dot) to the
-   * sub-properties under that prefix.
+   * Take a simple set of properties and a regex that the instance names (part before the first
+   * dot) have to conform to. And, return a map of the first order prefix (before the first dot)
+   * to the sub-properties under that prefix.
    *
    * For example, if the properties sent were Properties("*.sink.servlet.class"->"class1",
-   * "*.sink.servlet.path"->"path1"), the returned map would be
-   * Map("*" -> Properties("sink.servlet.class" -> "class1", "sink.servlet.path" -> "path1"))
-   * Note in the subProperties (value of the returned Map), only the suffixes are used as property
-   * keys.
-   * If, in the passed properties, there is only one property with a given prefix, it is still
+   * "*.sink.servlet.path"->"path1"), the returned map would be Map("*" ->
+   * Properties("sink.servlet.class" -> "class1", "sink.servlet.path" -> "path1")) Note in the
+   * subProperties (value of the returned Map), only the suffixes are used as property keys. If,
+   * in the passed properties, there is only one property with a given prefix, it is still
    * "unflattened". For example, if the input was Properties("*.sink.servlet.class" -> "class1"
-   * the returned Map would contain one key-value pair
-   * Map("*" -> Properties("sink.servlet.class" -> "class1"))
-   * Any passed in properties, not complying with the regex are ignored.
+   * the returned Map would contain one key-value pair Map("*" -> Properties("sink.servlet.class"
+   * -> "class1")) Any passed in properties, not complying with the regex are ignored.
    *
-   * @param prop the flat list of properties to "unflatten" based on prefixes
-   * @param regex the regex that the prefix has to comply with
-   * @return an unflattened map, mapping prefix with sub-properties under that prefix
+   * @param prop
+   *   the flat list of properties to "unflatten" based on prefixes
+   * @param regex
+   *   the regex that the prefix has to comply with
+   * @return
+   *   an unflattened map, mapping prefix with sub-properties under that prefix
    */
   def subProperties(prop: Properties, regex: Regex): mutable.HashMap[String, Properties] = {
     val subProperties = new mutable.HashMap[String, Properties]
@@ -124,8 +125,8 @@ private[spark] class MetricsConfig(conf: SparkConf) extends Logging {
   }
 
   /**
-   * Loads configuration from a config file. If no config file is provided, try to get file
-   * in class path.
+   * Loads configuration from a config file. If no config file is provided, try to get file in
+   * class path.
    */
   private[this] def loadPropertiesFromFile(path: Option[String]): Unit = {
     var is: InputStream = null

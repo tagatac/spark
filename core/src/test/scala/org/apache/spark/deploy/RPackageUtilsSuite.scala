@@ -31,16 +31,15 @@ import org.apache.spark.api.r.RUtils
 import org.apache.spark.util.{IvyTestUtils, ResetSystemProperties, Utils}
 import org.apache.spark.util.MavenUtils.MavenCoordinate
 
-class RPackageUtilsSuite
-  extends SparkFunSuite
-  with ResetSystemProperties {
+class RPackageUtilsSuite extends SparkFunSuite with ResetSystemProperties {
 
   private val main = MavenCoordinate("a", "b", "c")
   private val dep1 = MavenCoordinate("a", "dep1", "c")
   private val dep2 = MavenCoordinate("a", "dep2", "d")
 
   private def getJarPath(coord: MavenCoordinate, repo: File): File = {
-    new File(IvyTestUtils.pathFromCoordinate(coord, repo, "jar", useIvyLayout = false),
+    new File(
+      IvyTestUtils.pathFromCoordinate(coord, repo, "jar", useIvyLayout = false),
       IvyTestUtils.artifactName(coord, useIvyLayout = false, ".jar"))
   }
 
@@ -54,7 +53,7 @@ class RPackageUtilsSuite
   private class BufferPrintStream extends PrintStream(noOpOutputStream) {
     // scalastyle:off println
     override def println(line: String): Unit = {
-    // scalastyle:on println
+      // scalastyle:on println
       lineBuffer += line
     }
   }
@@ -67,7 +66,8 @@ class RPackageUtilsSuite
   test("pick which jars to unpack using the manifest") {
     val deps = Seq(dep1, dep2).mkString(",")
     IvyTestUtils.withRepository(main, Some(deps), None, withR = true) { repo =>
-      val jars = Seq(main, dep1, dep2).map(c => new JarFile(getJarPath(c, new File(new URI(repo)))))
+      val jars =
+        Seq(main, dep1, dep2).map(c => new JarFile(getJarPath(c, new File(new URI(repo)))))
       Utils.tryWithSafeFinally {
         assert(RPackageUtils.checkManifestForR(jars(0)), "should have R code")
         assert(!RPackageUtils.checkManifestForR(jars(1)), "should not have R code")
@@ -82,9 +82,11 @@ class RPackageUtilsSuite
     assume(RUtils.isRInstalled, "R isn't installed on this machine.")
     val deps = Seq(dep1, dep2).mkString(",")
     IvyTestUtils.withRepository(main, Some(deps), None, withR = true) { repo =>
-      val jars = Seq(main, dep1, dep2).map { c =>
-        getJarPath(c, new File(new URI(repo)))
-      }.mkString(",")
+      val jars = Seq(main, dep1, dep2)
+        .map { c =>
+          getJarPath(c, new File(new URI(repo)))
+        }
+        .mkString(",")
       RPackageUtils.checkAndBuildRPackage(jars, new BufferPrintStream, verbose = true)
       val firstJar = jars.substring(0, jars.indexOf(","))
       val output = lineBuffer.mkString("\n")
@@ -99,9 +101,11 @@ class RPackageUtilsSuite
     assume(RUtils.isRInstalled, "R isn't installed on this machine.")
     val deps = Seq(dep1, dep2).mkString(",")
     IvyTestUtils.withRepository(main, Some(deps), None, withR = true) { repo =>
-      val jars = Seq(main, dep1, dep2).map { c =>
-        getJarPath(c, new File(new URI(repo))).toString + "dummy"
-      }.mkString(",")
+      val jars = Seq(main, dep1, dep2)
+        .map { c =>
+          getJarPath(c, new File(new URI(repo))).toString + "dummy"
+        }
+        .mkString(",")
       RPackageUtils.checkAndBuildRPackage(jars, new BufferPrintStream, verbose = true)
       val individualJars = jars.split(",")
       val output = lineBuffer.mkString("\n")
@@ -118,9 +122,16 @@ class RPackageUtilsSuite
       val attr = manifest.getMainAttributes
       attr.put(Name.MANIFEST_VERSION, "1.0")
       attr.put(new Name("Spark-HasRPackage"), "true")
-      val jar = IvyTestUtils.packJar(new File(new URI(repo)), dep1, Nil,
-        useIvyLayout = false, withR = false, Some(manifest))
-      RPackageUtils.checkAndBuildRPackage(jar.getAbsolutePath, new BufferPrintStream,
+      val jar = IvyTestUtils.packJar(
+        new File(new URI(repo)),
+        dep1,
+        Nil,
+        useIvyLayout = false,
+        withR = false,
+        Some(manifest))
+      RPackageUtils.checkAndBuildRPackage(
+        jar.getAbsolutePath,
+        new BufferPrintStream,
         verbose = true)
       val output = lineBuffer.mkString("\n")
       assert(output.contains(RPackageUtils.RJarDoc.message))
@@ -129,8 +140,13 @@ class RPackageUtilsSuite
 
   test("jars without manifest return false") {
     IvyTestUtils.withRepository(main, None, None) { repo =>
-      val jar = IvyTestUtils.packJar(new File(new URI(repo)), dep1, Nil,
-        useIvyLayout = false, withR = false, None)
+      val jar = IvyTestUtils.packJar(
+        new File(new URI(repo)),
+        dep1,
+        Nil,
+        useIvyLayout = false,
+        withR = false,
+        None)
       Utils.tryWithResource(new JarFile(jar)) { jarFile =>
         assert(jarFile.getManifest == null, "jar file should have null manifest")
         assert(!RPackageUtils.checkManifestForR(jarFile), "null manifest should return false")

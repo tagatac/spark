@@ -39,12 +39,11 @@ case class TestData(key: Int, value: String)
 
 case class ThreeColumnTable(key: Int, value: String, key1: String)
 
-class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
-    with SQLTestUtils {
+class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter with SQLTestUtils {
   import spark.implicits._
 
-  override lazy val testData = spark.sparkContext.parallelize(
-    (1 to 100).map(i => TestData(i, i.toString))).toDF()
+  override lazy val testData =
+    spark.sparkContext.parallelize((1 to 100).map(i => TestData(i, i.toString))).toDF()
 
   before {
     // Since every we are doing tests for DDL statements,
@@ -62,10 +61,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       testData.write.mode(SaveMode.Append).insertInto("createAndInsertTest")
 
       // Make sure the table has also been updated.
-      checkAnswer(
-        sql("SELECT * FROM createAndInsertTest"),
-        testData.collect().toSeq
-      )
+      checkAnswer(sql("SELECT * FROM createAndInsertTest"), testData.collect().toSeq)
 
       // Add more data.
       testData.write.mode(SaveMode.Append).insertInto("createAndInsertTest")
@@ -73,17 +69,13 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       // Make sure the table has been updated.
       checkAnswer(
         sql("SELECT * FROM createAndInsertTest"),
-        testData.toDF().collect().toSeq ++ testData.toDF().collect().toSeq
-      )
+        testData.toDF().collect().toSeq ++ testData.toDF().collect().toSeq)
 
       // Now overwrite.
       testData.write.mode(SaveMode.Overwrite).insertInto("createAndInsertTest")
 
       // Make sure the registered table has also been updated.
-      checkAnswer(
-        sql("SELECT * FROM createAndInsertTest"),
-        testData.collect().toSeq
-      )
+      checkAnswer(sql("SELECT * FROM createAndInsertTest"), testData.collect().toSeq)
     }
   }
 
@@ -113,10 +105,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     sql("CREATE TABLE hiveTableWithMapValue(m MAP <STRING, STRING>)")
     sql("INSERT OVERWRITE TABLE hiveTableWithMapValue SELECT m FROM tableWithMapValue")
 
-    checkAnswer(
-      sql("SELECT * FROM hiveTableWithMapValue"),
-      rowRDD.collect().toSeq
-    )
+    checkAnswer(sql("SELECT * FROM hiveTableWithMapValue"), rowRDD.collect().toSeq)
 
     sql("DROP TABLE hiveTableWithMapValue")
   }
@@ -127,39 +116,36 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     // The default value of hive.exec.stagingdir.
     val stagingDir = ".hive-staging"
 
-    sql(
-      s"""
+    sql(s"""
          |CREATE TABLE table_with_partition(c1 string)
          |PARTITIONED by (p1 string,p2 string,p3 string,p4 string,p5 string)
          |location '${tmpDir.toURI.toString}'
         """.stripMargin)
-    sql(
-      """
+    sql("""
         |INSERT OVERWRITE TABLE table_with_partition
         |partition (p1='a',p2='b',p3='c',p4='c',p5='1')
         |SELECT 'blarr' FROM tmp_table
       """.stripMargin)
-    sql(
-      """
+    sql("""
         |INSERT OVERWRITE TABLE table_with_partition
         |partition (p1='a',p2='b',p3='c',p4='c',p5='2')
         |SELECT 'blarr' FROM tmp_table
       """.stripMargin)
-    sql(
-      """
+    sql("""
         |INSERT OVERWRITE TABLE table_with_partition
         |partition (p1='a',p2='b',p3='c',p4='c',p5='3')
         |SELECT 'blarr' FROM tmp_table
       """.stripMargin)
-    sql(
-      """
+    sql("""
         |INSERT OVERWRITE TABLE table_with_partition
         |partition (p1='a',p2='b',p3='c',p4='c',p5='4')
         |SELECT 'blarr' FROM tmp_table
       """.stripMargin)
     def listFolders(path: File, acc: List[String]): List[List[String]] = {
       val dir = path.listFiles()
-      val folders = dir.filter { e => e.isDirectory && !e.getName().startsWith(stagingDir) }.toList
+      val folders = dir.filter { e =>
+        e.isDirectory && !e.getName().startsWith(stagingDir)
+      }.toList
       if (folders.isEmpty) {
         List(acc.reverse)
       } else {
@@ -167,11 +153,10 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       }
     }
     val expected = List(
-      "p1=a"::"p2=b"::"p3=c"::"p4=c"::"p5=2"::Nil,
-      "p1=a"::"p2=b"::"p3=c"::"p4=c"::"p5=3"::Nil,
-      "p1=a"::"p2=b"::"p3=c"::"p4=c"::"p5=1"::Nil,
-      "p1=a"::"p2=b"::"p3=c"::"p4=c"::"p5=4"::Nil
-    )
+      "p1=a" :: "p2=b" :: "p3=c" :: "p4=c" :: "p5=2" :: Nil,
+      "p1=a" :: "p2=b" :: "p3=c" :: "p4=c" :: "p5=3" :: Nil,
+      "p1=a" :: "p2=b" :: "p3=c" :: "p4=c" :: "p5=1" :: Nil,
+      "p1=a" :: "p2=b" :: "p3=c" :: "p4=c" :: "p5=4" :: Nil)
     assert(listFolders(tmpDir, List()).sortBy(_.toString()) === expected.sortBy(_.toString))
     sql("DROP TABLE table_with_partition")
     sql("DROP TABLE tmp_table")
@@ -179,16 +164,14 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
   testPartitionedTable("INSERT OVERWRITE - partition IF NOT EXISTS") { tableName =>
     val selQuery = s"select a, b, c, d from $tableName"
-    sql(
-      s"""
+    sql(s"""
          |INSERT OVERWRITE TABLE $tableName
          |partition (b=2, c=3)
          |SELECT 1, 4
         """.stripMargin)
     checkAnswer(sql(selQuery), Row(1, 2, 3, 4))
 
-    sql(
-      s"""
+    sql(s"""
          |INSERT OVERWRITE TABLE $tableName
          |partition (b=2, c=3)
          |SELECT 5, 6
@@ -196,8 +179,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     checkAnswer(sql(selQuery), Row(5, 2, 3, 6))
 
     val e = intercept[ParseException] {
-      sql(
-        s"""
+      sql(s"""
            |INSERT OVERWRITE TABLE $tableName
            |partition (b=2, c) IF NOT EXISTS
            |SELECT 7, 8, 3
@@ -207,8 +189,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
     // If the partition already exists, the insert will overwrite the data
     // unless users specify IF NOT EXISTS
-    sql(
-      s"""
+    sql(s"""
          |INSERT OVERWRITE TABLE $tableName
          |partition (b=2, c=3) IF NOT EXISTS
          |SELECT 9, 10
@@ -217,8 +198,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
     // ADD PARTITION has the same effect, even if no actual data is inserted.
     sql(s"ALTER TABLE $tableName ADD PARTITION (b=21, c=31)")
-    sql(
-      s"""
+    sql(s"""
          |INSERT OVERWRITE TABLE $tableName
          |partition (b=21, c=31) IF NOT EXISTS
          |SELECT 20, 24
@@ -227,51 +207,43 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
   }
 
   test("Insert ArrayType.containsNull == false") {
-    val schema = StructType(Seq(
-      StructField("a", ArrayType(StringType, containsNull = false))))
+    val schema = StructType(Seq(StructField("a", ArrayType(StringType, containsNull = false))))
     val rowRDD = spark.sparkContext.parallelize((1 to 100).map(i => Row(Seq(s"value$i"))))
     val df = spark.createDataFrame(rowRDD, schema)
     df.createOrReplaceTempView("tableWithArrayValue")
     sql("CREATE TABLE hiveTableWithArrayValue(a Array <STRING>)")
     sql("INSERT OVERWRITE TABLE hiveTableWithArrayValue SELECT a FROM tableWithArrayValue")
 
-    checkAnswer(
-      sql("SELECT * FROM hiveTableWithArrayValue"),
-      rowRDD.collect().toSeq)
+    checkAnswer(sql("SELECT * FROM hiveTableWithArrayValue"), rowRDD.collect().toSeq)
 
     sql("DROP TABLE hiveTableWithArrayValue")
   }
 
   test("Insert MapType.valueContainsNull == false") {
-    val schema = StructType(Seq(
-      StructField("m", MapType(StringType, StringType, valueContainsNull = false))))
-    val rowRDD = spark.sparkContext.parallelize(
-      (1 to 100).map(i => Row(Map(s"key$i" -> s"value$i"))))
+    val schema = StructType(
+      Seq(StructField("m", MapType(StringType, StringType, valueContainsNull = false))))
+    val rowRDD =
+      spark.sparkContext.parallelize((1 to 100).map(i => Row(Map(s"key$i" -> s"value$i"))))
     val df = spark.createDataFrame(rowRDD, schema)
     df.createOrReplaceTempView("tableWithMapValue")
     sql("CREATE TABLE hiveTableWithMapValue(m Map <STRING, STRING>)")
     sql("INSERT OVERWRITE TABLE hiveTableWithMapValue SELECT m FROM tableWithMapValue")
 
-    checkAnswer(
-      sql("SELECT * FROM hiveTableWithMapValue"),
-      rowRDD.collect().toSeq)
+    checkAnswer(sql("SELECT * FROM hiveTableWithMapValue"), rowRDD.collect().toSeq)
 
     sql("DROP TABLE hiveTableWithMapValue")
   }
 
   test("Insert StructType.fields.exists(_.nullable == false)") {
-    val schema = StructType(Seq(
-      StructField("s", StructType(Seq(StructField("f", StringType, nullable = false))))))
-    val rowRDD = spark.sparkContext.parallelize(
-      (1 to 100).map(i => Row(Row(s"value$i"))))
+    val schema = StructType(
+      Seq(StructField("s", StructType(Seq(StructField("f", StringType, nullable = false))))))
+    val rowRDD = spark.sparkContext.parallelize((1 to 100).map(i => Row(Row(s"value$i"))))
     val df = spark.createDataFrame(rowRDD, schema)
     df.createOrReplaceTempView("tableWithStructValue")
     sql("CREATE TABLE hiveTableWithStructValue(s Struct <f: STRING>)")
     sql("INSERT OVERWRITE TABLE hiveTableWithStructValue SELECT s FROM tableWithStructValue")
 
-    checkAnswer(
-      sql("SELECT * FROM hiveTableWithStructValue"),
-      rowRDD.collect().toSeq)
+    checkAnswer(sql("SELECT * FROM hiveTableWithStructValue"), rowRDD.collect().toSeq)
 
     sql("DROP TABLE hiveTableWithStructValue")
   }
@@ -279,9 +251,11 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
   test("Test partition mode = strict") {
     withSQLConf(("hive.exec.dynamic.partition.mode", "strict")) {
       withTable("partitioned") {
-        sql("CREATE TABLE partitioned (id bigint, data string) USING hive " +
-          "PARTITIONED BY (part string)")
-        val data = (1 to 10).map(i => (i, s"data-$i", if ((i % 2) == 0) "even" else "odd"))
+        sql(
+          "CREATE TABLE partitioned (id bigint, data string) USING hive " +
+            "PARTITIONED BY (part string)")
+        val data = (1 to 10)
+          .map(i => (i, s"data-$i", if ((i % 2) == 0) "even" else "odd"))
           .toDF("id", "data", "part")
 
         intercept[SparkException] {
@@ -315,8 +289,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
       withTable(hiveTable) {
         withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
-          sql(
-            s"""
+          sql(s"""
               |CREATE TABLE $hiveTable (a INT, d INT)
               |PARTITIONED BY (b INT, c INT) STORED AS TEXTFILE
             """.stripMargin)
@@ -331,8 +304,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       val dsTable = "ds_table"
 
       withTable(dsTable) {
-        sql(
-          s"""
+        sql(s"""
              |CREATE TABLE $dsTable (a INT, b INT, c INT, d INT)
              |USING PARQUET PARTITIONED BY (b, c)
            """.stripMargin)
@@ -349,11 +321,14 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
   testPartitionedTable("partitionBy() can't be used together with insertInto()") { tableName =>
     checkError(
       exception = intercept[AnalysisException] {
-        Seq((1, 2, 3, 4)).toDF("a", "b", "c", "d").write.partitionBy("b", "c").insertInto(tableName)
+        Seq((1, 2, 3, 4))
+          .toDF("a", "b", "c", "d")
+          .write
+          .partitionBy("b", "c")
+          .insertInto(tableName)
       },
       condition = "_LEGACY_ERROR_TEMP_1309",
-      parameters = Map.empty
-    )
+      parameters = Map.empty)
   }
 
   testPartitionedTable(
@@ -368,8 +343,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
           "staticPartCols" -> "`b`, `c`",
           "tableColumns" -> "`a`, `d`, `b`, `c`",
           "dataColumns" -> "`1`, `2`, `3`",
-          "tableName" -> s"`spark_catalog`.`default`.`${tableName}`")
-      )
+          "tableName" -> s"`spark_catalog`.`default`.`${tableName}`"))
   }
 
   testPartitionedTable("SPARK-16037: INSERT statement should match columns by position") {
@@ -446,8 +420,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
             Row(13, 16, 15, null) ::
             Row(17, 18, 19, 20) ::
             Row(21, 22, 23, 24) ::
-            Row(25, 26, 27, 28) :: Nil
-        )
+            Row(25, 26, 27, 28) :: Nil)
       }
   }
 
@@ -457,22 +430,19 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
         exception = intercept[AnalysisException] {
           sql(s"INSERT WITH SCHEMA EVOLUTION INTO TABLE $tableName SELECT 25, 26, 27, 28")
         },
-        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION"
-      )
+        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION")
 
       checkError(
         exception = intercept[AnalysisException] {
           sql(s"INSERT WITH SCHEMA EVOLUTION INTO TABLE $tableName SELECT 25, 26, 27, 28, 29")
         },
-        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION"
-      )
+        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION")
 
       checkError(
         exception = intercept[AnalysisException] {
           sql(s"INSERT WITH SCHEMA EVOLUTION INTO TABLE $tableName SELECT 25, 26, 27, (28, 29)")
         },
-        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION"
-      )
+        condition = "UNSUPPORTED_INSERT_WITH_SCHEMA_EVOLUTION")
   }
 
   testPartitionedTable("insertInto() should match columns by position and ignore column names") {
@@ -483,26 +453,19 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
         val df = Seq((1, 2, 3, 4)).toDF("a", "b", "c", "d")
         df.write.insertInto(tableName)
 
-        checkAnswer(
-          sql(s"SELECT a, b, c, d FROM $tableName"),
-          Row(1, 3, 4, 2)
-        )
+        checkAnswer(sql(s"SELECT a, b, c, d FROM $tableName"), Row(1, 3, 4, 2))
       }
   }
 
-  testPartitionedTable("insertInto() should match unnamed columns by position") {
-    tableName =>
-      withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
-        // Columns `c + 1` and `d + 1` are resolved by position, and thus mapped to partition
-        // columns `b` and `c` of the target table.
-        val df = Seq((1, 2, 3, 4)).toDF("a", "b", "c", "d")
-        df.select($"a" + 1, $"b" + 1, $"c" + 1, $"d" + 1).write.insertInto(tableName)
+  testPartitionedTable("insertInto() should match unnamed columns by position") { tableName =>
+    withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
+      // Columns `c + 1` and `d + 1` are resolved by position, and thus mapped to partition
+      // columns `b` and `c` of the target table.
+      val df = Seq((1, 2, 3, 4)).toDF("a", "b", "c", "d")
+      df.select($"a" + 1, $"b" + 1, $"c" + 1, $"d" + 1).write.insertInto(tableName)
 
-        checkAnswer(
-          sql(s"SELECT a, b, c, d FROM $tableName"),
-          Row(2, 4, 5, 3)
-        )
-      }
+      checkAnswer(sql(s"SELECT a, b, c, d FROM $tableName"), Row(2, 4, 5, 3))
+    }
   }
 
   testPartitionedTable("insertInto() should reject missing columns if null default is disabled") {
@@ -517,15 +480,14 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       }
   }
 
-  testPartitionedTable("insertInto() should reject extra columns") {
-    tableName =>
-      withTable("t") {
-        sql("CREATE TABLE t (a INT, b INT, c INT, d INT, e INT)")
+  testPartitionedTable("insertInto() should reject extra columns") { tableName =>
+    withTable("t") {
+      sql("CREATE TABLE t (a INT, b INT, c INT, d INT, e INT)")
 
-        intercept[AnalysisException] {
-          spark.table("t").write.insertInto(tableName)
-        }
+      intercept[AnalysisException] {
+        spark.table("t").write.insertInto(tableName)
       }
+    }
   }
 
   private def testBucketedTable(testName: String)(f: String => Unit): Unit = {
@@ -534,8 +496,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
       withTable(hiveTable) {
         withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
-          sql(
-            s"""
+          sql(s"""
                |CREATE TABLE $hiveTable (a INT, d INT)
                |PARTITIONED BY (b INT, c INT)
                |CLUSTERED BY(a)
@@ -549,8 +510,9 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
   }
 
   Seq("true", "false").foreach { enableHiveEnforce =>
-    withSQLConf("hive.enforce.bucketing" -> enableHiveEnforce,
-        "hive.enforce.sorting" -> enableHiveEnforce) {
+    withSQLConf(
+      "hive.enforce.bucketing" -> enableHiveEnforce,
+      "hive.enforce.sorting" -> enableHiveEnforce) {
       testBucketedTable(s"INSERT should NOT fail if strict bucketing is $enableHiveEnforce") {
         tableName =>
           sql(s"INSERT INTO TABLE $tableName SELECT 1, 4, 2 AS c, 3 AS b")
@@ -601,8 +563,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
       sql(s"INSERT OVERWRITE LOCAL DIRECTORY '${path}' SELECT * FROM src where key < 10")
 
-      sql(
-        s"""
+      sql(s"""
            |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
            |STORED AS orc
            |SELECT * FROM src where key < 10
@@ -610,8 +571,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
 
       // use orc data source to check the data of path is right.
       withTempView("orc_source") {
-        sql(
-          s"""
+        sql(s"""
              |CREATE TEMPORARY VIEW orc_source
              |USING org.apache.spark.sql.hive.orc
              |OPTIONS (
@@ -619,9 +579,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
              |)
            """.stripMargin)
 
-        checkAnswer(
-          sql("select * from orc_source"),
-          sql("select * from src where key < 10"))
+        checkAnswer(sql("select * from orc_source"), sql("select * from src where key < 10"))
       }
     }
   }
@@ -633,24 +591,20 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       withTempDir { dir =>
         val path = dir.toURI.getPath
 
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
              |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
              |SELECT * FROM test_insert_table
            """.stripMargin)
 
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE LOCAL DIRECTORY '${path}'
              |STORED AS orc
              |SELECT * FROM test_insert_table
            """.stripMargin)
 
         // use orc data source to check the data of path is right.
-        checkAnswer(
-          spark.read.orc(dir.getCanonicalPath),
-          sql("select * from test_insert_table"))
+        checkAnswer(spark.read.orc(dir.getCanonicalPath), sql("select * from test_insert_table"))
       }
     }
   }
@@ -662,24 +616,20 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       withTempDir { dir =>
         val pathUri = dir.toURI
 
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE DIRECTORY '${pathUri}'
              |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
              |SELECT * FROM test_insert_table
            """.stripMargin)
 
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE DIRECTORY '${pathUri}'
              |STORED AS orc
              |SELECT * FROM test_insert_table
            """.stripMargin)
 
         // use orc data source to check the data of path is right.
-        checkAnswer(
-          spark.read.orc(dir.getCanonicalPath),
-          sql("select * from test_insert_table"))
+        checkAnswer(spark.read.orc(dir.getCanonicalPath), sql("select * from test_insert_table"))
       }
     }
   }
@@ -694,8 +644,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
         withTempDir { dir2 =>
           val pathUri2 = dir2.toURI
 
-          sql(
-            s"""
+          sql(s"""
                |FROM test_insert_table
                |INSERT OVERWRITE DIRECTORY '${pathUri}'
                |STORED AS orc
@@ -723,8 +672,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
 
       val e = intercept[IllegalArgumentException] {
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE LOCAL DIRECTORY 'abc://a'
              |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
              |SELECT * FROM test_insert_table
@@ -739,8 +687,8 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     withTempView("test_insert_table") {
       spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
       checkError(
-        exception = intercept[ParseException] { sql(
-          s"""INSERT OVERWRITE DIRECTORY 'file://tmp'
+        exception = intercept[ParseException] {
+          sql(s"""INSERT OVERWRITE DIRECTORY 'file://tmp'
              |USING json
              |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
              |SELECT * FROM test_insert_table""".stripMargin)
@@ -755,8 +703,7 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       spark.range(10).selectExpr("id", "id AS str").createOrReplaceTempView("test_insert_table")
       checkError(
         exception = intercept[ParseException] {
-          sql(
-            s"""INSERT OVERWRITE DIRECTORY 'file://tmp2'
+          sql(s"""INSERT OVERWRITE DIRECTORY 'file://tmp2'
                |USING json
                |ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
                |SELECT * FROM test_insert_table
@@ -770,7 +717,6 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     }
   }
 
-
   test("insert overwrite to dir from non-existent table") {
     withTempDir { dir =>
       val path = dir.toURI.getPath
@@ -778,9 +724,10 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       val e = intercept[AnalysisException] {
         sql(stmt)
       }
-      checkErrorTableNotFound(e, "`nonexistent`",
-        ExpectedContext("nonexistent", stmt.length - "nonexistent".length,
-          stmt.length - 1))
+      checkErrorTableNotFound(
+        e,
+        "`nonexistent`",
+        ExpectedContext("nonexistent", stmt.length - "nonexistent".length, stmt.length - 1))
     }
   }
 
@@ -789,14 +736,12 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
       withTable("tab1", "tab2") {
         Seq(("a", "b", 3)).toDF("word", "first", "length").write.saveAsTable("tab1")
 
-        spark.sql(
-          """
+        spark.sql("""
             |CREATE TABLE tab2 (word string, length int)
             |PARTITIONED BY (first string)
           """.stripMargin)
 
-        spark.sql(
-          """
+        spark.sql("""
             |INSERT INTO TABLE tab2 PARTITION(first)
             |SELECT word, length, cast(first as string) as first FROM tab1
           """.stripMargin)
@@ -816,17 +761,16 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     }
   }
 
-
   Seq("LOCAL", "").foreach { local =>
     Seq(true, false).foreach { caseSensitivity =>
       Seq("orc", "parquet").foreach { format =>
-        test(s"SPARK-25389 INSERT OVERWRITE $local DIRECTORY ... STORED AS with duplicated names" +
-          s"(caseSensitivity=$caseSensitivity, format=$format)") {
+        test(
+          s"SPARK-25389 INSERT OVERWRITE $local DIRECTORY ... STORED AS with duplicated names" +
+            s"(caseSensitivity=$caseSensitivity, format=$format)") {
           withTempDir { dir =>
             withSQLConf(SQLConf.CASE_SENSITIVE.key -> s"$caseSensitivity") {
               val e = intercept[AnalysisException] {
-                sql(
-                  s"""
+                sql(s"""
                      |INSERT OVERWRITE $local DIRECTORY '${dir.toURI}'
                      |STORED AS $format
                      |SELECT 'id', 'id2' ${if (caseSensitivity) "id" else "ID"}
@@ -851,41 +795,33 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
         Files.write(file.toPath, Hex.unhex(hex))
         val path = file.getParent
         sql(s"create table t1 (c string) STORED AS TEXTFILE location '$path'")
-        checkAnswer(
-          sql("select hex(c) from t1"),
-          Row(hex)
-        )
+        checkAnswer(sql("select hex(c) from t1"), Row(hex))
 
         sql("create table t2 as select c from t1")
-        checkAnswer(
-          sql("select hex(c) from t2"),
-          Row(hex)
-        )
+        checkAnswer(sql("select hex(c) from t2"), Row(hex))
       }
     }
   }
 
-  test("SPARK-32508 " +
-    "Disallow empty part col values in partition spec before static partition writing") {
+  test(
+    "SPARK-32508 " +
+      "Disallow empty part col values in partition spec before static partition writing") {
     withTable("t1") {
-      spark.sql(
-        """
+      spark.sql("""
           |CREATE TABLE t1 (c1 int)
           |PARTITIONED BY (d string)
           """.stripMargin)
 
       checkError(
         exception = intercept[AnalysisException] {
-          spark.sql(
-            """
+          spark.sql("""
               |INSERT OVERWRITE TABLE t1 PARTITION(d='')
               |SELECT 1
             """.stripMargin)
         },
         condition = "_LEGACY_ERROR_TEMP_1076",
-        parameters = Map(
-          "details" -> "The spec ([d=Some()]) contains an empty partition column value")
-      )
+        parameters =
+          Map("details" -> "The spec ([d=Some()]) contains an empty partition column value"))
     }
   }
 
@@ -942,11 +878,13 @@ class InsertSuite extends QueryTest with TestHiveSingleton with BeforeAndAfter
     withSQLConf(SQLConf.ENABLE_DEFAULT_COLUMNS.key -> "false") {
       testDefaultColumn
     }
-    withSQLConf(SQLConf.ENABLE_DEFAULT_COLUMNS.key -> "true",
+    withSQLConf(
+      SQLConf.ENABLE_DEFAULT_COLUMNS.key -> "true",
       SQLConf.USE_NULLS_FOR_MISSING_DEFAULT_COLUMN_VALUES.key -> "false") {
       testDefaultColumn
     }
-    withSQLConf(SQLConf.ENABLE_DEFAULT_COLUMNS.key -> "true",
+    withSQLConf(
+      SQLConf.ENABLE_DEFAULT_COLUMNS.key -> "true",
       SQLConf.USE_NULLS_FOR_MISSING_DEFAULT_COLUMN_VALUES.key -> "true") {
       testDefaultColumn
     }

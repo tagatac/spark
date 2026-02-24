@@ -37,12 +37,18 @@ import org.apache.spark.sql.types._
 /**
  * Spark's own SparkGetColumnsOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
- * @param catalogName catalog name. NULL if not applicable.
- * @param schemaName database name, NULL or a concrete database name
- * @param tableName table name
- * @param columnName column name
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
+ * @param catalogName
+ *   catalog name. NULL if not applicable.
+ * @param schemaName
+ *   database name, NULL or a concrete database name
+ * @param tableName
+ *   table name
+ * @param columnName
+ *   column name
  */
 private[hive] class SparkGetColumnsOperation(
     val session: SparkSession,
@@ -51,9 +57,9 @@ private[hive] class SparkGetColumnsOperation(
     schemaName: String,
     tableName: String,
     columnName: String)
-  extends GetColumnsOperation(parentSession, catalogName, schemaName, tableName, columnName)
-  with SparkOperation
-  with Logging {
+    extends GetColumnsOperation(parentSession, catalogName, schemaName, tableName, columnName)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     // Do not change cmdStr. It's used for Hive auditing and authorization.
@@ -62,11 +68,12 @@ private[hive] class SparkGetColumnsOperation(
 
     val catalogNameStr = if (catalogName == null) "null" else catalogName
     val schemaNameStr = if (schemaName == null) "null" else schemaName
-    logInfo(log"Listing columns 'catalog : ${MDC(CATALOG_NAME, catalogNameStr)}, " +
-      log"schemaPattern : ${MDC(DATABASE_NAME, schemaNameStr)}, " +
-      log"tablePattern : ${MDC(TABLE_NAME, tableName)}, " +
-      log"columnName : ${MDC(COLUMN_NAME, columnName)}' " +
-      log"with ${MDC(STATEMENT_ID, statementId)}")
+    logInfo(
+      log"Listing columns 'catalog : ${MDC(CATALOG_NAME, catalogNameStr)}, " +
+        log"schemaPattern : ${MDC(DATABASE_NAME, schemaNameStr)}, " +
+        log"tablePattern : ${MDC(TABLE_NAME, tableName)}, " +
+        log"columnName : ${MDC(COLUMN_NAME, columnName)}' " +
+        log"with ${MDC(STATEMENT_ID, statementId)}")
 
     setState(OperationState.RUNNING)
     HiveThriftServer2.eventManager.onStatementStart(
@@ -84,9 +91,12 @@ private[hive] class SparkGetColumnsOperation(
       columnPattern = Pattern.compile(convertIdentifierPattern(columnName, false))
     }
 
-    val db2Tabs = catalog.listDatabases(schemaPattern).map { dbName =>
-      (dbName, catalog.listTables(dbName, tablePattern, includeLocalTempViews = false))
-    }.toMap
+    val db2Tabs = catalog
+      .listDatabases(schemaPattern)
+      .map { dbName =>
+        (dbName, catalog.listTables(dbName, tablePattern, includeLocalTempViews = false))
+      }
+      .toMap
 
     if (isAuthV2Enabled) {
       val privObjs = getPrivObjs(db2Tabs).asJava
@@ -95,11 +105,10 @@ private[hive] class SparkGetColumnsOperation(
 
     try {
       // Tables and views
-      db2Tabs.foreach {
-        case (dbName, tables) =>
-          catalog.getTablesByName(tables).foreach { catalogTable =>
-            addToRowSet(columnPattern, dbName, catalogTable.identifier.table, catalogTable.schema)
-          }
+      db2Tabs.foreach { case (dbName, tables) =>
+        catalog.getTablesByName(tables).foreach { catalogTable =>
+          addToRowSet(columnPattern, dbName, catalogTable.identifier.table, catalogTable.schema)
+        }
       }
 
       // Global temporary views
@@ -107,16 +116,16 @@ private[hive] class SparkGetColumnsOperation(
       val databasePattern = Pattern.compile(CLIServiceUtils.patternToRegex(schemaName))
       if (databasePattern.matcher(globalTempViewDb).matches()) {
         catalog.globalTempViewManager.listViewNames(tablePattern).foreach { globalTempView =>
-          catalog.getRawGlobalTempView(globalTempView).map(_.tableMeta.schema).foreach {
-            schema => addToRowSet(columnPattern, globalTempViewDb, globalTempView, schema)
+          catalog.getRawGlobalTempView(globalTempView).map(_.tableMeta.schema).foreach { schema =>
+            addToRowSet(columnPattern, globalTempViewDb, globalTempView, schema)
           }
         }
       }
 
       // Temporary views
       catalog.listLocalTempViews(tablePattern).foreach { localTempView =>
-        catalog.getRawTempView(localTempView.table).map(_.tableMeta.schema).foreach {
-          schema => addToRowSet(columnPattern, null, localTempView.table, schema)
+        catalog.getRawTempView(localTempView.table).map(_.tableMeta.schema).foreach { schema =>
+          addToRowSet(columnPattern, null, localTempView.table, schema)
         }
       }
       setState(OperationState.FINISHED)
@@ -126,14 +135,14 @@ private[hive] class SparkGetColumnsOperation(
   }
 
   /**
-   * For boolean, numeric and datetime types, it returns the default size of its catalyst type
-   * For struct type, when its elements are fixed-size, the summation of all element sizes will be
-   * returned.
-   * For array, map, string, and binaries, the column size is variable, return null as unknown.
+   * For boolean, numeric and datetime types, it returns the default size of its catalyst type For
+   * struct type, when its elements are fixed-size, the summation of all element sizes will be
+   * returned. For array, map, string, and binaries, the column size is variable, return null as
+   * unknown.
    */
   private def getColumnSize(typ: DataType): Option[Int] = typ match {
     case dt @ (BooleanType | _: NumericType | DateType | TimestampType | TimestampNTZType |
-               CalendarIntervalType | NullType | _: AnsiIntervalType) =>
+        CalendarIntervalType | NullType | _: AnsiIntervalType) =>
       Some(dt.defaultSize)
     case c: CharType => Some(c.length)
     case StructType(fields) =>
@@ -147,12 +156,10 @@ private[hive] class SparkGetColumnsOperation(
   }
 
   /**
-   * The number of fractional digits for this type.
-   * Null is returned for data types where this is not applicable.
-   * For boolean and integrals, the decimal digits is 0
-   * For floating types, we follow the IEEE Standard for Floating-Point Arithmetic (IEEE 754)
-   * For timestamp values, we support microseconds
-   * For decimals, it returns the scale
+   * The number of fractional digits for this type. Null is returned for data types where this is
+   * not applicable. For boolean and integrals, the decimal digits is 0 For floating types, we
+   * follow the IEEE Standard for Floating-Point Arithmetic (IEEE 754) For timestamp values, we
+   * support microseconds For decimals, it returns the scale
    */
   private def getDecimalDigits(typ: DataType) = typ match {
     case BooleanType | _: IntegerType => Some(0)
@@ -199,8 +206,8 @@ private[hive] class SparkGetColumnsOperation(
       tableName: String,
       schema: StructType): Unit = {
     schema.zipWithIndex.foreach { case (column, pos) =>
-      if (columnPattern != null && !columnPattern.matcher(column.name).matches()) {
-      } else {
+      if (columnPattern != null && !columnPattern.matcher(column.name).matches()) {}
+      else {
         val ordinal = if (session.conf.get(HiveUtils.LEGACY_STS_ZERO_BASED_COLUMN_ORDINAL)) {
           pos
         } else {
@@ -236,9 +243,10 @@ private[hive] class SparkGetColumnsOperation(
     }
   }
 
-  private def getPrivObjs(db2Tabs: Map[String, Seq[TableIdentifier]]): Seq[HivePrivilegeObject] = {
-    db2Tabs.foldLeft(Seq.empty[HivePrivilegeObject])({
-      case (i, (dbName, tables)) => i ++ tables.map { tableId =>
+  private def getPrivObjs(
+      db2Tabs: Map[String, Seq[TableIdentifier]]): Seq[HivePrivilegeObject] = {
+    db2Tabs.foldLeft(Seq.empty[HivePrivilegeObject])({ case (i, (dbName, tables)) =>
+      i ++ tables.map { tableId =>
         new HivePrivilegeObject(HivePrivilegeObjectType.TABLE_OR_VIEW, dbName, tableId.table)
       }
     })

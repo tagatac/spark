@@ -23,16 +23,20 @@ import org.apache.spark.{SparkThrowable, SparkThrowableHelper}
 import org.apache.spark.annotation.Evolving
 
 /**
- * Exception that stopped a [[StreamingQuery]]. Use `cause` get the actual exception
- * that caused the failure.
- * @param message     Message of this exception
- * @param cause       Internal cause of this exception
- * @param startOffset Starting offset in json of the range of data in which exception occurred
- * @param endOffset   Ending offset in json of the range of data in exception occurred
+ * Exception that stopped a [[StreamingQuery]]. Use `cause` get the actual exception that caused
+ * the failure.
+ * @param message
+ *   Message of this exception
+ * @param cause
+ *   Internal cause of this exception
+ * @param startOffset
+ *   Starting offset in json of the range of data in which exception occurred
+ * @param endOffset
+ *   Ending offset in json of the range of data in exception occurred
  * @since 2.0.0
  */
 @Evolving
-class StreamingQueryException private[sql](
+class StreamingQueryException private[sql] (
     private val queryDebugString: String,
     val message: String,
     val cause: Throwable,
@@ -41,7 +45,8 @@ class StreamingQueryException private[sql](
     errorClass: String,
     messageParameters: Map[String, String],
     sqlState: Option[String] = None)
-  extends Exception(message, cause) with SparkThrowable {
+    extends Exception(message, cause)
+    with SparkThrowable {
 
   private[spark] def this(
       message: String,

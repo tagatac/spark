@@ -56,8 +56,8 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
   def render(request: HttpServletRequest): Seq[Node] = {
     val workerState = workerEndpoint.askSync[WorkerStateResponse](RequestWorkerState)
 
-    val executorHeaders = Seq("ExecutorID", "State", "Cores", "Memory", "Resources",
-      "Job Details", "Logs")
+    val executorHeaders =
+      Seq("ExecutorID", "State", "Cores", "Memory", "Resources", "Job Details", "Logs")
     val runningExecutors = workerState.executors
     val runningExecutorTable =
       UIUtils.listingTable(executorHeaders, executorRow, runningExecutors)
@@ -65,20 +65,24 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
     val finishedExecutorTable =
       UIUtils.listingTable(executorHeaders, executorRow, finishedExecutors)
 
-    val driverHeaders = Seq("DriverID", "Main Class", "State", "Cores", "Memory", "Resources",
-      "Logs", "Notes")
+    val driverHeaders =
+      Seq("DriverID", "Main Class", "State", "Cores", "Memory", "Resources", "Logs", "Notes")
     val runningDrivers = workerState.drivers.sortBy(_.driverId).reverse
-    val runningDriverTable = UIUtils.listingTable[DriverRunner](driverHeaders,
-      driverRow(workerState.workerId, _), runningDrivers)
+    val runningDriverTable = UIUtils.listingTable[DriverRunner](
+      driverHeaders,
+      driverRow(workerState.workerId, _),
+      runningDrivers)
     val finishedDrivers = workerState.finishedDrivers.sortBy(_.driverId).reverse
-    val finishedDriverTable = UIUtils.listingTable[DriverRunner](driverHeaders,
-      driverRow(workerState.workerId, _), finishedDrivers)
+    val finishedDriverTable = UIUtils.listingTable[DriverRunner](
+      driverHeaders,
+      driverRow(workerState.workerId, _),
+      finishedDrivers)
 
     // For now we only show driver information if the user has submitted drivers to the cluster.
     // This is until we integrate the notion of drivers and applications in the UI.
 
-    val workerUrlRef = UIUtils.makeHref(parent.worker.reverseProxy, workerState.workerId,
-      parent.webUrl)
+    val workerUrlRef =
+      UIUtils.makeHref(parent.worker.reverseProxy, workerState.workerId, parent.webUrl)
     val content =
       <div class="row"> <!-- Worker Details -->
         <div class="col-12">
@@ -112,8 +116,8 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
             {runningExecutorTable}
           </div>
           {
-            if (runningDrivers.nonEmpty) {
-              <span class="collapse-aggregated-runningDrivers collapse-table"
+        if (runningDrivers.nonEmpty) {
+          <span class="collapse-aggregated-runningDrivers collapse-table"
                   data-collapse-name="collapse-aggregated-runningDrivers"
                   data-collapse-table="aggregated-runningDrivers">
                 <h4>
@@ -121,14 +125,14 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
                   <a>Running Drivers ({runningDrivers.size})</a>
                 </h4>
               </span> ++
-              <div class="aggregated-runningDrivers collapsible-table">
+            <div class="aggregated-runningDrivers collapsible-table">
                 {runningDriverTable}
               </div>
-            }
-          }
+        }
+      }
           {
-            if (finishedExecutors.nonEmpty) {
-              <span class="collapse-aggregated-finishedExecutors collapse-table"
+        if (finishedExecutors.nonEmpty) {
+          <span class="collapse-aggregated-finishedExecutors collapse-table"
                   data-collapse-name="collapse-aggregated-finishedExecutors"
                   data-collapse-table="aggregated-finishedExecutors">
                 <h4>
@@ -136,14 +140,14 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
                   <a>Finished Executors ({finishedExecutors.size})</a>
                 </h4>
               </span> ++
-              <div class="aggregated-finishedExecutors collapsible-table">
+            <div class="aggregated-finishedExecutors collapsible-table">
                 {finishedExecutorTable}
               </div>
-            }
-          }
+        }
+      }
           {
-            if (finishedDrivers.nonEmpty) {
-              <span class="collapse-aggregated-finishedDrivers collapse-table"
+        if (finishedDrivers.nonEmpty) {
+          <span class="collapse-aggregated-finishedDrivers collapse-table"
                   data-collapse-name="collapse-aggregated-finishedDrivers"
                   data-collapse-table="aggregated-finishedDrivers">
                 <h4>
@@ -151,22 +155,24 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
                   <a>Finished Drivers ({finishedDrivers.size})</a>
                 </h4>
               </span> ++
-              <div class="aggregated-finishedDrivers collapsible-table">
+            <div class="aggregated-finishedDrivers collapsible-table">
                 {finishedDriverTable}
               </div>
-            }
-          }
+        }
+      }
         </div>
       </div>;
-    UIUtils.basicSparkPage(request, content, "Spark Worker at %s:%s".format(
-      workerState.host, workerState.port))
+    UIUtils.basicSparkPage(
+      request,
+      content,
+      "Spark Worker at %s:%s".format(workerState.host, workerState.port))
   }
 
   def executorRow(executor: ExecutorRunner): Seq[Node] = {
-    val workerUrlRef = UIUtils.makeHref(parent.worker.reverseProxy, executor.workerId,
-      parent.webUrl)
-    val appUrlRef = UIUtils.makeHref(parent.worker.reverseProxy, executor.appId,
-      executor.appDesc.appUiUrl)
+    val workerUrlRef =
+      UIUtils.makeHref(parent.worker.reverseProxy, executor.workerId, parent.webUrl)
+    val appUrlRef =
+      UIUtils.makeHref(parent.worker.reverseProxy, executor.appId, executor.appDesc.appUiUrl)
 
     <tr>
       <td>{executor.execId}</td>
@@ -181,21 +187,23 @@ private[ui] class WorkerPage(parent: WorkerWebUI) extends WebUIPage("") {
           <li><strong>ID:</strong> {executor.appId}</li>
           <li><strong>Name:</strong>
           {
-            if ({executor.state == ExecutorState.RUNNING} && executor.appDesc.appUiUrl.nonEmpty) {
-              <a href={appUrlRef}> {executor.appDesc.name}</a>
-            } else {
-              {executor.appDesc.name}
-            }
-          }
+      if ({ executor.state == ExecutorState.RUNNING } && executor.appDesc.appUiUrl.nonEmpty) {
+        <a href={appUrlRef}> {executor.appDesc.name}</a>
+      } else {
+        { executor.appDesc.name }
+      }
+    }
           </li>
           <li><strong>User:</strong> {executor.appDesc.user}</li>
         </ul>
       </td>
       <td>
-        <a href={s"$workerUrlRef/logPage/?appId=${executor
-          .appId}&executorId=${executor.execId}&logType=stdout"}>stdout</a>
-        <a href={s"$workerUrlRef/logPage/?appId=${executor
-          .appId}&executorId=${executor.execId}&logType=stderr"}>stderr</a>
+        <a href={
+      s"$workerUrlRef/logPage/?appId=${executor.appId}&executorId=${executor.execId}&logType=stdout"
+    }>stdout</a>
+        <a href={
+      s"$workerUrlRef/logPage/?appId=${executor.appId}&executorId=${executor.execId}&logType=stderr"
+    }>stderr</a>
       </td>
     </tr>
 

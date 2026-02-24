@@ -22,9 +22,9 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * A factory object that is used to construct [[PipelineEvent]]s with common fields
- * automatically filled in. Developers should always use this factory rather than construct
- * an event directly from an empty proto.
+ * A factory object that is used to construct [[PipelineEvent]]s with common fields automatically
+ * filled in. Developers should always use this factory rather than construct an event directly
+ * from an empty proto.
  */
 object ConstructPipelineEvent {
 
@@ -37,8 +37,7 @@ object ConstructPipelineEvent {
       message: String,
       details: EventDetails,
       exception: Option[Throwable] = None,
-      eventTimestamp: Option[Timestamp] = None
-  ): PipelineEvent = {
+      eventTimestamp: Option[Timestamp] = None): PipelineEvent = {
     val eventUUID = UUID.randomUUID()
     val timestamp = Timestamp.from(Instant.now())
 
@@ -49,7 +48,6 @@ object ConstructPipelineEvent {
       details = details,
       error = exception,
       origin = origin,
-      level = level
-    )
+      level = level)
   }
 }

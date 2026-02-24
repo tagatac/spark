@@ -44,7 +44,9 @@ class ExecutorPodsAllocator(
     executorBuilder: KubernetesExecutorBuilder,
     kubernetesClient: KubernetesClient,
     snapshotsStore: ExecutorPodsSnapshotsStore,
-    clock: Clock) extends AbstractPodsAllocator() with Logging {
+    clock: Clock)
+    extends AbstractPodsAllocator()
+    with Logging {
 
   protected val EXECUTOR_ID_COUNTER = new AtomicInteger(0)
 
@@ -77,16 +79,17 @@ class ExecutorPodsAllocator(
 
   // If maxPendingPodsPerRpid is set, ensure it's not greater than maxPendingPods
   if (maxPendingPodsPerRpid != Int.MaxValue) {
-    require(maxPendingPodsPerRpid <= maxPendingPods,
+    require(
+      maxPendingPodsPerRpid <= maxPendingPods,
       s"Maximum pending pods per resource profile ID ($maxPendingPodsPerRpid) must be less than " +
         s"or equal to maximum pending pods ($maxPendingPods).")
   }
 
-  protected val podCreationTimeout = math.max(
-    podAllocationDelay * 5,
-    conf.get(KUBERNETES_ALLOCATION_EXECUTOR_TIMEOUT))
+  protected val podCreationTimeout =
+    math.max(podAllocationDelay * 5, conf.get(KUBERNETES_ALLOCATION_EXECUTOR_TIMEOUT))
 
-  protected val driverPodReadinessTimeout = conf.get(KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT)
+  protected val driverPodReadinessTimeout =
+    conf.get(KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT)
 
   protected val executorIdleTimeout = conf.get(DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT) * 1000
 
@@ -98,13 +101,16 @@ class ExecutorPodsAllocator(
   protected val shouldDeleteExecutors = conf.get(KUBERNETES_DELETE_EXECUTORS)
 
   val driverPod = kubernetesDriverPodName
-    .map(name => Option(kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withName(name)
-      .get())
-      .getOrElse(throw new SparkException(
-        s"No pod was found named $name in the cluster in the " +
-          s"namespace $namespace (this was supposed to be the driver pod.).")))
+    .map(name =>
+      Option(
+        kubernetesClient
+          .pods()
+          .inNamespace(namespace)
+          .withName(name)
+          .get())
+        .getOrElse(
+          throw new SparkException(s"No pod was found named $name in the cluster in the " +
+            s"namespace $namespace (this was supposed to be the driver pod.).")))
 
   // Executor IDs that have been requested from Kubernetes but have not been detected in any
   // snapshot yet. Mapped to the (ResourceProfile id, timestamp) when they were created.
@@ -170,16 +176,20 @@ class ExecutorPodsAllocator(
     // Although we are going to delete some executors due to timeout in this function,
     // it takes undefined time before the actual deletion. Hence, we should collect all PVCs
     // in use at the beginning. False positive is okay in this context in order to be safe.
-    val k8sKnownPVCNames = snapshots.flatMap(_.executorPods.values.map(_.pod)).flatMap { pod =>
-      pod.getSpec.getVolumes.asScala
-        .flatMap { v => Option(v.getPersistentVolumeClaim).map(_.getClaimName) }
-    }.distinct
+    val k8sKnownPVCNames = snapshots
+      .flatMap(_.executorPods.values.map(_.pod))
+      .flatMap { pod =>
+        pod.getSpec.getVolumes.asScala
+          .flatMap { v => Option(v.getPersistentVolumeClaim).map(_.getClaimName) }
+      }
+      .distinct
 
     // transfer the scheduler backend known executor requests from the newlyCreatedExecutors
     // to the schedulerKnownNewlyCreatedExecs
     val schedulerKnownExecs = schedulerBackend.getExecutorIds().map(_.toLong).toSet
     schedulerKnownNewlyCreatedExecs ++=
-      newlyCreatedExecutors.filter { case (k, _) => schedulerKnownExecs.contains(k) }
+      newlyCreatedExecutors
+        .filter { case (k, _) => schedulerKnownExecs.contains(k) }
         .map { case (k, v) => (k, v._1) }
     newlyCreatedExecutors --= schedulerKnownNewlyCreatedExecs.keySet
 
@@ -194,8 +204,9 @@ class ExecutorPodsAllocator(
       if (currentTime - timeCreated > podCreationTimeout) {
         Some(execId)
       } else {
-        logDebug(s"Executor with id $execId was not found in the Kubernetes cluster since it" +
-          s" was created ${currentTime - timeCreated} milliseconds ago.")
+        logDebug(
+          s"Executor with id $execId was not found in the Kubernetes cluster since it" +
+            s" was created ${currentTime - timeCreated} milliseconds ago.")
         None
       }
     }
@@ -244,9 +255,10 @@ class ExecutorPodsAllocator(
         mutable.HashMap.empty ++= notDeletedPods
     } else {
       notDeletedPods.foreach { case (execId, execPodState) =>
-        val rpId = execPodState.pod.getMetadata.getLabels.get(SPARK_RESOURCE_PROFILE_ID_LABEL).toInt
-        val execPods = rpIdToExecsAndPodState.getOrElseUpdate(rpId,
-          mutable.HashMap[Long, ExecutorPodState]())
+        val rpId =
+          execPodState.pod.getMetadata.getLabels.get(SPARK_RESOURCE_PROFILE_ID_LABEL).toInt
+        val execPods =
+          rpIdToExecsAndPodState.getOrElseUpdate(rpId, mutable.HashMap[Long, ExecutorPodState]())
         execPods(execId) = execPodState
       }
     }
@@ -255,138 +267,152 @@ class ExecutorPodsAllocator(
     var totalPendingCount = 0
     // total not running pods (including scheduler known & unknown, pending & newly requested ones)
     var totalNotRunningPodCount = 0
-    val podsToAllocateWithRpId = totalExpectedExecutorsPerResourceProfileId
-      .asScala
-      .toSeq
+    val podsToAllocateWithRpId = totalExpectedExecutorsPerResourceProfileId.asScala.toSeq
       .sortBy(_._1)
       .flatMap { case (rpId, targetNum) =>
-      val podsForRpId = rpIdToExecsAndPodState.getOrElse(rpId, mutable.HashMap.empty)
+        val podsForRpId = rpIdToExecsAndPodState.getOrElse(rpId, mutable.HashMap.empty)
 
-      val currentRunningCount = podsForRpId.values.count {
-        case PodRunning(_) => true
-        case _ => false
-      }
-
-      val (schedulerKnownPendingExecsForRpId, currentPendingExecutorsForRpId) = podsForRpId.filter {
-        case (_, PodPending(_)) => true
-        case _ => false
-      }.partition { case (k, _) =>
-        schedulerKnownExecs.contains(k)
-      }
-      // This variable is used later to print some debug logs. It's updated when cleaning up
-      // excess pod requests, since currentPendingExecutorsForRpId is immutable.
-      var pendingCountForRpId = currentPendingExecutorsForRpId.size
-
-      val newlyCreatedExecutorsForRpId =
-        newlyCreatedExecutors.filter { case (_, (waitingRpId, _)) =>
-          rpId == waitingRpId
+        val currentRunningCount = podsForRpId.values.count {
+          case PodRunning(_) => true
+          case _ => false
         }
 
-      val schedulerKnownNewlyCreatedExecsForRpId =
-        schedulerKnownNewlyCreatedExecs.filter { case (_, waitingRpId) =>
-          rpId == waitingRpId
+        val (schedulerKnownPendingExecsForRpId, currentPendingExecutorsForRpId) = podsForRpId
+          .filter {
+            case (_, PodPending(_)) => true
+            case _ => false
+          }
+          .partition { case (k, _) =>
+            schedulerKnownExecs.contains(k)
+          }
+        // This variable is used later to print some debug logs. It's updated when cleaning up
+        // excess pod requests, since currentPendingExecutorsForRpId is immutable.
+        var pendingCountForRpId = currentPendingExecutorsForRpId.size
+
+        val newlyCreatedExecutorsForRpId =
+          newlyCreatedExecutors.filter { case (_, (waitingRpId, _)) =>
+            rpId == waitingRpId
+          }
+
+        val schedulerKnownNewlyCreatedExecsForRpId =
+          schedulerKnownNewlyCreatedExecs.filter { case (_, waitingRpId) =>
+            rpId == waitingRpId
+          }
+
+        if (podsForRpId.nonEmpty) {
+          logDebug(
+            s"ResourceProfile Id: $rpId (" +
+              s"pod allocation status: $currentRunningCount running, " +
+              s"${currentPendingExecutorsForRpId.size} unknown pending, " +
+              s"${schedulerKnownPendingExecsForRpId.size} scheduler backend known pending, " +
+              s"${newlyCreatedExecutorsForRpId.size} unknown newly created, " +
+              s"${schedulerKnownNewlyCreatedExecsForRpId.size} scheduler backend known newly created)")
         }
 
-      if (podsForRpId.nonEmpty) {
-        logDebug(s"ResourceProfile Id: $rpId (" +
-          s"pod allocation status: $currentRunningCount running, " +
-          s"${currentPendingExecutorsForRpId.size} unknown pending, " +
-          s"${schedulerKnownPendingExecsForRpId.size} scheduler backend known pending, " +
-          s"${newlyCreatedExecutorsForRpId.size} unknown newly created, " +
-          s"${schedulerKnownNewlyCreatedExecsForRpId.size} scheduler backend known newly created)")
-      }
+        // It's possible that we have outstanding pods that are outdated when dynamic allocation
+        // decides to downscale the application. So check if we can release any pending pods early
+        // instead of waiting for them to time out. Drop them first from the unacknowledged list,
+        // then from the pending. However, in order to prevent too frequent fluctuation, newly
+        // requested pods are protected during executorIdleTimeout period.
+        //
+        // TODO: with dynamic allocation off, handle edge cases if we end up with more running
+        // executors than expected.
+        var notRunningPodCountForRpId =
+          currentPendingExecutorsForRpId.size + schedulerKnownPendingExecsForRpId.size +
+            newlyCreatedExecutorsForRpId.size + schedulerKnownNewlyCreatedExecsForRpId.size
+        val podCountForRpId = currentRunningCount + notRunningPodCountForRpId
 
-      // It's possible that we have outstanding pods that are outdated when dynamic allocation
-      // decides to downscale the application. So check if we can release any pending pods early
-      // instead of waiting for them to time out. Drop them first from the unacknowledged list,
-      // then from the pending. However, in order to prevent too frequent fluctuation, newly
-      // requested pods are protected during executorIdleTimeout period.
-      //
-      // TODO: with dynamic allocation off, handle edge cases if we end up with more running
-      // executors than expected.
-      var notRunningPodCountForRpId =
-        currentPendingExecutorsForRpId.size + schedulerKnownPendingExecsForRpId.size +
-        newlyCreatedExecutorsForRpId.size + schedulerKnownNewlyCreatedExecsForRpId.size
-      val podCountForRpId = currentRunningCount + notRunningPodCountForRpId
+        if (podCountForRpId > targetNum) {
+          val excess = podCountForRpId - targetNum
+          val newlyCreatedToDelete = newlyCreatedExecutorsForRpId
+            .filter { case (_, (_, createTime)) =>
+              currentTime - createTime > executorIdleTimeout
+            }
+            .keys
+            .take(excess)
+            .toList
+          val pendingToDelete = currentPendingExecutorsForRpId
+            .filter(x => isExecutorIdleTimedOut(x._2, currentTime))
+            .take(excess - newlyCreatedToDelete.size)
+            .map { case (id, _) => id }
+          val toDelete = newlyCreatedToDelete ++ pendingToDelete
 
-      if (podCountForRpId > targetNum) {
-        val excess = podCountForRpId - targetNum
-        val newlyCreatedToDelete = newlyCreatedExecutorsForRpId
-          .filter { case (_, (_, createTime)) =>
-            currentTime - createTime > executorIdleTimeout
-          }.keys.take(excess).toList
-        val pendingToDelete = currentPendingExecutorsForRpId
-          .filter(x => isExecutorIdleTimedOut(x._2, currentTime))
-          .take(excess - newlyCreatedToDelete.size)
-          .map { case (id, _) => id }
-        val toDelete = newlyCreatedToDelete ++ pendingToDelete
+          if (toDelete.nonEmpty) {
+            logInfo(
+              log"Deleting ${MDC(LogKeys.COUNT, toDelete.size)} excess pod requests " +
+                log"(${MDC(LogKeys.RESOURCE_PROFILE_IDS, toDelete.mkString(","))}).")
+            _deletedExecutorIds = _deletedExecutorIds ++ toDelete
 
-        if (toDelete.nonEmpty) {
-          logInfo(log"Deleting ${MDC(LogKeys.COUNT, toDelete.size)} excess pod requests " +
-            log"(${MDC(LogKeys.RESOURCE_PROFILE_IDS, toDelete.mkString(","))}).")
-          _deletedExecutorIds = _deletedExecutorIds ++ toDelete
-
-          Utils.tryLogNonFatalError {
-            kubernetesClient
-              .pods()
-              .inNamespace(namespace)
-              .withField("status.phase", "Pending")
-              .withLabel(SPARK_APP_ID_LABEL, applicationId)
-              .withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-              .withLabelIn(SPARK_EXECUTOR_ID_LABEL, toDelete.sorted.map(_.toString): _*)
-              .delete()
-            newlyCreatedExecutors --= newlyCreatedToDelete
-            pendingCountForRpId -= pendingToDelete.size
-            notRunningPodCountForRpId -= toDelete.size
+            Utils.tryLogNonFatalError {
+              kubernetesClient
+                .pods()
+                .inNamespace(namespace)
+                .withField("status.phase", "Pending")
+                .withLabel(SPARK_APP_ID_LABEL, applicationId)
+                .withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+                .withLabelIn(SPARK_EXECUTOR_ID_LABEL, toDelete.sorted.map(_.toString): _*)
+                .delete()
+              newlyCreatedExecutors --= newlyCreatedToDelete
+              pendingCountForRpId -= pendingToDelete.size
+              notRunningPodCountForRpId -= toDelete.size
+            }
           }
         }
-      }
-      totalPendingCount += pendingCountForRpId
-      totalNotRunningPodCount += notRunningPodCountForRpId
+        totalPendingCount += pendingCountForRpId
+        totalNotRunningPodCount += notRunningPodCountForRpId
 
-      // The code below just prints debug messages, which are only useful when there's a change
-      // in the snapshot state. Since the messages are a little spammy, avoid them when we know
-      // there are no useful updates.
-      if (log.isDebugEnabled && snapshots.nonEmpty) {
-        if (currentRunningCount >= targetNum && !dynamicAllocationEnabled) {
-          logDebug(s"Current number of running executors for ResourceProfile Id $rpId is " +
-            "equal to the number of requested executors. Not scaling up further.")
+        // The code below just prints debug messages, which are only useful when there's a change
+        // in the snapshot state. Since the messages are a little spammy, avoid them when we know
+        // there are no useful updates.
+        if (log.isDebugEnabled && snapshots.nonEmpty) {
+          if (currentRunningCount >= targetNum && !dynamicAllocationEnabled) {
+            logDebug(
+              s"Current number of running executors for ResourceProfile Id $rpId is " +
+                "equal to the number of requested executors. Not scaling up further.")
+          } else {
+            if (newlyCreatedExecutorsForRpId.nonEmpty) {
+              logDebug(
+                s"Still waiting for ${newlyCreatedExecutorsForRpId.size} executors for " +
+                  s"ResourceProfile Id $rpId before requesting more.")
+            }
+          }
+        }
+        if (newlyCreatedExecutorsForRpId.isEmpty && podCountForRpId < targetNum) {
+          Some(rpId, podCountForRpId, targetNum, notRunningPodCountForRpId)
         } else {
-          if (newlyCreatedExecutorsForRpId.nonEmpty) {
-            logDebug(s"Still waiting for ${newlyCreatedExecutorsForRpId.size} executors for " +
-              s"ResourceProfile Id $rpId before requesting more.")
-          }
+          // for this resource profile we do not request more PODs
+          None
         }
       }
-      if (newlyCreatedExecutorsForRpId.isEmpty && podCountForRpId < targetNum) {
-        Some(rpId, podCountForRpId, targetNum, notRunningPodCountForRpId)
-      } else {
-        // for this resource profile we do not request more PODs
-        None
-      }
-    }
 
     // Try to request new executors only when there exist remaining slots within the maximum
     // number of pending pods and new snapshot arrives in case of waiting for releasing of the
     // existing PVCs
     val remainingSlotFromPendingPods = maxPendingPods - totalNotRunningPodCount
     if (remainingSlotFromPendingPods > 0 && podsToAllocateWithRpId.size > 0 &&
-        !(snapshots.isEmpty && podAllocOnPVC && maxPVCs <= PVC_COUNTER.get())) {
-      ExecutorPodsAllocator.splitSlots(podsToAllocateWithRpId, remainingSlotFromPendingPods)
-        .foreach { case ((rpId, podCountForRpId, targetNum, pendingPodCountForRpId),
-            sharedSlotFromPendingPods) =>
-        val remainingSlotsForRpId = maxPendingPodsPerRpid - pendingPodCountForRpId
-        val numMissingPodsForRpId = targetNum - podCountForRpId
-        val numExecutorsToAllocate = Seq(numMissingPodsForRpId, podAllocationSize,
-          sharedSlotFromPendingPods, remainingSlotsForRpId).min
+      !(snapshots.isEmpty && podAllocOnPVC && maxPVCs <= PVC_COUNTER.get())) {
+      ExecutorPodsAllocator
+        .splitSlots(podsToAllocateWithRpId, remainingSlotFromPendingPods)
+        .foreach {
+          case (
+                (rpId, podCountForRpId, targetNum, pendingPodCountForRpId),
+                sharedSlotFromPendingPods) =>
+            val remainingSlotsForRpId = maxPendingPodsPerRpid - pendingPodCountForRpId
+            val numMissingPodsForRpId = targetNum - podCountForRpId
+            val numExecutorsToAllocate = Seq(
+              numMissingPodsForRpId,
+              podAllocationSize,
+              sharedSlotFromPendingPods,
+              remainingSlotsForRpId).min
 
-        logInfo(log"Going to request ${MDC(LogKeys.COUNT, numExecutorsToAllocate)} executors from" +
-          log" Kubernetes for ResourceProfile Id: ${MDC(LogKeys.RESOURCE_PROFILE_ID, rpId)}, " +
-          log"target: ${MDC(LogKeys.NUM_POD_TARGET, targetNum)}, " +
-          log"known: ${MDC(LogKeys.NUM_POD, podCountForRpId)}, sharedSlotFromPendingPods: " +
-          log"${MDC(LogKeys.NUM_POD_SHARED_SLOT, sharedSlotFromPendingPods)}.")
-        requestNewExecutors(numExecutorsToAllocate, applicationId, rpId, k8sKnownPVCNames)
-      }
+            logInfo(
+              log"Going to request ${MDC(LogKeys.COUNT, numExecutorsToAllocate)} executors from" +
+                log" Kubernetes for ResourceProfile Id: ${MDC(LogKeys.RESOURCE_PROFILE_ID, rpId)}, " +
+                log"target: ${MDC(LogKeys.NUM_POD_TARGET, targetNum)}, " +
+                log"known: ${MDC(LogKeys.NUM_POD, podCountForRpId)}, sharedSlotFromPendingPods: " +
+                log"${MDC(LogKeys.NUM_POD_SHARED_SLOT, sharedSlotFromPendingPods)}.")
+            requestNewExecutors(numExecutorsToAllocate, applicationId, rpId, k8sKnownPVCNames)
+        }
     }
     deletedExecutorIds = _deletedExecutorIds
 
@@ -398,10 +424,9 @@ class ExecutorPodsAllocator(
 
   protected def getReusablePVCs(applicationId: String, pvcsInUse: Seq[String]) = {
     if (conf.get(KUBERNETES_DRIVER_OWN_PVC) && conf.get(KUBERNETES_DRIVER_REUSE_PVC) &&
-        driverPod.nonEmpty) {
+      driverPod.nonEmpty) {
       try {
-        val createdPVCs = kubernetesClient
-          .persistentVolumeClaims
+        val createdPVCs = kubernetesClient.persistentVolumeClaims
           .inNamespace(namespace)
           .withLabel("spark-app-selector", applicationId)
           .list()
@@ -411,10 +436,12 @@ class ExecutorPodsAllocator(
         val now = Instant.now().toEpochMilli
         val reusablePVCs = createdPVCs
           .filterNot(pvc => pvcsInUse.contains(pvc.getMetadata.getName))
-          .filter(pvc => now - Instant.parse(pvc.getMetadata.getCreationTimestamp).toEpochMilli
-            > podCreationTimeout)
-        logInfo(log"Found ${MDC(LogKeys.COUNT, reusablePVCs.size)} reusable PVCs from " +
-          log"${MDC(LogKeys.TOTAL, createdPVCs.size)} PVCs")
+          .filter(pvc =>
+            now - Instant.parse(pvc.getMetadata.getCreationTimestamp).toEpochMilli
+              > podCreationTimeout)
+        logInfo(
+          log"Found ${MDC(LogKeys.COUNT, reusablePVCs.size)} reusable PVCs from " +
+            log"${MDC(LogKeys.TOTAL, createdPVCs.size)} PVCs")
         reusablePVCs
       } catch {
         case _: KubernetesClientException =>
@@ -433,7 +460,7 @@ class ExecutorPodsAllocator(
       pvcsInUse: Seq[String]): Unit = {
     // Check reusable PVCs for this executor allocation batch
     val reusablePVCs = getReusablePVCs(applicationId, pvcsInUse)
-    for ( _ <- 0 until numExecutorsToAllocate) {
+    for (_ <- 0 until numExecutorsToAllocate) {
       if (reusablePVCs.isEmpty && podAllocOnPVC && maxPVCs <= PVC_COUNTER.get()) {
         logInfo(
           log"Wait to reuse one of the existing ${MDC(LogKeys.COUNT, PVC_COUNTER.get())} PVCs.")
@@ -449,8 +476,11 @@ class ExecutorPodsAllocator(
         applicationId,
         driverPod,
         resourceProfileId)
-      val resolvedExecutorSpec = executorBuilder.buildFromFeatures(executorConf, secMgr,
-        kubernetesClient, rpIdToResourceProfile(resourceProfileId))
+      val resolvedExecutorSpec = executorBuilder.buildFromFeatures(
+        executorConf,
+        secMgr,
+        kubernetesClient,
+        rpIdToResourceProfile(resourceProfileId))
       val executorPod = resolvedExecutorSpec.pod
       val podWithAttachedContainer = new PodBuilder(executorPod.pod)
         .editOrNewSpec()
@@ -458,7 +488,9 @@ class ExecutorPodsAllocator(
         .endSpec()
         .build()
       val resources = replacePVCsIfNeeded(
-        podWithAttachedContainer, resolvedExecutorSpec.executorKubernetesResources, reusablePVCs)
+        podWithAttachedContainer,
+        resolvedExecutorSpec.executorKubernetesResources,
+        reusablePVCs)
       val createdExecutorPod =
         kubernetesClient.pods().inNamespace(namespace).resource(podWithAttachedContainer).create()
       try {
@@ -470,17 +502,23 @@ class ExecutorPodsAllocator(
               addOwnerReference(driverPod.get, Seq(resource))
             }
             val pvc = resource.asInstanceOf[PersistentVolumeClaim]
-            logInfo(log"Trying to create PersistentVolumeClaim " +
-              log"${MDC(LogKeys.PVC_METADATA_NAME, pvc.getMetadata.getName)} with " +
-              log"StorageClass ${MDC(LogKeys.CLASS_NAME, pvc.getSpec.getStorageClassName)}")
-            kubernetesClient.persistentVolumeClaims().inNamespace(namespace).resource(pvc).create()
+            logInfo(
+              log"Trying to create PersistentVolumeClaim " +
+                log"${MDC(LogKeys.PVC_METADATA_NAME, pvc.getMetadata.getName)} with " +
+                log"StorageClass ${MDC(LogKeys.CLASS_NAME, pvc.getSpec.getStorageClassName)}")
+            kubernetesClient
+              .persistentVolumeClaims()
+              .inNamespace(namespace)
+              .resource(pvc)
+              .create()
             PVC_COUNTER.incrementAndGet()
           }
         newlyCreatedExecutors(newExecutorId) = (resourceProfileId, clock.getTimeMillis())
         logDebug(s"Requested executor with id $newExecutorId from Kubernetes.")
       } catch {
         case NonFatal(e) =>
-          kubernetesClient.pods()
+          kubernetesClient
+            .pods()
             .inNamespace(namespace)
             .resource(createdExecutorPod)
             .delete()
@@ -500,19 +538,21 @@ class ExecutorPodsAllocator(
         // Larger disks will be encountered when they have been expanded by an external actor.
         val index = reusablePVCs.indexWhere { p =>
           p.getSpec.getStorageClassName == pvc.getSpec.getStorageClassName &&
-          p.getSpec.getResources.getRequests.get("storage")
+          p.getSpec.getResources.getRequests
+            .get("storage")
             .compareTo(pvc.getSpec.getResources.getRequests.get("storage")) >= 0
         }
         if (index >= 0) {
           val volume = pod.getSpec.getVolumes.asScala.find { v =>
             v.getPersistentVolumeClaim != null &&
-              v.getPersistentVolumeClaim.getClaimName == pvc.getMetadata.getName
+            v.getPersistentVolumeClaim.getClaimName == pvc.getMetadata.getName
           }
           if (volume.nonEmpty) {
             val matchedPVC = reusablePVCs.remove(index)
             replacedResources.add(pvc)
-            logInfo(log"Reuse PersistentVolumeClaim " +
-              log"${MDC(LogKeys.PVC_METADATA_NAME, matchedPVC.getMetadata.getName)}")
+            logInfo(
+              log"Reuse PersistentVolumeClaim " +
+                log"${MDC(LogKeys.PVC_METADATA_NAME, matchedPVC.getMetadata.getName)}")
             volume.get.getPersistentVolumeClaim.setClaimName(matchedPVC.getMetadata.getName)
           }
         }
@@ -527,8 +567,10 @@ class ExecutorPodsAllocator(
       currentTime - creationTime > executorIdleTimeout
     } catch {
       case e: Exception =>
-        logError(log"Cannot get the creationTimestamp of the pod: " +
-          log"${MDC(LogKeys.POD_ID, state.pod)}", e)
+        logError(
+          log"Cannot get the creationTimestamp of the pod: " +
+            log"${MDC(LogKeys.POD_ID, state.pod)}",
+          e)
         true
     }
   }

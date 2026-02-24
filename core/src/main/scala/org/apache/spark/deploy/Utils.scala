@@ -37,19 +37,23 @@ private[deploy] object Utils extends Logging {
   val SUPPORTED_LOG_TYPES = Set("stderr", "stdout", "out")
 
   def addRenderLogHandler(page: WebUI, conf: SparkConf): Unit = {
-    page.attachHandler(createServletHandler("/log",
-      (request: HttpServletRequest) => renderLog(request, conf),
-      conf))
+    page.attachHandler(
+      createServletHandler(
+        "/log",
+        (request: HttpServletRequest) => renderLog(request, conf),
+        conf))
   }
 
   private def renderLog(request: HttpServletRequest, conf: SparkConf): String = {
     val logDir = sys.env.getOrElse("SPARK_LOG_DIR", "logs/")
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(DEFAULT_BYTES)
 
-    val (logText, startByte, endByte, logLength) = getLog(conf, logDir, logType, offset, byteLength)
+    val (logText, startByte, endByte, logLength) =
+      getLog(conf, logDir, logType, offset, byteLength)
     val pre = s"==== Bytes $startByte-$endByte of $logLength of $logDir$logType ====\n"
     pre + logText
   }
@@ -69,8 +73,11 @@ private[deploy] object Utils extends Logging {
       val fileName = if (logType.equals("out")) {
         val normalizedUri = new File(logDirectory).toURI.normalize()
         val normalizedLogDir = new File(normalizedUri.getPath)
-        normalizedLogDir.listFiles.map(_.getName).filter(_.endsWith(".out"))
-          .headOption.getOrElse(logType)
+        normalizedLogDir.listFiles
+          .map(_.getName)
+          .filter(_.endsWith(".out"))
+          .headOption
+          .getOrElse(logType)
       } else {
         logType
       }
@@ -96,8 +103,10 @@ private[deploy] object Utils extends Logging {
       (logText, startIndex, endIndex, totalLength)
     } catch {
       case e: Exception =>
-        logError(log"Error getting ${MDC(LOG_TYPE, logType)} logs from " +
-          log"directory ${MDC(PATH, logDirectory)}", e)
+        logError(
+          log"Error getting ${MDC(LOG_TYPE, logType)} logs from " +
+            log"directory ${MDC(PATH, logDirectory)}",
+          e)
         ("Error getting logs due to exception: " + e.getMessage, 0, 0, 0)
     }
   }

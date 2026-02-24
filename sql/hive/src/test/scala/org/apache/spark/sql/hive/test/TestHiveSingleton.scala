@@ -22,7 +22,6 @@ import org.apache.spark.sql.classic.SparkSession
 import org.apache.spark.sql.hive.HiveExternalCatalog
 import org.apache.spark.sql.hive.client.HiveClient
 
-
 trait TestHiveSingleton extends SparkFunSuite {
   override protected val enableAutoThreadAudit = false
   protected val spark: SparkSession = TestHive.sparkSession

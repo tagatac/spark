@@ -25,24 +25,23 @@ import org.apache.spark.ml.util.TestingUtils._
 import org.apache.spark.sql._
 
 object LDASuite {
-  def generateLDAData(
-      spark: SparkSession,
-      rows: Int,
-      k: Int,
-      vocabSize: Int): DataFrame = {
-    val avgWC = 1  // average instances of each word in a doc
+  def generateLDAData(spark: SparkSession, rows: Int, k: Int, vocabSize: Int): DataFrame = {
+    val avgWC = 1 // average instances of each word in a doc
     val sc = spark.sparkContext
-    val rdd = sc.parallelize(1 to rows).map { i =>
-      val rng = new java.util.Random(i)
-      Vectors.dense(Array.fill(vocabSize)(rng.nextInt(2 * avgWC).toDouble))
-    }.map(v => new TestRow(v))
+    val rdd = sc
+      .parallelize(1 to rows)
+      .map { i =>
+        val rng = new java.util.Random(i)
+        Vectors.dense(Array.fill(vocabSize)(rng.nextInt(2 * avgWC).toDouble))
+      }
+      .map(v => new TestRow(v))
     spark.createDataFrame(rdd)
   }
 
   /**
-   * Mapping from all Params to valid settings which differ from the defaults.
-   * This is useful for tests which need to exercise all Params, such as save/load.
-   * This excludes input columns to simplify some tests.
+   * Mapping from all Params to valid settings which differ from the defaults. This is useful for
+   * tests which need to exercise all Params, such as save/load. This excludes input columns to
+   * simplify some tests.
    */
   val allParamSettings: Map[String, Any] = Map(
     "k" -> 3,
@@ -51,10 +50,8 @@ object LDASuite {
     "learningOffset" -> 1023.0,
     "learningDecay" -> 0.52,
     "subsamplingRate" -> 0.051,
-    "docConcentration" -> Array(2.0)
-  )
+    "docConcentration" -> Array(2.0))
 }
-
 
 class LDASuite extends MLTest with DefaultReadWriteTest {
 
@@ -108,7 +105,6 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
     assert(lda.getK === 9)
     assert(lda.getTopicConcentration === 0.56)
     assert(lda.getTopicDistributionCol === "myOutput")
-
 
     // setOptimizer
     lda.setOptimizer("em")
@@ -185,11 +181,13 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
     assert(model.topicsMatrix.numCols === k)
     assert(!model.isDistributed)
 
-    testTransformer[Tuple1[Vector]](dataset.toDF(), model,
-      "features", lda.getTopicDistributionCol) {
-      case Row(_, topicDistribution: Vector) =>
-        assert(topicDistribution.size === k)
-        assert(topicDistribution.toArray.forall(w => w >= 0.0 && w <= 1.0))
+    testTransformer[Tuple1[Vector]](
+      dataset.toDF(),
+      model,
+      "features",
+      lda.getTopicDistributionCol) { case Row(_, topicDistribution: Vector) =>
+      assert(topicDistribution.size === k)
+      assert(topicDistribution.toArray.forall(w => w >= 0.0 && w <= 1.0))
     }
 
     // logLikelihood, logPerplexity
@@ -239,14 +237,20 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
   test("read/write LocalLDAModel") {
     def checkModelData(model: LDAModel, model2: LDAModel): Unit = {
       assert(model.vocabSize === model2.vocabSize)
-      assert(Vectors.dense(model.topicsMatrix.toArray) ~==
-        Vectors.dense(model2.topicsMatrix.toArray) absTol 1e-6)
-      assert(Vectors.dense(model.getDocConcentration) ~==
-        Vectors.dense(model2.getDocConcentration) absTol 1e-6)
+      assert(
+        Vectors.dense(model.topicsMatrix.toArray) ~==
+          Vectors.dense(model2.topicsMatrix.toArray) absTol 1e-6)
+      assert(
+        Vectors.dense(model.getDocConcentration) ~==
+          Vectors.dense(model2.getDocConcentration) absTol 1e-6)
     }
     val lda = new LDA()
-    testEstimatorAndModelReadWrite(lda, dataset, LDASuite.allParamSettings,
-      LDASuite.allParamSettings, checkModelData)
+    testEstimatorAndModelReadWrite(
+      lda,
+      dataset,
+      LDASuite.allParamSettings,
+      LDASuite.allParamSettings,
+      checkModelData)
 
     // Make sure the result is deterministic after saving and loading the model
     val model = lda.fit(dataset)
@@ -258,10 +262,12 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
   test("read/write DistributedLDAModel") {
     def checkModelData(model: LDAModel, model2: LDAModel): Unit = {
       assert(model.vocabSize === model2.vocabSize)
-      assert(Vectors.dense(model.topicsMatrix.toArray) ~==
-        Vectors.dense(model2.topicsMatrix.toArray) absTol 1e-6)
-      assert(Vectors.dense(model.getDocConcentration) ~==
-        Vectors.dense(model2.getDocConcentration) absTol 1e-6)
+      assert(
+        Vectors.dense(model.topicsMatrix.toArray) ~==
+          Vectors.dense(model2.topicsMatrix.toArray) absTol 1e-6)
+      assert(
+        Vectors.dense(model.getDocConcentration) ~==
+          Vectors.dense(model2.getDocConcentration) absTol 1e-6)
       val logPrior = model.asInstanceOf[DistributedLDAModel].logPrior
       val logPrior2 = model2.asInstanceOf[DistributedLDAModel].logPrior
       val trainingLogLikelihood =
@@ -272,14 +278,18 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
       assert(trainingLogLikelihood ~== trainingLogLikelihood2 absTol 1e-6)
     }
     val lda = new LDA()
-    testEstimatorAndModelReadWrite(lda, dataset,
+    testEstimatorAndModelReadWrite(
+      lda,
+      dataset,
       LDASuite.allParamSettings ++ Map("optimizer" -> "em"),
-      LDASuite.allParamSettings ++ Map("optimizer" -> "em"), checkModelData)
+      LDASuite.allParamSettings ++ Map("optimizer" -> "em"),
+      checkModelData)
   }
 
   test("EM LDA checkpointing: save last checkpoint") {
     // Checkpoint dir is set by MLlibTestSparkContext
-    val lda = new LDA().setK(2).setSeed(1).setOptimizer("em").setMaxIter(3).setCheckpointInterval(1)
+    val lda =
+      new LDA().setK(2).setSeed(1).setOptimizer("em").setMaxIter(3).setCheckpointInterval(1)
     val model_ = lda.fit(dataset)
     assert(model_.isInstanceOf[DistributedLDAModel])
     val model = model_.asInstanceOf[DistributedLDAModel]
@@ -295,7 +305,12 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
 
   test("EM LDA checkpointing: remove last checkpoint") {
     // Checkpoint dir is set by MLlibTestSparkContext
-    val lda = new LDA().setK(2).setSeed(1).setOptimizer("em").setMaxIter(3).setCheckpointInterval(1)
+    val lda = new LDA()
+      .setK(2)
+      .setSeed(1)
+      .setOptimizer("em")
+      .setMaxIter(3)
+      .setCheckpointInterval(1)
       .setKeepLastCheckpoint(false)
     val model_ = lda.fit(dataset)
     assert(model_.isInstanceOf[DistributedLDAModel])
@@ -306,7 +321,11 @@ class LDASuite extends MLTest with DefaultReadWriteTest {
 
   test("EM LDA disable checkpointing") {
     // Checkpoint dir is set by MLlibTestSparkContext
-    val lda = new LDA().setK(2).setSeed(1).setOptimizer("em").setMaxIter(3)
+    val lda = new LDA()
+      .setK(2)
+      .setSeed(1)
+      .setOptimizer("em")
+      .setMaxIter(3)
       .setCheckpointInterval(-1)
     val model_ = lda.fit(dataset)
     assert(model_.isInstanceOf[DistributedLDAModel])

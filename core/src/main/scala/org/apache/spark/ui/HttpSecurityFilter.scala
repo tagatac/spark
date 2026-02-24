@@ -29,20 +29,18 @@ import org.apache.spark.{SecurityManager, SparkConf}
 import org.apache.spark.internal.config.UI._
 
 /**
- * A servlet filter that implements HTTP security features. The following actions are taken
- * for every request:
+ * A servlet filter that implements HTTP security features. The following actions are taken for
+ * every request:
  *
- * - perform access control of authenticated requests.
- * - check request data for disallowed content (e.g. things that could be used to create XSS
- *   attacks).
- * - set response headers to prevent certain kinds of attacks.
+ *   - perform access control of authenticated requests.
+ *   - check request data for disallowed content (e.g. things that could be used to create XSS
+ *     attacks).
+ *   - set response headers to prevent certain kinds of attacks.
  *
  * Request parameters are sanitized so that HTML content is escaped, and disallowed content is
  * removed.
  */
-private class HttpSecurityFilter(
-    conf: SparkConf,
-    securityMgr: SecurityManager) extends Filter {
+private class HttpSecurityFilter(conf: SparkConf, securityMgr: SecurityManager) extends Filter {
 
   override def doFilter(req: ServletRequest, res: ServletResponse, chain: FilterChain): Unit = {
     val hreq = req.asInstanceOf[HttpServletRequest]
@@ -51,10 +49,11 @@ private class HttpSecurityFilter(
 
     val cspNonce = CspNonce.generate()
     try {
-      hres.setHeader("Content-Security-Policy",
+      hres.setHeader(
+        "Content-Security-Policy",
         s"default-src 'self'; script-src 'self' 'nonce-$cspNonce'; " +
-        s"style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
-        s"object-src 'none'; base-uri 'self';")
+          s"style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+          s"object-src 'none'; base-uri 'self';")
 
       val requestUser = hreq.getRemoteUser()
 
@@ -63,7 +62,8 @@ private class HttpSecurityFilter(
       val effectiveUser = Option(hreq.getParameter("doAs"))
         .map { proxy =>
           if (requestUser != proxy && !securityMgr.checkAdminPermissions(requestUser)) {
-            hres.sendError(HttpServletResponse.SC_FORBIDDEN,
+            hres.sendError(
+              HttpServletResponse.SC_FORBIDDEN,
               s"User $requestUser is not allowed to impersonate others.")
             return
           }
@@ -72,7 +72,8 @@ private class HttpSecurityFilter(
         .getOrElse(requestUser)
 
       if (!securityMgr.checkUIViewPermissions(effectiveUser)) {
-        hres.sendError(HttpServletResponse.SC_FORBIDDEN,
+        hres.sendError(
+          HttpServletResponse.SC_FORBIDDEN,
           s"User $effectiveUser is not authorized to access this page.")
         return
       }
@@ -81,7 +82,8 @@ private class HttpSecurityFilter(
       // (see http://tools.ietf.org/html/rfc7034). By default allow framing only from the
       // same origin, but allow framing for a specific named URI.
       // Example: spark.ui.allowFramingFrom = https://example.com/
-      val xFrameOptionsValue = conf.getOption("spark.ui.allowFramingFrom")
+      val xFrameOptionsValue = conf
+        .getOption("spark.ui.allowFramingFrom")
         .map { uri => s"ALLOW-FROM $uri" }
         .getOrElse("SAMEORIGIN")
 
@@ -91,8 +93,9 @@ private class HttpSecurityFilter(
         hres.setHeader("X-Content-Type-Options", "nosniff")
       }
       if (hreq.getScheme() == "https") {
-        conf.get(UI_STRICT_TRANSPORT_SECURITY).foreach(
-          hres.setHeader("Strict-Transport-Security", _))
+        conf
+          .get(UI_STRICT_TRANSPORT_SECURITY)
+          .foreach(hres.setHeader("Strict-Transport-Security", _))
       }
 
       chain.doFilter(new XssSafeRequest(hreq, effectiveUser), res)
@@ -104,14 +107,18 @@ private class HttpSecurityFilter(
 }
 
 private class XssSafeRequest(req: HttpServletRequest, effectiveUser: String)
-  extends HttpServletRequestWrapper(req) {
+    extends HttpServletRequestWrapper(req) {
 
   private val NEWLINE_AND_SINGLE_QUOTE_REGEX = raw"(?i)(\r\n|\n|\r|%0D%0A|%0A|%0D|'|%27)".r
 
   private val parameterMap: Map[String, Array[String]] = {
-    super.getParameterMap().asScala.map { case (name, values) =>
-      stripXSS(name) -> values.map(stripXSS)
-    }.toMap
+    super
+      .getParameterMap()
+      .asScala
+      .map { case (name, values) =>
+        stripXSS(name) -> values.map(stripXSS)
+      }
+      .toMap
   }
 
   override def getRemoteUser(): String = effectiveUser

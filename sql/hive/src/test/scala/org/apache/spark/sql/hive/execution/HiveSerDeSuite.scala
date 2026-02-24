@@ -49,9 +49,7 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
   // table sales is not a cache table, and will be clear after reset
   createQueryTest("Read with RegexSerDe", "SELECT * FROM sales", false)
 
-  createQueryTest(
-    "Read and write with LazySimpleSerDe (tab separated)",
-    "SELECT * from serdeins")
+  createQueryTest("Read and write with LazySimpleSerDe (tab separated)", "SELECT * from serdeins")
 
   createQueryTest("Read with AvroSerDe", "SELECT * FROM episodes")
 
@@ -70,15 +68,21 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
   }
 
   private def extractTableDesc(sql: String): (CatalogTable, Boolean) = {
-    TestHive.sessionState.analyzer.execute(TestHive.sessionState.sqlParser.parsePlan(sql)).collect {
-      case CreateTableCommand(tableDesc, ifNotExists) => (tableDesc, ifNotExists)
-    }.head
+    TestHive.sessionState.analyzer
+      .execute(TestHive.sessionState.sqlParser.parsePlan(sql))
+      .collect { case CreateTableCommand(tableDesc, ifNotExists) =>
+        (tableDesc, ifNotExists)
+      }
+      .head
   }
 
   private def analyzeCreateTable(sql: String): CatalogTable = {
-    TestHive.sessionState.analyzer.execute(TestHive.sessionState.sqlParser.parsePlan(sql)).collect {
-      case CreateTableCommand(tableDesc, _) => tableDesc
-    }.head
+    TestHive.sessionState.analyzer
+      .execute(TestHive.sessionState.sqlParser.parsePlan(sql))
+      .collect { case CreateTableCommand(tableDesc, _) =>
+        tableDesc
+      }
+      .head
   }
 
   // Make sure we set the config values to TestHive.conf.
@@ -87,17 +91,18 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
 
   test("Test the default fileformat for Hive-serde tables") {
     withSQLConf("hive.default.fileformat" -> "orc") {
-      val (desc, exists) = extractTableDesc(
-        "CREATE TABLE IF NOT EXISTS fileformat_test (id int) USING hive")
+      val (desc, exists) =
+        extractTableDesc("CREATE TABLE IF NOT EXISTS fileformat_test (id int) USING hive")
       assert(exists)
       assert(desc.storage.inputFormat == Some("org.apache.hadoop.hive.ql.io.orc.OrcInputFormat"))
-      assert(desc.storage.outputFormat == Some("org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat"))
+      assert(
+        desc.storage.outputFormat == Some("org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat"))
       assert(desc.storage.serde == Some("org.apache.hadoop.hive.ql.io.orc.OrcSerde"))
     }
 
     withSQLConf("hive.default.fileformat" -> "parquet") {
-      val (desc, exists) = extractTableDesc(
-        "CREATE TABLE IF NOT EXISTS fileformat_test (id int) USING hive")
+      val (desc, exists) =
+        extractTableDesc("CREATE TABLE IF NOT EXISTS fileformat_test (id int) USING hive")
       assert(exists)
       val input = desc.storage.inputFormat
       val output = desc.storage.outputFormat
@@ -108,12 +113,13 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
     }
 
     withSQLConf("hive.default.fileformat" -> "orc") {
-      val (desc, exists) = extractTableDesc(
-        "CREATE TABLE IF NOT EXISTS fileformat_test (id int) STORED AS textfile")
+      val (desc, exists) =
+        extractTableDesc("CREATE TABLE IF NOT EXISTS fileformat_test (id int) STORED AS textfile")
       assert(exists)
       assert(desc.storage.inputFormat == Some("org.apache.hadoop.mapred.TextInputFormat"))
-      assert(desc.storage.outputFormat ==
-        Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"))
+      assert(
+        desc.storage.outputFormat ==
+          Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"))
       assert(desc.storage.serde == Some("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"))
     }
 
@@ -122,7 +128,8 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
         "CREATE TABLE IF NOT EXISTS fileformat_test (id int) STORED AS sequencefile")
       assert(exists)
       assert(desc.storage.inputFormat == Some("org.apache.hadoop.mapred.SequenceFileInputFormat"))
-      assert(desc.storage.outputFormat == Some("org.apache.hadoop.mapred.SequenceFileOutputFormat"))
+      assert(
+        desc.storage.outputFormat == Some("org.apache.hadoop.mapred.SequenceFileOutputFormat"))
       assert(desc.storage.serde == Some("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"))
     }
   }
@@ -139,20 +146,24 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
       """.stripMargin
 
     val table = analyzeCreateTable(sql)
-    assert(table.schema == new StructType()
-      .add("id", "int")
-      .add("name", "string", nullable = true, comment = "blabla"))
+    assert(
+      table.schema == new StructType()
+        .add("id", "int")
+        .add("name", "string", nullable = true, comment = "blabla"))
     assert(table.provider == Some(DDLUtils.HIVE_PROVIDER))
     assert(table.storage.locationUri == Some(new URI("file:///tmp/file")))
     assert(table.storage.properties == Map("my_prop" -> "1"))
     assert(table.comment == Some("BLABLA"))
 
-    assert(table.storage.inputFormat ==
-      Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"))
-    assert(table.storage.outputFormat ==
-      Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"))
-    assert(table.storage.serde ==
-      Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))
+    assert(
+      table.storage.inputFormat ==
+        Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat"))
+    assert(
+      table.storage.outputFormat ==
+        Some("org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat"))
+    assert(
+      table.storage.serde ==
+        Some("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))
   }
 
   test("create hive serde table with new syntax - with partition and bucketing") {
@@ -163,8 +174,9 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
     // check the default formats
     assert(table.storage.serde == Some("org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe"))
     assert(table.storage.inputFormat == Some("org.apache.hadoop.mapred.TextInputFormat"))
-    assert(table.storage.outputFormat ==
-      Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"))
+    assert(
+      table.storage.outputFormat ==
+        Some("org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat"))
 
     val v2 = "CREATE TABLE t (c1 int, c2 int) USING hive CLUSTERED BY (c2) INTO 4 BUCKETS"
     val e2 = intercept[AnalysisException](analyzeCreateTable(v2))
@@ -187,8 +199,8 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
     val v2 = "CREATE TABLE t (c1 int) USING hive OPTIONS " +
       "(fileFormat 'x', inputFormat 'a', outputFormat 'b')"
     val e2 = intercept[IllegalArgumentException](analyzeCreateTable(v2))
-    assert(e2.getMessage.contains(
-      "Cannot specify fileFormat and inputFormat/outputFormat together"))
+    assert(
+      e2.getMessage.contains("Cannot specify fileFormat and inputFormat/outputFormat together"))
 
     val v3 = "CREATE TABLE t (c1 int) USING hive OPTIONS (fileFormat 'parquet', serde 'a')"
     val e3 = intercept[IllegalArgumentException](analyzeCreateTable(v3))
@@ -204,34 +216,37 @@ class HiveSerDeSuite extends HiveComparisonTest with PlanTest {
 
     val v6 = "CREATE TABLE t (c1 int) USING hive OPTIONS (fileFormat 'parquet', fieldDelim ' ')"
     val e6 = intercept[IllegalArgumentException](analyzeCreateTable(v6))
-    assert(e6.getMessage.contains(
-      "Cannot specify delimiters as they are only compatible with fileFormat 'textfile'"))
+    assert(
+      e6.getMessage.contains(
+        "Cannot specify delimiters as they are only compatible with fileFormat 'textfile'"))
 
     // The value of 'fileFormat' option is case-insensitive.
     val v7 = "CREATE TABLE t (c1 int) USING hive OPTIONS (fileFormat 'TEXTFILE', lineDelim ',')"
     val e7 = intercept[IllegalArgumentException](analyzeCreateTable(v7))
-    assert(e7.getMessage.contains("Hive data source only support newline '\\n' as line delimiter"))
+    assert(
+      e7.getMessage.contains("Hive data source only support newline '\\n' as line delimiter"))
 
     val v8 = "CREATE TABLE t (c1 int) USING hive OPTIONS (fileFormat 'wrong')"
     val e8 = intercept[IllegalArgumentException](analyzeCreateTable(v8))
     assert(e8.getMessage.contains("invalid fileFormat: 'wrong'"))
   }
 
-  test("SPARK-27555: fall back to hive-site.xml if hive.default.fileformat " +
-    "is not found in SQLConf ") {
+  test(
+    "SPARK-27555: fall back to hive-site.xml if hive.default.fileformat " +
+      "is not found in SQLConf ") {
     val testSession = SparkSession.getActiveSession.get
     try {
       testSession.sparkContext.hadoopConfiguration.set("hive.default.fileformat", "parquetfile")
       val sqlConf = new SQLConf()
       var storageFormat = HiveSerDe.getDefaultStorage(sqlConf)
-      assert(storageFormat.serde.
-        contains("org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))
+      assert(
+        storageFormat.serde.contains(
+          "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe"))
       // should take orc as it is present in sqlConf
       sqlConf.setConfString("hive.default.fileformat", "orc")
       storageFormat = HiveSerDe.getDefaultStorage(sqlConf)
       assert(storageFormat.serde.contains("org.apache.hadoop.hive.ql.io.orc.OrcSerde"))
-    }
-    finally {
+    } finally {
       testSession.sparkContext.hadoopConfiguration.unset("hive.default.fileformat")
     }
   }

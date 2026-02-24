@@ -34,12 +34,12 @@ import org.apache.spark.internal.config._
 import org.apache.spark.util.Utils
 
 /**
- * :: DeveloperApi ::
- * CompressionCodec allows the customization of choosing different compression implementations
- * to be used in block storage.
+ * :: DeveloperApi :: CompressionCodec allows the customization of choosing different compression
+ * implementations to be used in block storage.
  *
- * @note The wire protocol for a codec is not guaranteed compatible across versions of Spark.
- * This is intended for use as an internal compression utility within a single Spark application.
+ * @note
+ *   The wire protocol for a codec is not guaranteed compatible across versions of Spark. This is
+ *   intended for use as an internal compression utility within a single Spark application.
  */
 @DeveloperApi
 trait CompressionCodec {
@@ -59,9 +59,10 @@ trait CompressionCodec {
 
 private[spark] object CompressionCodec {
 
-  private[spark] def supportsConcatenationOfSerializedStreams(codec: CompressionCodec): Boolean = {
+  private[spark] def supportsConcatenationOfSerializedStreams(
+      codec: CompressionCodec): Boolean = {
     (codec.isInstanceOf[SnappyCompressionCodec] || codec.isInstanceOf[LZFCompressionCodec]
-      || codec.isInstanceOf[LZ4CompressionCodec] || codec.isInstanceOf[ZStdCompressionCodec])
+    || codec.isInstanceOf[LZ4CompressionCodec] || codec.isInstanceOf[ZStdCompressionCodec])
   }
 
   val LZ4 = "lz4"
@@ -86,19 +87,20 @@ private[spark] object CompressionCodec {
   def createCodec(conf: SparkConf, codecName: String): CompressionCodec = {
     val codecClass =
       shortCompressionCodecNames.getOrElse(codecName.toLowerCase(Locale.ROOT), codecName)
-    val codec = try {
-      val ctor =
-        Utils.classForName[CompressionCodec](codecClass).getConstructor(classOf[SparkConf])
-      Some(ctor.newInstance(conf))
-    } catch {
-      case _: ClassNotFoundException | _: IllegalArgumentException => None
-    }
+    val codec =
+      try {
+        val ctor =
+          Utils.classForName[CompressionCodec](codecClass).getConstructor(classOf[SparkConf])
+        Some(ctor.newInstance(conf))
+      } catch {
+        case _: ClassNotFoundException | _: IllegalArgumentException => None
+      }
     codec.getOrElse(throw SparkCoreErrors.codecNotAvailableError(codecName))
   }
 
   /**
-   * Return the short version of the given codec name.
-   * If it is already a short name, just return it.
+   * Return the short version of the given codec name. If it is already a short name, just return
+   * it.
    */
   def getShortName(codecName: String): String = {
     val lowercasedCodec = codecName.toLowerCase(Locale.ROOT)
@@ -107,9 +109,11 @@ private[spark] object CompressionCodec {
     } else {
       shortCompressionCodecNames
         .collectFirst { case (k, v) if v == codecName => k }
-        .getOrElse { throw new SparkIllegalArgumentException(
-          errorClass = "CODEC_SHORT_NAME_NOT_FOUND",
-          messageParameters = Map("codecName" -> codecName))}
+        .getOrElse {
+          throw new SparkIllegalArgumentException(
+            errorClass = "CODEC_SHORT_NAME_NOT_FOUND",
+            messageParameters = Map("codecName" -> codecName))
+        }
     }
   }
 
@@ -118,13 +122,13 @@ private[spark] object CompressionCodec {
 }
 
 /**
- * :: DeveloperApi ::
- * LZ4 implementation of [[org.apache.spark.io.CompressionCodec]].
- * Block size can be configured by `spark.io.compression.lz4.blockSize`.
+ * :: DeveloperApi :: LZ4 implementation of [[org.apache.spark.io.CompressionCodec]]. Block size
+ * can be configured by `spark.io.compression.lz4.blockSize`.
  *
- * @note The wire protocol for this codec is not guaranteed to be compatible across versions
- * of Spark. This is intended for use as an internal compression utility within a single Spark
- * application.
+ * @note
+ *   The wire protocol for this codec is not guaranteed to be compatible across versions of Spark.
+ *   This is intended for use as an internal compression utility within a single Spark
+ *   application.
  */
 @DeveloperApi
 class LZ4CompressionCodec(conf: SparkConf) extends CompressionCodec {
@@ -161,14 +165,13 @@ class LZ4CompressionCodec(conf: SparkConf) extends CompressionCodec {
   }
 }
 
-
 /**
- * :: DeveloperApi ::
- * LZF implementation of [[org.apache.spark.io.CompressionCodec]].
+ * :: DeveloperApi :: LZF implementation of [[org.apache.spark.io.CompressionCodec]].
  *
- * @note The wire protocol for this codec is not guaranteed to be compatible across versions
- * of Spark. This is intended for use as an internal compression utility within a single Spark
- * application.
+ * @note
+ *   The wire protocol for this codec is not guaranteed to be compatible across versions of Spark.
+ *   This is intended for use as an internal compression utility within a single Spark
+ *   application.
  */
 @DeveloperApi
 class LZFCompressionCodec(conf: SparkConf) extends CompressionCodec {
@@ -185,15 +188,14 @@ class LZFCompressionCodec(conf: SparkConf) extends CompressionCodec {
   override def compressedInputStream(s: InputStream): InputStream = new LZFInputStream(s)
 }
 
-
 /**
- * :: DeveloperApi ::
- * Snappy implementation of [[org.apache.spark.io.CompressionCodec]].
- * Block size can be configured by `spark.io.compression.snappy.blockSize`.
+ * :: DeveloperApi :: Snappy implementation of [[org.apache.spark.io.CompressionCodec]]. Block
+ * size can be configured by `spark.io.compression.snappy.blockSize`.
  *
- * @note The wire protocol for this codec is not guaranteed to be compatible across versions
- * of Spark. This is intended for use as an internal compression utility within a single Spark
- * application.
+ * @note
+ *   The wire protocol for this codec is not guaranteed to be compatible across versions of Spark.
+ *   This is intended for use as an internal compression utility within a single Spark
+ *   application.
  */
 @DeveloperApi
 class SnappyCompressionCodec(conf: SparkConf) extends CompressionCodec {
@@ -213,13 +215,13 @@ class SnappyCompressionCodec(conf: SparkConf) extends CompressionCodec {
 }
 
 /**
- * :: DeveloperApi ::
- * ZStandard implementation of [[org.apache.spark.io.CompressionCodec]]. For more
- * details see - http://facebook.github.io/zstd/
+ * :: DeveloperApi :: ZStandard implementation of [[org.apache.spark.io.CompressionCodec]]. For
+ * more details see - http://facebook.github.io/zstd/
  *
- * @note The wire protocol for this codec is not guaranteed to be compatible across versions
- * of Spark. This is intended for use as an internal compression utility within a single Spark
- * application.
+ * @note
+ *   The wire protocol for this codec is not guaranteed to be compatible across versions of Spark.
+ *   This is intended for use as an internal compression utility within a single Spark
+ *   application.
  */
 @DeveloperApi
 class ZStdCompressionCodec(conf: SparkConf) extends CompressionCodec {
@@ -268,6 +270,7 @@ class ZStdCompressionCodec(conf: SparkConf) extends CompressionCodec {
     // `compressedInputStream` method above throws truncated error exception. This method set
     // `isContinuous` true to allow reading from open frames.
     new BufferedInputStream(
-      new ZstdInputStreamNoFinalizer(s, bufferPool).setContinuous(true), bufferSize)
+      new ZstdInputStreamNoFinalizer(s, bufferPool).setContinuous(true),
+      bufferSize)
   }
 }

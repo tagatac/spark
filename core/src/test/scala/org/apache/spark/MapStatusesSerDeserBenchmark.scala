@@ -45,21 +45,29 @@ object MapStatusesSerDeserBenchmark extends BenchmarkBase {
       Int.MaxValue
     }
 
-    val benchmark = new Benchmark(s"$numMaps MapOutputs, $blockSize blocks " + {
-      if (enableBroadcast) "w/ " else "w/o "
-    } + "broadcast", numMaps, output = output)
+    val benchmark = new Benchmark(
+      s"$numMaps MapOutputs, $blockSize blocks " + {
+        if (enableBroadcast) "w/ " else "w/o "
+      } + "broadcast",
+      numMaps,
+      output = output)
 
     val shuffleId = 10
 
     tracker.registerShuffle(shuffleId, numMaps, MergeStatus.SHUFFLE_PUSH_DUMMY_NUM_REDUCES)
     val r = new scala.util.Random(912)
     (0 until numMaps).foreach { i =>
-      tracker.registerMapOutput(shuffleId, i,
-        new CompressedMapStatus(BlockManagerId(s"node$i", s"node$i.spark.apache.org", 1000),
+      tracker.registerMapOutput(
+        shuffleId,
+        i,
+        new CompressedMapStatus(
+          BlockManagerId(s"node$i", s"node$i.spark.apache.org", 1000),
           Array.fill(blockSize) {
             // Creating block size ranging from 0byte to 1GB
             (r.nextDouble() * 1024 * 1024 * 1024).toLong
-          }, i, i * 100))
+          },
+          i,
+          i * 100))
     }
 
     val shuffleStatus = tracker.shuffleStatuses.get(shuffleId).head
@@ -68,7 +76,10 @@ object MapStatusesSerDeserBenchmark extends BenchmarkBase {
     var serializedBroadcastSizes = 0L
 
     val (serializedMapStatus, serializedBroadcast) = MapOutputTracker.serializeOutputStatuses(
-      shuffleStatus.mapStatuses, tracker.broadcastManager, tracker.isLocal, minBroadcastSize,
+      shuffleStatus.mapStatuses,
+      tracker.broadcastManager,
+      tracker.isLocal,
+      minBroadcastSize,
       sc.getConf)
     serializedMapStatusSizes = serializedMapStatus.length
     if (serializedBroadcast != null) {
@@ -76,8 +87,12 @@ object MapStatusesSerDeserBenchmark extends BenchmarkBase {
     }
 
     benchmark.addCase("Serialization") { _ =>
-      MapOutputTracker.serializeOutputStatuses(shuffleStatus.mapStatuses, tracker.broadcastManager,
-        tracker.isLocal, minBroadcastSize, sc.getConf)
+      MapOutputTracker.serializeOutputStatuses(
+        shuffleStatus.mapStatuses,
+        tracker.broadcastManager,
+        tracker.isLocal,
+        minBroadcastSize,
+        sc.getConf)
     }
 
     benchmark.addCase("Deserialization") { _ =>
@@ -87,10 +102,12 @@ object MapStatusesSerDeserBenchmark extends BenchmarkBase {
 
     benchmark.run()
     // scalastyle:off println
-    benchmark.out.println("Compressed Serialized MapStatus sizes: " +
-      Utils.bytesToString(serializedMapStatusSizes))
-    benchmark.out.println("Compressed Serialized Broadcast MapStatus sizes: " +
-      Utils.bytesToString(serializedBroadcastSizes) + "\n\n")
+    benchmark.out.println(
+      "Compressed Serialized MapStatus sizes: " +
+        Utils.bytesToString(serializedMapStatusSizes))
+    benchmark.out.println(
+      "Compressed Serialized Broadcast MapStatus sizes: " +
+        Utils.bytesToString(serializedBroadcastSizes) + "\n\n")
     // scalastyle:on
 
     tracker.unregisterShuffle(shuffleId)

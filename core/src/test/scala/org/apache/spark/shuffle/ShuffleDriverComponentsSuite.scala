@@ -39,7 +39,8 @@ class ShuffleDriverComponentsSuite extends SparkFunSuite with LocalSparkContext 
 
     sc = new SparkContext(testConf)
 
-    val out = sc.parallelize(Seq((1, "one"), (2, "two"), (3, "three")), 3)
+    val out = sc
+      .parallelize(Seq((1, "one"), (2, "two"), (3, "three")), 3)
       .groupByKey()
       .foreach { _ =>
         if (!TestShuffleExecutorComponentsInitialized.initialized.get()) {

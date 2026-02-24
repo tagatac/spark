@@ -37,8 +37,10 @@ import org.apache.spark.util.Utils
 
 /**
  * Resource identifier.
- * @param componentName spark.driver / spark.executor / spark.task
- * @param resourceName  gpu, fpga, etc
+ * @param componentName
+ *   spark.driver / spark.executor / spark.task
+ * @param resourceName
+ *   gpu, fpga, etc
  *
  * @since 3.0.0
  */
@@ -55,7 +57,7 @@ class ResourceID(val componentName: String, val resourceName: String) {
     obj match {
       case that: ResourceID =>
         that.getClass == this.getClass &&
-          that.componentName == componentName && that.resourceName == resourceName
+        that.componentName == componentName && that.resourceName == resourceName
       case _ =>
         false
     }
@@ -67,14 +69,18 @@ class ResourceID(val componentName: String, val resourceName: String) {
 /**
  * Class that represents a resource request.
  *
- * The class used when discovering resources (using the discovery script),
- * or via the context as it is parsing configuration for the ResourceID.
+ * The class used when discovering resources (using the discovery script), or via the context as
+ * it is parsing configuration for the ResourceID.
  *
- * @param id object identifying the resource
- * @param amount integer amount for the resource. Note that for a request (executor level),
- *               fractional resources does not make sense, so amount is an integer.
- * @param discoveryScript optional discovery script file name
- * @param vendor optional vendor name
+ * @param id
+ *   object identifying the resource
+ * @param amount
+ *   integer amount for the resource. Note that for a request (executor level), fractional
+ *   resources does not make sense, so amount is an integer.
+ * @param discoveryScript
+ *   optional discovery script file name
+ * @param vendor
+ *   optional vendor name
  *
  * @since 3.0.0
  */
@@ -89,8 +95,8 @@ class ResourceRequest(
     obj match {
       case that: ResourceRequest =>
         that.getClass == this.getClass &&
-          that.id == id && that.amount == amount && that.discoveryScript == discoveryScript &&
-          that.vendor == vendor
+        that.id == id && that.amount == amount && that.discoveryScript == discoveryScript &&
+        that.vendor == vendor
       case _ =>
         false
     }
@@ -100,20 +106,23 @@ class ResourceRequest(
 }
 
 /**
- * Case class that represents resource requirements for a component in a
- * an application (components are driver, executor or task).
+ * Case class that represents resource requirements for a component in a an application
+ * (components are driver, executor or task).
  *
- * A configuration of spark.task.resource.[resourceName].amount = 4, equates to:
- * amount = 4, and numParts = 1.
+ * A configuration of spark.task.resource.[resourceName].amount = 4, equates to: amount = 4, and
+ * numParts = 1.
  *
- * A configuration of spark.task.resource.[resourceName].amount = 0.25, equates to:
- * amount = 1, and numParts = 4.
+ * A configuration of spark.task.resource.[resourceName].amount = 0.25, equates to: amount = 1,
+ * and numParts = 4.
  *
- * @param resourceName gpu, fpga, etc.
- * @param amount whole units of the resource we expect (e.g. 1 gpus, 2 fpgas)
- * @param numParts if not 1, the number of ways a whole resource is subdivided.
- *                 This is always an integer greater than or equal to 1,
- *                 where 1 is whole resource, 2 is divide a resource in two, and so on.
+ * @param resourceName
+ *   gpu, fpga, etc.
+ * @param amount
+ *   whole units of the resource we expect (e.g. 1 gpus, 2 fpgas)
+ * @param numParts
+ *   if not 1, the number of ways a whole resource is subdivided. This is always an integer
+ *   greater than or equal to 1, where 1 is whole resource, 2 is divide a resource in two, and so
+ *   on.
  */
 private[spark] case class ResourceRequirement(
     resourceName: String,
@@ -121,9 +130,9 @@ private[spark] case class ResourceRequirement(
     numParts: Int = 1)
 
 /**
- * Case class representing allocated resource addresses for a specific resource.
- * Cluster manager uses the JSON serialization of this case class to pass allocated resource info to
- * driver and executors. See the ``--resourcesFile`` option there.
+ * Case class representing allocated resource addresses for a specific resource. Cluster manager
+ * uses the JSON serialization of this case class to pass allocated resource info to driver and
+ * executors. See the ``--resourcesFile`` option there.
  */
 private[spark] case class ResourceAllocation(id: ResourceID, addresses: Seq[String]) {
   def toResourceInformation: ResourceInformation = {
@@ -141,23 +150,31 @@ private[spark] object ResourceUtils extends Logging {
 
   def parseResourceRequest(sparkConf: SparkConf, resourceId: ResourceID): ResourceRequest = {
     val settings = sparkConf.getAllWithPrefix(resourceId.confPrefix).toMap
-    val amount = settings.getOrElse(AMOUNT,
-      throw new SparkException(s"You must specify an amount for ${resourceId.resourceName}")
-    ).toInt
+    val amount = settings
+      .getOrElse(
+        AMOUNT,
+        throw new SparkException(s"You must specify an amount for ${resourceId.resourceName}"))
+      .toInt
     val discoveryScript = Optional.ofNullable(settings.get(DISCOVERY_SCRIPT).orNull)
     val vendor = Optional.ofNullable(settings.get(VENDOR).orNull)
     new ResourceRequest(resourceId, amount, discoveryScript, vendor)
   }
 
   def listResourceIds(sparkConf: SparkConf, componentName: String): Seq[ResourceID] = {
-    sparkConf.getAllWithPrefix(s"$componentName.$RESOURCE_PREFIX.").map { case (key, _) =>
-      val index = key.indexOf('.')
-      if (index < 0) {
-        throw new SparkException(s"You must specify an amount config for resource: $key " +
-          s"config: $componentName.$RESOURCE_PREFIX.$key")
+    sparkConf
+      .getAllWithPrefix(s"$componentName.$RESOURCE_PREFIX.")
+      .map { case (key, _) =>
+        val index = key.indexOf('.')
+        if (index < 0) {
+          throw new SparkException(
+            s"You must specify an amount config for resource: $key " +
+              s"config: $componentName.$RESOURCE_PREFIX.$key")
+        }
+        key.substring(0, index)
       }
-      key.substring(0, index)
-    }.distinct.map(name => new ResourceID(componentName, name)).toImmutableArraySeq
+      .distinct
+      .map(name => new ResourceID(componentName, name))
+      .toImmutableArraySeq
   }
 
   def parseAllResourceRequests(
@@ -188,29 +205,36 @@ private[spark] object ResourceUtils extends Logging {
   }
 
   // Add any task resource requests from the spark conf to the TaskResourceRequests passed in
-  def addTaskResourceRequests(
-      sparkConf: SparkConf,
-      treqs: TaskResourceRequests): Unit = {
-    val nonZeroTaskReqs = listResourceIds(sparkConf, SPARK_TASK_PREFIX).map { resourceId =>
-      val settings = sparkConf.getAllWithPrefix(resourceId.confPrefix).toMap
-      val amountDouble = settings.getOrElse(AMOUNT,
-        throw new SparkException(s"You must specify an amount for ${resourceId.resourceName}")
-      ).toDouble
-      (resourceId.resourceName, amountDouble)
-    }.toMap.filter { case (_, amount) => amount > 0.0 }
+  def addTaskResourceRequests(sparkConf: SparkConf, treqs: TaskResourceRequests): Unit = {
+    val nonZeroTaskReqs = listResourceIds(sparkConf, SPARK_TASK_PREFIX)
+      .map { resourceId =>
+        val settings = sparkConf.getAllWithPrefix(resourceId.confPrefix).toMap
+        val amountDouble = settings
+          .getOrElse(
+            AMOUNT,
+            throw new SparkException(
+              s"You must specify an amount for ${resourceId.resourceName}"))
+          .toDouble
+        (resourceId.resourceName, amountDouble)
+      }
+      .toMap
+      .filter { case (_, amount) => amount > 0.0 }
     nonZeroTaskReqs.foreach { case (resourceName, amount) =>
       treqs.resource(resourceName, amount)
     }
   }
 
-  def parseResourceRequirements(sparkConf: SparkConf, componentName: String)
-    : Seq[ResourceRequirement] = {
+  def parseResourceRequirements(
+      sparkConf: SparkConf,
+      componentName: String): Seq[ResourceRequirement] = {
     val resourceIds = listResourceIds(sparkConf, componentName)
     val rnamesAndAmounts = resourceIds.map { resourceId =>
       val settings = sparkConf.getAllWithPrefix(resourceId.confPrefix).toMap
-      val amountDouble = settings.getOrElse(AMOUNT,
-        throw new SparkException(s"You must specify an amount for ${resourceId.resourceName}")
-      ).toDouble
+      val amountDouble = settings
+        .getOrElse(
+          AMOUNT,
+          throw new SparkException(s"You must specify an amount for ${resourceId.resourceName}"))
+        .toDouble
       (resourceId.resourceName, amountDouble)
     }
     rnamesAndAmounts.filter { case (_, amount) => amount > 0 }.map { case (rName, amountDouble) =>
@@ -226,16 +250,15 @@ private[spark] object ResourceUtils extends Logging {
     }
   }
 
-  def executorResourceRequestToRequirement(resourceRequest: Seq[ExecutorResourceRequest])
-    : Seq[ResourceRequirement] = {
+  def executorResourceRequestToRequirement(
+      resourceRequest: Seq[ExecutorResourceRequest]): Seq[ResourceRequirement] = {
     resourceRequest.map(request =>
       ResourceRequirement(request.resourceName, request.amount.toInt, 1))
   }
 
   def resourcesMeetRequirements(
       resourcesFree: Map[String, Int],
-      resourceRequirements: Seq[ResourceRequirement])
-    : Boolean = {
+      resourceRequirements: Seq[ResourceRequirement]): Boolean = {
     resourceRequirements.forall { req =>
       resourcesFree.getOrElse(req.resourceName, 0) >= req.amount
     }
@@ -261,7 +284,8 @@ private[spark] object ResourceUtils extends Logging {
   def parseAllocated(
       resourcesFileOpt: Option[String],
       componentName: String): Seq[ResourceAllocation] = {
-    resourcesFileOpt.toSeq.flatMap(parseAllocatedFromJsonFile)
+    resourcesFileOpt.toSeq
+      .flatMap(parseAllocatedFromJsonFile)
       .filter(_.id.componentName == componentName)
   }
 
@@ -274,8 +298,10 @@ private[spark] object ResourceUtils extends Logging {
     val otherResources = otherResourceIds.flatMap { id =>
       val request = parseResourceRequest(sparkConf, id)
       if (request.amount > 0) {
-        Some(ResourceAllocation(id,
-          discoverResource(sparkConf, request).addresses.toImmutableArraySeq))
+        Some(
+          ResourceAllocation(
+            id,
+            discoverResource(sparkConf, request).addresses.toImmutableArraySeq))
       } else {
         None
       }
@@ -286,10 +312,11 @@ private[spark] object ResourceUtils extends Logging {
   private def assertResourceAllocationMeetsRequest(
       allocation: ResourceAllocation,
       request: ResourceRequest): Unit = {
-    require(allocation.id == request.id && allocation.addresses.size >= request.amount,
+    require(
+      allocation.id == request.id && allocation.addresses.size >= request.amount,
       s"Resource: ${allocation.id.resourceName}, with addresses: " +
-      s"${allocation.addresses.mkString(",")} " +
-      s"is less than what the user requested: ${request.amount})")
+        s"${allocation.addresses.mkString(",")} " +
+        s"is less than what the user requested: ${request.amount})")
   }
 
   private def assertAllResourceAllocationsMeetRequests(
@@ -303,7 +330,8 @@ private[spark] object ResourceUtils extends Logging {
       allocations: Map[String, ResourceInformation],
       execReqs: Map[String, ExecutorResourceRequest]): Unit = {
     execReqs.foreach { case (rName, req) =>
-      require(allocations.contains(rName) && allocations(rName).addresses.length >= req.amount,
+      require(
+        allocations.contains(rName) && allocations(rName).addresses.length >= req.amount,
         s"Resource: ${rName}, with addresses: " +
           s"${allocations(rName).addresses.mkString(",")} " +
           s"is less than what the user requested: ${req.amount})")
@@ -316,16 +344,18 @@ private[spark] object ResourceUtils extends Logging {
    * specified in the resources file (this would include specified address assignments and it only
    * specified in certain cluster managers) and then it looks at the Spark configs to get any
    * others not specified in the file. The resources not explicitly set in the file require a
-   * discovery script for it to run to get the addresses of the resource.
-   * It also verifies the resource allocation meets required amount for each resource.
-   * @return a map from resource name to resource info
+   * discovery script for it to run to get the addresses of the resource. It also verifies the
+   * resource allocation meets required amount for each resource.
+   * @return
+   *   a map from resource name to resource info
    */
   def getOrDiscoverAllResources(
       sparkConf: SparkConf,
       componentName: String,
       resourcesFileOpt: Option[String]): Map[String, ResourceInformation] = {
     val requests = parseAllResourceRequests(sparkConf, componentName)
-    val allocations = parseAllocatedOrDiscoverResources(sparkConf, componentName, resourcesFileOpt)
+    val allocations =
+      parseAllocatedOrDiscoverResources(sparkConf, componentName, resourcesFileOpt)
     assertAllResourceAllocationsMeetRequests(allocations, requests)
     val resourceInfoMap = allocations.map(a => (a.id.resourceName, a.toResourceInformation)).toMap
     resourceInfoMap
@@ -344,14 +374,15 @@ private[spark] object ResourceUtils extends Logging {
    * This function is similar to getOrDiscoverallResources, except for it uses the ResourceProfile
    * information instead of the application level configs.
    *
-   * It first looks to see if resource were explicitly specified in the resources file
-   * (this would include specified address assignments and it only specified in certain
-   * cluster managers) and then it looks at the ResourceProfile to get
-   * any others not specified in the file. The resources not explicitly set in the file require a
-   * discovery script for it to run to get the addresses of the resource.
-   * It also verifies the resource allocation meets required amount for each resource.
+   * It first looks to see if resource were explicitly specified in the resources file (this would
+   * include specified address assignments and it only specified in certain cluster managers) and
+   * then it looks at the ResourceProfile to get any others not specified in the file. The
+   * resources not explicitly set in the file require a discovery script for it to run to get the
+   * addresses of the resource. It also verifies the resource allocation meets required amount for
+   * each resource.
    *
-   * @return a map from resource name to resource info
+   * @return
+   *   a map from resource name to resource info
    */
   def getOrDiscoverAllResourcesForResourceProfile(
       resourcesFileOpt: Option[String],
@@ -359,7 +390,8 @@ private[spark] object ResourceUtils extends Logging {
       resourceProfile: ResourceProfile,
       sparkConf: SparkConf): Map[String, ResourceInformation] = {
     val fileAllocated = parseAllocated(resourcesFileOpt, componentName)
-    val fileAllocResMap = fileAllocated.map(a => (a.id.resourceName, a.toResourceInformation)).toMap
+    val fileAllocResMap =
+      fileAllocated.map(a => (a.id.resourceName, a.toResourceInformation)).toMap
     // only want to look at the ResourceProfile for resources not in the resources file
     val execReq = resourceProfile.getCustomExecutorResources()
     val filteredExecreq = execReq.filterNot { case (rname, _) => fileAllocResMap.contains(rname) }
@@ -376,8 +408,9 @@ private[spark] object ResourceUtils extends Logging {
     allAllocations
   }
 
-  def logResourceInfo(componentName: String, resources: Map[String, ResourceInformation])
-    : Unit = {
+  def logResourceInfo(
+      componentName: String,
+      resources: Map[String, ResourceInformation]): Unit = {
     val resourceInfo = if (resources.isEmpty) {
       s"No custom resources configured for $componentName."
     } else {
@@ -394,8 +427,8 @@ private[spark] object ResourceUtils extends Logging {
     // always put the discovery script plugin as last plugin
     val discoveryScriptPlugin = "org.apache.spark.resource.ResourceDiscoveryScriptPlugin"
     val pluginClasses = sparkConf.get(RESOURCES_DISCOVERY_PLUGIN) :+ discoveryScriptPlugin
-    val resourcePlugins = Utils.loadExtensions(classOf[ResourceDiscoveryPlugin], pluginClasses,
-      sparkConf)
+    val resourcePlugins =
+      Utils.loadExtensions(classOf[ResourceDiscoveryPlugin], pluginClasses, sparkConf)
     // apply each plugin until one of them returns the information for this resource
     resourcePlugins.foreach { plugin =>
       val riOption = plugin.discoverResource(resourceRequest, sparkConf)
@@ -403,15 +436,20 @@ private[spark] object ResourceUtils extends Logging {
         return riOption.get()
       }
     }
-    throw new SparkException(s"None of the discovery plugins returned ResourceInformation for " +
-      s"${resourceRequest.id.resourceName}")
+    throw new SparkException(
+      s"None of the discovery plugins returned ResourceInformation for " +
+        s"${resourceRequest.id.resourceName}")
   }
 
-  def validateTaskCpusLargeEnough(sparkConf: SparkConf, execCores: Int, taskCpus: Int): Boolean = {
+  def validateTaskCpusLargeEnough(
+      sparkConf: SparkConf,
+      execCores: Int,
+      taskCpus: Int): Boolean = {
     // Number of cores per executor must meet at least one task requirement.
     if (execCores < taskCpus) {
-      throw new SparkException(s"The number of cores per executor (=$execCores) has to be >= " +
-        s"the number of cpus per task = $taskCpus.")
+      throw new SparkException(
+        s"The number of cores per executor (=$execCores) has to be >= " +
+          s"the number of cpus per task = $taskCpus.")
     }
     true
   }
@@ -454,7 +492,7 @@ private[spark] object ResourceUtils extends Logging {
 
     if (limitingResource.nonEmpty && !limitingResource.equals(ResourceProfile.CPUS)) {
       if ((taskCpus * maxTaskPerExec) < cores) {
-        val resourceNumSlots = Math.floor(cores/taskCpus).toInt
+        val resourceNumSlots = Math.floor(cores / taskCpus).toInt
         val message = log"The configuration of cores (exec = ${MDC(NUM_CORES, cores)} " +
           log"task = ${MDC(NUM_TASK_CPUS, taskCpus)}, runnable tasks = " +
           log"${MDC(NUM_RESOURCE_SLOTS, resourceNumSlots)}) will " +

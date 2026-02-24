@@ -32,13 +32,14 @@ import org.apache.spark.storage.{PythonWorkerLogBlockIdGenerator, PythonWorkerLo
 /**
  * Manages Python UDF log capture and routing to per-worker log writers.
  *
- * This class handles the parsing of Python worker output streams and routes
- * log messages to appropriate rolling log writers based on worker PIDs.
- * Works for both daemon and non-daemon modes.
+ * This class handles the parsing of Python worker output streams and routes log messages to
+ * appropriate rolling log writers based on worker PIDs. Works for both daemon and non-daemon
+ * modes.
  */
 private[python] class PythonWorkerLogCapture(
     sessionId: String,
-    logMarker: String = "PYTHON_WORKER_LOGGING") extends Logging {
+    logMarker: String = "PYTHON_WORKER_LOGGING")
+    extends Logging {
 
   // Map to track per-worker log writers: workerId(PID) -> (writer, sequenceId)
   private val workerLogWriters = new ConcurrentHashMap[String, (RollingLogWriter, AtomicLong)]()
@@ -46,8 +47,10 @@ private[python] class PythonWorkerLogCapture(
   /**
    * Creates an InputStream wrapper that captures Python UDF logs from the given stream.
    *
-   * @param inputStream The input stream to wrap (typically daemon stdout or worker stdout)
-   * @return A wrapped InputStream that captures and routes log messages
+   * @param inputStream
+   *   The input stream to wrap (typically daemon stdout or worker stdout)
+   * @return
+   *   A wrapped InputStream that captures and routes log messages
    */
   def wrapInputStream(inputStream: InputStream): InputStream = {
     new CaptureWorkerLogsInputStream(inputStream)
@@ -56,7 +59,8 @@ private[python] class PythonWorkerLogCapture(
   /**
    * Removes and closes the log writer for a specific worker.
    *
-   * @param workerId The worker ID (typically PID as string)
+   * @param workerId
+   *   The worker ID (typically PID as string)
    */
   def removeAndCloseWorkerLogWriter(workerId: String): Unit = {
     Option(workerLogWriters.remove(workerId)).foreach { case (writer, _) =>
@@ -91,23 +95,28 @@ private[python] class PythonWorkerLogCapture(
   /**
    * Gets or creates a log writer for the specified worker.
    *
-   * @param workerId Unique identifier for the worker (typically PID)
-   * @return Tuple of (RollingLogWriter, AtomicLong sequence counter)
+   * @param workerId
+   *   Unique identifier for the worker (typically PID)
+   * @return
+   *   Tuple of (RollingLogWriter, AtomicLong sequence counter)
    */
   private def getOrCreateLogWriter(workerId: String): (RollingLogWriter, AtomicLong) = {
-    workerLogWriters.computeIfAbsent(workerId, _ => {
-      val logWriter = SparkEnv.get.blockManager.getRollingLogWriter(
-        new PythonWorkerLogBlockIdGenerator(sessionId, workerId)
-      )
-      (logWriter, new AtomicLong())
-    })
+    workerLogWriters.computeIfAbsent(
+      workerId,
+      _ => {
+        val logWriter = SparkEnv.get.blockManager.getRollingLogWriter(
+          new PythonWorkerLogBlockIdGenerator(sessionId, workerId))
+        (logWriter, new AtomicLong())
+      })
   }
 
   /**
    * Processes a log line from a Python worker.
    *
-   * @param line The complete line containing the log marker and JSON
-   * @return The prefix (non-log content) that should be passed through
+   * @param line
+   *   The complete line containing the log marker and JSON
+   * @return
+   *   The prefix (non-log content) that should be passed through
    */
   private def processLogLine(line: String): String = {
     val markerIndex = line.indexOf(s"$logMarker:")
@@ -127,13 +136,13 @@ private[python] class PythonWorkerLogCapture(
           } else {
             val (writer, seqId) = getOrCreateLogWriter(workerId)
             writer.writeLog(
-              PythonWorkerLogLine(System.currentTimeMillis(), seqId.getAndIncrement(), json)
-            )
+              PythonWorkerLogLine(System.currentTimeMillis(), seqId.getAndIncrement(), json))
           }
         } catch {
           case e: Exception =>
             logWarning(
-              log"Failed to write log for worker ${MDC(LogKeys.PYTHON_WORKER_ID, workerId)}", e)
+              log"Failed to write log for worker ${MDC(LogKeys.PYTHON_WORKER_ID, workerId)}",
+              e)
         }
       }
       prefix

@@ -32,24 +32,36 @@ import org.apache.spark.rdd.RDD
  *
  * See [[org.apache.spark.scheduler.Task]] for more information.
  *
- * @param stageId id of the stage this task belongs to
- * @param stageAttemptId attempt id of the stage this task belongs to
- * @param taskBinary broadcast version of the RDD and the ShuffleDependency. Once deserialized,
- *                   the type should be (RDD[_], ShuffleDependency[_, _, _]).
- * @param partition partition of the RDD this task is associated with
- * @param numPartitions Total number of partitions in the stage that this task belongs to.
- * @param locs preferred task execution locations for locality scheduling
- * @param artifacts list of artifacts (may be session-specific) of the job this task belongs to.
- * @param localProperties copy of thread-local properties set by the user on the driver side.
- * @param serializedTaskMetrics a `TaskMetrics` that is created and serialized on the driver side
- *                              and sent to executor side.
+ * @param stageId
+ *   id of the stage this task belongs to
+ * @param stageAttemptId
+ *   attempt id of the stage this task belongs to
+ * @param taskBinary
+ *   broadcast version of the RDD and the ShuffleDependency. Once deserialized, the type should be
+ *   (RDD[_], ShuffleDependency[_, _, _]).
+ * @param partition
+ *   partition of the RDD this task is associated with
+ * @param numPartitions
+ *   Total number of partitions in the stage that this task belongs to.
+ * @param locs
+ *   preferred task execution locations for locality scheduling
+ * @param artifacts
+ *   list of artifacts (may be session-specific) of the job this task belongs to.
+ * @param localProperties
+ *   copy of thread-local properties set by the user on the driver side.
+ * @param serializedTaskMetrics
+ *   a `TaskMetrics` that is created and serialized on the driver side and sent to executor side.
  *
  * The parameters below are optional:
- * @param jobId id of the job this task belongs to
- * @param appId id of the app this task belongs to
- * @param appAttemptId attempt id of the app this task belongs to
- * @param isBarrier whether this task belongs to a barrier stage. Spark must launch all the tasks
- *                  at the same time for a barrier stage.
+ * @param jobId
+ *   id of the job this task belongs to
+ * @param appId
+ *   id of the app this task belongs to
+ * @param appAttemptId
+ *   attempt id of the app this task belongs to
+ * @param isBarrier
+ *   whether this task belongs to a barrier stage. Spark must launch all the tasks at the same
+ *   time for a barrier stage.
  */
 private[spark] class ShuffleMapTask(
     stageId: Int,
@@ -65,13 +77,31 @@ private[spark] class ShuffleMapTask(
     appId: Option[String] = None,
     appAttemptId: Option[String] = None,
     isBarrier: Boolean = false)
-  extends Task[MapStatus](stageId, stageAttemptId, partition.index, numPartitions, artifacts,
-    localProperties, serializedTaskMetrics, jobId, appId, appAttemptId, isBarrier)
-  with Logging {
+    extends Task[MapStatus](
+      stageId,
+      stageAttemptId,
+      partition.index,
+      numPartitions,
+      artifacts,
+      localProperties,
+      serializedTaskMetrics,
+      jobId,
+      appId,
+      appAttemptId,
+      isBarrier)
+    with Logging {
 
   /** A constructor used only in test suites. This does not require passing in an RDD. */
   def this(partitionId: Int) = {
-    this(0, 0, null, new Partition { override def index: Int = 0 }, 1, null, null, new Properties,
+    this(
+      0,
+      0,
+      null,
+      new Partition { override def index: Int = 0 },
+      1,
+      null,
+      null,
+      new Properties,
       null)
   }
 
@@ -88,7 +118,8 @@ private[spark] class ShuffleMapTask(
     } else 0L
     val ser = SparkEnv.get.closureSerializer.newInstance()
     val rddAndDep = ser.deserialize[(RDD[_], ShuffleDependency[_, _, _])](
-      ByteBuffer.wrap(taskBinary.value), Thread.currentThread.getContextClassLoader)
+      ByteBuffer.wrap(taskBinary.value),
+      Thread.currentThread.getContextClassLoader)
     _executorDeserializeTimeNs = System.nanoTime() - deserializeStartTimeNs
     _executorDeserializeCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
       threadMXBean.getCurrentThreadCpuTime - deserializeStartCpuTime

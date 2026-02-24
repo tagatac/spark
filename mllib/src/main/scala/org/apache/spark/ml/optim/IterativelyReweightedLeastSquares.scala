@@ -26,36 +26,46 @@ import org.apache.spark.rdd.RDD
 
 /**
  * Model fitted by [[IterativelyReweightedLeastSquares]].
- * @param coefficients model coefficients
- * @param intercept model intercept
- * @param diagInvAtWA diagonal of matrix (A^T * W * A)^-1 in the last iteration
- * @param numIterations number of iterations
+ * @param coefficients
+ *   model coefficients
+ * @param intercept
+ *   model intercept
+ * @param diagInvAtWA
+ *   diagonal of matrix (A^T * W * A)^-1 in the last iteration
+ * @param numIterations
+ *   number of iterations
  */
 private[ml] class IterativelyReweightedLeastSquaresModel(
     val coefficients: DenseVector,
     val intercept: Double,
     val diagInvAtWA: DenseVector,
-    val numIterations: Int) extends Serializable
+    val numIterations: Int)
+    extends Serializable
 
 /**
  * Implements the method of iteratively reweighted least squares (IRLS) which is used to solve
  * certain optimization problems by an iterative method. In each step of the iterations, it
- * involves solving a weighted least squares (WLS) problem by [[WeightedLeastSquares]].
- * It can be used to find maximum likelihood estimates of a generalized linear model (GLM),
- * find M-estimator in robust regression and other optimization problems.
+ * involves solving a weighted least squares (WLS) problem by [[WeightedLeastSquares]]. It can be
+ * used to find maximum likelihood estimates of a generalized linear model (GLM), find M-estimator
+ * in robust regression and other optimization problems.
  *
- * @param initialModel the initial guess model.
- * @param reweightFunc the reweight function which is used to update working labels and weights
- *                     at each iteration.
- * @param fitIntercept whether to fit intercept.
- * @param regParam L2 regularization parameter used by WLS.
- * @param maxIter maximum number of iterations.
- * @param tol the convergence tolerance.
+ * @param initialModel
+ *   the initial guess model.
+ * @param reweightFunc
+ *   the reweight function which is used to update working labels and weights at each iteration.
+ * @param fitIntercept
+ *   whether to fit intercept.
+ * @param regParam
+ *   L2 regularization parameter used by WLS.
+ * @param maxIter
+ *   maximum number of iterations.
+ * @param tol
+ *   the convergence tolerance.
  *
- * @see <a href="http://www.jstor.org/stable/2345503">P. J. Green, Iteratively
- * Reweighted Least Squares for Maximum Likelihood Estimation, and some Robust
- * and Resistant Alternatives, Journal of the Royal Statistical Society.
- * Series B, 1984.</a>
+ * @see
+ *   <a href="http://www.jstor.org/stable/2345503">P. J. Green, Iteratively Reweighted Least
+ *   Squares for Maximum Likelihood Estimation, and some Robust and Resistant Alternatives,
+ *   Journal of the Royal Statistical Society. Series B, 1984.</a>
  */
 private[ml] class IterativelyReweightedLeastSquares(
     val initialModel: WeightedLeastSquaresModel,
@@ -63,12 +73,14 @@ private[ml] class IterativelyReweightedLeastSquares(
     val fitIntercept: Boolean,
     val regParam: Double,
     val maxIter: Int,
-    val tol: Double) extends Serializable with Logging {
+    val tol: Double)
+    extends Serializable
+    with Logging {
 
   def fit(
       instances: RDD[OffsetInstance],
-      instr: OptionalInstrumentation = OptionalInstrumentation.create(
-        classOf[IterativelyReweightedLeastSquares]),
+      instr: OptionalInstrumentation =
+        OptionalInstrumentation.create(classOf[IterativelyReweightedLeastSquares]),
       depth: Int = 2): IterativelyReweightedLeastSquaresModel = {
 
     var converged = false
@@ -88,8 +100,12 @@ private[ml] class IterativelyReweightedLeastSquares(
       }
 
       // Estimate new model
-      model = new WeightedLeastSquares(fitIntercept, regParam, elasticNetParam = 0.0,
-        standardizeFeatures = false, standardizeLabel = false)
+      model = new WeightedLeastSquares(
+        fitIntercept,
+        regParam,
+        elasticNetParam = 0.0,
+        standardizeFeatures = false,
+        standardizeLabel = false)
         .fit(newInstances, instr = instr, depth = depth)
 
       // Check convergence
@@ -106,17 +122,22 @@ private[ml] class IterativelyReweightedLeastSquares(
         instr.logInfo(log"IRLS converged in ${MDC(NUM_ITERATIONS, iter)} iterations.")
       }
 
-      instr.logInfo(log"Iteration ${MDC(NUM_ITERATIONS, iter)}: " +
-        log"relative tolerance = ${MDC(RELATIVE_TOLERANCE, maxTol)}")
+      instr.logInfo(
+        log"Iteration ${MDC(NUM_ITERATIONS, iter)}: " +
+          log"relative tolerance = ${MDC(RELATIVE_TOLERANCE, maxTol)}")
       iter = iter + 1
 
       if (iter == maxIter) {
-        instr.logInfo(log"IRLS reached the max number of iterations: ${MDC(NUM_ITERATIONS, iter)}.")
+        instr.logInfo(
+          log"IRLS reached the max number of iterations: ${MDC(NUM_ITERATIONS, iter)}.")
       }
 
     }
 
     new IterativelyReweightedLeastSquaresModel(
-      model.coefficients, model.intercept, model.diagInvAtWA, iter)
+      model.coefficients,
+      model.intercept,
+      model.diagInvAtWA,
+      iter)
   }
 }

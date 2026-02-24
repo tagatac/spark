@@ -27,8 +27,8 @@ import org.apache.spark.util.Utils
 /**
  * ::DeveloperApi::
  *
- * KubernetesDriverBuilder builds k8s spec for driver, used for K8s operations internally
- * and Spark K8s operator.
+ * KubernetesDriverBuilder builds k8s spec for driver, used for K8s operations internally and
+ * Spark K8s operator.
  */
 @Unstable
 @DeveloperApi
@@ -38,7 +38,8 @@ class KubernetesDriverBuilder {
   def buildFromFeatures(
       conf: KubernetesDriverConf,
       client: KubernetesClient): KubernetesDriverSpec = {
-    val initialPod = conf.get(Config.KUBERNETES_DRIVER_PODTEMPLATE_FILE)
+    val initialPod = conf
+      .get(Config.KUBERNETES_DRIVER_PODTEMPLATE_FILE)
       .map { file =>
         KubernetesUtils.loadPodFromTemplate(
           client,
@@ -48,7 +49,8 @@ class KubernetesDriverBuilder {
       }
       .getOrElse(SparkPod.initialPod())
 
-    val userFeatures = conf.get(Config.KUBERNETES_DRIVER_POD_FEATURE_STEPS)
+    val userFeatures = conf
+      .get(Config.KUBERNETES_DRIVER_POD_FEATURE_STEPS)
       .map { className =>
         val feature = Utils.classForName[Any](className).getConstructor().newInstance()
         val initializedFeature = feature match {
@@ -65,10 +67,11 @@ class KubernetesDriverBuilder {
           case _ => None
         }
         initializedFeature.getOrElse {
-          throw new SparkException(s"Failed to initialize feature step: $className, " +
-            s"please make sure your driver side feature steps are implemented by " +
-            s"`${classOf[KubernetesDriverCustomFeatureConfigStep].getName}` or " +
-            s"`${classOf[KubernetesFeatureConfigStep].getName}`.")
+          throw new SparkException(
+            s"Failed to initialize feature step: $className, " +
+              s"please make sure your driver side feature steps are implemented by " +
+              s"`${classOf[KubernetesDriverCustomFeatureConfigStep].getName}` or " +
+              s"`${classOf[KubernetesFeatureConfigStep].getName}`.")
         }
       }
 

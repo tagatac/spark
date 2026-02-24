@@ -41,8 +41,8 @@ class UISuite extends SparkFunSuite {
   val localhost = Utils.localHostNameForURI()
 
   /**
-   * Create a test SparkContext with the SparkUI enabled.
-   * It is safe to `get` the SparkUI directly from the SparkContext returned here.
+   * Create a test SparkContext with the SparkUI enabled. It is safe to `get` the SparkUI directly
+   * from the SparkContext returned here.
    */
   private def newSparkContext(): SparkContext = {
     val conf = new SparkConf()
@@ -60,8 +60,8 @@ class UISuite extends SparkFunSuite {
     (conf, securityMgr, securityMgr.getSSLOptions("ui"))
   }
 
-  private def sslEnabledConf(sslPort: Option[Int] = None):
-      (SparkConf, SecurityManager, SSLOptions) = {
+  private def sslEnabledConf(
+      sslPort: Option[Int] = None): (SparkConf, SecurityManager, SSLOptions) = {
     val keyStoreFilePath = getTestResourcePath("spark.keystore")
     val conf = new SparkConf()
       .set("spark.ssl.ui.enabled", "true")
@@ -245,7 +245,8 @@ class UISuite extends SparkFunSuite {
   test("add and remove handlers with custom user filter") {
     val (conf, securityMgr, sslOptions) = sslDisabledConf()
     conf.set("spark.ui.filters", classOf[TestFilter].getName())
-    conf.set(s"spark.${classOf[TestFilter].getName()}.param.responseCode",
+    conf.set(
+      s"spark.${classOf[TestFilter].getName()}.param.responseCode",
       HttpServletResponse.SC_NOT_ACCEPTABLE.toString)
 
     val serverInfo = JettyUtils.startJettyServer("0.0.0.0", 0, sslOptions, conf)
@@ -262,8 +263,8 @@ class UISuite extends SparkFunSuite {
       // Try a request with bad content in a parameter to make sure the security filter
       // is being added to new handlers.
       // scalastyle:off URLConstructor
-      val badRequest = new URL(
-        s"http://$localhost:${serverInfo.boundPort}$path/root?bypass&invalid<=foo")
+      val badRequest =
+        new URL(s"http://$localhost:${serverInfo.boundPort}$path/root?bypass&invalid<=foo")
       // scalastyle:on URLConstructor
       assert(TestUtils.httpResponseCode(badRequest) === HttpServletResponse.SC_OK)
       assert(servlet.lastRequest.getParameter("invalid<") === null)
@@ -288,7 +289,8 @@ class UISuite extends SparkFunSuite {
       TestUtils.withHttpConnection(new URI(s"$serverAddr/ctx%281%29?a%5B0%5D=b").toURL) { conn =>
         assert(conn.getResponseCode() === HttpServletResponse.SC_FOUND)
         val location = Option(conn.getHeaderFields().get("Location"))
-          .map(_.get(0)).orNull
+          .map(_.get(0))
+          .orNull
         val expectedLocation = s"https://$localhost:${serverInfo.securePort.get}/ctx(1)?a[0]=b"
         assert(location == expectedLocation)
       }
@@ -340,8 +342,12 @@ class UISuite extends SparkFunSuite {
       val baseSslPort = Utils.userPort(socket.getLocalPort(), 10000)
       val (conf, _, sslOptions) = sslEnabledConf(sslPort = Some(baseSslPort))
 
-      serverInfo = JettyUtils.startJettyServer("0.0.0.0", socket.getLocalPort() + 1,
-        sslOptions, conf, serverName = "server1")
+      serverInfo = JettyUtils.startJettyServer(
+        "0.0.0.0",
+        socket.getLocalPort() + 1,
+        sslOptions,
+        conf,
+        serverName = "server1")
 
       val notAllowed = Utils.userPort(serverInfo.boundPort, 400)
       assert(serverInfo.securePort.isDefined)
@@ -374,19 +380,20 @@ class UISuite extends SparkFunSuite {
         conn.setInstanceFollowRedirects(false)
         assert(conn.getResponseCode() === HttpServletResponse.SC_MOVED_PERMANENTLY)
         val location = Option(conn.getHeaderFields().get("Location"))
-          .map(_.get(0)).orNull
+          .map(_.get(0))
+          .orNull
         assert(location === s"$proxyRoot/ctx1/")
       }
 
       // Test with a URL handled by the added redirect handler, and also including a path prefix.
       val headers = Seq("X-Forwarded-Context" -> "/prefix")
-      TestUtils.withHttpConnection(
-          new URI(s"$serverAddr/src/").toURL,
-          headers = headers) { conn =>
-        assert(conn.getResponseCode() === HttpServletResponse.SC_FOUND)
-        val location = Option(conn.getHeaderFields().get("Location"))
-          .map(_.get(0)).orNull
-        assert(location === s"$proxyRoot/prefix/dst")
+      TestUtils.withHttpConnection(new URI(s"$serverAddr/src/").toURL, headers = headers) {
+        conn =>
+          assert(conn.getResponseCode() === HttpServletResponse.SC_FOUND)
+          val location = Option(conn.getHeaderFields().get("Location"))
+            .map(_.get(0))
+            .orNull
+          assert(location === s"$proxyRoot/prefix/dst")
       }
 
       // Not really used by Spark, but test with a relative redirect.
@@ -395,7 +402,8 @@ class UISuite extends SparkFunSuite {
       TestUtils.withHttpConnection(new URI(s"$serverAddr/rel/").toURL) { conn =>
         assert(conn.getResponseCode() === HttpServletResponse.SC_FOUND)
         val location = Option(conn.getHeaderFields().get("Location"))
-          .map(_.get(0)).orNull
+          .map(_.get(0))
+          .orNull
         assert(location === s"$proxyRoot/rel/root")
       }
     } finally {
@@ -403,8 +411,9 @@ class UISuite extends SparkFunSuite {
     }
   }
 
-  test("SPARK-47086: Jetty 12 and above should return status code 301 with correct redirect url" +
-    " when request URL ends with a context path without trailing '/'") {
+  test(
+    "SPARK-47086: Jetty 12 and above should return status code 301 with correct redirect url" +
+      " when request URL ends with a context path without trailing '/'") {
     val proxyRoot = "https://proxy.example.com:443/prefix"
     val (conf, securityMgr, sslOptions) = sslDisabledConf()
     conf.set(UI.PROXY_REDIRECT_URI, proxyRoot)
@@ -415,13 +424,15 @@ class UISuite extends SparkFunSuite {
       serverInfo.addHandler(ctx, securityMgr)
       val urlStr = s"http://$localhost:${serverInfo.boundPort}/ctx"
 
-      assert(TestUtils.httpResponseCode(new URI(urlStr + "/").toURL) === HttpServletResponse.SC_OK)
+      assert(
+        TestUtils.httpResponseCode(new URI(urlStr + "/").toURL) === HttpServletResponse.SC_OK)
 
       // In the case of trailing slash,
       // 301 should be return and the redirect URL should be part of the header.
       assert(TestUtils.redirectUrl(new URI(urlStr).toURL) === proxyRoot + "/ctx/")
-      assert(TestUtils.httpResponseCode(
-        new URI(urlStr).toURL) === HttpServletResponse.SC_MOVED_PERMANENTLY)
+      assert(
+        TestUtils.httpResponseCode(
+          new URI(urlStr).toURL) === HttpServletResponse.SC_MOVED_PERMANENTLY)
     } finally {
       stopServer(serverInfo)
     }
@@ -436,7 +447,8 @@ class UISuite extends SparkFunSuite {
 
         val pool = serverInfo.server.getThreadPool.asInstanceOf[QueuedThreadPool]
         val leasedThreads = pool.getThreadPoolBudget.getLeasedThreads
-        assert(pool.getMaxThreads === math.max(leasedThreads + 1, poolSize),
+        assert(
+          pool.getMaxThreads === math.max(leasedThreads + 1, poolSize),
           "we shall meet the basic requirement for jetty to be responsive")
       } finally {
         stopServer(serverInfo)
@@ -455,12 +467,19 @@ class UISuite extends SparkFunSuite {
 
     withSpark(newSparkContextWithoutUI()) { sc =>
       assert(sc.ui.isEmpty)
-      val sparkUI = SparkUI.create(Some(sc), sc.statusStore, sc.conf, sc.env.securityManager,
-        sc.appName, "", sc.startTime)
+      val sparkUI = SparkUI.create(
+        Some(sc),
+        sc.statusStore,
+        sc.conf,
+        sc.env.securityManager,
+        sc.appName,
+        "",
+        sc.startTime)
       sparkUI.bind()
       val url = new URI(sparkUI.webUrl + "/jobs").toURL
-      assert(TestUtils.httpResponseMessage(url)
-        === "Spark is starting up. Please wait a while until it's ready.")
+      assert(
+        TestUtils.httpResponseMessage(url)
+          === "Spark is starting up. Please wait a while until it's ready.")
       sparkUI.attachAllHandlers()
       assert(TestUtils.httpResponseMessage(url).contains(sc.appName))
       sparkUI.stop()
@@ -484,13 +503,16 @@ class UISuite extends SparkFunSuite {
         val xFrameOptions = conn.getHeaderField("X-Frame-Options")
         // Jetty should sanitize newlines by replacing them with spaces
         assert(xFrameOptions !== null, "X-Frame-Options header should be present")
-        assert(!xFrameOptions.contains("\n"),
+        assert(
+          !xFrameOptions.contains("\n"),
           "X-Frame-Options header should not contain newlines")
-        assert(!xFrameOptions.contains("\r"),
+        assert(
+          !xFrameOptions.contains("\r"),
           "X-Frame-Options header should not contain carriage returns")
         // The header value should have newlines replaced with spaces
         val expectedValue = "ALLOW-FROM " + valueWithNewlines.replaceAll("[\r\n]+", " ")
-        assert(xFrameOptions === expectedValue,
+        assert(
+          xFrameOptions === expectedValue,
           s"X-Frame-Options header should have newlines replaced with spaces")
       }
     } finally {

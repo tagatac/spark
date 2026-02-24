@@ -50,7 +50,6 @@ import org.apache.spark.sql.types._
 import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
-
 private[spark] object HiveUtils extends Logging {
   private val PATTERN_FOR_KEY_EQ_VAL = "(.+)=(.+)".r
 
@@ -58,13 +57,15 @@ private[spark] object HiveUtils extends Logging {
   val builtinHiveVersion: String = HiveVersionInfo.getVersion
 
   val BUILTIN_HIVE_VERSION = buildStaticConf("spark.sql.hive.version")
-    .doc("The compiled, a.k.a, builtin Hive version of the Spark distribution bundled with." +
+    .doc(
+      "The compiled, a.k.a, builtin Hive version of the Spark distribution bundled with." +
         " Note that, this a read-only conf and only used to report the built-in hive version." +
         " If you want a different metastore client for Spark to call, please refer to" +
         " spark.sql.hive.metastore.version.")
     .version("1.1.1")
     .stringConf
-    .checkValue(_ == builtinHiveVersion,
+    .checkValue(
+      _ == builtinHiveVersion,
       "The builtin Hive version is read-only, please use spark.sql.hive.metastore.version")
     .createWithDefault(builtinHiveVersion)
 
@@ -73,10 +74,11 @@ private[spark] object HiveUtils extends Logging {
   }
 
   val HIVE_METASTORE_VERSION = buildStaticConf("spark.sql.hive.metastore.version")
-    .doc("Version of the Hive metastore. Available options are " +
-      "<code>2.0.0</code> through <code>2.3.10</code>, " +
-      "<code>3.0.0</code> through <code>3.1.3</code> and " +
-      "<code>4.0.0</code> through <code>4.1.0</code>.")
+    .doc(
+      "Version of the Hive metastore. Available options are " +
+        "<code>2.0.0</code> through <code>2.3.10</code>, " +
+        "<code>3.0.0</code> through <code>3.1.3</code> and " +
+        "<code>4.0.0</code> through <code>4.1.0</code>.")
     .version("1.4.0")
     .stringConf
     .checkValue(isCompatibleHiveVersion, "Unsupported Hive Metastore version")
@@ -131,9 +133,10 @@ private[spark] object HiveUtils extends Logging {
 
   val CONVERT_METASTORE_PARQUET_WITH_SCHEMA_MERGING =
     buildConf("spark.sql.hive.convertMetastoreParquet.mergeSchema")
-      .doc("When true, also tries to merge possibly different but compatible Parquet schemas in " +
-        "different Parquet data files. This configuration is only effective " +
-        "when \"spark.sql.hive.convertMetastoreParquet\" is true.")
+      .doc(
+        "When true, also tries to merge possibly different but compatible Parquet schemas in " +
+          "different Parquet data files. This configuration is only effective " +
+          "when \"spark.sql.hive.convertMetastoreParquet\" is true.")
       .version("1.3.1")
       .booleanConf
       .createWithDefault(false)
@@ -166,29 +169,32 @@ private[spark] object HiveUtils extends Logging {
       .createWithDefault(true)
 
   val CONVERT_METASTORE_CTAS = buildConf("spark.sql.hive.convertMetastoreCtas")
-    .doc("When set to true,  Spark will try to use built-in data source writer " +
-      "instead of Hive serde in CTAS. This flag is effective only if " +
-      "`spark.sql.hive.convertMetastoreParquet` or `spark.sql.hive.convertMetastoreOrc` is " +
-      "enabled respectively for Parquet and ORC formats")
+    .doc(
+      "When set to true,  Spark will try to use built-in data source writer " +
+        "instead of Hive serde in CTAS. This flag is effective only if " +
+        "`spark.sql.hive.convertMetastoreParquet` or `spark.sql.hive.convertMetastoreOrc` is " +
+        "enabled respectively for Parquet and ORC formats")
     .version("3.0.0")
     .booleanConf
     .createWithDefault(true)
 
   val CONVERT_METASTORE_INSERT_DIR = buildConf("spark.sql.hive.convertMetastoreInsertDir")
-    .doc("When set to true,  Spark will try to use built-in data source writer " +
-      "instead of Hive serde in INSERT OVERWRITE DIRECTORY. This flag is effective only if " +
-      "`spark.sql.hive.convertMetastoreParquet` or `spark.sql.hive.convertMetastoreOrc` is " +
-      "enabled respectively for Parquet and ORC formats")
+    .doc(
+      "When set to true,  Spark will try to use built-in data source writer " +
+        "instead of Hive serde in INSERT OVERWRITE DIRECTORY. This flag is effective only if " +
+        "`spark.sql.hive.convertMetastoreParquet` or `spark.sql.hive.convertMetastoreOrc` is " +
+        "enabled respectively for Parquet and ORC formats")
     .version("3.3.0")
     .booleanConf
     .createWithDefault(true)
 
   val CONVERT_METASTORE_AS_NULLABLE = buildConf("spark.sql.hive.convertMetastoreAsNullable")
-    .doc("When set to true, apply nullable to the schema when Spark use datasource APIs instead " +
-      "of Hive serde to read/write Hive tables in Parquet or ORC formats. This flag is " +
-      "effective only if `convertMetastoreParquet` or `convertMetastoreOrc` is enabled " +
-      "respectively. It's recommended to set to true, when the nullability of table schema " +
-      "is inconsistent between the metastore and the data files.")
+    .doc(
+      "When set to true, apply nullable to the schema when Spark use datasource APIs instead " +
+        "of Hive serde to read/write Hive tables in Parquet or ORC formats. This flag is " +
+        "effective only if `convertMetastoreParquet` or `convertMetastoreOrc` is enabled " +
+        "respectively. It's recommended to set to true, when the nullability of table schema " +
+        "is inconsistent between the metastore and the data files.")
     .version("4.1.0")
     .booleanConf
     .createWithDefault(false)
@@ -205,12 +211,18 @@ private[spark] object HiveUtils extends Logging {
     .createWithDefault(jdbcPrefixes)
 
   private def jdbcPrefixes = Seq(
-    "com.mysql.jdbc", "com.mysql.cj", "org.postgresql", "com.microsoft.sqlserver", "oracle.jdbc")
+    "com.mysql.jdbc",
+    "com.mysql.cj",
+    "org.postgresql",
+    "com.microsoft.sqlserver",
+    "oracle.jdbc")
 
-  val HIVE_METASTORE_BARRIER_PREFIXES = buildStaticConf("spark.sql.hive.metastore.barrierPrefixes")
-    .doc("A comma separated list of class prefixes that should explicitly be reloaded for each " +
-      "version of Hive that Spark SQL is communicating with. For example, Hive UDFs that are " +
-      "declared in a prefix that typically would be shared (i.e. <code>org.apache.spark.*</code>).")
+  val HIVE_METASTORE_BARRIER_PREFIXES = buildStaticConf(
+    "spark.sql.hive.metastore.barrierPrefixes")
+    .doc(
+      "A comma separated list of class prefixes that should explicitly be reloaded for each " +
+        "version of Hive that Spark SQL is communicating with. For example, Hive UDFs that are " +
+        "declared in a prefix that typically would be shared (i.e. <code>org.apache.spark.*</code>).")
     .version("1.4.0")
     .stringConf
     .toSequence
@@ -240,7 +252,7 @@ private[spark] object HiveUtils extends Logging {
       .createWithDefault(true)
 
   /**
-   * The version of the hive client that will be used to communicate with the metastore.  Note that
+   * The version of the hive client that will be used to communicate with the metastore. Note that
    * this does not necessarily need to be the same version of Hive that is used internally by
    * Spark SQL for execution.
    */
@@ -249,13 +261,13 @@ private[spark] object HiveUtils extends Logging {
   }
 
   /**
-   * The location of the jars that should be used to instantiate the HiveMetastoreClient.  This
+   * The location of the jars that should be used to instantiate the HiveMetastoreClient. This
    * property can be one of three options:
-   *  - a classpath in the standard format for both hive and hadoop.
-   *  - path - attempt to discover the jars with paths configured by `HIVE_METASTORE_JARS_PATH`.
-   *  - builtin - attempt to discover the jars that were used to load Spark SQL and use those. This
-   *              option is only valid when using the execution version of Hive.
-   *  - maven - download the correct version of hive on demand from maven.
+   *   - a classpath in the standard format for both hive and hadoop.
+   *   - path - attempt to discover the jars with paths configured by `HIVE_METASTORE_JARS_PATH`.
+   *   - builtin - attempt to discover the jars that were used to load Spark SQL and use those.
+   *     This option is only valid when using the execution version of Hive.
+   *   - maven - download the correct version of hive on demand from maven.
    */
   private def hiveMetastoreJars(conf: SQLConf): String = {
     conf.getConf(HIVE_METASTORE_JARS)
@@ -269,11 +281,11 @@ private[spark] object HiveUtils extends Logging {
   }
 
   /**
-   * A comma separated list of class prefixes that should be loaded using the classloader that
-   * is shared between Spark SQL and a specific version of Hive. An example of classes that should
-   * be shared is JDBC drivers that are needed to talk to the metastore. Other classes that need
-   * to be shared are those that interact with classes that are already shared.  For example,
-   * custom appenders that are used by log4j.
+   * A comma separated list of class prefixes that should be loaded using the classloader that is
+   * shared between Spark SQL and a specific version of Hive. An example of classes that should be
+   * shared is JDBC drivers that are needed to talk to the metastore. Other classes that need to
+   * be shared are those that interact with classes that are already shared. For example, custom
+   * appenders that are used by log4j.
    */
   private def hiveMetastoreSharedPrefixes(conf: SQLConf): Seq[String] = {
     conf.getConf(HIVE_METASTORE_SHARED_PREFIXES).filterNot(_ == "")
@@ -281,7 +293,7 @@ private[spark] object HiveUtils extends Logging {
 
   /**
    * A comma separated list of class prefixes that should explicitly be reloaded for each version
-   * of Hive that Spark SQL is communicating with.  For example, Hive UDFs that are declared in a
+   * of Hive that Spark SQL is communicating with. For example, Hive UDFs that are declared in a
    * prefix that typically would be shared (i.e. org.apache.spark.*)
    */
   private def hiveMetastoreBarrierPrefixes(conf: SQLConf): Seq[String] = {
@@ -290,8 +302,9 @@ private[spark] object HiveUtils extends Logging {
 
   /**
    * Check current Thread's SessionState type
-   * @return true when SessionState.get returns an instance of CliSessionState,
-   *         false when it gets non-CliSessionState instance or null
+   * @return
+   *   true when SessionState.get returns an instance of CliSessionState, false when it gets
+   *   non-CliSessionState instance or null
    */
   def isCliSessionState(): Boolean = {
     val state = SessionState.get
@@ -307,17 +320,18 @@ private[spark] object HiveUtils extends Logging {
   /**
    * Create a [[HiveClient]] used for execution.
    *
-   * Currently this must always be the Hive built-in version that packaged
-   * with Spark SQL. This copy of the client is used for execution related tasks like
-   * registering temporary functions or ensuring that the ThreadLocal SessionState is
-   * correctly populated.  This copy of Hive is *not* used for storing persistent metadata,
-   * and only point to a dummy metastore in a temporary directory.
+   * Currently this must always be the Hive built-in version that packaged with Spark SQL. This
+   * copy of the client is used for execution related tasks like registering temporary functions
+   * or ensuring that the ThreadLocal SessionState is correctly populated. This copy of Hive is
+   * *not* used for storing persistent metadata, and only point to a dummy metastore in a
+   * temporary directory.
    */
   protected[hive] def newClientForExecution(
       conf: SparkConf,
       hadoopConf: Configuration): HiveClientImpl = {
-    logInfo(log"Initializing execution hive, version " +
-      log"${MDC(LogKeys.HIVE_METASTORE_VERSION, builtinHiveVersion)}")
+    logInfo(
+      log"Initializing execution hive, version " +
+        log"${MDC(LogKeys.HIVE_METASTORE_VERSION, builtinHiveVersion)}")
     val loader = new IsolatedClientLoader(
       version = IsolatedClientLoader.hiveVersion(builtinHiveVersion),
       sparkConf = conf,
@@ -354,7 +368,9 @@ private[spark] object HiveUtils extends Logging {
           logWarning(log"Hive jar path '${MDC(LogKeys.PATH, file.getPath)}' does not exist.")
           Nil
         } else {
-          files.filter(_.getName.toLowerCase(Locale.ROOT).endsWith(".jar")).map(_.toURI.toURL)
+          files
+            .filter(_.getName.toLowerCase(Locale.ROOT).endsWith(".jar"))
+            .map(_.toURI.toURL)
             .toImmutableArraySeq
         }
       } else {
@@ -363,9 +379,10 @@ private[spark] object HiveUtils extends Logging {
     }
 
     def logInitWithPath(jars: Seq[URL]): Unit = {
-      logInfo(log"Initializing HiveMetastoreConnection version " +
-        log"${MDC(LogKeys.HIVE_METASTORE_VERSION, hiveMetastoreVersion)} using paths: " +
-        log"${MDC(LogKeys.PATH, jars.mkString(", "))}")
+      logInfo(
+        log"Initializing HiveMetastoreConnection version " +
+          log"${MDC(LogKeys.HIVE_METASTORE_VERSION, hiveMetastoreVersion)} using paths: " +
+          log"${MDC(LogKeys.PATH, jars.mkString(", "))}")
     }
 
     val isolatedLoader = if (hiveMetastoreJars == "builtin") {
@@ -405,18 +422,20 @@ private[spark] object HiveUtils extends Logging {
     } else if (hiveMetastoreJars == "path") {
       // Convert to files and expand any directories.
       val jars =
-        HiveUtils.hiveMetastoreJarsPath(sqlConf)
+        HiveUtils
+          .hiveMetastoreJarsPath(sqlConf)
           .flatMap {
             case path if path.contains("\\") && Utils.isWindows =>
               addLocalHiveJars(new File(path))
             case path =>
-              DataSource.checkAndGlobPathIfNecessary(
-                pathStrings = Seq(path),
-                hadoopConf = hadoopConf,
-                checkEmptyGlobPath = true,
-                checkFilesExist = false,
-                enableGlobbing = true
-              ).map(_.toUri.toURL)
+              DataSource
+                .checkAndGlobPathIfNecessary(
+                  pathStrings = Seq(path),
+                  hadoopConf = hadoopConf,
+                  checkEmptyGlobPath = true,
+                  checkFilesExist = false,
+                  enableGlobbing = true)
+                .map(_.toUri.toURL)
           }
 
       logInitWithPath(jars)
@@ -468,9 +487,11 @@ private[spark] object HiveUtils extends Logging {
       }
     }
     propMap.put(WAREHOUSE_PATH.key, localMetastore.toURI.toString)
-    propMap.put("javax.jdo.option.ConnectionURL",
+    propMap.put(
+      "javax.jdo.option.ConnectionURL",
       s"jdbc:derby:${withInMemoryMode};databaseName=${localMetastore.getAbsolutePath};create=true")
-    propMap.put("datanucleus.rdbms.datastoreAdapterClassName",
+    propMap.put(
+      "datanucleus.rdbms.datastoreAdapterClassName",
       "org.datanucleus.store.rdbms.adapter.DerbyAdapter")
 
     // Disable schema verification and allow schema auto-creation in the
@@ -513,9 +534,9 @@ private[spark] object HiveUtils extends Logging {
   }
 
   /**
-   * Infers the schema for Hive serde tables and returns the CatalogTable with the inferred schema.
-   * When the tables are data source tables or the schema already exists, returns the original
-   * CatalogTable.
+   * Infers the schema for Hive serde tables and returns the CatalogTable with the inferred
+   * schema. When the tables are data source tables or the schema already exists, returns the
+   * original CatalogTable.
    */
   def inferSchema(table: CatalogTable): CatalogTable = {
     if (DDLUtils.isDatasourceTable(table) || table.dataSchema.nonEmpty) {
@@ -535,8 +556,8 @@ private[spark] object HiveUtils extends Logging {
    * "region=US/dt=2023-02-18", then we will return an array of values ("US", "2023-02-18").
    */
   def partitionNameToValues(name: String): Array[String] = {
-    name.split(Path.SEPARATOR).map {
-      case PATTERN_FOR_KEY_EQ_VAL(_, v) => FileUtils.unescapePathName(v)
+    name.split(Path.SEPARATOR).map { case PATTERN_FOR_KEY_EQ_VAL(_, v) =>
+      FileUtils.unescapePathName(v)
     }
   }
 

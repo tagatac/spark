@@ -53,29 +53,37 @@ import org.apache.spark.util.{ResetSystemProperties, ShutdownHookManager, Utils}
 import org.apache.spark.util.ArrayImplicits._
 
 /**
- * Abstract base class for testing the History Server, including mechanisms to compare
- * responses from the JSON metrics API against predefined "golden files". This suite
- * establishes a framework for validating API behaviors across different storage backends.
+ * Abstract base class for testing the History Server, including mechanisms to compare responses
+ * from the JSON metrics API against predefined "golden files". This suite establishes a framework
+ * for validating API behaviors across different storage backends.
  *
- * Test cases added here will be executed against all concrete implementations. For backend-specific
- * validations, subclasses should override relevant setup methods or add specialized tests.
+ * Test cases added here will be executed against all concrete implementations. For
+ * backend-specific validations, subclasses should override relevant setup methods or add
+ * specialized tests.
  *
  * The test suite supports two operational modes:
- * 1. Validation Mode (default): Compares API responses against existing golden files.
- * 2. Generation Mode: Generates new golden files when SPARK_GENERATE_GOLDEN_FILES=1 is set.
+ *   1. Validation Mode (default): Compares API responses against existing golden files.
+ *   2. Generation Mode: Generates new golden files when SPARK_GENERATE_GOLDEN_FILES=1 is set.
  *
  * To generate golden files, run the following SBT command with the environment variable set:
  * {{{
  *   SPARK_GENERATE_GOLDEN_FILES=1 build/sbt "core/testOnly <sub class>"
  * }}}
  *
- * Note: New golden files should be carefully reviewed to ensure they align with Spark's
- * public API specifications. Changes to metrics should be made with caution, as they
- * are considered part of Spark's public interface.
+ * Note: New golden files should be carefully reviewed to ensure they align with Spark's public
+ * API specifications. Changes to metrics should be made with caution, as they are considered part
+ * of Spark's public interface.
  */
-abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with Matchers
-  with MockitoSugar with JsonTestUtils with Eventually with WebBrowser with LocalSparkContext
-  with ResetSystemProperties {
+abstract class HistoryServerSuite
+    extends SparkFunSuite
+    with BeforeAndAfter
+    with Matchers
+    with MockitoSugar
+    with JsonTestUtils
+    with Eventually
+    with WebBrowser
+    with LocalSparkContext
+    with ResetSystemProperties {
 
   private val baseResourcePath = getWorkspaceFilePath("core", "src", "test", "resources").toFile
   private val logDir = new File(baseResourcePath, "spark-events").getCanonicalPath
@@ -160,14 +168,12 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     "one stage attempt json details with failed task" ->
       "applications/local-1422981780767/stages/1/0?details=true&taskStatus=failed",
     "one stage json with partitionId" -> "applications/local-1642039451826/stages/2",
-
     "stage task summary w shuffle write"
       -> "applications/local-1430917381534/stages/0/0/taskSummary",
     "stage task summary w shuffle read"
       -> "applications/local-1430917381534/stages/1/0/taskSummary",
     "stage task summary w/ custom quantiles" ->
       "applications/local-1430917381534/stages/0/0/taskSummary?quantiles=0.01,0.5,0.99",
-
     "stage task list" -> "applications/local-1430917381534/stages/0/0/taskList",
     "stage task list w/ offset & length" ->
       "applications/local-1430917381534/stages/0/0/taskList?offset=10&length=50",
@@ -184,7 +190,6 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     "stage task list w/ status & sortBy short names: runtime" ->
       "applications/local-1430917381534/stages/0/0/taskList?status=success&sortBy=runtime",
     "stage task list with partitionId" -> "applications/local-1642039451826/stages/0/0/taskList",
-
     "stage list with accumulable json" -> "applications/local-1426533911241/1/stages",
     "stage with accumulable json" -> "applications/local-1426533911241/1/stages/0/0",
     "stage task list from multi-attempt app json(1)" ->
@@ -193,7 +198,6 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
       "applications/local-1426533911241/2/stages/0/0/taskList",
     "excludeOnFailure for stage" -> "applications/app-20180109111548-0000/stages/0/0",
     "excludeOnFailure node for stage" -> "applications/application_1516285256255_0012/stages/0/0",
-
     "rdd list storage json" -> "applications/local-1422981780767/storage/rdd",
     "executor node excludeOnFailure" -> "applications/app-20161116163331-0000/executors",
     "executor node excludeOnFailure unexcluding" ->
@@ -204,7 +208,6 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     "stage list with peak metrics" -> "applications/app-20200706201101-0003/stages",
     "stage with peak metrics" -> "applications/app-20200706201101-0003/stages/2/0",
     "stage with summaries" -> "applications/app-20200706201101-0003/stages/2/0?withSummaries=true",
-
     "app environment" -> "applications/app-20161116163331-0000/environment",
 
     // Enable "spark.eventLog.logBlockUpdates.enabled", to get the storage information
@@ -213,8 +216,7 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     "miscellaneous process" ->
       "applications/application_1555004656427_0144/allmiscellaneousprocess",
     "stage with speculation summary" ->
-      "applications/application_1628109047826_1317105/stages/0/0/"
-  )
+      "applications/application_1628109047826_1317105/stages/0/0/")
 
   if (regenerateGoldenFiles) {
     Utils.deleteRecursively(expRoot)
@@ -226,9 +228,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
   cases.foreach { case (name, path) =>
     test(name) {
       val (code, jsonOpt, errOpt) = getContentAndCode(path)
-      code should be (HttpServletResponse.SC_OK)
-      jsonOpt should be (Symbol("defined"))
-      errOpt should be (None)
+      code should be(HttpServletResponse.SC_OK)
+      jsonOpt should be(Symbol("defined"))
+      errOpt should be(None)
 
       val goldenFile =
         new File(expRoot, HistoryServerSuite.sanitizePath(name) + "_expectation.json")
@@ -236,8 +238,8 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
 
       if (regenerateGoldenFiles) {
         Utils.tryWithResource(new FileWriter(goldenFile)) { out =>
-          val sortedJson = jsonAst.transform {
-            case JObject(fields) => JObject(fields.sortBy(_._1))
+          val sortedJson = jsonAst.transform { case JObject(fields) =>
+            JObject(fields.sortBy(_._1))
           }
           out.write(pretty(render(sortedJson)))
           out.write('\n')
@@ -291,9 +293,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     }
 
     val (code, inputStream, error) = HistoryServerSuite.connectAndGetInputStream(url)
-    code should be (HttpServletResponse.SC_OK)
+    code should be(HttpServletResponse.SC_OK)
     inputStream should not be None
-    error should be (None)
+    error should be(None)
 
     val zipStream = new ZipInputStream(inputStream.get)
     var entry = zipStream.getNextEntry
@@ -307,44 +309,47 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
         val expectedFile = {
           new File(logDir, entry.getName)
         }
-        Utils.toString(zipStream) should be (Files.readString(expectedFile.toPath))
+        Utils.toString(zipStream) should be(Files.readString(expectedFile.toPath))
         filesCompared += 1
       }
       entry = zipStream.getNextEntry
     }
-    filesCompared should be (totalFiles)
+    filesCompared should be(totalFiles)
   }
 
   test("response codes on bad paths") {
     val badAppId = getContentAndCode("applications/foobar")
-    badAppId._1 should be (HttpServletResponse.SC_NOT_FOUND)
-    badAppId._3 should be (Some("unknown app: foobar"))
+    badAppId._1 should be(HttpServletResponse.SC_NOT_FOUND)
+    badAppId._3 should be(Some("unknown app: foobar"))
 
     val badStageId = getContentAndCode("applications/local-1422981780767/stages/12345")
-    badStageId._1 should be (HttpServletResponse.SC_NOT_FOUND)
-    badStageId._3 should be (Some("unknown stage: 12345"))
+    badStageId._1 should be(HttpServletResponse.SC_NOT_FOUND)
+    badStageId._3 should be(Some("unknown stage: 12345"))
 
     val badStageAttemptId = getContentAndCode("applications/local-1422981780767/stages/1/1")
-    badStageAttemptId._1 should be (HttpServletResponse.SC_NOT_FOUND)
-    badStageAttemptId._3 should be (Some("unknown attempt for stage 1.  Found attempts: [0]"))
+    badStageAttemptId._1 should be(HttpServletResponse.SC_NOT_FOUND)
+    badStageAttemptId._3 should be(Some("unknown attempt for stage 1.  Found attempts: [0]"))
 
     val badStageId2 = getContentAndCode("applications/local-1422981780767/stages/flimflam")
-    badStageId2._1 should be (HttpServletResponse.SC_NOT_FOUND)
+    badStageId2._1 should be(HttpServletResponse.SC_NOT_FOUND)
     // will take some mucking w/ jersey to get a better error msg in this case
 
     val badQuantiles = getContentAndCode(
       "applications/local-1430917381534/stages/0/0/taskSummary?quantiles=foo,0.1")
-    badQuantiles._1 should be (HttpServletResponse.SC_BAD_REQUEST)
-    badQuantiles._3 should be (Some("Bad value for parameter \"quantiles\".  Expected a double, " +
-      "got \"foo\""))
+    badQuantiles._1 should be(HttpServletResponse.SC_BAD_REQUEST)
+    badQuantiles._3 should be(
+      Some("Bad value for parameter \"quantiles\".  Expected a double, " +
+        "got \"foo\""))
 
-    getContentAndCode("foobar")._1 should be (HttpServletResponse.SC_NOT_FOUND)
+    getContentAndCode("foobar")._1 should be(HttpServletResponse.SC_NOT_FOUND)
   }
 
   test("automatically retrieve uiRoot from request through Knox") {
-    assert(sys.props.get("spark.ui.proxyBase").isEmpty,
+    assert(
+      sys.props.get("spark.ui.proxyBase").isEmpty,
       "spark.ui.proxyBase is defined but it should not for this UT")
-    assert(sys.env.get("APPLICATION_WEB_PROXY_BASE").isEmpty,
+    assert(
+      sys.env.get("APPLICATION_WEB_PROXY_BASE").isEmpty,
       "APPLICATION_WEB_PROXY_BASE is defined but it should not for this UT")
     val page = new HistoryPage(server)
     val requestThroughKnox = mock[HttpServletRequest]
@@ -355,7 +360,7 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     val urlsThroughKnox = responseThroughKnox \\ "@href" map (_.toString)
     val siteRelativeLinksThroughKnox = urlsThroughKnox filter (_.startsWith("/"))
     for (link <- siteRelativeLinksThroughKnox) {
-      link should startWith (knoxBaseUrl)
+      link should startWith(knoxBaseUrl)
     }
 
     val directRequest = mock[HttpServletRequest]
@@ -369,7 +374,8 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
   }
 
   test("static relative links are prefixed with uiRoot (spark.ui.proxyBase)") {
-    val uiRoot = Option(System.getenv("APPLICATION_WEB_PROXY_BASE")).getOrElse("/testwebproxybase")
+    val uiRoot =
+      Option(System.getenv("APPLICATION_WEB_PROXY_BASE")).getOrElse("/testwebproxybase")
     val page = new HistoryPage(server)
     val request = mock[HttpServletRequest]
 
@@ -381,7 +387,7 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     val urls = response \\ "@href" map (_.toString)
     val siteRelativeLinks = urls filter (_.startsWith("/"))
     for (link <- siteRelativeLinks) {
-      link should startWith (uiRoot)
+      link should startWith(uiRoot)
     }
   }
 
@@ -398,9 +404,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     val app = JsonMethods.parse(response)
 
     // Verify that malicious content is present in JSON (not escaped at API level)
-    (app \ "name").extract[String] should be ("<script>alert('XSS')</script>")
+    (app \ "name").extract[String] should be("<script>alert('XSS')</script>")
     val attempt = (app \ "attempts")(0)
-    (attempt \ "sparkUser").extract[String] should be ("<script>alert('XSS')</script>")
+    (attempt \ "sparkUser").extract[String] should be("<script>alert('XSS')</script>")
 
     // Verify that the history page HTML properly escapes the content
     val historyPage = HistoryServerSuite.getUrl(buildPageAttemptUrl(appId, None))
@@ -408,8 +414,8 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
   }
 
   /**
-   * Verify that the security manager needed for the history server can be instantiated
-   * when `spark.authenticate` is `true`, rather than raise an `IllegalArgumentException`.
+   * Verify that the security manager needed for the history server can be instantiated when
+   * `spark.authenticate` is `true`, rather than raise an `IllegalArgumentException`.
    */
   test("security manager starts with spark.authenticate set") {
     val conf = new SparkConf()
@@ -450,8 +456,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
 
     def listDir(dir: Path): Seq[FileStatus] = {
       val statuses = fs.listStatus(dir)
-      statuses.flatMap(
-        stat => if (stat.isDirectory) listDir(stat.getPath) else Seq(stat)).toImmutableArraySeq
+      statuses
+        .flatMap(stat => if (stat.isDirectory) listDir(stat.getPath) else Seq(stat))
+        .toImmutableArraySeq
     }
 
     def dumpLogDir(msg: String = ""): Unit = {
@@ -528,14 +535,16 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
       json match {
         case JNothing => Seq()
         case apps: JArray =>
-          apps.children.filter(app => {
-            (app \ "attempts") match {
-              case attempts: JArray =>
-                val state = (attempts.children.head \ "completed").asInstanceOf[JBool]
-                state.value == completed
-              case _ => false
-            }
-          }).map(app => (app \ "id").asInstanceOf[JString].values)
+          apps.children
+            .filter(app => {
+              (app \ "attempts") match {
+                case attempts: JArray =>
+                  val state = (attempts.children.head \ "completed").asInstanceOf[JBool]
+                  state.value == completed
+                case _ => false
+              }
+            })
+            .map(app => (app \ "id").asInstanceOf[JString].values)
         case _ => Seq()
       }
     }
@@ -554,9 +563,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
 
     activeJobs() should have size 0
     completedJobs() should have size 1
-    getNumJobs("") should be (1)
-    getNumJobs("/jobs") should be (1)
-    getNumJobsRestful() should be (1)
+    getNumJobs("") should be(1)
+    getNumJobs("/jobs") should be(1)
+    getNumJobsRestful() should be(1)
     assert(metrics.lookupCount.getCount > 0, s"lookup count too low in $metrics")
 
     // dump state before the next bit of test, which is where update
@@ -571,9 +580,11 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     val stdTimeout = timeout(10.seconds)
     logDebug("waiting for UI to update")
     eventually(stdTimeout, stdInterval) {
-      assert(2 === getNumJobs(""),
+      assert(
+        2 === getNumJobs(""),
         s"jobs not updated, server=$server\n dir = ${listDir(logDirPath)}")
-      assert(2 === getNumJobs("/jobs"),
+      assert(
+        2 === getNumJobs("/jobs"),
         s"job count under /jobs not updated, server=$server\n dir = ${listDir(logDirPath)}")
       getNumJobsRestful() should be(2)
     }
@@ -591,16 +602,17 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     resetSparkContext()
     // check the app is now found as completed
     eventually(stdTimeout, stdInterval) {
-      assert(isApplicationCompleted(provider.getListing().next()),
+      assert(
+        isApplicationCompleted(provider.getListing().next()),
         s"application never completed, server=$server\n")
     }
 
     // app becomes observably complete
     eventually(stdTimeout, stdInterval) {
-      listApplications(true) should contain (appId)
+      listApplications(true) should contain(appId)
     }
     // app is no longer incomplete
-    listApplications(false) should not contain(appId)
+    listApplications(false) should not contain (appId)
 
     eventually(stdTimeout, stdInterval) {
       assert(4 === getNumJobsRestful())
@@ -661,7 +673,9 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     testUrls.foreach { url =>
       TestUtils.httpResponseCode(new URI(url).toURL)
     }
-    assert(server.cacheMetrics.loadCount.getCount === 0, "downloading event log shouldn't load ui")
+    assert(
+      server.cacheMetrics.loadCount.getCount === 0,
+      "downloading event log shouldn't load ui")
   }
 
   test("access history application defaults to the last attempt id") {
@@ -673,20 +687,18 @@ abstract class HistoryServerSuite extends SparkFunSuite with BeforeAndAfter with
     val lastAttemptUrl = buildPageAttemptUrl(multiAttemptAppid, lastAttemptId)
     // If an application has multiple attempts, the path ends with the last attempt ID is the root
     // of the context path of the application.
-    Seq((None, 302), (Some(1), 302), (Some(2), 301)).foreach {
-      case (attemptId, expectedCode) =>
-        val url = buildPageAttemptUrl(multiAttemptAppid, attemptId)
-        val (code, location) = getRedirectUrl(url)
-        assert(
-          code === expectedCode, s"Unexpected status code $code for $url")
-        attemptId match {
-          case None =>
-            assert(location.stripSuffix("/") === lastAttemptUrl.getPath)
-          case _ =>
-            assert(location.stripSuffix("/") === url.getPath)
-        }
-        HistoryServerSuite.getUrl(
-          new URI(url.getProtocol, url.getAuthority, location, null, null).toURL)
+    Seq((None, 302), (Some(1), 302), (Some(2), 301)).foreach { case (attemptId, expectedCode) =>
+      val url = buildPageAttemptUrl(multiAttemptAppid, attemptId)
+      val (code, location) = getRedirectUrl(url)
+      assert(code === expectedCode, s"Unexpected status code $code for $url")
+      attemptId match {
+        case None =>
+          assert(location.stripSuffix("/") === lastAttemptUrl.getPath)
+        case _ =>
+          assert(location.stripSuffix("/") === url.getPath)
+      }
+      HistoryServerSuite.getUrl(
+        new URI(url.getProtocol, url.getAuthority, location, null, null).toURL)
     }
   }
 
@@ -777,20 +789,21 @@ object HistoryServerSuite {
     connection.setRequestMethod("GET")
     connection.connect()
     val code = connection.getResponseCode()
-    val inStream = try {
-      Option(connection.getInputStream())
-    } catch {
-      case io: IOException => None
-    }
-    val errString = try {
-      val err = Option(connection.getErrorStream())
-      err.map(Utils.toString)
-    } catch {
-      case io: IOException => None
-    }
+    val inStream =
+      try {
+        Option(connection.getInputStream())
+      } catch {
+        case io: IOException => None
+      }
+    val errString =
+      try {
+        val err = Option(connection.getErrorStream())
+        err.map(Utils.toString)
+      } catch {
+        case io: IOException => None
+      }
     (code, inStream, errString)
   }
-
 
   def sanitizePath(path: String): String = {
     // this doesn't need to be perfect, just good enough to avoid collisions
@@ -828,8 +841,8 @@ object FakeAuthFilter {
 
 // scalastyle:off line.size.limit
 /**
- * Test suite for the History Server using LevelDB as the event log storage backend.
- * Extends HistoryServerSuite and focuses on validating LevelDB-specific behaviors.
+ * Test suite for the History Server using LevelDB as the event log storage backend. Extends
+ * HistoryServerSuite and focuses on validating LevelDB-specific behaviors.
  *
  * To generate golden files for this backend:
  * {{{
@@ -846,8 +859,8 @@ class LevelDBBackendHistoryServerSuite extends HistoryServerSuite {
 
 // scalastyle:off line.size.limit
 /**
- * Test suite for the History Server using RocksDB as the event log storage backend.
- * Extends HistoryServerSuite and focuses on validating RocksDB-specific behaviors.
+ * Test suite for the History Server using RocksDB as the event log storage backend. Extends
+ * HistoryServerSuite and focuses on validating RocksDB-specific behaviors.
  *
  * To generate golden files for this backend:
  * {{{

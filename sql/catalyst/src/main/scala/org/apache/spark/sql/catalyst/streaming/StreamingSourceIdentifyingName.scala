@@ -23,8 +23,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
  * A trait for logical plans that have a streaming source identifying name.
  *
  * This trait provides a common interface for both V1 (StreamingRelation) and V2
- * (StreamingRelationV2) streaming sources, allowing analyzer rules in sql/catalyst
- * to uniformly handle source naming without module boundary issues.
+ * (StreamingRelationV2) streaming sources, allowing analyzer rules in sql/catalyst to uniformly
+ * handle source naming without module boundary issues.
  *
  * The self-type constraint ensures this trait can only be mixed into LogicalPlan subclasses.
  */
@@ -37,9 +37,9 @@ trait HasStreamingSourceIdentifyingName { self: LogicalPlan =>
  * Represents the identifying name state for a streaming source during query analysis.
  *
  * Source names can be:
- * - User-provided via the `.name()` API
- * - Flow-assigned by external systems (e.g., SDP)
- * - Unassigned, to be auto-generated during analysis
+ *   - User-provided via the `.name()` API
+ *   - Flow-assigned by external systems (e.g., SDP)
+ *   - Unassigned, to be auto-generated during analysis
  */
 sealed trait StreamingSourceIdentifyingName {
   override def toString: String = this match {
@@ -50,14 +50,13 @@ sealed trait StreamingSourceIdentifyingName {
 }
 
 /**
- * A source name explicitly provided by the user via the `.name()` API.
- * Takes highest precedence.
+ * A source name explicitly provided by the user via the `.name()` API. Takes highest precedence.
  */
 case class UserProvided(name: String) extends StreamingSourceIdentifyingName
 
 /**
- * A source name assigned by an external flow system (e.g., SDP).
- * Used when the source is part of a managed pipeline.
+ * A source name assigned by an external flow system (e.g., SDP). Used when the source is part of
+ * a managed pipeline.
  */
 case class FlowAssigned(name: String) extends StreamingSourceIdentifyingName
 

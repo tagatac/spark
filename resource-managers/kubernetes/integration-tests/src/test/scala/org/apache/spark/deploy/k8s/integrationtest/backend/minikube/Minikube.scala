@@ -49,13 +49,17 @@ private[spark] object Minikube extends Logging {
     versionArrayOpt match {
       case Some(Array(x, y, z)) =>
         if (Ordering.Tuple3[Int, Int, Int].lt((x, y, z), (1, 28, 0))) {
-          assert(false, s"Unsupported Minikube version is detected: $minikubeVersionString." +
-            "For integration testing Minikube version 1.28.0 or greater is expected.")
+          assert(
+            false,
+            s"Unsupported Minikube version is detected: $minikubeVersionString." +
+              "For integration testing Minikube version 1.28.0 or greater is expected.")
         }
       case _ =>
-        assert(false, s"Unexpected version format detected in `$minikubeVersionString`." +
-          "For minikube version a three-part version number is expected (the optional " +
-          "non-numeric suffix is intentionally dropped)")
+        assert(
+          false,
+          s"Unexpected version format detected in `$minikubeVersionString`." +
+            "For minikube version a three-part version number is expected (the optional " +
+            "non-numeric suffix is intentionally dropped)")
     }
 
     new KubernetesClientBuilder().withConfig(Config.autoConfigure(BACKEND_MINIKUBE)).build()
@@ -72,7 +76,7 @@ private[spark] object Minikube extends Logging {
     val hasConfigStatus = kubectlString.isDefined || kubeconfigString.isDefined
 
     if (hostString.isEmpty || kubeletString.isEmpty || apiserverString.isEmpty ||
-        !hasConfigStatus) {
+      !hasConfigStatus) {
       MinikubeStatus.NONE
     } else {
       val status1 = hostString.get.split(HOST_PREFIX)(1)
@@ -100,12 +104,15 @@ private[spark] object Minikube extends Logging {
   }
 
   def executeMinikube(logOutput: Boolean, action: String, args: String*): Seq[String] = {
-    ProcessUtils.executeProcess(
-      Array("bash", "-c", s"MINIKUBE_IN_STYLE=true minikube $action ${args.mkString(" ")}"),
-      MINIKUBE_STARTUP_TIMEOUT_SECONDS, dumpOutput = logOutput).filter { x =>
-      !x.contains("There is a newer version of minikube") &&
-      !x.contains("https://github.com/kubernetes")
-    }
+    ProcessUtils
+      .executeProcess(
+        Array("bash", "-c", s"MINIKUBE_IN_STYLE=true minikube $action ${args.mkString(" ")}"),
+        MINIKUBE_STARTUP_TIMEOUT_SECONDS,
+        dumpOutput = logOutput)
+      .filter { x =>
+        !x.contains("There is a newer version of minikube") &&
+        !x.contains("https://github.com/kubernetes")
+      }
   }
 
   def minikubeServiceAction(args: String*): String = {

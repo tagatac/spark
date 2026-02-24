@@ -37,20 +37,19 @@ import org.apache.spark.util.CompletionIterator
 import org.apache.spark.util.collection.ExternalAppendOnlyMap.HashComparator
 
 /**
- * :: DeveloperApi ::
- * An append-only map that spills sorted content to disk when there is insufficient space for it
- * to grow.
+ * :: DeveloperApi :: An append-only map that spills sorted content to disk when there is
+ * insufficient space for it to grow.
  *
  * This map takes two passes over the data:
  *
- *   (1) Values are merged into combiners, which are sorted and spilled to disk as necessary
- *   (2) Combiners are read from disk and merged together
+ * (1) Values are merged into combiners, which are sorted and spilled to disk as necessary (2)
+ * Combiners are read from disk and merged together
  *
- * The setting of the spill threshold faces the following trade-off: If the spill threshold is
- * too high, the in-memory map may occupy more memory than is available, resulting in OOM.
- * However, if the spill threshold is too low, we spill frequently and incur unnecessary disk
- * writes. This may lead to a performance regression compared to the normal case of using the
- * non-spilling AppendOnlyMap.
+ * The setting of the spill threshold faces the following trade-off: If the spill threshold is too
+ * high, the in-memory map may occupy more memory than is available, resulting in OOM. However, if
+ * the spill threshold is too low, we spill frequently and incur unnecessary disk writes. This may
+ * lead to a performance regression compared to the normal case of using the non-spilling
+ * AppendOnlyMap.
  */
 @DeveloperApi
 class ExternalAppendOnlyMap[K, V, C](
@@ -61,10 +60,10 @@ class ExternalAppendOnlyMap[K, V, C](
     blockManager: BlockManager = SparkEnv.get.blockManager,
     context: TaskContext = TaskContext.get(),
     serializerManager: SerializerManager = SparkEnv.get.serializerManager)
-  extends Spillable[SizeTracker](context.taskMemoryManager())
-  with Serializable
-  with Logging
-  with Iterable[(K, C)] {
+    extends Spillable[SizeTracker](context.taskMemoryManager())
+    with Serializable
+    with Logging
+    with Iterable[(K, C)] {
 
   if (context == null) {
     throw new IllegalStateException(
@@ -92,11 +91,12 @@ class ExternalAppendOnlyMap[K, V, C](
   /**
    * Size of object batches when reading/writing from serializers.
    *
-   * Objects are written in batches, with each batch using its own serialization stream. This
-   * cuts down on the size of reference-tracking maps constructed when deserializing a stream.
+   * Objects are written in batches, with each batch using its own serialization stream. This cuts
+   * down on the size of reference-tracking maps constructed when deserializing a stream.
    *
-   * NOTE: Setting this too low can cause excessive copying when serializing, since some serializers
-   * grow internal data structures by growing + copying every time the number of objects doubles.
+   * NOTE: Setting this too low can cause excessive copying when serializing, since some
+   * serializers grow internal data structures by growing + copying every time the number of
+   * objects doubles.
    */
   private val serializerBatchSize = sparkConf.get(config.SHUFFLE_SPILL_BATCH_SIZE)
 
@@ -120,8 +120,7 @@ class ExternalAppendOnlyMap[K, V, C](
   @volatile private var readingIterator: SpillableIterator = null
 
   /**
-   * Number of files this map has spilled so far.
-   * Exposed for testing.
+   * Number of files this map has spilled so far. Exposed for testing.
    */
   private[collection] def numSpills: Int = spilledMaps.size
 
@@ -135,9 +134,9 @@ class ExternalAppendOnlyMap[K, V, C](
   /**
    * Insert the given iterator of keys and values into the map.
    *
-   * When the underlying map needs to grow, check if the global pool of shuffle memory has
-   * enough room for this to happen. If so, allocate the memory required to grow the map;
-   * otherwise, spill the in-memory map to disk.
+   * When the underlying map needs to grow, check if the global pool of shuffle memory has enough
+   * room for this to happen. If so, allocate the memory required to grow the map; otherwise,
+   * spill the in-memory map to disk.
    *
    * The shuffle memory usage of the first trackMemoryThreshold entries is not tracked.
    */
@@ -170,9 +169,9 @@ class ExternalAppendOnlyMap[K, V, C](
   /**
    * Insert the given iterable of keys and values into the map.
    *
-   * When the underlying map needs to grow, check if the global pool of shuffle memory has
-   * enough room for this to happen. If so, allocate the memory required to grow the map;
-   * otherwise, spill the in-memory map to disk.
+   * When the underlying map needs to grow, check if the global pool of shuffle memory has enough
+   * room for this to happen. If so, allocate the memory required to grow the map; otherwise,
+   * spill the in-memory map to disk.
    *
    * The shuffle memory usage of the first trackMemoryThreshold entries is not tracked.
    */
@@ -190,8 +189,8 @@ class ExternalAppendOnlyMap[K, V, C](
   }
 
   /**
-   * Force to spilling the current in-memory collection to disk to release memory,
-   * It will be called by TaskMemoryManager when there is not enough memory for the task.
+   * Force to spilling the current in-memory collection to disk to release memory, It will be
+   * called by TaskMemoryManager when there is not enough memory for the task.
    */
   override protected[this] def forceSpill(): Boolean = {
     if (readingIterator != null) {
@@ -212,8 +211,8 @@ class ExternalAppendOnlyMap[K, V, C](
   /**
    * Spill the in-memory Iterator to a temporary file on disk.
    */
-  private[this] def spillMemoryIteratorToDisk(inMemoryIterator: Iterator[(K, C)])
-      : DiskMapIterator = {
+  private[this] def spillMemoryIteratorToDisk(
+      inMemoryIterator: Iterator[(K, C)]): DiskMapIterator = {
     val (blockId, file) = diskBlockManager.createTempLocalBlock()
     val writer = blockManager.getDiskWriter(blockId, file, ser, fileBufferSize, writeMetrics)
     var objectsWritten = 0
@@ -259,9 +258,9 @@ class ExternalAppendOnlyMap[K, V, C](
   }
 
   /**
-   * Returns a destructive iterator for iterating over the entries of this map.
-   * If this iterator is forced spill to disk to release memory when there is not enough memory,
-   * it returns pairs from an on-disk map.
+   * Returns a destructive iterator for iterating over the entries of this map. If this iterator
+   * is forced spill to disk to release memory when there is not enough memory, it returns pairs
+   * from an on-disk map.
    */
   def destructiveIterator(inMemoryIterator: Iterator[(K, C)]): Iterator[(K, C)] = {
     readingIterator = new SpillableIterator(inMemoryIterator)
@@ -269,8 +268,8 @@ class ExternalAppendOnlyMap[K, V, C](
   }
 
   /**
-   * Return a destructive iterator that merges the in-memory map with the spilled maps.
-   * If no spill has occurred, simply return the in-memory map's iterator.
+   * Return a destructive iterator that merges the in-memory map with the spilled maps. If no
+   * spill has occurred, simply return the in-memory map's iterator.
    */
   override def iterator: Iterator[(K, C)] = {
     if (currentMap == null) {
@@ -320,8 +319,10 @@ class ExternalAppendOnlyMap[K, V, C](
      *
      * Assumes the given iterator is in sorted order of hash code.
      *
-     * @param it iterator to read from
-     * @param buf buffer to write the results into
+     * @param it
+     *   iterator to read from
+     * @param buf
+     *   buffer to write the results into
      */
     private def readNextHashCode(it: BufferedIterator[(K, C)], buf: ArrayBuffer[(K, C)]): Unit = {
       if (it.hasNext) {
@@ -336,8 +337,8 @@ class ExternalAppendOnlyMap[K, V, C](
     }
 
     /**
-     * If the given buffer contains a value for the given key, merge that value into
-     * baseCombiner and remove the corresponding (K, C) pair from the buffer.
+     * If the given buffer contains a value for the given key, merge that value into baseCombiner
+     * and remove the corresponding (K, C) pair from the buffer.
      */
     private def mergeIfKeyExists(key: K, baseCombiner: C, buffer: StreamBuffer): C = {
       var i = 0
@@ -357,12 +358,13 @@ class ExternalAppendOnlyMap[K, V, C](
     /**
      * Remove the index'th element from an ArrayBuffer in constant time, swapping another element
      * into its place. This is more efficient than the ArrayBuffer.remove method because it does
-     * not have to shift all the elements in the array over. It works for our array buffers because
-     * we don't care about the order of elements inside, we just want to search them for a key.
+     * not have to shift all the elements in the array over. It works for our array buffers
+     * because we don't care about the order of elements inside, we just want to search them for a
+     * key.
      */
     private def removeFromBuffer[T](buffer: ArrayBuffer[T], index: Int): T = {
       val elem = buffer(index)
-      buffer(index) = buffer(buffer.size - 1)  // This also works if index == buffer.size - 1
+      buffer(index) = buffer(buffer.size - 1) // This also works if index == buffer.size - 1
       buffer.dropRightInPlace(1)
       elem
     }
@@ -412,11 +414,11 @@ class ExternalAppendOnlyMap[K, V, C](
     }
 
     /**
-     * A buffer for streaming from a map iterator (in-memory or on-disk) sorted by key hash.
-     * Each buffer maintains all of the key-value pairs with what is currently the lowest hash
-     * code among keys in the stream. There may be multiple keys if there are hash collisions.
-     * Note that because when we spill data out, we only spill one value for each key, there is
-     * at most one element for each key.
+     * A buffer for streaming from a map iterator (in-memory or on-disk) sorted by key hash. Each
+     * buffer maintains all of the key-value pairs with what is currently the lowest hash code
+     * among keys in the stream. There may be multiple keys if there are hash collisions. Note
+     * that because when we spill data out, we only spill one value for each key, there is at most
+     * one element for each key.
      *
      * StreamBuffers are ordered by the minimum key hash currently available in their stream so
      * that we can put them into a heap and sort that.
@@ -424,7 +426,7 @@ class ExternalAppendOnlyMap[K, V, C](
     private class StreamBuffer(
         val iterator: BufferedIterator[(K, C)],
         val pairs: ArrayBuffer[(K, C)])
-      extends Comparable[StreamBuffer] {
+        extends Comparable[StreamBuffer] {
 
       def isEmpty: Boolean = pairs.length == 0
 
@@ -445,17 +447,16 @@ class ExternalAppendOnlyMap[K, V, C](
    * An iterator that returns (K, C) pairs in sorted order from an on-disk map
    */
   private class DiskMapIterator(file: File, blockId: BlockId, batchSizes: ArrayBuffer[Long])
-    extends Iterator[(K, C)]
-  {
-    private val batchOffsets = batchSizes.scanLeft(0L)(_ + _)  // Size will be batchSize.length + 1
-    assert(file.length() == batchOffsets.last,
+      extends Iterator[(K, C)] {
+    private val batchOffsets = batchSizes.scanLeft(0L)(_ + _) // Size will be batchSize.length + 1
+    assert(
+      file.length() == batchOffsets.last,
       "File length is not equal to the last batch offset:\n" +
-      s"    file length = ${file.length}\n" +
-      s"    last batch offset = ${batchOffsets.last}\n" +
-      s"    all batch offsets = ${batchOffsets.mkString(",")}"
-    )
+        s"    file length = ${file.length}\n" +
+        s"    last batch offset = ${batchOffsets.last}\n" +
+        s"    all batch offsets = ${batchOffsets.mkString(",")}")
 
-    private var batchIndex = 0  // Which batch we're in
+    private var batchIndex = 0 // Which batch we're in
     private var fileStream: FileInputStream = null
 
     // An intermediate stream that reads from exactly one batch
@@ -485,8 +486,10 @@ class ExternalAppendOnlyMap[K, V, C](
 
         val end = batchOffsets(batchIndex)
 
-        assert(end >= start, "start = " + start + ", end = " + end +
-          ", batchOffsets = " + batchOffsets.mkString("[", ", ", "]"))
+        assert(
+          end >= start,
+          "start = " + start + ", end = " + end +
+            ", batchOffsets = " + batchOffsets.mkString("[", ", ", "]"))
 
         val bufferedStream = new BufferedInputStream(ByteStreams.limit(fileStream, end - start))
         val wrappedStream = serializerManager.wrapStream(blockId, bufferedStream)
@@ -502,8 +505,8 @@ class ExternalAppendOnlyMap[K, V, C](
     /**
      * Return the next (K, C) pair from the deserialization stream.
      *
-     * If the current batch is drained, construct a stream for the next batch and read from it.
-     * If no more pairs are left, return null.
+     * If the current batch is drained, construct a stream for the next batch and read from it. If
+     * no more pairs are left, return null.
      */
     private def readNextItem(): (K, C) = {
       val item = batchIterator.next()
@@ -534,7 +537,7 @@ class ExternalAppendOnlyMap[K, V, C](
     }
 
     private def cleanup(): Unit = {
-      batchIndex = batchOffsets.length  // Prevent reading any other batch
+      batchIndex = batchOffsets.length // Prevent reading any other batch
       if (deserializeStream != null) {
         deserializeStream.close()
         deserializeStream = null
@@ -553,8 +556,7 @@ class ExternalAppendOnlyMap[K, V, C](
     context.addTaskCompletionListener[Unit](context => cleanup())
   }
 
-  private class SpillableIterator(var upstream: Iterator[(K, C)])
-    extends Iterator[(K, C)] {
+  private class SpillableIterator(var upstream: Iterator[(K, C)]) extends Iterator[(K, C)] {
 
     private val SPILL_LOCK = new Object()
 
@@ -566,9 +568,10 @@ class ExternalAppendOnlyMap[K, V, C](
       if (hasSpilled) {
         false
       } else {
-        logInfo(log"Task ${MDC(TASK_ATTEMPT_ID, context.taskAttemptId())} force spilling" +
-          log" in-memory map to disk and it will release " +
-          log"${MDC(NUM_BYTES, org.apache.spark.util.Utils.bytesToString(getUsed()))} memory")
+        logInfo(
+          log"Task ${MDC(TASK_ATTEMPT_ID, context.taskAttemptId())} force spilling" +
+            log" in-memory map to disk and it will release " +
+            log"${MDC(NUM_BYTES, org.apache.spark.util.Utils.bytesToString(getUsed()))} memory")
         val nextUpstream = spillMemoryIteratorToDisk(upstream)
         assert(!upstream.hasNext)
         hasSpilled = true

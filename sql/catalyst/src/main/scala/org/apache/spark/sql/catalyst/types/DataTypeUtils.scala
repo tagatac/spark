@@ -27,6 +27,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.types.DecimalType.{forType, fromDecimal}
 
 object DataTypeUtils {
+
   /**
    * Check if `this` and `other` are the same data type when ignoring nullability
    * (`StructField.nullable`, `ArrayType.containsNull`, and `MapType.valueContainsNull`).
@@ -50,7 +51,8 @@ object DataTypeUtils {
 
   /**
    * Compares two types, ignoring nullability of ArrayType, MapType, StructType, ignoring case
-   * sensitivity of field names in StructType as well as differences in collation for String types.
+   * sensitivity of field names in StructType as well as differences in collation for String
+   * types.
    */
   def equalsIgnoreCaseNullabilityAndCollation(from: DataType, to: DataType): Boolean = {
     (from, to) match {
@@ -59,14 +61,14 @@ object DataTypeUtils {
 
       case (MapType(fromKey, fromValue, _), MapType(toKey, toValue, _)) =>
         equalsIgnoreCaseNullabilityAndCollation(fromKey, toKey) &&
-          equalsIgnoreCaseNullabilityAndCollation(fromValue, toValue)
+        equalsIgnoreCaseNullabilityAndCollation(fromValue, toValue)
 
       case (StructType(fromFields), StructType(toFields)) =>
         fromFields.length == toFields.length &&
-          fromFields.zip(toFields).forall { case (l, r) =>
-            l.name.equalsIgnoreCase(r.name) &&
-              equalsIgnoreCaseNullabilityAndCollation(l.dataType, r.dataType)
-          }
+        fromFields.zip(toFields).forall { case (l, r) =>
+          l.name.equalsIgnoreCase(r.name) &&
+          equalsIgnoreCaseNullabilityAndCollation(l.dataType, r.dataType)
+        }
 
       case (_: StringType, _: StringType) => true
       case (fromDataType, toDataType) => fromDataType == toDataType
@@ -83,23 +85,27 @@ object DataTypeUtils {
    * Returns true if the write data type can be read using the read data type.
    *
    * The write type is compatible with the read type if:
-   * - Both types are arrays, the array element types are compatible, and element nullability is
-   *   compatible (read allows nulls or write does not contain nulls).
-   * - Both types are maps and the map key and value types are compatible, and value nullability
-   *   is compatible  (read allows nulls or write does not contain nulls).
-   * - Both types are structs and have the same number of fields. The type and nullability of each
-   *   field from read/write is compatible. If byName is true, the name of each field from
-   *   read/write needs to be the same.
-   * - It is user defined type and its underlying sql type is same as the read type, or the read
-   *   type is user defined type and its underlying sql type is same as the write type.
-   * - Both types are atomic and the write type can be safely cast to the read type.
+   *   - Both types are arrays, the array element types are compatible, and element nullability is
+   *     compatible (read allows nulls or write does not contain nulls).
+   *   - Both types are maps and the map key and value types are compatible, and value nullability
+   *     is compatible (read allows nulls or write does not contain nulls).
+   *   - Both types are structs and have the same number of fields. The type and nullability of
+   *     each field from read/write is compatible. If byName is true, the name of each field from
+   *     read/write needs to be the same.
+   *   - It is user defined type and its underlying sql type is same as the read type, or the read
+   *     type is user defined type and its underlying sql type is same as the write type.
+   *   - Both types are atomic and the write type can be safely cast to the read type.
    *
    * Extra fields in write-side structs are not allowed to avoid accidentally writing data that
-   * the read schema will not read, and to ensure map key equality is not changed when data is read.
+   * the read schema will not read, and to ensure map key equality is not changed when data is
+   * read.
    *
-   * @param write a write-side data type to validate against the read type
-   * @param read a read-side data type
-   * @return true if data written with the write type can be read using the read type
+   * @param write
+   *   a write-side data type to validate against the read type
+   * @param read
+   *   a read-side data type
+   * @return
+   *   true if data written with the write type can be read using the read type
    */
   def canWrite(
       tableName: String,
@@ -114,13 +120,19 @@ object DataTypeUtils {
       case (wArr: ArrayType, rArr: ArrayType) =>
         // run compatibility check first to produce all error messages
         val typesCompatible = canWrite(
-          tableName, wArr.elementType, rArr.elementType, byName, resolver, context + ".element",
-          storeAssignmentPolicy, addError)
+          tableName,
+          wArr.elementType,
+          rArr.elementType,
+          byName,
+          resolver,
+          context + ".element",
+          storeAssignmentPolicy,
+          addError)
 
         if (wArr.containsNull && !rArr.containsNull) {
           throw QueryCompilationErrors.incompatibleDataToTableNullableArrayElementsError(
-            tableName, context
-          )
+            tableName,
+            context)
         } else {
           typesCompatible
         }
@@ -131,56 +143,85 @@ object DataTypeUtils {
 
         // run compatibility check first to produce all error messages
         val keyCompatible = canWrite(
-          tableName, wMap.keyType, rMap.keyType, byName, resolver, context + ".key",
-          storeAssignmentPolicy, addError)
+          tableName,
+          wMap.keyType,
+          rMap.keyType,
+          byName,
+          resolver,
+          context + ".key",
+          storeAssignmentPolicy,
+          addError)
         val valueCompatible = canWrite(
-          tableName, wMap.valueType, rMap.valueType, byName, resolver, context + ".value",
-          storeAssignmentPolicy, addError)
+          tableName,
+          wMap.valueType,
+          rMap.valueType,
+          byName,
+          resolver,
+          context + ".value",
+          storeAssignmentPolicy,
+          addError)
 
         if (wMap.valueContainsNull && !rMap.valueContainsNull) {
           throw QueryCompilationErrors.incompatibleDataToTableNullableMapValuesError(
-            tableName, context
-          )
+            tableName,
+            context)
         } else {
           keyCompatible && valueCompatible
         }
 
       case (StructType(writeFields), StructType(readFields)) =>
         var fieldCompatible = true
-        readFields.zip(writeFields).zipWithIndex.foreach {
-          case ((rField, wField), i) =>
-            val nameMatch = resolver(wField.name, rField.name) || isSparkGeneratedName(wField.name)
-            val fieldContext = s"$context.${rField.name}"
-            val typesCompatible = canWrite(
-              tableName, wField.dataType, rField.dataType, byName, resolver, fieldContext,
-              storeAssignmentPolicy, addError)
+        readFields.zip(writeFields).zipWithIndex.foreach { case ((rField, wField), i) =>
+          val nameMatch = resolver(wField.name, rField.name) || isSparkGeneratedName(wField.name)
+          val fieldContext = s"$context.${rField.name}"
+          val typesCompatible = canWrite(
+            tableName,
+            wField.dataType,
+            rField.dataType,
+            byName,
+            resolver,
+            fieldContext,
+            storeAssignmentPolicy,
+            addError)
 
-            if (byName && !nameMatch) {
-              throw QueryCompilationErrors.incompatibleDataToTableUnexpectedColumnNameError(
-                tableName, context, i, rField.name, wField.name)
-            } else if (!rField.nullable && wField.nullable) {
-              throw QueryCompilationErrors.incompatibleDataToTableNullableColumnError(
-                tableName, fieldContext)
-            } else if (!typesCompatible) {
-              // errors are added in the recursive call to canWrite above
-              fieldCompatible = false
-            }
+          if (byName && !nameMatch) {
+            throw QueryCompilationErrors.incompatibleDataToTableUnexpectedColumnNameError(
+              tableName,
+              context,
+              i,
+              rField.name,
+              wField.name)
+          } else if (!rField.nullable && wField.nullable) {
+            throw QueryCompilationErrors.incompatibleDataToTableNullableColumnError(
+              tableName,
+              fieldContext)
+          } else if (!typesCompatible) {
+            // errors are added in the recursive call to canWrite above
+            fieldCompatible = false
+          }
         }
 
         if (readFields.length > writeFields.length) {
-          val missingFieldsStr = readFields.takeRight(readFields.length - writeFields.length)
-            .map(f => s"${toSQLId(f.name)}").mkString(", ")
+          val missingFieldsStr = readFields
+            .takeRight(readFields.length - writeFields.length)
+            .map(f => s"${toSQLId(f.name)}")
+            .mkString(", ")
           if (missingFieldsStr.nonEmpty) {
             throw QueryCompilationErrors.incompatibleDataToTableStructMissingFieldsError(
-              tableName, context, missingFieldsStr)
+              tableName,
+              context,
+              missingFieldsStr)
           }
 
         } else if (writeFields.length > readFields.length) {
-          val extraFieldsStr = writeFields.takeRight(writeFields.length - readFields.length)
-            .map(f => s"${toSQLId(f.name)}").mkString(", ")
+          val extraFieldsStr = writeFields
+            .takeRight(writeFields.length - readFields.length)
+            .map(f => s"${toSQLId(f.name)}")
+            .mkString(", ")
           throw QueryCompilationErrors.incompatibleDataToTableExtraStructFieldsError(
-            tableName, context, extraFieldsStr
-          )
+            tableName,
+            context,
+            extraFieldsStr)
         }
 
         fieldCompatible
@@ -188,8 +229,10 @@ object DataTypeUtils {
       case (w: AtomicType, r: AtomicType) if storeAssignmentPolicy == STRICT =>
         if (!Cast.canUpCast(w, r)) {
           throw QueryCompilationErrors.incompatibleDataToTableCannotSafelyCastError(
-            tableName, context, w.catalogString, r.catalogString
-          )
+            tableName,
+            context,
+            w.catalogString,
+            r.catalogString)
         } else {
           true
         }
@@ -199,8 +242,10 @@ object DataTypeUtils {
       case (w: AtomicType, r: AtomicType) if storeAssignmentPolicy == ANSI =>
         if (!Cast.canANSIStoreAssign(w, r)) {
           throw QueryCompilationErrors.incompatibleDataToTableCannotSafelyCastError(
-            tableName, context, w.catalogString, r.catalogString
-          )
+            tableName,
+            context,
+            w.catalogString,
+            r.catalogString)
         } else {
           true
         }
@@ -210,18 +255,34 @@ object DataTypeUtils {
 
       // If write-side data type is a user-defined type, check with its underlying data type.
       case (w, r) if w.isInstanceOf[UserDefinedType[_]] && !r.isInstanceOf[UserDefinedType[_]] =>
-        canWrite(tableName, w.asInstanceOf[UserDefinedType[_]].sqlType, r, byName, resolver,
-          context, storeAssignmentPolicy, addError)
+        canWrite(
+          tableName,
+          w.asInstanceOf[UserDefinedType[_]].sqlType,
+          r,
+          byName,
+          resolver,
+          context,
+          storeAssignmentPolicy,
+          addError)
 
       // If read-side data type is a user-defined type, check with its underlying data type.
       case (w, r) if r.isInstanceOf[UserDefinedType[_]] && !w.isInstanceOf[UserDefinedType[_]] =>
-        canWrite(tableName, w, r.asInstanceOf[UserDefinedType[_]].sqlType, byName, resolver,
-          context, storeAssignmentPolicy, addError)
+        canWrite(
+          tableName,
+          w,
+          r.asInstanceOf[UserDefinedType[_]].sqlType,
+          byName,
+          resolver,
+          context,
+          storeAssignmentPolicy,
+          addError)
 
       case (w, r) =>
         throw QueryCompilationErrors.incompatibleDataToTableCannotSafelyCastError(
-          tableName, context, w.catalogString, r.catalogString
-        )
+          tableName,
+          context,
+          w.catalogString,
+          r.catalogString)
     }
   }
 
@@ -254,8 +315,9 @@ object DataTypeUtils {
   /**
    * Extracts all struct field paths from a nested StructType.
    */
-  def extractAllFieldPaths(schema: StructType, basePath: Seq[String] = Seq.empty):
-  Seq[Seq[String]] = {
+  def extractAllFieldPaths(
+      schema: StructType,
+      basePath: Seq[String] = Seq.empty): Seq[Seq[String]] = {
     schema.flatMap { field =>
       val fieldPath = basePath :+ field.name
       field.dataType match {
@@ -268,11 +330,12 @@ object DataTypeUtils {
   }
 
   /**
-   * Extracts only leaf-level field paths from a nested StructType.
-   * Unlike extractAllFieldPaths, this method does not include intermediate struct paths.
+   * Extracts only leaf-level field paths from a nested StructType. Unlike extractAllFieldPaths,
+   * this method does not include intermediate struct paths.
    */
-  def extractLeafFieldPaths(schema: StructType, basePath: Seq[String] = Seq.empty):
-  Seq[Seq[String]] = {
+  def extractLeafFieldPaths(
+      schema: StructType,
+      basePath: Seq[String] = Seq.empty): Seq[Seq[String]] = {
     schema.flatMap { field =>
       val fieldPath = basePath :+ field.name
       field.dataType match {
@@ -301,8 +364,7 @@ object DataTypeUtils {
    * Replace STRING/CHAR/VARCHAR (including nested ones) without explicit collation with the new
    * type with the given collation.
    */
-  def replaceDefaultStringCharAndVarcharTypes(
-      dataType: DataType, collation: String): DataType = {
+  def replaceDefaultStringCharAndVarcharTypes(dataType: DataType, collation: String): DataType = {
     // Should replace STRING/CHAR(10)/VARCHAR(10) with the new type.
     // Should not replace STRING COLLATE UTF8_BINARY/CHAR(10) COLLATE UTF8_BINARY/
     // VARCHAR(10) COLLATE UTF8_BINARY, as that is explicit collation.
@@ -317,8 +379,8 @@ object DataTypeUtils {
   }
 
   /**
-   * Returns true if the given data type is STRING/CHAR/VARCHAR without explicit collation.
-   * Even `STRING COLLATE UTF8_BINARY` is considered as with explicit collation.
+   * Returns true if the given data type is STRING/CHAR/VARCHAR without explicit collation. Even
+   * `STRING COLLATE UTF8_BINARY` is considered as with explicit collation.
    */
   def isDefaultStringCharOrVarcharType(dataType: DataType): Boolean = {
     dataType match {
@@ -330,8 +392,8 @@ object DataTypeUtils {
   }
 
   /**
-   * Recursively replaces all STRING, CHAR and VARCHAR types that do not have an explicit collation
-   * with the same type but with explicit `UTF8_BINARY` collation.
+   * Recursively replaces all STRING, CHAR and VARCHAR types that do not have an explicit
+   * collation with the same type but with explicit `UTF8_BINARY` collation.
    *
    * Used for cases like `SHOW CREATE TABLE`, where we want to show the exact collation of the
    * columns, because the default collation of the table may change the type of the column.
@@ -347,4 +409,3 @@ object DataTypeUtils {
     }
   }
 }
-

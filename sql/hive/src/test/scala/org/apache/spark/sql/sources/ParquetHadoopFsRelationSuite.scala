@@ -30,7 +30,6 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.util.Utils
 
-
 class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
   import testImplicits._
 
@@ -47,18 +46,21 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
     withTempDir { file =>
       for (p1 <- 1 to 2; p2 <- Seq("foo", "bar")) {
         val partitionDir = new Path(
-          CatalogUtils.URIToString(makeQualifiedPath(file.getCanonicalPath)), s"p1=$p1/p2=$p2")
+          CatalogUtils.URIToString(makeQualifiedPath(file.getCanonicalPath)),
+          s"p1=$p1/p2=$p2")
         sparkContext
           .parallelize(for (i <- 1 to 3) yield (i, s"val_$i", p1))
           .toDF("a", "b", "p1")
-          .write.parquet(partitionDir.toString)
+          .write
+          .parquet(partitionDir.toString)
       }
 
       val dataSchemaWithPartition =
         StructType(dataSchema.fields :+ StructField("p1", IntegerType, nullable = true))
 
       checkQueries(
-        spark.read.format(dataSourceName)
+        spark.read
+          .format(dataSourceName)
           .option("dataSchema", dataSchemaWithPartition.json)
           .load(file.getCanonicalPath))
     }
@@ -109,9 +111,9 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
 
   test("SPARK-8604: Parquet data source should write summary file while doing appending") {
     withSQLConf(
-        ParquetOutputFormat.JOB_SUMMARY_LEVEL -> "ALL",
-        SQLConf.FILE_COMMIT_PROTOCOL_CLASS.key ->
-          classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName) {
+      ParquetOutputFormat.JOB_SUMMARY_LEVEL -> "ALL",
+      SQLConf.FILE_COMMIT_PROTOCOL_CLASS.key ->
+        classOf[SQLHadoopMapReduceCommitProtocol].getCanonicalName) {
       withTempPath { dir =>
         val path = dir.getCanonicalPath
         val df = spark.range(0, 5).toDF()
@@ -159,8 +161,9 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
 
         // The schema consists of the leading columns of the first part-file
         // in the lexicographic order.
-        assert(spark.read.parquet(dir.getCanonicalPath).schema.map(_.name)
-          === Seq("a", "b", "c", "d", "part"))
+        assert(
+          spark.read.parquet(dir.getCanonicalPath).schema.map(_.name)
+            === Seq("a", "b", "c", "d", "part"))
       }
     }
   }
@@ -173,9 +176,17 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
         .add("index", IntegerType, nullable = false)
         .add("col", ByteType, nullable = true)
 
-      val data = Seq(Row(1, -33.toByte), Row(2, 0.toByte), Row(3, -55.toByte), Row(4, 56.toByte),
-        Row(5, 127.toByte), Row(6, -44.toByte), Row(7, 23.toByte), Row(8, -95.toByte),
-        Row(9, 127.toByte), Row(10, 13.toByte))
+      val data = Seq(
+        Row(1, -33.toByte),
+        Row(2, 0.toByte),
+        Row(3, -55.toByte),
+        Row(4, 56.toByte),
+        Row(5, 127.toByte),
+        Row(6, -44.toByte),
+        Row(7, 23.toByte),
+        Row(8, -95.toByte),
+        Row(9, 127.toByte),
+        Row(10, 13.toByte))
 
       val rdd = spark.sparkContext.parallelize(data)
       val df = spark.createDataFrame(rdd, schema).orderBy("index").coalesce(1)
@@ -186,8 +197,7 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
         .option("dataSchema", df.schema.json)
         .save(path)
 
-      val loadedDF = spark
-        .read
+      val loadedDF = spark.read
         .format(dataSourceName)
         .option("dataSchema", df.schema.json)
         .schema(df.schema)
@@ -210,8 +220,7 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
         val compressedFiles = new File(path).listFiles()
         assert(compressedFiles.exists(_.getName.endsWith(".gz.parquet")))
 
-        val copyDf = spark
-          .read
+        val copyDf = spark.read
           .parquet(path)
         checkAnswer(df, copyDf)
       }
@@ -237,8 +246,7 @@ class ParquetHadoopFsRelationSuite extends HadoopFsRelationTest {
         .save(path)
 
       assertResult(10000) {
-        spark
-          .read
+        spark.read
           .format(dataSourceName)
           .option("dataSchema", StructType(StructField("id", LongType) :: Nil).json)
           .load(path)

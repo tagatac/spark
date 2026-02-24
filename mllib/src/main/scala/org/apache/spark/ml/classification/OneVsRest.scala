@@ -57,13 +57,15 @@ private[ml] trait ClassifierTypeTrait {
 /**
  * Params for [[OneVsRest]].
  */
-private[ml] trait OneVsRestParams extends ClassifierParams
-  with ClassifierTypeTrait with HasWeightCol {
+private[ml] trait OneVsRestParams
+    extends ClassifierParams
+    with ClassifierTypeTrait
+    with HasWeightCol {
 
   /**
-   * param for the base binary classifier that we reduce multiclass classification into.
-   * The base classifier input and output columns are ignored in favor of
-   * the ones specified in [[OneVsRest]].
+   * param for the base binary classifier that we reduce multiclass classification into. The base
+   * classifier input and output columns are ignored in favor of the ones specified in
+   * [[OneVsRest]].
    * @group param
    */
   val classifier: Param[ClassifierType] = new Param(this, "classifier", "base binary classifier")
@@ -78,9 +80,10 @@ private[ml] object OneVsRestParams extends ClassifierTypeTrait {
     def checkElement(elem: Params, name: String): Unit = elem match {
       case stage: MLWritable => // good
       case other =>
-        throw new UnsupportedOperationException("OneVsRest write will fail " +
-          s" because it contains $name which does not implement MLWritable." +
-          s" Non-Writable $name: ${other.uid} of type ${other.getClass}")
+        throw new UnsupportedOperationException(
+          "OneVsRest write will fail " +
+            s" because it contains $name which does not implement MLWritable." +
+            s" Non-Writable $name: ${other.uid} of type ${other.getClass}")
     }
 
     instance match {
@@ -98,10 +101,11 @@ private[ml] object OneVsRestParams extends ClassifierTypeTrait {
       extraMetadata: Option[JObject] = None): Unit = {
 
     val params = instance.extractParamMap().toSeq
-    val jsonParams = render(params
-      .filter { case ParamPair(p, v) => p.name != "classifier" }
-      .map { case ParamPair(p, v) => p.name -> parse(p.jsonEncode(v)) }
-      .toList)
+    val jsonParams = render(
+      params
+        .filter { case ParamPair(p, v) => p.name != "classifier" }
+        .map { case ParamPair(p, v) => p.name -> parse(p.jsonEncode(v)) }
+        .toList)
 
     DefaultParamsWriter.saveMetadata(instance, path, spark, extraMetadata, Some(jsonParams))
 
@@ -122,23 +126,25 @@ private[ml] object OneVsRestParams extends ClassifierTypeTrait {
 }
 
 /**
- * Model produced by [[OneVsRest]].
- * This stores the models resulting from training k binary classifiers: one for each class.
- * Each example is scored against all k models, and the model with the highest score
- * is picked to label the example.
+ * Model produced by [[OneVsRest]]. This stores the models resulting from training k binary
+ * classifiers: one for each class. Each example is scored against all k models, and the model
+ * with the highest score is picked to label the example.
  *
- * @param labelMetadata Metadata of label column if it exists, or Nominal attribute
- *                      representing the number of classes in training dataset otherwise.
- * @param models The binary classification models for the reduction.
- *               The i-th model is produced by testing the i-th class (taking label 1) vs the rest
- *               (taking label 0).
+ * @param labelMetadata
+ *   Metadata of label column if it exists, or Nominal attribute representing the number of
+ *   classes in training dataset otherwise.
+ * @param models
+ *   The binary classification models for the reduction. The i-th model is produced by testing the
+ *   i-th class (taking label 1) vs the rest (taking label 0).
  */
 @Since("1.4.0")
 final class OneVsRestModel private[ml] (
     @Since("1.4.0") override val uid: String,
     private[ml] val labelMetadata: Metadata,
     @Since("1.4.0") val models: Array[_ <: ClassificationModel[_, _]])
-  extends Model[OneVsRestModel] with OneVsRestParams with MLWritable {
+    extends Model[OneVsRestModel]
+    with OneVsRestParams
+    with MLWritable {
 
   require(models.nonEmpty, "OneVsRestModel requires at least one model for one class")
 
@@ -162,15 +168,14 @@ final class OneVsRestModel private[ml] (
 
   @Since("1.4.0")
   override def transformSchema(schema: StructType): StructType = {
-    var outputSchema = validateAndTransformSchema(schema, fitting = false,
-      getClassifier.featuresDataType)
+    var outputSchema =
+      validateAndTransformSchema(schema, fitting = false, getClassifier.featuresDataType)
     if ($(predictionCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateNumValues(outputSchema,
-        $(predictionCol), numClasses)
+      outputSchema = SchemaUtils.updateNumValues(outputSchema, $(predictionCol), numClasses)
     }
     if ($(rawPredictionCol).nonEmpty) {
-      outputSchema = SchemaUtils.updateAttributeGroupSize(outputSchema,
-        $(rawPredictionCol), numClasses)
+      outputSchema =
+        SchemaUtils.updateAttributeGroupSize(outputSchema, $(rawPredictionCol), numClasses)
     }
     outputSchema
   }
@@ -181,8 +186,9 @@ final class OneVsRestModel private[ml] (
     val outputSchema = transformSchema(dataset.schema, logging = true)
 
     if (getPredictionCol.isEmpty && getRawPredictionCol.isEmpty) {
-      logWarning(log"${MDC(LogKeys.UUID, uid)}: OneVsRestModel.transform() does nothing " +
-        log"because no output columns were set.")
+      logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: OneVsRestModel.transform() does nothing " +
+          log"because no output columns were set.")
       return dataset.toDF()
     }
 
@@ -212,9 +218,11 @@ final class OneVsRestModel private[ml] (
       if (isProbModel) {
         tmpModel.asInstanceOf[ProbabilisticClassificationModel[_, _]].setProbabilityCol("")
       }
-      tmpModel.transform(df)
-        .withColumn(accColName, array_append(
-          col(accColName), vector_get(col(tmpRawPredName), lit(1))))
+      tmpModel
+        .transform(df)
+        .withColumn(
+          accColName,
+          array_append(col(accColName), vector_get(col(tmpRawPredName), lit(1))))
         .select(columns.toImmutableArraySeq: _*)
     }
 
@@ -237,7 +245,8 @@ final class OneVsRestModel private[ml] (
       predictionColNames :+= getPredictionCol
 
       predictionColumns :+= array_argmax(col(accColName))
-        .cast(DoubleType).as(getPredictionCol, labelMetadata)
+        .cast(DoubleType)
+        .as(getPredictionCol, labelMetadata)
     }
 
     aggregatedDataset
@@ -248,7 +257,9 @@ final class OneVsRestModel private[ml] (
   @Since("1.4.1")
   override def copy(extra: ParamMap): OneVsRestModel = {
     val copied = new OneVsRestModel(
-      uid, labelMetadata, models.map(_.copy(extra).asInstanceOf[ClassificationModel[_, _]]))
+      uid,
+      labelMetadata,
+      models.map(_.copy(extra).asInstanceOf[ClassificationModel[_, _]]))
     copyValues(copied, extra).setParent(parent)
   }
 
@@ -279,8 +290,7 @@ object OneVsRestModel extends MLReadable[OneVsRestModel] {
     override protected def saveImpl(path: String): Unit = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "OneVsRestModel does not support saving to local filesystem path."
-        )
+          "OneVsRestModel does not support saving to local filesystem path.")
       }
       val extraJson = ("labelMetadata" -> instance.labelMetadata.json) ~
         ("numClasses" -> instance.models.length)
@@ -300,8 +310,7 @@ object OneVsRestModel extends MLReadable[OneVsRestModel] {
     override def load(path: String): OneVsRestModel = {
       if (ReadWriteUtils.localSavingModeState.get()) {
         throw new UnsupportedOperationException(
-          "OneVsRestModel does not support loading from local filesystem path."
-        )
+          "OneVsRestModel does not support loading from local filesystem path.")
       }
       implicit val format = DefaultFormats
       val (metadata, classifier) = OneVsRestParams.loadImpl(path, sparkSession, className)
@@ -320,16 +329,17 @@ object OneVsRestModel extends MLReadable[OneVsRestModel] {
 }
 
 /**
- * Reduction of Multiclass Classification to Binary Classification.
- * Performs reduction using one against all strategy.
- * For a multiclass classification with k classes, train k models (one per class).
- * Each example is scored against all k models and the model with highest score
- * is picked to label the example.
+ * Reduction of Multiclass Classification to Binary Classification. Performs reduction using one
+ * against all strategy. For a multiclass classification with k classes, train k models (one per
+ * class). Each example is scored against all k models and the model with highest score is picked
+ * to label the example.
  */
 @Since("1.4.0")
-final class OneVsRest @Since("1.4.0") (
-    @Since("1.4.0") override val uid: String)
-  extends Estimator[OneVsRestModel] with OneVsRestParams with HasParallelism with MLWritable {
+final class OneVsRest @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+    extends Estimator[OneVsRestModel]
+    with OneVsRestParams
+    with HasParallelism
+    with MLWritable {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("oneVsRest"))
@@ -357,8 +367,8 @@ final class OneVsRest @Since("1.4.0") (
   def setRawPredictionCol(value: String): this.type = set(rawPredictionCol, value)
 
   /**
-   * The implementation of parallel one vs. rest runs the classification for
-   * each class in a separate threads.
+   * The implementation of parallel one vs. rest runs the classification for each class in a
+   * separate threads.
    *
    * @group expertSetParam
    */
@@ -370,9 +380,8 @@ final class OneVsRest @Since("1.4.0") (
   /**
    * Sets the value of param [[weightCol]].
    *
-   * This is ignored if weight is not supported by [[classifier]].
-   * If this is not set or empty, we treat all instance weights as 1.0.
-   * Default is not set, so all instances have weight one.
+   * This is ignored if weight is not supported by [[classifier]]. If this is not set or empty, we
+   * treat all instance weights as 1.0. Default is not set, so all instances have weight one.
    *
    * @group setParam
    */
@@ -390,8 +399,14 @@ final class OneVsRest @Since("1.4.0") (
 
     instr.logPipelineStage(this)
     instr.logDataset(dataset)
-    instr.logParams(this, labelCol, weightCol, featuresCol, predictionCol,
-      rawPredictionCol, parallelism)
+    instr.logParams(
+      this,
+      labelCol,
+      weightCol,
+      featuresCol,
+      predictionCol,
+      rawPredictionCol,
+      parallelism)
     instr.logNamedValue("classifier", $(classifier).getClass.getCanonicalName)
 
     // determine number of classes either from metadata if provided, or via computation.
@@ -408,8 +423,9 @@ final class OneVsRest @Since("1.4.0") (
       getClassifier match {
         case _: HasWeightCol => true
         case c =>
-          instr.logWarning(log"weightCol is ignored, as it is not supported by " +
-            log"${MDC(LogKeys.CLASSIFIER, c)} now.")
+          instr.logWarning(
+            log"weightCol is ignored, as it is not supported by " +
+              log"${MDC(LogKeys.CLASSIFIER, c)} now.")
           false
       }
     }
@@ -434,7 +450,9 @@ final class OneVsRest @Since("1.4.0") (
       val newLabelMeta = BinaryAttribute.defaultAttr.withName("label").toMetadata()
       val labelColName = "mc2b$" + index
       val trainingDataset = multiclassLabeled.withColumn(
-        labelColName, when(col($(labelCol)) === index.toDouble, 1.0).otherwise(0.0), newLabelMeta)
+        labelColName,
+        when(col($(labelCol)) === index.toDouble, 1.0).otherwise(0.0),
+        newLabelMeta)
       val classifier = getClassifier
       val paramMap = new ParamMap()
       paramMap.put(classifier.labelCol -> labelColName)
@@ -451,7 +469,8 @@ final class OneVsRest @Since("1.4.0") (
       }(executionContext)
     }
     val models = modelFutures
-      .map(ThreadUtils.awaitResult(_, Duration.Inf)).toArray[ClassificationModel[_, _]]
+      .map(ThreadUtils.awaitResult(_, Duration.Inf))
+      .toArray[ClassificationModel[_, _]]
     instr.logNumFeatures(models.head.numFeatures)
 
     if (handlePersistence) {

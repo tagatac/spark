@@ -21,8 +21,8 @@ import scala.concurrent.duration._
 import scala.math.{log10, pow}
 
 /**
- * A `BackoffStrategy` determines the backoff duration (how long we should wait) for
- * retries after failures.
+ * A `BackoffStrategy` determines the backoff duration (how long we should wait) for retries after
+ * failures.
  */
 trait BackoffStrategy {
 
@@ -31,31 +31,27 @@ trait BackoffStrategy {
 }
 
 /**
- * A `BackoffStrategy` where the back-off time grows exponentially for each
- * successive retry.
+ * A `BackoffStrategy` where the back-off time grows exponentially for each successive retry.
  *
  * The back-off time after `n` failures is min(maxTime, (2 ** n) * stepSize).
  *
- * @param maxTime Maximum back-off time.
- * @param stepSize Minimum step size to increment back-off.
+ * @param maxTime
+ *   Maximum back-off time.
+ * @param stepSize
+ *   Minimum step size to increment back-off.
  */
 case class ExponentialBackoffStrategy(maxTime: FiniteDuration, stepSize: FiniteDuration)
     extends BackoffStrategy {
 
   require(
     stepSize >= 0.seconds,
-    s"Back-off step size must be non-negative. Given value: $stepSize"
-  )
-  require(
-    maxTime >= 0.seconds,
-    s"Back-off max time must be non-negative. Given value: $stepSize"
-  )
+    s"Back-off step size must be non-negative. Given value: $stepSize")
+  require(maxTime >= 0.seconds, s"Back-off max time must be non-negative. Given value: $stepSize")
 
   override def waitDuration(numFailures: Int): FiniteDuration = {
     require(
       numFailures >= 0,
-      s"Number of failures must be non-negative. Given value: $numFailures."
-    )
+      s"Number of failures must be non-negative. Given value: $numFailures.")
 
     if (stepSize <= 0.seconds) return 0.seconds
     if (stepSize >= maxTime) return maxTime

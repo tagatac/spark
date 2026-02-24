@@ -50,14 +50,18 @@ import org.apache.spark.resource.TestResourceIDs.{WORKER_FPGA_ID, WORKER_GPU_ID}
 import org.apache.spark.rpc.{RpcAddress, RpcEndpointRef, RpcEnv}
 import org.apache.spark.util.Utils
 
-class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with PrivateMethodTester {
+class WorkerSuite
+    extends SparkFunSuite
+    with Matchers
+    with BeforeAndAfter
+    with PrivateMethodTester {
 
   import org.apache.spark.deploy.DeployTestUtils._
 
   @Mock(answer = RETURNS_SMART_NULLS) private var shuffleService: ExternalShuffleService = _
 
   def cmd(javaOpts: String*): Command = {
-    Command("", Seq.empty, Map.empty, Seq.empty, Seq.empty, Seq(javaOpts : _*))
+    Command("", Seq.empty, Map.empty, Seq.empty, Seq.empty, Seq(javaOpts: _*))
   }
   def conf(opts: (String, String)*): SparkConf = new SparkConf(loadDefaults = false).setAll(opts)
 
@@ -76,9 +80,18 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
     val rpcEnv = RpcEnv.create("test", "localhost", 12345, conf, securityMgr)
     val resourcesFile = conf.get(SPARK_WORKER_RESOURCE_FILE)
     val workDir = Utils.createTempDir(namePrefix = this.getClass.getSimpleName).toString
-    val localWorker = new Worker(rpcEnv, 50000, 20, 1234 * 5,
-      Array.fill(1)(RpcAddress("1.2.3.4", 1234)), "Worker", workDir,
-      conf, securityMgr, resourcesFile, shuffleServiceSupplier)
+    val localWorker = new Worker(
+      rpcEnv,
+      50000,
+      20,
+      1234 * 5,
+      Array.fill(1)(RpcAddress("1.2.3.4", 1234)),
+      "Worker",
+      workDir,
+      conf,
+      securityMgr,
+      resourcesFile,
+      shuffleServiceSupplier)
     if (local) {
       localWorker
     } else {
@@ -107,23 +120,28 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
   }
 
   test("test maybeUpdateSSLSettings") {
-    Worker.maybeUpdateSSLSettings(
-      cmd("-Dasdf=dfgh", "-Dspark.ssl.opt1=x"),
-      conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
-        .javaOpts should contain theSameElementsInOrderAs Seq(
-          "-Dasdf=dfgh", "-Dspark.ssl.opt1=x")
+    Worker
+      .maybeUpdateSSLSettings(
+        cmd("-Dasdf=dfgh", "-Dspark.ssl.opt1=x"),
+        conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
+      .javaOpts should contain theSameElementsInOrderAs Seq("-Dasdf=dfgh", "-Dspark.ssl.opt1=x")
 
-    Worker.maybeUpdateSSLSettings(
-      cmd("-Dspark.ssl.useNodeLocalConf=false", "-Dspark.ssl.opt1=x"),
-      conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
-        .javaOpts should contain theSameElementsInOrderAs Seq(
-          "-Dspark.ssl.useNodeLocalConf=false", "-Dspark.ssl.opt1=x")
+    Worker
+      .maybeUpdateSSLSettings(
+        cmd("-Dspark.ssl.useNodeLocalConf=false", "-Dspark.ssl.opt1=x"),
+        conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
+      .javaOpts should contain theSameElementsInOrderAs Seq(
+      "-Dspark.ssl.useNodeLocalConf=false",
+      "-Dspark.ssl.opt1=x")
 
-    Worker.maybeUpdateSSLSettings(
-      cmd("-Dspark.ssl.useNodeLocalConf=true", "-Dspark.ssl.opt1=x"),
-      conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
-        .javaOpts should contain theSameElementsAs Seq(
-          "-Dspark.ssl.useNodeLocalConf=true", "-Dspark.ssl.opt1=y", "-Dspark.ssl.opt2=z")
+    Worker
+      .maybeUpdateSSLSettings(
+        cmd("-Dspark.ssl.useNodeLocalConf=true", "-Dspark.ssl.opt1=x"),
+        conf("spark.ssl.opt1" -> "y", "spark.ssl.opt2" -> "z"))
+      .javaOpts should contain theSameElementsAs Seq(
+      "-Dspark.ssl.useNodeLocalConf=true",
+      "-Dspark.ssl.opt1=y",
+      "-Dspark.ssl.opt2=z")
 
   }
 
@@ -265,8 +283,10 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
       val worker = makeWorker(conf)
       worker.rpcEnv.setupEndpoint("worker", worker)
       eventually(timeout(10.seconds)) {
-        assert(worker.resources === Map(GPU -> gpuArgs.toResourceInformation,
-          FPGA -> fpgaArgs.toResourceInformation))
+        assert(
+          worker.resources === Map(
+            GPU -> gpuArgs.toResourceInformation,
+            FPGA -> fpgaArgs.toResourceInformation))
         worker.rpcEnv.shutdown()
         worker.rpcEnv.awaitTermination()
       }
@@ -276,15 +296,18 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
   test("worker could load resources from discovery script while launching") {
     val conf = new SparkConf()
     withTempDir { dir =>
-      val scriptPath = createTempScriptWithExpectedOutput(dir, "fpgaDiscoverScript",
+      val scriptPath = createTempScriptWithExpectedOutput(
+        dir,
+        "fpgaDiscoverScript",
         """{"name": "fpga","addresses":["f1", "f2", "f3"]}""")
       conf.set(WORKER_FPGA_ID.discoveryScriptConf, scriptPath)
       conf.set(WORKER_FPGA_ID.amountConf, "3")
       val worker = makeWorker(conf)
       worker.rpcEnv.setupEndpoint("worker", worker)
       eventually(timeout(10.seconds)) {
-        assert(worker.resources === Map(FPGA ->
-          new ResourceInformation(FPGA, Array("f1", "f2", "f3"))))
+        assert(
+          worker.resources === Map(FPGA ->
+            new ResourceInformation(FPGA, Array("f1", "f2", "f3"))))
         worker.rpcEnv.shutdown()
         worker.rpcEnv.awaitTermination()
       }
@@ -297,7 +320,9 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
       val gpuArgs = ResourceAllocation(WORKER_GPU_ID, Seq("0", "1"))
       val ja = Extraction.decompose(Seq(gpuArgs))
       val resourcesPath = createTempJsonFile(dir, "resources", ja)
-      val scriptPath = createTempScriptWithExpectedOutput(dir, "fpgaDiscoverScript",
+      val scriptPath = createTempScriptWithExpectedOutput(
+        dir,
+        "fpgaDiscoverScript",
         """{"name": "fpga","addresses":["f1", "f2", "f3"]}""")
       conf.set(SPARK_WORKER_RESOURCE_FILE.key, resourcesPath)
       conf.set(WORKER_FPGA_ID.discoveryScriptConf, scriptPath)
@@ -306,20 +331,24 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
       val worker = makeWorker(conf)
       worker.rpcEnv.setupEndpoint("worker", worker)
       eventually(timeout(10.seconds)) {
-        assert(worker.resources === Map(GPU -> gpuArgs.toResourceInformation,
-          FPGA -> new ResourceInformation(FPGA, Array("f1", "f2", "f3"))))
+        assert(
+          worker.resources === Map(
+            GPU -> gpuArgs.toResourceInformation,
+            FPGA -> new ResourceInformation(FPGA, Array("f1", "f2", "f3"))))
         worker.rpcEnv.shutdown()
         worker.rpcEnv.awaitTermination()
       }
     }
   }
 
-  test("cleanup non-shuffle files after executor exits when config " +
+  test(
+    "cleanup non-shuffle files after executor exits when config " +
       "spark.storage.cleanupFilesAfterExecutorExit=true") {
     testCleanupFilesWithConfig(true)
   }
 
-  test("don't cleanup non-shuffle files after executor exits when config " +
+  test(
+    "don't cleanup non-shuffle files after executor exits when config " +
       "spark.storage.cleanupFilesAfterExecutorExit=false") {
     testCleanupFilesWithConfig(false)
   }
@@ -343,24 +372,28 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
     assert(cleanupCalled.get() == value)
   }
 
-  test("WorkDirCleanup cleans app dirs and shuffle metadata when " +
-    "spark.shuffle.service.db.enabled=true, spark.shuffle.service.db.backend=RocksDB") {
+  test(
+    "WorkDirCleanup cleans app dirs and shuffle metadata when " +
+      "spark.shuffle.service.db.enabled=true, spark.shuffle.service.db.backend=RocksDB") {
     testWorkDirCleanupAndRemoveMetadataWithConfig(true, DBBackend.ROCKSDB)
   }
 
-  test("WorkDirCleanup cleans app dirs and shuffle metadata when " +
-    "spark.shuffle.service.db.enabled=true, spark.shuffle.service.db.backend=LevelDB") {
+  test(
+    "WorkDirCleanup cleans app dirs and shuffle metadata when " +
+      "spark.shuffle.service.db.enabled=true, spark.shuffle.service.db.backend=LevelDB") {
     assume(!Utils.isMacOnAppleSilicon)
     testWorkDirCleanupAndRemoveMetadataWithConfig(true, DBBackend.LEVELDB)
   }
 
-  test("WorkDirCleanup cleans only app dirs when" +
-    "spark.shuffle.service.db.enabled=false") {
+  test(
+    "WorkDirCleanup cleans only app dirs when" +
+      "spark.shuffle.service.db.enabled=false") {
     testWorkDirCleanupAndRemoveMetadataWithConfig(false)
   }
 
   private def testWorkDirCleanupAndRemoveMetadataWithConfig(
-      dbCleanupEnabled: Boolean, shuffleDBBackend: DBBackend = null): Unit = {
+      dbCleanupEnabled: Boolean,
+      shuffleDBBackend: DBBackend = null): Unit = {
     val conf = new SparkConf().set("spark.shuffle.service.db.enabled", dbCleanupEnabled.toString)
     if (dbCleanupEnabled) {
       assert(shuffleDBBackend != null)
@@ -372,8 +405,8 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
     val appId = "app1"
     val execId = "exec1"
     val cleanupCalled = new AtomicBoolean(false)
-    when(shuffleService.applicationRemoved(any[String])).thenAnswer(
-      (_: InvocationOnMock) => cleanupCalled.set(true))
+    when(shuffleService.applicationRemoved(any[String])).thenAnswer((_: InvocationOnMock) =>
+      cleanupCalled.set(true))
     val externalShuffleServiceSupplier = new Supplier[ExternalShuffleService] {
       override def get: ExternalShuffleService = shuffleService
     }
@@ -407,8 +440,9 @@ class WorkerSuite extends SparkFunSuite with Matchers with BeforeAndAfter with P
     assert(m.contains("Whitespace is not allowed"))
   }
 
-  test("SPARK-54312: heartbeat task and workdir cleanup task should only be scheduled once " +
-    "across multiple registrations") {
+  test(
+    "SPARK-54312: heartbeat task and workdir cleanup task should only be scheduled once " +
+      "across multiple registrations") {
     val worker = spy(makeWorker())
     val masterWebUiUrl = "https://1.2.3.4:8080"
     val masterAddress = RpcAddress("1.2.3.4", 1234)

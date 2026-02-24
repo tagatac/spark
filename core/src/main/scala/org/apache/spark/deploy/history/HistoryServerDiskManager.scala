@@ -37,20 +37,25 @@ import org.apache.spark.util.kvstore.KVStore
  * A class used to keep track of disk usage by the SHS, allowing application data to be deleted
  * from disk when usage exceeds a configurable threshold.
  *
- * The goal of the class is not to guarantee that usage will never exceed the threshold; because of
- * how application data is written, disk usage may temporarily go higher. But, eventually, it
+ * The goal of the class is not to guarantee that usage will never exceed the threshold; because
+ * of how application data is written, disk usage may temporarily go higher. But, eventually, it
  * should fall back under the threshold.
  *
- * @param conf Spark configuration.
- * @param path Path where to store application data.
- * @param listing The listing store, used to persist usage data.
- * @param clock Clock instance to use.
+ * @param conf
+ *   Spark configuration.
+ * @param path
+ *   Path where to store application data.
+ * @param listing
+ *   The listing store, used to persist usage data.
+ * @param clock
+ *   Clock instance to use.
  */
 private class HistoryServerDiskManager(
     conf: SparkConf,
     path: File,
     listing: KVStore,
-    clock: Clock) extends Logging {
+    clock: Clock)
+    extends Logging {
 
   private val appStoreDir = new File(path, "apps")
   if (!appStoreDir.isDirectory() && !appStoreDir.mkdir()) {
@@ -78,8 +83,10 @@ private class HistoryServerDiskManager(
 
     // Go through the recorded store directories and remove any that may have been removed by
     // external code.
-    val (existences, orphans) = KVUtils.viewToSeq(listing
-      .view(classOf[ApplicationStoreInfo]))
+    val (existences, orphans) = KVUtils
+      .viewToSeq(
+        listing
+          .view(classOf[ApplicationStoreInfo]))
       .partition { info =>
         new File(info.path).exists()
       }
@@ -113,8 +120,8 @@ private class HistoryServerDiskManager(
    * This method always returns a lease, meaning that it's possible for local disk usage to grow
    * past the configured threshold if there aren't enough idle applications to evict.
    *
-   * While the lease is active, the data is written to a temporary location, so `openStore()`
-   * will still return `None` for the application.
+   * While the lease is active, the data is written to a temporary location, so `openStore()` will
+   * still return `None` for the application.
    */
   def lease(eventLogSize: Long, isCompressed: Boolean = false): Lease = {
     val needed = approximateSize(eventLogSize, isCompressed)
@@ -126,9 +133,10 @@ private class HistoryServerDiskManager(
     updateUsage(needed)
     val current = currentUsage.get()
     if (current > maxUsage) {
-      logInfo(log"Lease of ${MDC(NUM_BYTES, Utils.bytesToString(needed))} may cause" +
-        log" usage to exceed max (${MDC(NUM_BYTES_CURRENT, Utils.bytesToString(current))}" +
-        log" > ${MDC(NUM_BYTES_MAX, Utils.bytesToString(maxUsage))})")
+      logInfo(
+        log"Lease of ${MDC(NUM_BYTES, Utils.bytesToString(needed))} may cause" +
+          log" usage to exceed max (${MDC(NUM_BYTES_CURRENT, Utils.bytesToString(current))}" +
+          log" > ${MDC(NUM_BYTES_MAX, Utils.bytesToString(maxUsage))})")
     }
 
     new Lease(tmp, needed)
@@ -161,7 +169,8 @@ private class HistoryServerDiskManager(
   /**
    * Tell the disk manager that the store for the given application is not being used anymore.
    *
-   * @param delete Whether to delete the store from disk.
+   * @param delete
+   *   Whether to delete the store from disk.
    */
   def release(appId: String, attemptId: Option[String], delete: Boolean = false): Unit = {
     // Because disk-based stores may modify the structure of the store files even when just reading,
@@ -178,7 +187,8 @@ private class HistoryServerDiskManager(
           deleteStore(path)
         } else {
           val newSize = sizeOf(path)
-          val newInfo = listing.read(classOf[ApplicationStoreInfo], path.getAbsolutePath())
+          val newInfo = listing
+            .read(classOf[ApplicationStoreInfo], path.getAbsolutePath())
             .copy(size = newSize)
           listing.write(newInfo)
           updateUsage(newSize, committed = true)
@@ -221,36 +231,39 @@ private class HistoryServerDiskManager(
       logDebug(s"Not enough free space, looking at candidates for deletion...")
       val evicted = new ListBuffer[ApplicationStoreInfo]()
       Utils.tryWithResource(
-        listing.view(classOf[ApplicationStoreInfo]).index("lastAccess").closeableIterator()
-      ) { iter =>
-        var needed = size
-        while (needed > 0 && iter.hasNext()) {
-          val info = iter.next()
-          val isActive = active.synchronized {
-            active.contains(info.appId -> info.attemptId)
+        listing.view(classOf[ApplicationStoreInfo]).index("lastAccess").closeableIterator()) {
+        iter =>
+          var needed = size
+          while (needed > 0 && iter.hasNext()) {
+            val info = iter.next()
+            val isActive = active.synchronized {
+              active.contains(info.appId -> info.attemptId)
+            }
+            if (!isActive) {
+              evicted += info
+              needed -= info.size
+            }
           }
-          if (!isActive) {
-            evicted += info
-            needed -= info.size
-          }
-        }
       }
 
       if (evicted.nonEmpty) {
         val freed = evicted.map { info =>
-          logInfo(log"Deleting store for" +
-            log" ${MDC(APP_ID, info.appId)}/${MDC(APP_ATTEMPT_ID, info.attemptId)}.")
+          logInfo(
+            log"Deleting store for" +
+              log" ${MDC(APP_ID, info.appId)}/${MDC(APP_ATTEMPT_ID, info.attemptId)}.")
           deleteStore(new File(info.path))
           updateUsage(-info.size, committed = true)
           info.size
         }.sum
 
-        logInfo(log"Deleted ${MDC(NUM_BYTES_EVICTED, evicted.size)} store(s)" +
-          log" to free ${MDC(NUM_BYTES_TO_FREE, Utils.bytesToString(freed))}" +
-          log" (target = ${MDC(NUM_BYTES, Utils.bytesToString(size))}).")
+        logInfo(
+          log"Deleted ${MDC(NUM_BYTES_EVICTED, evicted.size)} store(s)" +
+            log" to free ${MDC(NUM_BYTES_TO_FREE, Utils.bytesToString(freed))}" +
+            log" (target = ${MDC(NUM_BYTES, Utils.bytesToString(size))}).")
       } else {
-        logWarning(log"Unable to free any space to make room for " +
-          log"${MDC(NUM_BYTES, Utils.bytesToString(size))}.")
+        logWarning(
+          log"Unable to free any space to make room for " +
+            log"${MDC(NUM_BYTES, Utils.bytesToString(size))}.")
       }
     }
   }
@@ -261,10 +274,16 @@ private class HistoryServerDiskManager(
   }
 
   private def updateApplicationStoreInfo(
-      appId: String, attemptId: Option[String], newSize: Long): Unit = {
+      appId: String,
+      attemptId: Option[String],
+      newSize: Long): Unit = {
     val path = appStorePath(appId, attemptId)
-    val info = ApplicationStoreInfo(path.getAbsolutePath(), clock.getTimeMillis(), appId,
-      attemptId, newSize)
+    val info = ApplicationStoreInfo(
+      path.getAbsolutePath(),
+      clock.getTimeMillis(),
+      appId,
+      attemptId,
+      newSize)
     listing.write(info)
   }
 
@@ -289,14 +308,15 @@ private class HistoryServerDiskManager(
   private[history] class Lease(val tmpPath: File, private val leased: Long) {
 
     /**
-     * Commits a lease to its final location, and update accounting information. This method
-     * marks the application as active, so its store is not available for eviction.
+     * Commits a lease to its final location, and update accounting information. This method marks
+     * the application as active, so its store is not available for eviction.
      */
     def commit(appId: String, attemptId: Option[String]): File = {
       val dst = appStorePath(appId, attemptId)
 
       active.synchronized {
-        require(!active.contains(appId -> attemptId),
+        require(
+          !active.contains(appId -> attemptId),
           s"Cannot commit lease for active application $appId / $attemptId")
 
         if (dst.isDirectory()) {
@@ -316,9 +336,10 @@ private class HistoryServerDiskManager(
       if (committedUsage.get() > maxUsage) {
         val current = Utils.bytesToString(committedUsage.get())
         val max = Utils.bytesToString(maxUsage)
-        logWarning(log"Commit of application ${MDC(APP_ID, appId)} / " +
-          log"${MDC(APP_ATTEMPT_ID, attemptId)} causes maximum disk usage to be " +
-          log"exceeded (${MDC(NUM_BYTES, current)} > ${MDC(NUM_BYTES_MAX, max)}")
+        logWarning(
+          log"Commit of application ${MDC(APP_ID, appId)} / " +
+            log"${MDC(APP_ATTEMPT_ID, attemptId)} causes maximum disk usage to be " +
+            log"exceeded (${MDC(NUM_BYTES, current)} > ${MDC(NUM_BYTES_MAX, max)}")
       }
 
       updateApplicationStoreInfo(appId, attemptId, newSize)

@@ -20,13 +20,10 @@ package org.apache.spark
 import org.scalatest.refspec.RefSpec
 
 /**
- * This test is just for demonstration purpose.
- * Real test suites in Spark codebase should use SparkFunSuite.
+ * This test is just for demonstration purpose. Real test suites in Spark codebase should use
+ * SparkFunSuite.
  */
-class RefSpecSparkTestSuite
-  extends RefSpec
-    with SparkTestSuite
-    with LocalSparkContext {
+class RefSpecSparkTestSuite extends RefSpec with SparkTestSuite with LocalSparkContext {
 
   override def beforeAll(): Unit = {
     super.beforeAll()

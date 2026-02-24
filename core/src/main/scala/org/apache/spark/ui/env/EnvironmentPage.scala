@@ -28,10 +28,8 @@ import org.apache.spark.status.AppStatusStore
 import org.apache.spark.ui._
 import org.apache.spark.util.Utils
 
-private[ui] class EnvironmentPage(
-    parent: EnvironmentTab,
-    conf: SparkConf,
-    store: AppStatusStore) extends WebUIPage("") {
+private[ui] class EnvironmentPage(parent: EnvironmentTab, conf: SparkConf, store: AppStatusStore)
+    extends WebUIPage("") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
     val appEnv = store.environmentInfo()
@@ -41,9 +39,10 @@ private[ui] class EnvironmentPage(
       "Scala Version" -> appEnv.runtime.scalaVersion)
 
     def constructExecutorRequestString(execReqs: Map[String, ExecutorResourceRequest]): String = {
-      execReqs.map {
-        case (_, execReq) =>
-          val execStr = new StringBuilder(s"\t${execReq.resourceName}: [amount: ${execReq.amount}")
+      execReqs
+        .map { case (_, execReq) =>
+          val execStr =
+            new StringBuilder(s"\t${execReq.resourceName}: [amount: ${execReq.amount}")
           if (execReq.discoveryScript.nonEmpty) {
             execStr ++= s", discovery: ${execReq.discoveryScript}"
           }
@@ -52,43 +51,70 @@ private[ui] class EnvironmentPage(
           }
           execStr ++= "]"
           execStr.toString()
-      }.mkString("\n")
+        }
+        .mkString("\n")
     }
 
     def constructTaskRequestString(taskReqs: Map[String, TaskResourceRequest]): String = {
-      taskReqs.map {
-        case (_, taskReq) => s"\t${taskReq.resourceName}: [amount: ${taskReq.amount}]"
-      }.mkString("\n")
+      taskReqs
+        .map { case (_, taskReq) =>
+          s"\t${taskReq.resourceName}: [amount: ${taskReq.amount}]"
+        }
+        .mkString("\n")
     }
 
-    val resourceProfileInfo = store.resourceProfileInfo().map { rinfo =>
-      val einfo = constructExecutorRequestString(rinfo.executorResources)
-      val tinfo = constructTaskRequestString(rinfo.taskResources)
-      val res = s"Executor Reqs:\n$einfo\nTask Reqs:\n$tinfo"
-      (rinfo.id.toString, res)
-    }.toMap
+    val resourceProfileInfo = store
+      .resourceProfileInfo()
+      .map { rinfo =>
+        val einfo = constructExecutorRequestString(rinfo.executorResources)
+        val tinfo = constructTaskRequestString(rinfo.taskResources)
+        val res = s"Executor Reqs:\n$einfo\nTask Reqs:\n$tinfo"
+        (rinfo.id.toString, res)
+      }
+      .toMap
 
-    val resourceProfileInformationTable = UIUtils.listingTable(resourceProfileHeader,
-      jvmRowDataPre, resourceProfileInfo.toSeq.sortWith(_._1.toInt < _._1.toInt),
-      fixedWidth = true, headerClasses = headerClassesNoSortValues)
+    val resourceProfileInformationTable = UIUtils.listingTable(
+      resourceProfileHeader,
+      jvmRowDataPre,
+      resourceProfileInfo.toSeq.sortWith(_._1.toInt < _._1.toInt),
+      fixedWidth = true,
+      headerClasses = headerClassesNoSortValues)
     val runtimeInformationTable = UIUtils.listingTable(
-      propertyHeader, jvmRow, jvmInformation.toSeq.sorted, fixedWidth = true,
+      propertyHeader,
+      jvmRow,
+      jvmInformation.toSeq.sorted,
+      fixedWidth = true,
       headerClasses = headerClasses)
-    val sparkPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      Utils.redact(conf, appEnv.sparkProperties.sorted), fixedWidth = true,
+    val sparkPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      Utils.redact(conf, appEnv.sparkProperties.sorted),
+      fixedWidth = true,
       headerClasses = headerClasses)
     val emptyProperties = collection.Seq.empty[(String, String)]
-    val hadoopPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
+    val hadoopPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
       Utils.redact(conf, Option(appEnv.hadoopProperties).getOrElse(emptyProperties).sorted),
-      fixedWidth = true, headerClasses = headerClasses)
-    val systemPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
-      Utils.redact(conf, appEnv.systemProperties.sorted), fixedWidth = true,
+      fixedWidth = true,
       headerClasses = headerClasses)
-    val metricsPropertiesTable = UIUtils.listingTable(propertyHeader, propertyRow,
+    val systemPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
+      Utils.redact(conf, appEnv.systemProperties.sorted),
+      fixedWidth = true,
+      headerClasses = headerClasses)
+    val metricsPropertiesTable = UIUtils.listingTable(
+      propertyHeader,
+      propertyRow,
       Utils.redact(conf, Option(appEnv.metricsProperties).getOrElse(emptyProperties).sorted),
-      fixedWidth = true, headerClasses = headerClasses)
+      fixedWidth = true,
+      headerClasses = headerClasses)
     val classpathEntriesTable = UIUtils.listingTable(
-      classPathHeader, classPathRow, appEnv.classpathEntries.sorted, fixedWidth = true,
+      classPathHeader,
+      classPathRow,
+      appEnv.classpathEntries.sorted,
+      fixedWidth = true,
       headerClasses = headerClasses)
     val content =
       <span>
@@ -188,8 +214,7 @@ private[ui] class EnvironmentPage(
   private def classPathRow(data: (String, String)) = <tr><td>{data._1}</td><td>{data._2}</td></tr>
 }
 
-private[ui] class EnvironmentTab(
-    parent: SparkUI,
-    store: AppStatusStore) extends SparkUITab(parent, "environment") {
+private[ui] class EnvironmentTab(parent: SparkUI, store: AppStatusStore)
+    extends SparkUITab(parent, "environment") {
   attachPage(new EnvironmentPage(this, parent.conf, store))
 }

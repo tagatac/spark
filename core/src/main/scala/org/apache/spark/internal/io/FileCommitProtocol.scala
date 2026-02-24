@@ -25,27 +25,26 @@ import org.apache.spark.annotation.Unstable
 import org.apache.spark.internal.Logging
 import org.apache.spark.util.Utils
 
-
 /**
  * An interface to define how a single Spark job commits its outputs. Three notes:
  *
- * 1. Implementations must be serializable, as the committer instance instantiated on the driver
- *    will be used for tasks on executors.
- * 2. Implementations should have a constructor with 2 or 3 arguments:
- *      (jobId: String, path: String) or
- *      (jobId: String, path: String, dynamicPartitionOverwrite: Boolean)
- * 3. A committer should not be reused across multiple Spark jobs.
+ *   1. Implementations must be serializable, as the committer instance instantiated on the driver
+ *      will be used for tasks on executors.
+ *   2. Implementations should have a constructor with 2 or 3 arguments: (jobId: String, path:
+ *      String) or (jobId: String, path: String, dynamicPartitionOverwrite: Boolean)
+ *   3. A committer should not be reused across multiple Spark jobs.
  *
  * The proper call sequence is:
  *
- * 1. Driver calls setupJob.
- * 2. As part of each task's execution, executor calls setupTask and then commitTask
- *    (or abortTask if task failed).
- * 3. When all necessary tasks completed successfully, the driver calls commitJob. If the job
- *    failed to execute (e.g. too many failed tasks), the job should call abortJob.
+ *   1. Driver calls setupJob.
+ *   2. As part of each task's execution, executor calls setupTask and then commitTask (or
+ *      abortTask if task failed).
+ *   3. When all necessary tasks completed successfully, the driver calls commitJob. If the job
+ *      failed to execute (e.g. too many failed tasks), the job should call abortJob.
  *
- * @note This class is exposed as an API considering the usage of many downstream custom
- * implementations, but will be subject to be changed and/or moved.
+ * @note
+ *   This class is exposed as an API considering the usage of many downstream custom
+ *   implementations, but will be subject to be changed and/or moved.
  */
 @Unstable
 abstract class FileCommitProtocol extends Logging {
@@ -64,14 +63,14 @@ abstract class FileCommitProtocol extends Logging {
   /**
    * Aborts a job after the writes fail. Must be called on the driver.
    *
-   * Calling this function is a best-effort attempt, because it is possible that the driver
-   * just crashes (or killed) before it can call abort.
+   * Calling this function is a best-effort attempt, because it is possible that the driver just
+   * crashes (or killed) before it can call abort.
    */
   def abortJob(jobContext: JobContext): Unit
 
   /**
-   * Sets up a task within a job.
-   * Must be called before any other task related methods can be invoked.
+   * Sets up a task within a job. Must be called before any other task related methods can be
+   * invoked.
    */
   def setupTask(taskContext: TaskAttemptContext): Unit
 
@@ -83,21 +82,24 @@ abstract class FileCommitProtocol extends Logging {
    * promises that the file will be at the location specified by the arguments after job commit.
    *
    * A full file path consists of the following parts:
-   *  1. the base path
-   *  2. some sub-directory within the base path, used to specify partitioning
-   *  3. file prefix, usually some unique job id with the task id
-   *  4. bucket id
-   *  5. source specific file extension, e.g. ".snappy.parquet"
+   *   1. the base path
+   *   2. some sub-directory within the base path, used to specify partitioning
+   *   3. file prefix, usually some unique job id with the task id
+   *   4. bucket id
+   *   5. source specific file extension, e.g. ".snappy.parquet"
    *
-   * The "dir" parameter specifies 2, and "ext" parameter specifies both 4 and 5, and the rest
-   * are left to the commit protocol implementation to decide.
+   * The "dir" parameter specifies 2, and "ext" parameter specifies both 4 and 5, and the rest are
+   * left to the commit protocol implementation to decide.
    *
-   * Important: it is the caller's responsibility to add uniquely identifying content to "ext"
-   * if a task is going to write out multiple files to the same dir. The file commit protocol only
+   * Important: it is the caller's responsibility to add uniquely identifying content to "ext" if
+   * a task is going to write out multiple files to the same dir. The file commit protocol only
    * guarantees that files written by different tasks will not conflict.
    */
   @deprecated("use newTaskTempFile(..., spec: FileNameSpec) instead", "3.3.0")
-  def newTaskTempFile(taskContext: TaskAttemptContext, dir: Option[String], ext: String): String = {
+  def newTaskTempFile(
+      taskContext: TaskAttemptContext,
+      dir: Option[String],
+      ext: String): String = {
     throw SparkException.mustOverrideOneMethodError("newTaskTempFile")
   }
 
@@ -112,19 +114,22 @@ abstract class FileCommitProtocol extends Logging {
    * partitioning. The "spec" parameter specifies the file name. The rest are left to the commit
    * protocol implementation to decide.
    *
-   * Important: it is the caller's responsibility to add uniquely identifying content to "spec"
-   * if a task is going to write out multiple files to the same dir. The file commit protocol only
+   * Important: it is the caller's responsibility to add uniquely identifying content to "spec" if
+   * a task is going to write out multiple files to the same dir. The file commit protocol only
    * guarantees that files written by different tasks will not conflict.
    *
    * @since 3.2.0
    */
   def newTaskTempFile(
-      taskContext: TaskAttemptContext, dir: Option[String], spec: FileNameSpec): String = {
+      taskContext: TaskAttemptContext,
+      dir: Option[String],
+      spec: FileNameSpec): String = {
     if (spec.prefix.isEmpty) {
       newTaskTempFile(taskContext, dir, spec.suffix)
     } else {
-      throw new UnsupportedOperationException(s"${getClass.getSimpleName}.newTaskTempFile does " +
-        s"not support file name prefix: ${spec.prefix}")
+      throw new UnsupportedOperationException(
+        s"${getClass.getSimpleName}.newTaskTempFile does " +
+          s"not support file name prefix: ${spec.prefix}")
     }
   }
 
@@ -132,13 +137,15 @@ abstract class FileCommitProtocol extends Logging {
    * Similar to newTaskTempFile(), but allows files to committed to an absolute output location.
    * Depending on the implementation, there may be weaker guarantees around adding files this way.
    *
-   * Important: it is the caller's responsibility to add uniquely identifying content to "ext"
-   * if a task is going to write out multiple files to the same dir. The file commit protocol only
+   * Important: it is the caller's responsibility to add uniquely identifying content to "ext" if
+   * a task is going to write out multiple files to the same dir. The file commit protocol only
    * guarantees that files written by different tasks will not conflict.
    */
   @deprecated("use newTaskTempFileAbsPath(..., spec: FileNameSpec) instead", "3.3.0")
   def newTaskTempFileAbsPath(
-      taskContext: TaskAttemptContext, absoluteDir: String, ext: String): String = {
+      taskContext: TaskAttemptContext,
+      absoluteDir: String,
+      ext: String): String = {
     throw SparkException.mustOverrideOneMethodError("newTaskTempFileAbsPath")
   }
 
@@ -150,14 +157,16 @@ abstract class FileCommitProtocol extends Logging {
    * parameter specifies the file name. The rest are left to the commit protocol implementation to
    * decide.
    *
-   * Important: it is the caller's responsibility to add uniquely identifying content to "spec"
-   * if a task is going to write out multiple files to the same dir. The file commit protocol only
+   * Important: it is the caller's responsibility to add uniquely identifying content to "spec" if
+   * a task is going to write out multiple files to the same dir. The file commit protocol only
    * guarantees that files written by different tasks will not conflict.
    *
    * @since 3.2.0
    */
   def newTaskTempFileAbsPath(
-      taskContext: TaskAttemptContext, absoluteDir: String, spec: FileNameSpec): String = {
+      taskContext: TaskAttemptContext,
+      absoluteDir: String,
+      spec: FileNameSpec): String = {
     if (spec.prefix.isEmpty) {
       newTaskTempFileAbsPath(taskContext, absoluteDir, spec.suffix)
     } else {
@@ -173,10 +182,11 @@ abstract class FileCommitProtocol extends Logging {
   def commitTask(taskContext: TaskAttemptContext): TaskCommitMessage
 
   /**
-   * Aborts a task after the writes have failed. Must be called on the executors when running tasks.
+   * Aborts a task after the writes have failed. Must be called on the executors when running
+   * tasks.
    *
-   * Calling this function is a best-effort attempt, because it is possible that the executor
-   * just crashes (or killed) before it can call abort.
+   * Calling this function is a best-effort attempt, because it is possible that the executor just
+   * crashes (or killed) before it can call abort.
    */
   def abortTask(taskContext: TaskAttemptContext): Unit
 
@@ -190,14 +200,13 @@ abstract class FileCommitProtocol extends Logging {
 
   /**
    * Called on the driver after a task commits. This can be used to access task commit messages
-   * before the job has finished. These same task commit messages will be passed to commitJob()
-   * if the entire job succeeds.
+   * before the job has finished. These same task commit messages will be passed to commitJob() if
+   * the entire job succeeds.
    */
   def onTaskCommit(taskCommit: TaskCommitMessage): Unit = {
     logDebug(s"onTaskCommit($taskCommit)")
   }
 }
-
 
 object FileCommitProtocol extends Logging {
   class TaskCommitMessage(val obj: Any) extends Serializable
@@ -213,8 +222,9 @@ object FileCommitProtocol extends Logging {
       outputPath: String,
       dynamicPartitionOverwrite: Boolean = false): FileCommitProtocol = {
 
-    logDebug(s"Creating committer $className; job $jobId; output=$outputPath;" +
-      s" dynamic=$dynamicPartitionOverwrite")
+    logDebug(
+      s"Creating committer $className; job $jobId; output=$outputPath;" +
+        s" dynamic=$dynamicPartitionOverwrite")
     val clazz = Utils.classForName[FileCommitProtocol](className)
     // First try the constructor with arguments (jobId: String, outputPath: String,
     // dynamicPartitionOverwrite: Boolean).
@@ -222,11 +232,15 @@ object FileCommitProtocol extends Logging {
     try {
       val ctor = clazz.getDeclaredConstructor(classOf[String], classOf[String], classOf[Boolean])
       logDebug("Using (String, String, Boolean) constructor")
-      ctor.newInstance(jobId, outputPath, dynamicPartitionOverwrite.asInstanceOf[java.lang.Boolean])
+      ctor.newInstance(
+        jobId,
+        outputPath,
+        dynamicPartitionOverwrite.asInstanceOf[java.lang.Boolean])
     } catch {
       case _: NoSuchMethodException =>
         logDebug("Falling back to (String, String) constructor")
-        require(!dynamicPartitionOverwrite,
+        require(
+          !dynamicPartitionOverwrite,
           "Dynamic Partition Overwrite is enabled but" +
             s" the committer ${className} does not have the appropriate constructor")
         val ctor = clazz.getDeclaredConstructor(classOf[String], classOf[String])
@@ -240,10 +254,12 @@ object FileCommitProtocol extends Logging {
 }
 
 /**
- * The specification for Spark output file name.
- * This is used by [[FileCommitProtocol]] to create full path of file.
+ * The specification for Spark output file name. This is used by [[FileCommitProtocol]] to create
+ * full path of file.
  *
- * @param prefix Prefix of file.
- * @param suffix Suffix of file.
+ * @param prefix
+ *   Prefix of file.
+ * @param suffix
+ *   Suffix of file.
  */
 final case class FileNameSpec(prefix: String, suffix: String)

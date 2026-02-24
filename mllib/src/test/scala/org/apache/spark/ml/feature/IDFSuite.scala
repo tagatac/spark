@@ -54,8 +54,7 @@ class IDFSuite extends MLTest with DefaultReadWriteTest {
     val data = Array(
       Vectors.sparse(numOfFeatures, Array(1, 3), Array(1.0, 2.0)),
       Vectors.dense(0.0, 1.0, 2.0, 3.0),
-      Vectors.sparse(numOfFeatures, Array(1), Array(1.0))
-    )
+      Vectors.sparse(numOfFeatures, Array(1), Array(1.0)))
     val numOfData = data.length
     val idf = Vectors.dense(Array(0, 3, 1, 2).map { x =>
       math.log((numOfData + 1.0) / (x + 1.0))
@@ -85,8 +84,7 @@ class IDFSuite extends MLTest with DefaultReadWriteTest {
     val data = Array(
       Vectors.sparse(numOfFeatures, Array(1, 3), Array(1.0, 2.0)),
       Vectors.dense(0.0, 1.0, 2.0, 3.0),
-      Vectors.sparse(numOfFeatures, Array(1), Array(1.0))
-    )
+      Vectors.sparse(numOfFeatures, Array(1), Array(1.0)))
     val numOfData = data.length
     val idf = Vectors.dense(Array(0, 3, 1, 2).map { x =>
       if (x > 0) math.log((numOfData + 1.0) / (x + 1.0)) else 0
@@ -116,10 +114,10 @@ class IDFSuite extends MLTest with DefaultReadWriteTest {
   }
 
   test("IDFModel read/write") {
-    val instance = new IDFModel("myIDFModel",
-      new OldIDFModel(Vectors.dense(1.0, 2.0), Array(1, 2), 2))
-      .setInputCol("myInputCol")
-      .setOutputCol("myOutputCol")
+    val instance =
+      new IDFModel("myIDFModel", new OldIDFModel(Vectors.dense(1.0, 2.0), Array(1, 2), 2))
+        .setInputCol("myInputCol")
+        .setOutputCol("myOutputCol")
 
     for (testSaveToLocal <- Seq(false, true)) {
       val newInstance = testDefaultReadWrite(instance, testSaveToLocal = testSaveToLocal)

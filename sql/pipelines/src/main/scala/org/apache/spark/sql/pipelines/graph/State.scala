@@ -26,10 +26,14 @@ object State extends Logging {
 
   /**
    * Find the graph elements to reset given the current update context.
-   * @param graph The graph to reset.
-   * @param env The current update context.
+   * @param graph
+   *   The graph to reset.
+   * @param env
+   *   The current update context.
    */
-  private def findElementsToReset(graph: DataflowGraph, env: PipelineUpdateContext): Seq[Input] = {
+  private def findElementsToReset(
+      graph: DataflowGraph,
+      env: PipelineUpdateContext): Seq[Input] = {
     // If tableFilter is an instance of SomeTables, this is a refresh selection and all tables
     // to reset should be resettable; Otherwise, this is a full graph update, and we reset all
     // tables that are resettable.
@@ -41,8 +45,7 @@ object State extends Logging {
             if (!PipelinesTableProperties.resetAllowed.fromMap(t.properties)) {
               throw new AnalysisException(
                 "TABLE_NOT_RESETTABLE",
-                Map("tableName" -> t.displayName)
-              )
+                Map("tableName" -> t.displayName))
             }
           }
           specifiedTables
@@ -63,13 +66,13 @@ object State extends Logging {
     }
 
     specifiedTablesToReset.flatMap(t => t +: graph.resolvedFlowsTo(t.identifier)) ++
-    specifiedSinksToReset.flatMap(s => graph.resolvedFlowsTo(s.identifier))
+      specifiedSinksToReset.flatMap(s => graph.resolvedFlowsTo(s.identifier))
   }
 
   /**
    * Performs the following on targets selected for full refresh:
-   * - Clearing checkpoint data
-   * - Truncating table data
+   *   - Clearing checkpoint data
+   *   - Truncating table data
    */
   def reset(resolvedGraph: DataflowGraph, env: PipelineUpdateContext): Seq[Input] = {
     val elementsToReset: Seq[Input] = findElementsToReset(resolvedGraph, env)
@@ -77,7 +80,7 @@ object State extends Logging {
     elementsToReset.foreach {
       case f: ResolvedFlow => reset(f, env, resolvedGraph)
       case _ => // tables is handled in materializeTables since hive metastore does not support
-                // removing all columns from a table.
+      // removing all columns from a table.
     }
 
     elementsToReset
@@ -86,15 +89,17 @@ object State extends Logging {
   /**
    * Resets the checkpoint for the given flow by creating the next consecutive directory.
    */
-  private def reset(flow: ResolvedFlow, env: PipelineUpdateContext, graph: DataflowGraph): Unit = {
+  private def reset(
+      flow: ResolvedFlow,
+      env: PipelineUpdateContext,
+      graph: DataflowGraph): Unit = {
     logInfo(log"Clearing out state for flow ${MDC(LogKeys.FLOW_NAME, flow.displayName)}")
     val flowMetadata = FlowSystemMetadata(env, flow, graph)
     flow match {
       case f if flowMetadata.latestCheckpointLocationOpt().isEmpty =>
         logInfo(
           s"Skipping resetting flow ${f.identifier} since its destination not been previously" +
-          s"materialized and we can't find the checkpoint location."
-        )
+            s"materialized and we can't find the checkpoint location.")
       case _ =>
         val hadoopConf = env.spark.sessionState.newHadoopConf()
 
@@ -107,8 +112,7 @@ object State extends Logging {
           fs1.mkdirs(nextPath)
           logInfo(
             log"Created new checkpoint for stream ${MDC(LogKeys.FLOW_NAME, flow.displayName)} " +
-            log"at ${MDC(LogKeys.CHECKPOINT_PATH, nextPath.toString)}."
-          )
+              log"at ${MDC(LogKeys.CHECKPOINT_PATH, nextPath.toString)}.")
         }
     }
   }

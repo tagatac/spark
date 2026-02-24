@@ -39,7 +39,8 @@ private[kafka010] case class KafkaBatchInputPartition(
     executorKafkaParams: ju.Map[String, Object],
     pollTimeoutMs: Long,
     failOnDataLoss: Boolean,
-    includeHeaders: Boolean) extends InputPartition {
+    includeHeaders: Boolean)
+    extends InputPartition {
   override def preferredLocations(): Array[String] = {
     offsetRange.preferredLoc.map(Array(_)).getOrElse(Array())
   }
@@ -52,16 +53,21 @@ private[kafka010] object KafkaBatchReaderFactory extends PartitionReaderFactory 
     val taskCtx = TaskContext.get()
     val queryId = taskCtx.getLocalProperty(StreamExecution.QUERY_ID_KEY)
     val batchId = taskCtx.getLocalProperty(MicroBatchExecution.BATCH_ID_KEY)
-    logInfo(log"Creating Kafka reader " +
-      log"topicPartition=${MDC(TOPIC_PARTITION, p.offsetRange.topicPartition)} " +
-      log"fromOffset=${MDC(FROM_OFFSET, p.offsetRange.fromOffset)}} " +
-      log"untilOffset=${MDC(UNTIL_OFFSET, p.offsetRange.untilOffset)}, " +
-      log"for query queryId=${MDC(QUERY_ID, queryId)} batchId=${MDC(BATCH_ID, batchId)} " +
-      log"taskId=${MDC(TASK_ATTEMPT_ID, TaskContext.get().taskAttemptId())} " +
-      log"partitionId=${MDC(PARTITION_ID, TaskContext.get().partitionId())}")
+    logInfo(
+      log"Creating Kafka reader " +
+        log"topicPartition=${MDC(TOPIC_PARTITION, p.offsetRange.topicPartition)} " +
+        log"fromOffset=${MDC(FROM_OFFSET, p.offsetRange.fromOffset)}} " +
+        log"untilOffset=${MDC(UNTIL_OFFSET, p.offsetRange.untilOffset)}, " +
+        log"for query queryId=${MDC(QUERY_ID, queryId)} batchId=${MDC(BATCH_ID, batchId)} " +
+        log"taskId=${MDC(TASK_ATTEMPT_ID, TaskContext.get().taskAttemptId())} " +
+        log"partitionId=${MDC(PARTITION_ID, TaskContext.get().partitionId())}")
 
-    KafkaBatchPartitionReader(p.offsetRange, p.executorKafkaParams, p.pollTimeoutMs,
-      p.failOnDataLoss, p.includeHeaders)
+    KafkaBatchPartitionReader(
+      p.offsetRange,
+      p.executorKafkaParams,
+      p.pollTimeoutMs,
+      p.failOnDataLoss,
+      p.includeHeaders)
   }
 }
 
@@ -72,9 +78,11 @@ private case class KafkaBatchPartitionReader(
     pollTimeoutMs: Long,
     failOnDataLoss: Boolean,
     includeHeaders: Boolean)
-  extends SupportsRealTimeRead[InternalRow] with Logging {
+    extends SupportsRealTimeRead[InternalRow]
+    with Logging {
 
-  private val consumer = KafkaDataConsumer.acquire(offsetRange.topicPartition, executorKafkaParams)
+  private val consumer =
+    KafkaDataConsumer.acquire(offsetRange.topicPartition, executorKafkaParams)
 
   private val rangeToRead = resolveRange(offsetRange)
   private val unsafeRowProjector = new KafkaRecordToRowConverter()
@@ -91,7 +99,8 @@ private case class KafkaBatchPartitionReader(
 
   override def next(): Boolean = {
     if (nextOffset < rangeToRead.untilOffset) {
-      val record = consumer.get(nextOffset, rangeToRead.untilOffset, pollTimeoutMs, failOnDataLoss)
+      val record =
+        consumer.get(nextOffset, rangeToRead.untilOffset, pollTimeoutMs, failOnDataLoss)
       if (record != null) {
         nextRow = unsafeRowProjector(record)
         nextOffset = record.offset + 1
@@ -106,21 +115,22 @@ private case class KafkaBatchPartitionReader(
 
   override def nextWithTimeout(timeoutMs: java.lang.Long): RecordStatus = {
     if (!iteratorForRealTimeMode.isDefined) {
-      logInfo(s"Getting a new kafka consuming iterator for ${offsetRange.topicPartition} " +
-        s"starting from ${nextOffset}, timeoutMs ${timeoutMs}")
+      logInfo(
+        s"Getting a new kafka consuming iterator for ${offsetRange.topicPartition} " +
+          s"starting from ${nextOffset}, timeoutMs ${timeoutMs}")
       iteratorForRealTimeMode = Some(consumer.getIterator(nextOffset))
     }
     assert(iteratorForRealTimeMode.isDefined)
     val nextRecord = iteratorForRealTimeMode.get.nextWithTimeout(timeoutMs)
     nextRecord.foreach { record =>
-
       nextRow = unsafeRowProjector(record)
       nextOffset = record.offset + 1
       if (record.timestampType() == TimestampType.LOG_APPEND_TIME ||
         record.timestampType() == TimestampType.CREATE_TIME) {
         if (!timestampTypeLogged) {
-          logInfo(log"Kafka source record timestamp type is " +
-            log"${MDC(LogKeys.TIMESTAMP_COLUMN_NAME, record.timestampType())}")
+          logInfo(
+            log"Kafka source record timestamp type is " +
+              log"${MDC(LogKeys.TIMESTAMP_COLUMN_NAME, record.timestampType())}")
           timestampTypeLogged = true
         }
 
@@ -150,14 +160,16 @@ private case class KafkaBatchPartitionReader(
       // Late bind the offset range
       val availableOffsetRange = consumer.getAvailableOffsetRange()
       val fromOffset = if (range.fromOffset < 0) {
-        assert(range.fromOffset == KafkaOffsetRangeLimit.EARLIEST,
+        assert(
+          range.fromOffset == KafkaOffsetRangeLimit.EARLIEST,
           s"earliest offset ${range.fromOffset} does not equal ${KafkaOffsetRangeLimit.EARLIEST}")
         availableOffsetRange.earliest
       } else {
         range.fromOffset
       }
       val untilOffset = if (range.untilOffset < 0) {
-        assert(range.untilOffset == KafkaOffsetRangeLimit.LATEST,
+        assert(
+          range.untilOffset == KafkaOffsetRangeLimit.LATEST,
           s"latest offset ${range.untilOffset} does not equal ${KafkaOffsetRangeLimit.LATEST}")
         availableOffsetRange.latest
       } else {

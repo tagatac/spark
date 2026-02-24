@@ -33,15 +33,17 @@ import org.apache.spark.sql.SparkSession
 /**
  * Spark's own GetTypeInfoOperation
  *
- * @param session       SparkSession to use
- * @param parentSession a HiveSession from SessionManager
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
  */
 private[hive] class SparkGetTypeInfoOperation(
     val session: SparkSession,
     parentSession: HiveSession)
-  extends GetTypeInfoOperation(parentSession)
-  with SparkOperation
-  with Logging {
+    extends GetTypeInfoOperation(parentSession)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     statementId = UUID.randomUUID().toString
@@ -93,11 +95,26 @@ private[hive] class SparkGetTypeInfoOperation(
 
 private[hive] object SparkGetTypeInfoUtil {
   val supportedType: Seq[Type] = {
-    Seq(NULL_TYPE, BOOLEAN_TYPE, STRING_TYPE, BINARY_TYPE,
-      TINYINT_TYPE, SMALLINT_TYPE, INT_TYPE, BIGINT_TYPE,
-      FLOAT_TYPE, DOUBLE_TYPE, DECIMAL_TYPE,
-      DATE_TYPE, TIMESTAMP_TYPE,
-      ARRAY_TYPE, MAP_TYPE, STRUCT_TYPE, CHAR_TYPE, VARCHAR_TYPE,
-      INTERVAL_YEAR_MONTH_TYPE, INTERVAL_DAY_TIME_TYPE)
+    Seq(
+      NULL_TYPE,
+      BOOLEAN_TYPE,
+      STRING_TYPE,
+      BINARY_TYPE,
+      TINYINT_TYPE,
+      SMALLINT_TYPE,
+      INT_TYPE,
+      BIGINT_TYPE,
+      FLOAT_TYPE,
+      DOUBLE_TYPE,
+      DECIMAL_TYPE,
+      DATE_TYPE,
+      TIMESTAMP_TYPE,
+      ARRAY_TYPE,
+      MAP_TYPE,
+      STRUCT_TYPE,
+      CHAR_TYPE,
+      VARCHAR_TYPE,
+      INTERVAL_YEAR_MONTH_TYPE,
+      INTERVAL_DAY_TIME_TYPE)
   }
 }

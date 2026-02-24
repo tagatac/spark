@@ -33,19 +33,22 @@ import org.apache.spark.sql.pipelines.graph.{FlowExecution, ResolutionCompletedF
  * progress events for batch/streaming flows will be logged:
  *
  * For batch & streaming flows in triggered execution mode:
- *  - All flow progress events other than errors/warnings will be logged at INFO level (including
- *    flow progress events with metrics) and error/warning messages will be logged at their level.
+ *   - All flow progress events other than errors/warnings will be logged at INFO level (including
+ *     flow progress events with metrics) and error/warning messages will be logged at their
+ *     level.
  *
- * @param eventCallback Callback to invoke on the flow progress events.
+ * @param eventCallback
+ *   Callback to invoke on the flow progress events.
  */
 class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logging {
 
   /**
    * This map stores flow identifier to a boolean representing whether flow is running.
-   * - For a flow which is queued and has not yet run, there will be no entry present in the map.
-   * - For a flow which has started running but failed will have a value of false or will not be
-   * present in the map.
-   * - Flow which has started running with no failures will have a value of true.
+   *   - For a flow which is queued and has not yet run, there will be no entry present in the
+   *     map.
+   *   - For a flow which has started running but failed will have a value of false or will not be
+   *     present in the map.
+   *   - Flow which has started running with no failures will have a value of true.
    */
   private val runningFlows = new ConcurrentHashMap[TableIdentifier, Boolean]().asScala
 
@@ -62,13 +65,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = s"Flow ${flow.displayName} is QUEUED.",
-        details = FlowProgress(FlowStatus.QUEUED)
-      )
-    )
+        details = FlowProgress(FlowStatus.QUEUED)))
   }
 
   /**
@@ -81,20 +81,17 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(batchFlow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(batchFlow.origin)
-        ),
+          sourceCodeLocation = Option(batchFlow.origin)),
         level = EventLevel.INFO,
         message = s"Flow ${batchFlow.displayName} is PLANNING.",
-        details = FlowProgress(FlowStatus.PLANNING)
-      )
-    )
+        details = FlowProgress(FlowStatus.PLANNING)))
     knownIdleFlows.remove(batchFlow.identifier)
   }
 
   /**
-   * Records flow progress events with flow status as STARTING. For batch flows in continuous mode,
-   * event will be logged at INFO if the recent flow run had failed otherwise the event will be
-   * logged at METRICS. All other cases will be logged at INFO.
+   * Records flow progress events with flow status as STARTING. For batch flows in continuous
+   * mode, event will be logged at INFO if the recent flow run had failed otherwise the event will
+   * be logged at METRICS. All other cases will be logged at INFO.
    */
   def recordStart(flowExecution: FlowExecution): Unit = synchronized {
     eventCallback(
@@ -102,13 +99,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flowExecution.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flowExecution.getOrigin)
-        ),
+          sourceCodeLocation = Option(flowExecution.getOrigin)),
         level = EventLevel.INFO,
         message = s"Flow ${flowExecution.displayName} is STARTING.",
-        details = FlowProgress(FlowStatus.STARTING)
-      )
-    )
+        details = FlowProgress(FlowStatus.STARTING)))
     knownIdleFlows.remove(flowExecution.identifier)
   }
 
@@ -119,13 +113,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = s"Flow ${flow.displayName} is RUNNING.",
-        details = FlowProgress(FlowStatus.RUNNING)
-      )
-    )
+        details = FlowProgress(FlowStatus.RUNNING)))
     runningFlows.put(flow.identifier, true)
     knownIdleFlows.remove(flow.identifier)
   }
@@ -138,8 +129,7 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
       flow: ResolutionCompletedFlow,
       exception: Throwable,
       logAsWarn: Boolean,
-      messageOpt: Option[String] = None
-  ): Unit = synchronized {
+      messageOpt: Option[String] = None): Unit = synchronized {
     val eventLogMessage = messageOpt.getOrElse(s"Flow '${flow.displayName}' has FAILED.")
 
     eventCallback(
@@ -147,14 +137,11 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = if (logAsWarn) EventLevel.WARN else EventLevel.ERROR,
         message = eventLogMessage,
         details = FlowProgress(FlowStatus.FAILED),
-        exception = Option(exception)
-      )
-    )
+        exception = Option(exception)))
     // Since the flow failed, remove the flow from runningFlows.
     runningFlows.remove(flow.identifier)
     knownIdleFlows.remove(flow.identifier)
@@ -170,13 +157,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.WARN,
         message = s"Flow '${flow.displayName}' SKIPPED due to upstream failure(s).",
-        details = FlowProgress(FlowStatus.SKIPPED)
-      )
-    )
+        details = FlowProgress(FlowStatus.SKIPPED)))
     runningFlows.remove(flow.identifier)
     // Even though this is skipped  it is a skipped because of a failure so this is not marked as
     // a idle flow.
@@ -193,33 +177,27 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = {
           s"Flow '${flow.displayName}' has been processed by a previous iteration " +
-          s"and will not be rerun."
+            s"and will not be rerun."
         },
-        details = FlowProgress(FlowStatus.SKIPPED)
-      )
-    )
+        details = FlowProgress(FlowStatus.SKIPPED)))
     knownIdleFlows.put(flow.identifier, FlowStatus.SKIPPED)
   }
 
-  /** Records flow progress events with flow status as EXCLUDED at INFO level.  */
+  /** Records flow progress events with flow status as EXCLUDED at INFO level. */
   def recordExcluded(flow: ResolvedFlow): Unit = synchronized {
     eventCallback(
       ConstructPipelineEvent(
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = s"Flow '${flow.displayName}' is EXCLUDED.",
-        details = FlowProgress(FlowStatus.EXCLUDED)
-      )
-    )
+        details = FlowProgress(FlowStatus.EXCLUDED)))
     knownIdleFlows.remove(flow.identifier)
   }
 
@@ -230,21 +208,17 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
   def recordStop(
       flow: ResolvedFlow,
       message: Option[String] = None,
-      cause: Option[Throwable] = None
-  ): Unit = synchronized {
+      cause: Option[Throwable] = None): Unit = synchronized {
     eventCallback(
       ConstructPipelineEvent(
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = message.getOrElse(s"Flow '${flow.displayName}' has STOPPED."),
         details = FlowProgress(FlowStatus.STOPPED),
-        exception = cause
-      )
-    )
+        exception = cause))
     // Once a flow is stopped, remove it from running and idle.
     runningFlows.remove(flow.identifier)
     knownIdleFlows.remove(flow.identifier)
@@ -257,13 +231,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = s"Flow '${flow.displayName}' is IDLE, waiting for new data.",
-        details = FlowProgress(FlowStatus.IDLE)
-      )
-    )
+        details = FlowProgress(FlowStatus.IDLE)))
     knownIdleFlows.put(flow.identifier, FlowStatus.IDLE)
   }
 
@@ -282,13 +253,10 @@ class FlowProgressEventLogger(eventCallback: PipelineEvent => Unit) extends Logg
         origin = PipelineEventOrigin(
           flowName = Option(flow.displayName),
           datasetName = None,
-          sourceCodeLocation = Option(flow.origin)
-        ),
+          sourceCodeLocation = Option(flow.origin)),
         level = EventLevel.INFO,
         message = s"Flow ${flow.displayName} has COMPLETED.",
-        details = FlowProgress(FlowStatus.COMPLETED)
-      )
-    )
+        details = FlowProgress(FlowStatus.COMPLETED)))
     knownIdleFlows.remove(flow.identifier)
   }
 }

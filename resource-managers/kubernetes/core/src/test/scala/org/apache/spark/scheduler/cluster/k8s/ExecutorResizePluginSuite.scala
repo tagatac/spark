@@ -34,7 +34,9 @@ import org.apache.spark.deploy.k8s.Constants._
 import org.apache.spark.deploy.k8s.Fabric8Aliases._
 
 class ExecutorResizePluginSuite
-    extends SparkFunSuite with BeforeAndAfter with PrivateMethodTester {
+    extends SparkFunSuite
+    with BeforeAndAfter
+    with PrivateMethodTester {
 
   private val namespace = "test-namespace"
   private val appId = "spark-test-app"
@@ -91,18 +93,18 @@ class ExecutorResizePluginSuite
       containerName: String = DEFAULT_EXECUTOR_CONTAINER_NAME): Pod = {
     new PodBuilder()
       .withNewMetadata()
-        .withName(s"spark-executor-$executorId")
-        .addToLabels(SPARK_APP_ID_LABEL, appId)
-        .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-        .addToLabels(SPARK_EXECUTOR_ID_LABEL, executorId.toString)
+      .withName(s"spark-executor-$executorId")
+      .addToLabels(SPARK_APP_ID_LABEL, appId)
+      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+      .addToLabels(SPARK_EXECUTOR_ID_LABEL, executorId.toString)
       .endMetadata()
       .withNewSpec()
-        .addNewContainer()
-          .withName(containerName)
-          .withNewResources()
-            .addToLimits("memory", new Quantity(memoryLimit))
-          .endResources()
-        .endContainer()
+      .addNewContainer()
+      .withName(containerName)
+      .withNewResources()
+      .addToLimits("memory", new Quantity(memoryLimit))
+      .endResources()
+      .endContainer()
       .endSpec()
       .build()
   }
@@ -133,10 +135,10 @@ class ExecutorResizePluginSuite
     val plugin = createPlugin()
     val pod = new PodBuilder()
       .withNewMetadata()
-        .withName("spark-executor-1")
-        .addToLabels(SPARK_APP_ID_LABEL, appId)
-        .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-        // No SPARK_EXECUTOR_ID_LABEL
+      .withName("spark-executor-1")
+      .addToLabels(SPARK_APP_ID_LABEL, appId)
+      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+      // No SPARK_EXECUTOR_ID_LABEL
       .endMetadata()
       .build()
 
@@ -200,18 +202,18 @@ class ExecutorResizePluginSuite
     val plugin = createPlugin()
     val pod = new PodBuilder()
       .withNewMetadata()
-        .withName("spark-executor-1")
-        .addToLabels(SPARK_APP_ID_LABEL, appId)
-        .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-        .addToLabels(SPARK_EXECUTOR_ID_LABEL, "1")
+      .withName("spark-executor-1")
+      .addToLabels(SPARK_APP_ID_LABEL, appId)
+      .addToLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+      .addToLabels(SPARK_EXECUTOR_ID_LABEL, "1")
       .endMetadata()
       .withNewSpec()
-        .addNewContainer()
-          .withName(DEFAULT_EXECUTOR_CONTAINER_NAME)
-          .withNewResources()
-            // No memory limit
-          .endResources()
-        .endContainer()
+      .addNewContainer()
+      .withName(DEFAULT_EXECUTOR_CONTAINER_NAME)
+      .withNewResources()
+      // No memory limit
+      .endResources()
+      .endContainer()
       .endSpec()
       .build()
 

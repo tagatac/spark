@@ -72,14 +72,13 @@ object SQLExecution extends Logging {
   }
 
   private def extractShuffleIds(plan: SparkPlan): Seq[Int] = {
-    val shuffleIdsOption = plan.collectFirst {
-      case ae: AdaptiveSparkPlanExec =>
-        ae.context.shuffleIds.asScala.keys.toSeq
+    val shuffleIdsOption = plan.collectFirst { case ae: AdaptiveSparkPlanExec =>
+      ae.context.shuffleIds.asScala.keys.toSeq
     }
     shuffleIdsOption.getOrElse {
-        plan.collect {
-          case exec: ShuffleExchangeLike => exec.shuffleId
-        }
+      plan.collect { case exec: ShuffleExchangeLike =>
+        exec.shuffleId
+      }
     }
   }
 
@@ -87,9 +86,7 @@ object SQLExecution extends Logging {
    * Wrap an action that will execute "queryExecution" to track all Spark jobs in the body so that
    * we can connect them with an execution.
    */
-  private def withNewExecutionId0[T](
-      queryExecution: QueryExecution,
-      name: Option[String] = None)(
+  private def withNewExecutionId0[T](queryExecution: QueryExecution, name: Option[String] = None)(
       body: Either[Throwable, () => T]): T = queryExecution.sparkSession.withActive {
     val sparkSession = queryExecution.sparkSession
     val sc = sparkSession.sparkContext
@@ -136,14 +133,15 @@ object SQLExecution extends Logging {
           val redactedStr = Utils
             .redact(sparkSession.sessionState.conf.stringRedactionPattern, sqlStr)
           redactedStr.substring(0, Math.min(truncateLength, redactedStr.length))
-        }.getOrElse(callSite.shortForm)
+        }
+        .getOrElse(callSite.shortForm)
 
       val globalConfigs = sparkSession.sharedState.conf.getAll.toMap
       val modifiedConfigs = sparkSession.sessionState.conf.getAllConfs
         .filterNot { case (key, value) =>
           key.startsWith(SPARK_DRIVER_PREFIX) ||
-            key.startsWith(SPARK_EXECUTOR_PREFIX) ||
-            globalConfigs.get(key).contains(value)
+          key.startsWith(SPARK_EXECUTOR_PREFIX) ||
+          globalConfigs.get(key).contains(value)
         }
       val redactedConfigs = sparkSession.sessionState.conf.redactOptions(modifiedConfigs)
 
@@ -164,8 +162,7 @@ object SQLExecution extends Logging {
               modifiedConfigs = redactedConfigs,
               jobTags = sc.getJobTags(),
               jobGroupId = Option(sc.getLocalProperty(SparkContext.SPARK_JOB_GROUP_ID)),
-              queryId = Some(queryId)
-            )
+              queryId = Some(queryId))
             try {
               body match {
                 case Left(e) =>
@@ -175,16 +172,17 @@ object SQLExecution extends Logging {
                   val planDescriptionMode =
                     ExplainMode.fromString(sparkSession.sessionState.conf.uiExplainMode)
                   val planDesc = queryExecution.explainString(planDescriptionMode)
-                  val planInfo = try {
-                    SparkPlanInfo.fromSparkPlan(queryExecution.executedPlan)
-                  } catch {
-                    case NonFatal(e) =>
-                      logDebug("Failed to generate SparkPlanInfo", e)
-                      // If the queryExecution already failed before this, we are not able to
-                      // generate the the plan info, so we use and empty graphviz node to make the
-                      // UI happy
-                      SparkPlanInfo.EMPTY
-                  }
+                  val planInfo =
+                    try {
+                      SparkPlanInfo.fromSparkPlan(queryExecution.executedPlan)
+                    } catch {
+                      case NonFatal(e) =>
+                        logDebug("Failed to generate SparkPlanInfo", e)
+                        // If the queryExecution already failed before this, we are not able to
+                        // generate the the plan info, so we use and empty graphviz node to make the
+                        // UI happy
+                        SparkPlanInfo.EMPTY
+                    }
                   sc.listenerBus.post(
                     startEvent.copy(physicalPlanDescription = planDesc, sparkPlanInfo = planInfo))
                   isExecutedPlanAvailable = true
@@ -274,23 +272,20 @@ object SQLExecution extends Logging {
     }
   }
 
-  def withNewExecutionId[T](
-      queryExecution: QueryExecution,
-      name: Option[String] = None)(body: => T): T = {
+  def withNewExecutionId[T](queryExecution: QueryExecution, name: Option[String] = None)(
+      body: => T): T = {
     withNewExecutionId0(queryExecution, name)(Right(() => body))
   }
 
-  def withNewExecutionIdOnError(
-      queryExecution: QueryExecution,
-      name: Option[String] = None)(t: Throwable): Unit = {
+  def withNewExecutionIdOnError(queryExecution: QueryExecution, name: Option[String] = None)(
+      t: Throwable): Unit = {
     withNewExecutionId0(queryExecution, name)(Left(t))
   }
 
-
   /**
    * Wrap an action with a known executionId. When running a different action in a different
-   * thread from the original one, this method can be used to connect the Spark jobs in this action
-   * with the known executionId, e.g., `BroadcastExchangeExec.relationFuture`.
+   * thread from the original one, this method can be used to connect the Spark jobs in this
+   * action with the known executionId, e.g., `BroadcastExchangeExec.relationFuture`.
    */
   def withExecutionId[T](sparkSession: SparkSession, executionId: String)(body: => T): T = {
     val sc = sparkSession.sparkContext
@@ -344,35 +339,38 @@ object SQLExecution extends Logging {
   }
 
   /**
-   * Wrap passed function to ensure necessary thread-local variables like
-   * SparkContext local properties are forwarded to execution thread
+   * Wrap passed function to ensure necessary thread-local variables like SparkContext local
+   * properties are forwarded to execution thread
    */
-  def withThreadLocalCaptured[T](
-      sparkSession: SparkSession, exec: ExecutorService) (body: => T): CompletableFuture[T] = {
+  def withThreadLocalCaptured[T](sparkSession: SparkSession, exec: ExecutorService)(
+      body: => T): CompletableFuture[T] = {
     val activeSession = sparkSession
     val sc = sparkSession.sparkContext
     val localProps = Utils.cloneProperties(sc.getLocalProperties)
     // `getCurrentJobArtifactState` will return a stat only in Spark Connect mode. In non-Connect
     // mode, we default back to the resources of the current Spark session.
-    val artifactState = JobArtifactSet.getCurrentJobArtifactState.getOrElse(
-      activeSession.artifactManager.state)
-    CompletableFuture.supplyAsync(() => JobArtifactSet.withActiveJobArtifactState(artifactState) {
-      val originalSession = SparkSession.getActiveSession
-      val originalLocalProps = sc.getLocalProperties
-      SparkSession.setActiveSession(activeSession)
-      val res = withSessionTagsApplied(activeSession) {
-        sc.setLocalProperties(localProps)
-        val res = body
-        // reset active session and local props.
-        sc.setLocalProperties(originalLocalProps)
-        res
-      }
-      if (originalSession.nonEmpty) {
-        SparkSession.setActiveSession(originalSession.get)
-      } else {
-        SparkSession.clearActiveSession()
-      }
-      res
-    }, exec)
+    val artifactState =
+      JobArtifactSet.getCurrentJobArtifactState.getOrElse(activeSession.artifactManager.state)
+    CompletableFuture.supplyAsync(
+      () =>
+        JobArtifactSet.withActiveJobArtifactState(artifactState) {
+          val originalSession = SparkSession.getActiveSession
+          val originalLocalProps = sc.getLocalProperties
+          SparkSession.setActiveSession(activeSession)
+          val res = withSessionTagsApplied(activeSession) {
+            sc.setLocalProperties(localProps)
+            val res = body
+            // reset active session and local props.
+            sc.setLocalProperties(originalLocalProps)
+            res
+          }
+          if (originalSession.nonEmpty) {
+            SparkSession.setActiveSession(originalSession.get)
+          } else {
+            SparkSession.clearActiveSession()
+          }
+          res
+        },
+      exec)
   }
 }

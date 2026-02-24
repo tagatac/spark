@@ -29,17 +29,19 @@ package object config extends Logging {
   /* Common app configuration. */
 
   private[spark] val APPLICATION_TAGS = ConfigBuilder("spark.yarn.tags")
-    .doc("Comma-separated list of strings to pass through as YARN application tags appearing " +
-      "in YARN Application Reports, which can be used for filtering when querying YARN.")
+    .doc(
+      "Comma-separated list of strings to pass through as YARN application tags appearing " +
+        "in YARN Application Reports, which can be used for filtering when querying YARN.")
     .version("1.5.0")
     .stringConf
     .toSequence
     .createOptional
 
   private[spark] val APPLICATION_PRIORITY = ConfigBuilder("spark.yarn.priority")
-    .doc("Application priority for YARN to define pending applications ordering policy, those" +
-      " with higher value have a better opportunity to be activated. Currently, YARN only" +
-      " supports application priority when using FIFO ordering policy.")
+    .doc(
+      "Application priority for YARN to define pending applications ordering policy, those" +
+        " with higher value have a better opportunity to be activated. Currently, YARN only" +
+        " supports application priority when using FIFO ordering policy.")
     .version("3.0.0")
     .intConf
     .createOptional
@@ -69,11 +71,12 @@ package object config extends Logging {
 
   private[spark] val AM_CLIENT_MODE_EXIT_ON_ERROR =
     ConfigBuilder("spark.yarn.am.clientModeExitOnError")
-      .doc("In yarn-client mode, when this is true, if driver got " +
-        "application report with final status of KILLED or FAILED, " +
-        "driver will stop corresponding SparkContext and exit program with code 1. " +
-        "Note, if this is true and called from another application, it will terminate " +
-        "the parent application as well.")
+      .doc(
+        "In yarn-client mode, when this is true, if driver got " +
+          "application report with final status of KILLED or FAILED, " +
+          "driver will stop corresponding SparkContext and exit program with code 1. " +
+          "Note, if this is true and called from another application, it will terminate " +
+          "the parent application as well.")
       .version("3.3.0")
       .booleanConf
       .createWithDefault(false)
@@ -106,26 +109,30 @@ package object config extends Logging {
     .booleanConf
     .createWithDefault(false)
 
-  private[spark] val POPULATE_HADOOP_CLASSPATH = ConfigBuilder("spark.yarn.populateHadoopClasspath")
-    .doc("Whether to populate Hadoop classpath from `yarn.application.classpath` and " +
-      "`mapreduce.application.classpath` Note that if this is set to `false`, it requires " +
-      "a `with-Hadoop` Spark distribution that bundles Hadoop runtime or user has to provide " +
-      "a Hadoop installation separately. By default, for `with-hadoop` Spark distribution, " +
-      "this is set to `false`; for `no-hadoop` distribution, this is set to `true`.")
+  private[spark] val POPULATE_HADOOP_CLASSPATH = ConfigBuilder(
+    "spark.yarn.populateHadoopClasspath")
+    .doc(
+      "Whether to populate Hadoop classpath from `yarn.application.classpath` and " +
+        "`mapreduce.application.classpath` Note that if this is set to `false`, it requires " +
+        "a `with-Hadoop` Spark distribution that bundles Hadoop runtime or user has to provide " +
+        "a Hadoop installation separately. By default, for `with-hadoop` Spark distribution, " +
+        "this is set to `false`; for `no-hadoop` distribution, this is set to `true`.")
     .version("2.4.6")
     .booleanConf
     .createWithDefault(isHadoopProvided())
 
   private[spark] val GATEWAY_ROOT_PATH = ConfigBuilder("spark.yarn.config.gatewayPath")
-    .doc("Root of configuration paths that is present on gateway nodes, and will be replaced " +
-      "with the corresponding path in cluster machines.")
+    .doc(
+      "Root of configuration paths that is present on gateway nodes, and will be replaced " +
+        "with the corresponding path in cluster machines.")
     .version("1.5.0")
     .stringConf
     .createOptional
 
   private[spark] val REPLACEMENT_ROOT_PATH = ConfigBuilder("spark.yarn.config.replacementPath")
-    .doc(s"Path to use as a replacement for ${GATEWAY_ROOT_PATH.key} when launching processes " +
-      "in the YARN cluster.")
+    .doc(
+      s"Path to use as a replacement for ${GATEWAY_ROOT_PATH.key} when launching processes " +
+        "in the YARN cluster.")
     .version("1.5.0")
     .stringConf
     .createOptional
@@ -149,9 +156,10 @@ package object config extends Logging {
       .createWithDefault(false)
 
   private[spark] val APPLICATION_TYPE = ConfigBuilder("spark.yarn.applicationType")
-    .doc("Type of this application," +
-      "it allows user to specify a more specific type for the application, such as SPARK," +
-      "SPARK-SQL, SPARK-STREAMING, SPARK-MLLIB and SPARK-GRAPH")
+    .doc(
+      "Type of this application," +
+        "it allows user to specify a more specific type for the application, such as SPARK," +
+        "SPARK-SQL, SPARK-STREAMING, SPARK-MLLIB and SPARK-GRAPH")
     .version("3.1.0")
     .stringConf
     .createWithDefault("SPARK")
@@ -195,20 +203,22 @@ package object config extends Logging {
     .booleanConf
     .createWithDefault(false)
 
-  private[spark] val STAGING_FILE_REPLICATION = ConfigBuilder("spark.yarn.submit.file.replication")
-    .doc("Replication factor for files uploaded by Spark to HDFS.")
-    .version("0.8.1")
-    .intConf
-    .createOptional
+  private[spark] val STAGING_FILE_REPLICATION =
+    ConfigBuilder("spark.yarn.submit.file.replication")
+      .doc("Replication factor for files uploaded by Spark to HDFS.")
+      .version("0.8.1")
+      .intConf
+      .createOptional
 
   /* Launcher configuration. */
 
-  private[spark] val WAIT_FOR_APP_COMPLETION = ConfigBuilder("spark.yarn.submit.waitAppCompletion")
-    .doc("In cluster mode, whether to wait for the application to finish before exiting the " +
-      "launcher process.")
-    .version("1.4.0")
-    .booleanConf
-    .createWithDefault(true)
+  private[spark] val WAIT_FOR_APP_COMPLETION =
+    ConfigBuilder("spark.yarn.submit.waitAppCompletion")
+      .doc("In cluster mode, whether to wait for the application to finish before exiting the " +
+        "launcher process.")
+      .version("1.4.0")
+      .booleanConf
+      .createWithDefault(true)
 
   private[spark] val REPORT_INTERVAL = ConfigBuilder("spark.yarn.report.interval")
     .doc("Interval between reports of the current app status.")
@@ -218,10 +228,11 @@ package object config extends Logging {
 
   private[spark] val REPORT_LOG_FREQUENCY = {
     ConfigBuilder("spark.yarn.report.loggingFrequency")
-      .doc("Maximum number of application reports processed " +
-        "until the next application status is logged. " +
-        "If there is a change of state, the application status will be logged " +
-        "regardless of the number of application reports processed.")
+      .doc(
+        "Maximum number of application reports processed " +
+          "until the next application status is logged. " +
+          "If there is a change of state, the application status will be logged " +
+          "regardless of the number of application reports processed.")
       .version("3.5.0")
       .intConf
       .checkValue(_ > 0, "logging frequency should be positive")
@@ -237,7 +248,8 @@ package object config extends Logging {
 
   private[spark] val CLIENT_INCLUDE_DRIVER_LOGS_LINK =
     ConfigBuilder("spark.yarn.includeDriverLogsLink")
-      .doc("In cluster mode, whether the client application report includes links to the driver "
+      .doc(
+        "In cluster mode, whether the client application report includes links to the driver "
           + "container's logs. This requires polling the ResourceManager's REST API, so it "
           + "places some additional load on the RM.")
       .version("3.1.0")
@@ -288,8 +300,9 @@ package object config extends Logging {
       .createWithDefaultString("200ms")
 
   private[spark] val AM_FINAL_MSG_LIMIT = ConfigBuilder("spark.yarn.am.finalMessageLimit")
-    .doc("The limit size of final diagnostic message for our ApplicationMaster to unregister from" +
-      " the ResourceManager.")
+    .doc(
+      "The limit size of final diagnostic message for our ApplicationMaster to unregister from" +
+        " the ResourceManager.")
     .version("2.4.0")
     .bytesConf(ByteUnit.BYTE)
     .createWithDefaultString("1m")
@@ -342,8 +355,9 @@ package object config extends Logging {
   /* Unmanaged AM configuration. */
 
   private[spark] val YARN_UNMANAGED_AM = ConfigBuilder("spark.yarn.unmanagedAM.enabled")
-    .doc("In client mode, whether to launch the Application Master service as part of the client " +
-      "using unmanaged am.")
+    .doc(
+      "In client mode, whether to launch the Application Master service as part of the client " +
+        "using unmanaged am.")
     .version("3.0.0")
     .booleanConf
     .createWithDefault(false)
@@ -352,16 +366,18 @@ package object config extends Logging {
 
   private[spark] val ROLLED_LOG_INCLUDE_PATTERN =
     ConfigBuilder("spark.yarn.rolledLog.includePattern")
-      .doc("Java Regex to filter the log files which match the defined include pattern and those " +
-        "log files will be aggregated in a rolling fashion.")
+      .doc(
+        "Java Regex to filter the log files which match the defined include pattern and those " +
+          "log files will be aggregated in a rolling fashion.")
       .version("2.0.0")
       .stringConf
       .createOptional
 
   private[spark] val ROLLED_LOG_EXCLUDE_PATTERN =
     ConfigBuilder("spark.yarn.rolledLog.excludePattern")
-      .doc("Java Regex to filter the log files which match the defined exclude pattern and those " +
-        "log files will not be aggregated in a rolling fashion.")
+      .doc(
+        "Java Regex to filter the log files which match the defined exclude pattern and those " +
+          "log files will not be aggregated in a rolling fashion.")
       .version("2.0.0")
       .stringConf
       .createOptional
@@ -445,41 +461,44 @@ package object config extends Logging {
 
   private[spark] val YARN_GPU_DEVICE = ConfigBuilder("spark.yarn.resourceGpuDeviceName")
     .version("3.2.1")
-    .doc("Specify the mapping of the Spark resource type of gpu to the YARN resource "
-      + "representing a GPU. By default YARN uses yarn.io/gpu but if YARN has been "
-      + "configured with a custom resource type, this allows remapping it. "
-      + "Applies when using the <code>spark.{driver/executor}.resource.gpu.*</code> configs.")
+    .doc(
+      "Specify the mapping of the Spark resource type of gpu to the YARN resource "
+        + "representing a GPU. By default YARN uses yarn.io/gpu but if YARN has been "
+        + "configured with a custom resource type, this allows remapping it. "
+        + "Applies when using the <code>spark.{driver/executor}.resource.gpu.*</code> configs.")
     .stringConf
     .createWithDefault("yarn.io/gpu")
 
   private[spark] val YARN_FPGA_DEVICE = ConfigBuilder("spark.yarn.resourceFpgaDeviceName")
     .version("3.2.1")
-    .doc("Specify the mapping of the Spark resource type of fpga to the YARN resource "
-      + "representing a FPGA. By default YARN uses yarn.io/fpga but if YARN has been "
-      + "configured with a custom resource type, this allows remapping it. "
-      + "Applies when using the <code>spark.{driver/executor}.resource.fpga.*</code> configs.")
+    .doc(
+      "Specify the mapping of the Spark resource type of fpga to the YARN resource "
+        + "representing a FPGA. By default YARN uses yarn.io/fpga but if YARN has been "
+        + "configured with a custom resource type, this allows remapping it. "
+        + "Applies when using the <code>spark.{driver/executor}.resource.fpga.*</code> configs.")
     .stringConf
     .createWithDefault("yarn.io/fpga")
 
   private[spark] val YARN_CLIENT_STAT_CACHE_PRELOAD_ENABLED =
     ConfigBuilder("spark.yarn.client.statCache.preload.enabled")
-    .doc("Enables statCache to be preloaded at YARN client side. This feature analyzes the " +
-      "pattern of resources paths, and if multiple resources shared the same parent directory, " +
-      "a single <code>listStatus</code> will be invoked on the parent directory instead of " +
-      "multiple <code>getFileStatus</code> on individual resources. If most resources are from " +
-      "a small set of directories, this can improve job submission time. Enabling this feature " +
-      "may potentially increase client memory overhead.")
-    .version("4.0.0")
-    .booleanConf
-    .createWithDefault(false)
+      .doc("Enables statCache to be preloaded at YARN client side. This feature analyzes the " +
+        "pattern of resources paths, and if multiple resources shared the same parent directory, " +
+        "a single <code>listStatus</code> will be invoked on the parent directory instead of " +
+        "multiple <code>getFileStatus</code> on individual resources. If most resources are from " +
+        "a small set of directories, this can improve job submission time. Enabling this feature " +
+        "may potentially increase client memory overhead.")
+      .version("4.0.0")
+      .booleanConf
+      .createWithDefault(false)
 
   private[spark] val YARN_CLIENT_STAT_CACHE_PRELOAD_PER_DIRECTORY_THRESHOLD =
     ConfigBuilder("spark.yarn.client.statCache.preload.perDirectoryThreshold")
-      .doc("Minimum resource count in a directory to trigger statCache preloading when " +
-        "submitting an application. If the number of resources in a directory, without " +
-        "any wildcards, equals or exceeds this threshold, the statCache for that directory " +
-        "will be preloaded. This configuration will only take effect when " +
-        "<code>spark.yarn.client.statCache.preloaded.enabled</code> option is enabled.")
+      .doc(
+        "Minimum resource count in a directory to trigger statCache preloading when " +
+          "submitting an application. If the number of resources in a directory, without " +
+          "any wildcards, equals or exceeds this threshold, the statCache for that directory " +
+          "will be preloaded. This configuration will only take effect when " +
+          "<code>spark.yarn.client.statCache.preloaded.enabled</code> option is enabled.")
       .version("4.0.0")
       .intConf
       .createWithDefault(5)
@@ -499,8 +518,9 @@ package object config extends Logging {
       prop.getProperty(propertyKey).toBoolean
     } catch {
       case e: Exception =>
-        log.warn(s"Can not load the default value of `$propertyKey` from " +
-          s"`$configPath` with error, ${e.toString}. Using `false` as a default value.")
+        log.warn(
+          s"Can not load the default value of `$propertyKey` from " +
+            s"`$configPath` with error, ${e.toString}. Using `false` as a default value.")
         false
     }
   }

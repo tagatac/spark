@@ -55,7 +55,11 @@ private[spark] object CryptoStreamUtils extends Logging {
     val params = new CryptoParams(key, sparkConf)
     val iv = createInitializationVector(params.conf)
     os.write(iv)
-    new CryptoOutputStream(params.transformation, params.conf, os, params.keySpec,
+    new CryptoOutputStream(
+      params.transformation,
+      params.conf,
+      os,
+      params.keySpec,
       new IvParameterSpec(iv))
   }
 
@@ -71,7 +75,11 @@ private[spark] object CryptoStreamUtils extends Logging {
     val helper = new CryptoHelperChannel(channel)
 
     helper.write(ByteBuffer.wrap(iv))
-    new CryptoOutputStream(params.transformation, params.conf, helper, params.keySpec,
+    new CryptoOutputStream(
+      params.transformation,
+      params.conf,
+      helper,
+      params.keySpec,
       new IvParameterSpec(iv))
   }
 
@@ -85,7 +93,11 @@ private[spark] object CryptoStreamUtils extends Logging {
     val iv = new Array[Byte](IV_LENGTH_IN_BYTES)
     JavaUtils.readFully(is, iv, 0, IV_LENGTH_IN_BYTES)
     val params = new CryptoParams(key, sparkConf)
-    new CryptoInputStream(params.transformation, params.conf, is, params.keySpec,
+    new CryptoInputStream(
+      params.transformation,
+      params.conf,
+      is,
+      params.keySpec,
       new IvParameterSpec(iv))
   }
 
@@ -101,12 +113,17 @@ private[spark] object CryptoStreamUtils extends Logging {
     JavaUtils.readFully(channel, buf)
 
     val params = new CryptoParams(key, sparkConf)
-    new CryptoInputStream(params.transformation, params.conf, channel, params.keySpec,
+    new CryptoInputStream(
+      params.transformation,
+      params.conf,
+      channel,
+      params.keySpec,
       new IvParameterSpec(iv))
   }
 
   def toCryptoConf(conf: SparkConf): Properties = {
-    CryptoUtils.toCryptoConf(SPARK_IO_ENCRYPTION_COMMONS_CONFIG_PREFIX,
+    CryptoUtils.toCryptoConf(
+      SPARK_IO_ENCRYPTION_COMMONS_CONFIG_PREFIX,
       conf.getAll.toMap.asJava.entrySet())
   }
 
@@ -131,8 +148,9 @@ private[spark] object CryptoStreamUtils extends Logging {
     val initialIVFinish = System.nanoTime()
     val initialIVTime = TimeUnit.NANOSECONDS.toMillis(initialIVFinish - initialIVStart)
     if (initialIVTime > 2000) {
-      logWarning(log"It costs ${MDC(TIME_UNITS, initialIVTime)} milliseconds " +
-        log"to create the Initialization Vector used by CryptoStream")
+      logWarning(
+        log"It costs ${MDC(TIME_UNITS, initialIVTime)} milliseconds " +
+          log"to create the Initialization Vector used by CryptoStream")
     }
     iv
   }

@@ -33,11 +33,11 @@ import org.apache.spark.ui.{SparkUI, UIUtils}
 /**
  * Main entry point for serving spark application metrics as json, using JAX-RS.
  *
- * Each resource should have endpoints that return **public** classes defined in api.scala.  Mima
+ * Each resource should have endpoints that return **public** classes defined in api.scala. Mima
  * binary compatibility checks ensure that we don't inadvertently make changes that break the api.
  * The returned objects are automatically converted to json by jackson with JacksonMessageWriter.
  * In addition, there are a number of tests in HistoryServerSuite that compare the json to "golden
- * files".  Any changes and additions should be reflected there as well -- see the notes in
+ * files". Any changes and additions should be reflected there as well -- see the notes in
  * HistoryServerSuite.
  */
 @Path("/v1")
@@ -69,15 +69,17 @@ private[spark] object ApiRootResource {
 }
 
 /**
- * This trait is shared by the all the root containers for application UI information --
- * the HistoryServer and the application UI.  This provides the common
- * interface needed for them all to expose application info as json.
+ * This trait is shared by the all the root containers for application UI information -- the
+ * HistoryServer and the application UI. This provides the common interface needed for them all to
+ * expose application info as json.
  */
 private[spark] trait UIRoot {
+
   /**
    * Runs some code with the current SparkUI instance for the app / attempt.
    *
-   * @throws java.util.NoSuchElementException If the app / attempt pair does not exist.
+   * @throws java.util.NoSuchElementException
+   *   If the app / attempt pair does not exist.
    */
   def withSparkUI[T](appId: String, attemptId: Option[String])(fn: SparkUI => T): T
 
@@ -92,8 +94,12 @@ private[spark] trait UIRoot {
    * Write the event logs for the given app to the `ZipOutputStream` instance. If attemptId is
    * `None`, event logs for all attempts of this application will be written out.
    */
-  def writeEventLogs(appId: String, attemptId: Option[String], zipStream: ZipOutputStream): Unit = {
-    Response.serverError()
+  def writeEventLogs(
+      appId: String,
+      attemptId: Option[String],
+      zipStream: ZipOutputStream): Unit = {
+    Response
+      .serverError()
       .entity("Event logs are only available through the history server.")
       .status(Response.Status.SERVICE_UNAVAILABLE)
       .build()
@@ -166,19 +172,20 @@ private[v1] trait BaseAppResource extends ApiRequestContext {
   }
 }
 
-private[v1] class ForbiddenException(msg: String) extends WebApplicationException(
-    UIUtils.buildErrorResponse(Response.Status.FORBIDDEN, msg))
+private[v1] class ForbiddenException(msg: String)
+    extends WebApplicationException(UIUtils.buildErrorResponse(Response.Status.FORBIDDEN, msg))
 
-private[v1] class NotFoundException(msg: String) extends WebApplicationException(
-    UIUtils.buildErrorResponse(Response.Status.NOT_FOUND, msg))
+private[v1] class NotFoundException(msg: String)
+    extends WebApplicationException(UIUtils.buildErrorResponse(Response.Status.NOT_FOUND, msg))
 
-private[v1] class ServiceUnavailable(msg: String) extends WebApplicationException(
-    UIUtils.buildErrorResponse(Response.Status.SERVICE_UNAVAILABLE, msg))
+private[v1] class ServiceUnavailable(msg: String)
+    extends WebApplicationException(
+      UIUtils.buildErrorResponse(Response.Status.SERVICE_UNAVAILABLE, msg))
 
-private[v1] class BadParameterException(msg: String) extends WebApplicationException(
-    UIUtils.buildErrorResponse(Response.Status.BAD_REQUEST, msg)) {
+private[v1] class BadParameterException(msg: String)
+    extends WebApplicationException(
+      UIUtils.buildErrorResponse(Response.Status.BAD_REQUEST, msg)) {
   def this(param: String, exp: String, actual: String) = {
     this(raw"""Bad value for parameter "$param".  Expected a $exp, got "$actual"""")
   }
 }
-

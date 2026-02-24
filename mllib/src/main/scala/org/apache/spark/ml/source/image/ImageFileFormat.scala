@@ -75,11 +75,12 @@ private[image] case class ImageFileFormat() extends FileFormat with DataSourceRe
         val path = file.toPath
         val fs = path.getFileSystem(broadcastedHadoopConf.value.value)
         val stream = fs.open(path)
-        val bytes = try {
-          stream.readAllBytes()
-        } finally {
-          Closeables.close(stream, true)
-        }
+        val bytes =
+          try {
+            stream.readAllBytes()
+          } finally {
+            Closeables.close(stream, true)
+          }
         val resultOpt = ImageSchema.decode(origin, bytes)
         val filteredResult = if (imageSourceOptions.dropInvalid) {
           resultOpt.iterator

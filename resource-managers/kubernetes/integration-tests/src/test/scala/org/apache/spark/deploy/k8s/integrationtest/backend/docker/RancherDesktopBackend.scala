@@ -20,6 +20,4 @@ import org.apache.spark.deploy.k8s.integrationtest.TestConstants
 import org.apache.spark.deploy.k8s.integrationtest.backend.cloud.KubeConfigBackend
 
 private[spark] object RancherDesktopBackend
-  extends KubeConfigBackend(TestConstants.BACKEND_RANCHER_DESKTOP) {
-
-}
+    extends KubeConfigBackend(TestConstants.BACKEND_RANCHER_DESKTOP) {}

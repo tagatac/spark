@@ -30,8 +30,7 @@ class PCASuite extends SparkFunSuite with MLlibTestSparkContext {
   private val data = Array(
     Vectors.sparse(5, Seq((1, 1.0), (3, 7.0))),
     Vectors.dense(2.0, 0.0, 3.0, 4.0, 5.0),
-    Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0)
-  )
+    Vectors.dense(4.0, 0.0, 0.0, 6.0, 7.0))
 
   private lazy val dataRDD = sc.parallelize(data.toImmutableArraySeq, 2)
 
@@ -58,23 +57,25 @@ class PCASuite extends SparkFunSuite with MLlibTestSparkContext {
   }
 
   test("number of features more than 65535") {
-    val data1 = sc.parallelize(Seq(
-      Vectors.dense(createArray(100000, 2.0)),
-      Vectors.dense(createArray(100000, 0.0))
-    ), 2)
+    val data1 = sc.parallelize(
+      Seq(Vectors.dense(createArray(100000, 2.0)), Vectors.dense(createArray(100000, 0.0))),
+      2)
 
     val pca = new PCA(2).fit(data1)
     // Eigen values should not be negative
     assert(pca.explainedVariance.values.forall(_ >= 0))
     // Norm of the principal component should be 1.0
-    assert(Math.sqrt(pca.pc.values.slice(0, 100000)
-      .map(Math.pow(_, 2)).sum) ~== 1.0 relTol 1e-8)
+    assert(
+      Math.sqrt(
+        pca.pc.values
+          .slice(0, 100000)
+          .map(Math.pow(_, 2))
+          .sum) ~== 1.0 relTol 1e-8)
     // Leading explainedVariance is 1.0
     assert(pca.explainedVariance(0) ~== 1.0 relTol 1e-12)
 
     // Leading principal component is '1' vector
     val firstValue = pca.pc.values(0)
-    pca.pc.values.slice(0, 100000).map(values =>
-      assert(values ~== firstValue relTol 1e-12))
+    pca.pc.values.slice(0, 100000).map(values => assert(values ~== firstValue relTol 1e-12))
   }
 }

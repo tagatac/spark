@@ -30,8 +30,8 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.util.{SparkStringUtils, Utils}
 
 /**
- * We use this trait and its implementation to allow for mocking the static
- * client creation in tests.
+ * We use this trait and its implementation to allow for mocking the static client creation in
+ * tests.
  */
 private[spark] trait KubernetesClientProvider {
   def create(conf: SparkConf): KubernetesClient
@@ -50,7 +50,8 @@ private[spark] class DefaultKubernetesClientProvider extends KubernetesClientPro
 }
 
 private[spark] class SparkKubernetesDiagnosticsSetter(clientProvider: KubernetesClientProvider)
-  extends SparkDiagnosticsSetter with Logging {
+    extends SparkDiagnosticsSetter
+    with Logging {
 
   private val KUBERNETES_EXIT_EXCEPTION_MESSAGE_LIMIT_BYTES = 64 * 1024 // 64 KiB
   private val PATCH_CONTEXT = PatchContext.of(PatchType.STRATEGIC_MERGE)
@@ -60,18 +61,22 @@ private[spark] class SparkKubernetesDiagnosticsSetter(clientProvider: Kubernetes
   }
 
   override def setDiagnostics(throwable: Throwable, conf: SparkConf): Unit = {
-    val diagnostics = SparkStringUtils.abbreviate(StringUtils.stringifyException(throwable),
+    val diagnostics = SparkStringUtils.abbreviate(
+      StringUtils.stringifyException(throwable),
       KUBERNETES_EXIT_EXCEPTION_MESSAGE_LIMIT_BYTES)
     Utils.tryWithResource(clientProvider.create(conf)) { client =>
       conf.get(KUBERNETES_DRIVER_POD_NAME).foreach { podName =>
-        client.pods()
+        client
+          .pods()
           .inNamespace(conf.get(KUBERNETES_NAMESPACE))
           .withName(podName)
-          .patch(PATCH_CONTEXT, new PodBuilder()
-            .withNewMetadata()
-            .addToAnnotations(EXIT_EXCEPTION_ANNOTATION, diagnostics)
-            .endMetadata()
-            .build());
+          .patch(
+            PATCH_CONTEXT,
+            new PodBuilder()
+              .withNewMetadata()
+              .addToAnnotations(EXIT_EXCEPTION_ANNOTATION, diagnostics)
+              .endMetadata()
+              .build());
       }
     }
   }

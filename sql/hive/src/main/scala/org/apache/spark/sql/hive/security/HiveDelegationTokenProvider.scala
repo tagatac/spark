@@ -40,7 +40,8 @@ import org.apache.spark.sql.hive.client.HiveClientImpl
 import org.apache.spark.util.Utils
 
 private[spark] class HiveDelegationTokenProvider
-    extends HadoopDelegationTokenProvider with Logging {
+    extends HadoopDelegationTokenProvider
+    with Logging {
 
   override def serviceName: String = "hive"
 
@@ -79,9 +80,9 @@ private[spark] class HiveDelegationTokenProvider
     // printing an exception to the logs in the latter case.
     val currentToken = UserGroupInformation.getCurrentUser().getCredentials().getToken(tokenAlias)
     currentToken == null && UserGroupInformation.isSecurityEnabled &&
-      hiveConf(hadoopConf).getTrimmed("hive.metastore.uris", "").nonEmpty &&
-      (SparkHadoopUtil.get.isProxyUser(UserGroupInformation.getCurrentUser()) ||
-        (!Utils.isClientMode(sparkConf) && !sparkConf.contains(KEYTAB)))
+    hiveConf(hadoopConf).getTrimmed("hive.metastore.uris", "").nonEmpty &&
+    (SparkHadoopUtil.get.isProxyUser(UserGroupInformation.getCurrentUser()) ||
+      (!Utils.isClientMode(sparkConf) && !sparkConf.contains(KEYTAB)))
   }
 
   override def obtainDelegationTokens(
@@ -98,8 +99,9 @@ private[spark] class HiveDelegationTokenProvider
       require(metastoreUri.nonEmpty, "Hive metastore uri undefined")
 
       val currentUser = UserGroupInformation.getCurrentUser()
-      logDebug(s"Getting Hive delegation token for ${currentUser.getUserName()} against " +
-        s"$principal at $metastoreUri")
+      logDebug(
+        s"Getting Hive delegation token for ${currentUser.getUserName()} against " +
+          s"$principal at $metastoreUri")
 
       doAsRealUser {
         val hive = HiveClientImpl.getHive(conf)

@@ -18,8 +18,7 @@
 package org.apache.spark.streaming
 
 import java.io._
-import java.util.concurrent.{ArrayBlockingQueue, RejectedExecutionException,
-  ThreadPoolExecutor, TimeUnit}
+import java.util.concurrent.{ArrayBlockingQueue, RejectedExecutionException, ThreadPoolExecutor, TimeUnit}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -36,9 +35,9 @@ import org.apache.spark.streaming.scheduler.JobGenerator
 import org.apache.spark.util.{ThreadUtils, Utils}
 import org.apache.spark.util.ArrayImplicits._
 
-private[streaming]
-class Checkpoint(ssc: StreamingContext, val checkpointTime: Time)
-  extends Logging with Serializable {
+private[streaming] class Checkpoint(ssc: StreamingContext, val checkpointTime: Time)
+    extends Logging
+    with Serializable {
   val master = ssc.sc.master
   val framework = ssc.sc.appName
   val jars = ssc.sc.jars
@@ -70,7 +69,8 @@ class Checkpoint(ssc: StreamingContext, val checkpointTime: Time)
       "spark.kerberos.principal",
       UI_FILTERS.key)
 
-    val newSparkConf = new SparkConf(loadDefaults = false).setAll(sparkConfPairs)
+    val newSparkConf = new SparkConf(loadDefaults = false)
+      .setAll(sparkConfPairs)
       .remove("spark.driver.host")
       .remove("spark.driver.bindAddress")
       .remove("spark.driver.port")
@@ -106,8 +106,7 @@ class Checkpoint(ssc: StreamingContext, val checkpointTime: Time)
   }
 }
 
-private[streaming]
-object Checkpoint extends Logging {
+private[streaming] object Checkpoint extends Logging {
   val PREFIX = "checkpoint-"
   val REGEX = (PREFIX + """([\d]+)([\w\.]*)""").r
 
@@ -122,10 +121,14 @@ object Checkpoint extends Logging {
   }
 
   /**
-   * @param checkpointDir checkpoint directory to read checkpoint files from
-   * @return checkpoint files from the `checkpointDir` checkpoint directory, ordered by oldest-first
+   * @param checkpointDir
+   *   checkpoint directory to read checkpoint files from
+   * @return
+   *   checkpoint files from the `checkpointDir` checkpoint directory, ordered by oldest-first
    */
-  def getCheckpointFiles(checkpointDir: String, fsOption: Option[FileSystem] = None): Seq[Path] = {
+  def getCheckpointFiles(
+      checkpointDir: String,
+      fsOption: Option[FileSystem] = None): Seq[Path] = {
 
     def sortFunc(path1: Path, path2: Path): Boolean = {
       val (time1, bk1) = path1.getName match { case REGEX(x, y) => (x.toLong, !y.isEmpty) }
@@ -178,8 +181,7 @@ object Checkpoint extends Logging {
       // loader to find and load classes. This is a well know Java issue and has popped up
       // in other places (e.g., https://issues.apache.org/jira/browse/GROOVY-1627)
       val zis = compressionCodec.compressedInputStream(inputStream)
-      ois = new ObjectInputStreamWithLoader(zis,
-        Thread.currentThread().getContextClassLoader)
+      ois = new ObjectInputStreamWithLoader(zis, Thread.currentThread().getContextClassLoader)
       val cp = ois.readObject.asInstanceOf[Checkpoint]
       cp.validate()
       cp
@@ -191,25 +193,25 @@ object Checkpoint extends Logging {
   }
 }
 
-
 /**
  * Convenience class to handle the writing of graph checkpoint to file
  */
-private[streaming]
-class CheckpointWriter(
+private[streaming] class CheckpointWriter(
     jobGenerator: JobGenerator,
     conf: SparkConf,
     checkpointDir: String,
-    hadoopConf: Configuration
-  ) extends Logging {
+    hadoopConf: Configuration)
+    extends Logging {
   val MAX_ATTEMPTS = 3
 
   // Single-thread executor which rejects executions when a large amount have queued up.
   // This fails fast since this typically means the checkpoint store will never keep up, and
   // will otherwise lead to filling memory with waiting payloads of byte[] to write.
   val executor = new ThreadPoolExecutor(
-    1, 1,
-    0L, TimeUnit.MILLISECONDS,
+    1,
+    1,
+    0L,
+    TimeUnit.MILLISECONDS,
     new ArrayBlockingQueue[Runnable](1000))
   val compressionCodec = CompressionCodec.createCodec(conf)
   private var stopped = false
@@ -219,7 +221,8 @@ class CheckpointWriter(
   class CheckpointWriteHandler(
       checkpointTime: Time,
       bytes: Array[Byte],
-      clearCheckpointDataLater: Boolean) extends Runnable {
+      clearCheckpointDataLater: Boolean)
+      extends Runnable {
     def run(): Unit = {
       if (latestCheckpointTime == null || latestCheckpointTime < checkpointTime) {
         latestCheckpointTime = checkpointTime
@@ -242,8 +245,9 @@ class CheckpointWriter(
       while (attempts < MAX_ATTEMPTS && !stopped) {
         attempts += 1
         try {
-          logInfo(log"Saving checkpoint for time ${MDC(LogKeys.CHECKPOINT_TIME, checkpointTime)} " +
-            log"to file '${MDC(LogKeys.CHECKPOINT_FILE, checkpointFile)}'")
+          logInfo(
+            log"Saving checkpoint for time ${MDC(LogKeys.CHECKPOINT_TIME, checkpointTime)} " +
+              log"to file '${MDC(LogKeys.CHECKPOINT_FILE, checkpointFile)}'")
           if (fs == null) {
             fs = new Path(checkpointDir).getFileSystem(hadoopConf)
           }
@@ -261,15 +265,17 @@ class CheckpointWriter(
           if (fs.exists(checkpointFile)) {
             fs.delete(backupFile, true) // just in case it exists
             if (!fs.rename(checkpointFile, backupFile)) {
-              logWarning(log"Could not rename ${MDC(CHECKPOINT_FILE, checkpointFile)} to " +
-                log"${MDC(BACKUP_FILE, backupFile)}")
+              logWarning(
+                log"Could not rename ${MDC(CHECKPOINT_FILE, checkpointFile)} to " +
+                  log"${MDC(BACKUP_FILE, backupFile)}")
             }
           }
 
           // Rename temp file to the final checkpoint file
           if (!fs.rename(tempFile, checkpointFile)) {
-            logWarning(log"Could not rename ${MDC(TEMP_FILE, tempFile)} to " +
-              log"${MDC(CHECKPOINT_FILE, checkpointFile)}")
+            logWarning(
+              log"Could not rename ${MDC(TEMP_FILE, tempFile)} to " +
+                log"${MDC(CHECKPOINT_FILE, checkpointFile)}")
           }
 
           // Delete old checkpoint files
@@ -285,10 +291,12 @@ class CheckpointWriter(
           logInfo(
             log"Checkpoint for time ${MDC(LogKeys.CHECKPOINT_TIME, checkpointTime)} " +
               log"saved to file " +
-            log"'${MDC(LogKeys.CHECKPOINT_FILE, checkpointFile)}', took " +
-            log"${MDC(LogKeys.BYTE_SIZE, bytes.length)} bytes and " +
-            log"${MDC(LogKeys.TIME, TimeUnit.NANOSECONDS.toMillis(System.nanoTime()
-              - startTimeNs))} ms")
+              log"'${MDC(LogKeys.CHECKPOINT_FILE, checkpointFile)}', took " +
+              log"${MDC(LogKeys.BYTE_SIZE, bytes.length)} bytes and " +
+              log"${MDC(
+                  LogKeys.TIME,
+                  TimeUnit.NANOSECONDS.toMillis(System.nanoTime()
+                    - startTimeNs))} ms")
           jobGenerator.onCheckpointCompletion(checkpointTime, clearCheckpointDataLater)
           return
         } catch {
@@ -299,18 +307,19 @@ class CheckpointWriter(
             fs = null
         }
       }
-      logWarning(log"Could not write checkpoint for time ${MDC(CHECKPOINT_TIME, checkpointTime)} " +
-        log"to file '${MDC(CHECKPOINT_FILE, checkpointFile)}'")
+      logWarning(
+        log"Could not write checkpoint for time ${MDC(CHECKPOINT_TIME, checkpointTime)} " +
+          log"to file '${MDC(CHECKPOINT_FILE, checkpointFile)}'")
     }
   }
 
   def write(checkpoint: Checkpoint, clearCheckpointDataLater: Boolean): Unit = {
     try {
       val bytes = Checkpoint.serialize(checkpoint, conf)
-      executor.execute(new CheckpointWriteHandler(
-        checkpoint.checkpointTime, bytes, clearCheckpointDataLater))
-      logInfo(log"Submitted checkpoint of time ${MDC(LogKeys.CHECKPOINT_TIME,
-        checkpoint.checkpointTime)} to writer queue")
+      executor.execute(
+        new CheckpointWriteHandler(checkpoint.checkpointTime, bytes, clearCheckpointDataLater))
+      logInfo(
+        log"Submitted checkpoint of time ${MDC(LogKeys.CHECKPOINT_TIME, checkpoint.checkpointTime)} to writer queue")
     } catch {
       case rej: RejectedExecutionException =>
         logError("Could not submit checkpoint task to the thread pool executor", rej)
@@ -324,15 +333,12 @@ class CheckpointWriter(
     ThreadUtils.shutdown(executor, FiniteDuration(10, TimeUnit.SECONDS))
     logInfo(log"CheckpointWriter executor terminated? " +
       log"${MDC(LogKeys.EXECUTOR_STATE, executor.isTerminated)}, waited for " +
-      log"${MDC(LogKeys.DURATION, TimeUnit.NANOSECONDS.toMillis(
-        System.nanoTime() - startTimeNs))} ms.")
+      log"${MDC(LogKeys.DURATION, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs))} ms.")
     stopped = true
   }
 }
 
-
-private[streaming]
-object CheckpointReader extends Logging {
+private[streaming] object CheckpointReader extends Logging {
 
   /**
    * Read checkpoint files present in the given checkpoint directory. If there are no checkpoint
@@ -346,8 +352,8 @@ object CheckpointReader extends Logging {
   /**
    * Read checkpoint files present in the given checkpoint directory. If there are no checkpoint
    * files, then return None, else try to return the latest valid checkpoint object. If no
-   * checkpoint files could be read correctly, then return None (if ignoreReadError = true),
-   * or throw exception (if ignoreReadError = false).
+   * checkpoint files could be read correctly, then return None (if ignoreReadError = true), or
+   * throw exception (if ignoreReadError = false).
    */
   def read(
       checkpointDir: String,
@@ -365,8 +371,9 @@ object CheckpointReader extends Logging {
     }
 
     // Try to read the checkpoint files in the order
-    logInfo(log"Checkpoint files found: " +
-      log"${MDC(LogKeys.CHECKPOINT_FILE, checkpointFiles.mkString(","))}")
+    logInfo(
+      log"Checkpoint files found: " +
+        log"${MDC(LogKeys.CHECKPOINT_FILE, checkpointFiles.mkString(","))}")
     var readError: Exception = null
     checkpointFiles.foreach { file =>
       logInfo(log"Attempting to load checkpoint from file ${MDC(LogKeys.FILE_NAME, file)}")
@@ -374,8 +381,9 @@ object CheckpointReader extends Logging {
         val fis = fs.open(file)
         val cp = Checkpoint.deserialize(fis, conf)
         logInfo(log"Checkpoint successfully loaded from file ${MDC(LogKeys.FILE_NAME, file)}")
-        logInfo(log"Checkpoint was generated at time " +
-          log"${MDC(LogKeys.CHECKPOINT_TIME, cp.checkpointTime)}")
+        logInfo(
+          log"Checkpoint was generated at time " +
+            log"${MDC(LogKeys.CHECKPOINT_TIME, cp.checkpointTime)}")
         return Some(cp)
       } catch {
         case e: Exception =>
@@ -387,15 +395,17 @@ object CheckpointReader extends Logging {
     // If none of checkpoint files could be read, then throw exception
     if (!ignoreReadError) {
       throw new SparkException(
-        s"Failed to read checkpoint from directory $checkpointPath", readError)
+        s"Failed to read checkpoint from directory $checkpointPath",
+        readError)
     }
     None
   }
 }
 
-private[streaming]
-class ObjectInputStreamWithLoader(_inputStream: InputStream, loader: ClassLoader)
-  extends ObjectInputStream(_inputStream) {
+private[streaming] class ObjectInputStreamWithLoader(
+    _inputStream: InputStream,
+    loader: ClassLoader)
+    extends ObjectInputStream(_inputStream) {
 
   override def resolveClass(desc: ObjectStreamClass): Class[_] = {
     try {

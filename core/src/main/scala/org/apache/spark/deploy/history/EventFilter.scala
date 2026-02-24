@@ -39,9 +39,10 @@ private[spark] trait EventFilterBuilder extends SparkListenerInterface {
 
 /** [[EventFilter]] decides whether the given event should be accepted or rejected. */
 private[spark] trait EventFilter {
+
   /**
-   * Provide statistic information of event filter, which would be used for measuring the score
-   * of compaction.
+   * Provide statistic information of event filter, which would be used for measuring the score of
+   * compaction.
    *
    * To simplify the condition, currently the fields of statistic are static, since major kinds of
    * events compaction would filter out are job related event types. If the filter doesn't track
@@ -80,14 +81,15 @@ private[spark] object EventFilter extends Logging {
 
       lines.zipWithIndex.foreach { case (line, lineNum) =>
         try {
-          val event = try {
-            Some(JsonProtocol.sparkEventFromJson(line))
-          } catch {
-            // ignore any exception occurred from unidentified json
-            case NonFatal(_) =>
-              onUnidentified(line)
-              None
-          }
+          val event =
+            try {
+              Some(JsonProtocol.sparkEventFromJson(line))
+            } catch {
+              // ignore any exception occurred from unidentified json
+              case NonFatal(_) =>
+                onUnidentified(line)
+                None
+            }
 
           event.foreach { e =>
             val results = filters.flatMap(_.acceptFn().lift.apply(e))

@@ -29,7 +29,7 @@ import org.apache.spark.util.DependencyUtils.downloadFile
 import org.apache.spark.util.Utils
 
 private[spark] class PodTemplateConfigMapStep(conf: KubernetesConf)
-  extends KubernetesFeatureConfigStep {
+    extends KubernetesFeatureConfigStep {
 
   private val hasTemplate = conf.contains(KUBERNETES_EXECUTOR_PODTEMPLATE_FILE)
 
@@ -38,25 +38,25 @@ private[spark] class PodTemplateConfigMapStep(conf: KubernetesConf)
   def configurePod(pod: SparkPod): SparkPod = {
     if (hasTemplate) {
       val podWithVolume = new PodBuilder(pod.pod)
-          .editSpec()
-            .addNewVolume()
-              .withName(POD_TEMPLATE_VOLUME)
-              .withNewConfigMap()
-                .withName(configmapName)
-                .addNewItem()
-                  .withKey(POD_TEMPLATE_KEY)
-                  .withPath(EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME)
-                .endItem()
-              .endConfigMap()
-            .endVolume()
-          .endSpec()
+        .editSpec()
+        .addNewVolume()
+        .withName(POD_TEMPLATE_VOLUME)
+        .withNewConfigMap()
+        .withName(configmapName)
+        .addNewItem()
+        .withKey(POD_TEMPLATE_KEY)
+        .withPath(EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME)
+        .endItem()
+        .endConfigMap()
+        .endVolume()
+        .endSpec()
         .build()
 
       val containerWithVolume = new ContainerBuilder(pod.container)
-          .addNewVolumeMount()
-            .withName(POD_TEMPLATE_VOLUME)
-            .withMountPath(EXECUTOR_POD_SPEC_TEMPLATE_MOUNTPATH)
-          .endVolumeMount()
+        .addNewVolumeMount()
+        .withName(POD_TEMPLATE_VOLUME)
+        .withMountPath(EXECUTOR_POD_SPEC_TEMPLATE_MOUNTPATH)
+        .endVolumeMount()
         .build()
       SparkPod(podWithVolume, containerWithVolume)
     } else {
@@ -81,13 +81,14 @@ private[spark] class PodTemplateConfigMapStep(conf: KubernetesConf)
       val uri = downloadFile(podTemplateFile, Utils.createTempDir(), conf.sparkConf, hadoopConf)
       val file = new java.net.URI(uri).getPath
       val podTemplateString = Files.readString(new File(file).toPath)
-      Seq(new ConfigMapBuilder()
+      Seq(
+        new ConfigMapBuilder()
           .withNewMetadata()
-            .withName(configmapName)
+          .withName(configmapName)
           .endMetadata()
           .withImmutable(true)
           .addToData(POD_TEMPLATE_KEY, podTemplateString)
-        .build())
+          .build())
     } else {
       Nil
     }

@@ -94,7 +94,8 @@ class KubernetesDriverConf(
     val appArgs: Array[String],
     val proxyUser: Option[String],
     clock: Clock = new SystemClock())
-  extends KubernetesConf(sparkConf) with Logging {
+    extends KubernetesConf(sparkConf)
+    with Logging {
 
   def driverNodeSelector: Map[String, String] =
     KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_NODE_SELECTOR_PREFIX)
@@ -127,8 +128,9 @@ class KubernetesDriverConf(
       SPARK_APP_NAME_LABEL -> KubernetesConf.getAppNameLabel(appName),
       SPARK_ROLE_LABEL -> SPARK_POD_DRIVER_ROLE)
     val driverCustomLabels =
-      KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_LABEL_PREFIX)
-        .map { case(k, v) => (k, Utils.substituteAppNExecIds(v, appId, "")) }
+      KubernetesUtils
+        .parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_LABEL_PREFIX)
+        .map { case (k, v) => (k, Utils.substituteAppNExecIds(v, appId, "")) }
 
     presetLabels.keys.foreach { key =>
       require(
@@ -144,17 +146,18 @@ class KubernetesDriverConf(
   }
 
   override def annotations: Map[String, String] = {
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_ANNOTATION_PREFIX)
+    KubernetesUtils
+      .parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_ANNOTATION_PREFIX)
       .map { case (k, v) => (k, Utils.substituteAppNExecIds(v, appId, "")) }
   }
 
   def serviceLabels: Map[String, String] = {
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf,
-      KUBERNETES_DRIVER_SERVICE_LABEL_PREFIX)
+    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_DRIVER_SERVICE_LABEL_PREFIX)
   }
 
   def serviceAnnotations: Map[String, String] = {
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf,
+    KubernetesUtils.parsePrefixedKeyValuePairs(
+      sparkConf,
       KUBERNETES_DRIVER_SERVICE_ANNOTATION_PREFIX)
   }
 
@@ -187,10 +190,13 @@ private[spark] class KubernetesExecutorConf(
     val executorId: String,
     val driverPod: Option[Pod],
     val resourceProfileId: Int = DEFAULT_RESOURCE_PROFILE_ID)
-  extends KubernetesConf(sparkConf) with Logging {
+    extends KubernetesConf(sparkConf)
+    with Logging {
 
   def executorNodeSelector: Map[String, String] =
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_NODE_SELECTOR_PREFIX)
+    KubernetesUtils.parsePrefixedKeyValuePairs(
+      sparkConf,
+      KUBERNETES_EXECUTOR_NODE_SELECTOR_PREFIX)
 
   override val resourceNamePrefix: String = {
     get(KUBERNETES_EXECUTOR_POD_NAME_PREFIX).getOrElse(
@@ -207,8 +213,9 @@ private[spark] class KubernetesExecutorConf(
       SPARK_RESOURCE_PROFILE_ID_LABEL -> resourceProfileId.toString)
 
     val executorCustomLabels =
-      KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_LABEL_PREFIX)
-        .map { case(k, v) => (k, Utils.substituteAppNExecIds(v, appId, executorId)) }
+      KubernetesUtils
+        .parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_LABEL_PREFIX)
+        .map { case (k, v) => (k, Utils.substituteAppNExecIds(v, appId, executorId)) }
 
     presetLabels.keys.foreach { key =>
       require(
@@ -219,12 +226,13 @@ private[spark] class KubernetesExecutorConf(
     executorCustomLabels ++ presetLabels
   }
 
-  override def environment: Map[String, String] = sparkConf.getExecutorEnv.filter(
-    p => checkExecutorEnvKey(p._1)).toMap
+  override def environment: Map[String, String] =
+    sparkConf.getExecutorEnv.filter(p => checkExecutorEnvKey(p._1)).toMap
 
   override def annotations: Map[String, String] = {
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_ANNOTATION_PREFIX)
-      .map { case(k, v) => (k, Utils.substituteAppNExecIds(v, appId, executorId)) }
+    KubernetesUtils
+      .parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_ANNOTATION_PREFIX)
+      .map { case (k, v) => (k, Utils.substituteAppNExecIds(v, appId, executorId)) }
   }
 
   override def secretNamesToMountPaths: Map[String, String] = {
@@ -232,7 +240,9 @@ private[spark] class KubernetesExecutorConf(
   }
 
   override def secretEnvNamesToKeyRefs: Map[String, String] = {
-    KubernetesUtils.parsePrefixedKeyValuePairs(sparkConf, KUBERNETES_EXECUTOR_SECRET_KEY_REF_PREFIX)
+    KubernetesUtils.parsePrefixedKeyValuePairs(
+      sparkConf,
+      KUBERNETES_EXECUTOR_SECRET_KEY_REF_PREFIX)
   }
 
   override def volumes: Seq[KubernetesVolumeSpec] = {
@@ -240,7 +250,8 @@ private[spark] class KubernetesExecutorConf(
   }
 
   override def schedulerName: Option[String] = {
-    Option(get(KUBERNETES_EXECUTOR_SCHEDULER_NAME).getOrElse(get(KUBERNETES_SCHEDULER_NAME).orNull))
+    Option(
+      get(KUBERNETES_EXECUTOR_SCHEDULER_NAME).getOrElse(get(KUBERNETES_SCHEDULER_NAME).orNull))
   }
 
   override def image: String = {
@@ -299,8 +310,7 @@ private[spark] object KubernetesConf {
 
   def getResourceNamePrefix(appName: String): String = {
     val id = KubernetesUtils.uniqueID()
-    s"$appName-$id"
-      .trim
+    s"$appName-$id".trim
       .toLowerCase(Locale.ROOT)
       .replaceAll("[^a-z0-9\\-]", "-")
       .replaceAll("-+", "-")
@@ -313,21 +323,21 @@ private[spark] object KubernetesConf {
     // must be 63 characters or less to follow the DNS label standard, so take the 63 characters
     // of the appName name as the label. In addition, label value must start and end with
     // an alphanumeric character.
-    Utils.abbreviate(
-      s"$appName"
-        .trim
-        .toLowerCase(Locale.ROOT)
-        .replaceAll("[^a-z0-9\\-]", "-")
-        .replaceAll("-+", "-"),
-      "",
-      KUBERNETES_DNS_LABEL_NAME_MAX_LENGTH
-    ).stripPrefix("-").stripSuffix("-")
+    Utils
+      .abbreviate(
+        s"$appName".trim
+          .toLowerCase(Locale.ROOT)
+          .replaceAll("[^a-z0-9\\-]", "-")
+          .replaceAll("-+", "-"),
+        "",
+        KUBERNETES_DNS_LABEL_NAME_MAX_LENGTH)
+      .stripPrefix("-")
+      .stripSuffix("-")
   }
 
   /**
-   * Build a resources name based on the vendor device plugin naming
-   * convention of: vendor-domain/resource. For example, an NVIDIA GPU is
-   * advertised as nvidia.com/gpu.
+   * Build a resources name based on the vendor device plugin naming convention of:
+   * vendor-domain/resource. For example, an NVIDIA GPU is advertised as nvidia.com/gpu.
    */
   def buildKubernetesResourceName(vendorDomain: String, resourceName: String): String = {
     s"${vendorDomain}/${resourceName}"

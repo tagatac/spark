@@ -24,16 +24,9 @@ import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.connector.catalog.{
-  CatalogManager,
-  LookupCatalog
-}
+import org.apache.spark.sql.connector.catalog.{CatalogManager, LookupCatalog}
 import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
-import org.apache.spark.sql.connector.catalog.functions.{
-  AggregateFunction => V2AggregateFunction,
-  ScalarFunction,
-  UnboundFunction
-}
+import org.apache.spark.sql.connector.catalog.functions.{AggregateFunction => V2AggregateFunction, ScalarFunction, UnboundFunction}
 import org.apache.spark.sql.errors.{DataTypeErrorsBase, QueryCompilationErrors}
 import org.apache.spark.sql.internal.connector.V1Function
 import org.apache.spark.sql.types._
@@ -41,7 +34,8 @@ import org.apache.spark.sql.types._
 class FunctionResolution(
     override val catalogManager: CatalogManager,
     relationResolution: RelationResolution)
-    extends DataTypeErrorsBase with LookupCatalog {
+    extends DataTypeErrorsBase
+    with LookupCatalog {
   private val v1SessionCatalog = catalogManager.v1SessionCatalog
 
   private val trimWarningEnabled = new AtomicBoolean(true)
@@ -134,24 +128,23 @@ class FunctionResolution(
         throw QueryCompilationErrors.wrongNumOrderingsForFunctionError(
           owg.prettyName,
           0,
-          u.orderingWithinGroup.length
-        )
+          u.orderingWithinGroup.length)
       case f if !f.isInstanceOf[SupportsOrderingWithinGroup] && u.orderingWithinGroup.nonEmpty =>
         throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
           func.prettyName,
-          "WITHIN GROUP (ORDER BY ...)"
-        )
+          "WITHIN GROUP (ORDER BY ...)")
       // AggregateWindowFunctions are AggregateFunctions that can only be evaluated within
       // the context of a Window clause. They do not need to be wrapped in an
       // AggregateExpression.
       case wf: AggregateWindowFunction =>
         if (u.isDistinct) {
-          throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(wf.prettyName, "DISTINCT")
+          throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
+            wf.prettyName,
+            "DISTINCT")
         } else if (u.filter.isDefined) {
           throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
             wf.prettyName,
-            "FILTER clause"
-          )
+            "FILTER clause")
         } else {
           resolveIgnoreNulls(wf, u.ignoreNulls)
         }
@@ -159,13 +152,11 @@ class FunctionResolution(
         if (u.isDistinct) {
           throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
             owf.prettyName,
-            "DISTINCT"
-          )
+            "DISTINCT")
         } else if (u.filter.isDefined) {
           throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
             owf.prettyName,
-            "FILTER clause"
-          )
+            "FILTER clause")
         } else {
           resolveIgnoreNulls(owf, u.ignoreNulls)
         }
@@ -184,19 +175,18 @@ class FunctionResolution(
 
         u.filter match {
           case Some(filter) if !filter.deterministic =>
-            throw QueryCompilationErrors.nonDeterministicFilterInAggregateError(filterExpr = filter)
+            throw QueryCompilationErrors.nonDeterministicFilterInAggregateError(filterExpr =
+              filter)
           case Some(filter) if filter.dataType != BooleanType =>
             throw QueryCompilationErrors.nonBooleanFilterInAggregateError(filterExpr = filter)
           case Some(filter) if filter.exists(_.isInstanceOf[AggregateExpression]) =>
             throw QueryCompilationErrors.aggregateInAggregateFilterError(
               filterExpr = filter,
-              aggExpr = filter.find(_.isInstanceOf[AggregateExpression]).get
-            )
+              aggExpr = filter.find(_.isInstanceOf[AggregateExpression]).get)
           case Some(filter) if filter.exists(_.isInstanceOf[WindowExpression]) =>
             throw QueryCompilationErrors.windowFunctionInAggregateFilterError(
               filterExpr = filter,
-              windowExpr = filter.find(_.isInstanceOf[WindowExpression]).get
-            )
+              windowExpr = filter.find(_.isInstanceOf[WindowExpression]).get)
           case _ =>
         }
         val aggFunc = resolveIgnoreNulls(newAgg, u.ignoreNulls)
@@ -208,9 +198,8 @@ class FunctionResolution(
           if (trimWarningEnabled.get) {
             log.warn(
               "Two-parameter TRIM/LTRIM/RTRIM function signatures are deprecated." +
-              " Use SQL syntax `TRIM((BOTH | LEADING | TRAILING)? trimStr FROM str)`" +
-              " instead."
-            )
+                " Use SQL syntax `TRIM((BOTH | LEADING | TRAILING)? trimStr FROM str)`" +
+                " instead.")
             trimWarningEnabled.set(false)
           }
         }
@@ -225,29 +214,27 @@ class FunctionResolution(
     if (u.filter.isDefined) {
       throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
         func.prettyName,
-        "FILTER clause"
-      )
+        "FILTER clause")
     }
     // Only fail for IGNORE NULLS; RESPECT NULLS is the default behavior
     if (u.ignoreNulls.contains(true)) {
       throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
         func.prettyName,
-        "IGNORE NULLS"
-      )
+        "IGNORE NULLS")
     }
   }
 
   /**
-   * Resolves the IGNORE NULLS / RESPECT NULLS clause for a function.
-   * If ignoreNulls is defined, applies it to the function; otherwise returns unchanged.
+   * Resolves the IGNORE NULLS / RESPECT NULLS clause for a function. If ignoreNulls is defined,
+   * applies it to the function; otherwise returns unchanged.
    */
   private def resolveIgnoreNulls[T <: Expression](func: T, ignoreNulls: Option[Boolean]): T = {
     ignoreNulls.map(applyIgnoreNulls(func, _)).getOrElse(func)
   }
 
   /**
-   * Applies the IGNORE NULLS / RESPECT NULLS clause to functions that support it.
-   * Returns the modified function if supported, throws error otherwise.
+   * Applies the IGNORE NULLS / RESPECT NULLS clause to functions that support it. Returns the
+   * modified function if supported, throws error otherwise.
    */
   private def applyIgnoreNulls[T <: Expression](func: T, ignoreNulls: Boolean): T = {
     val result = func match {
@@ -265,8 +252,7 @@ class FunctionResolution(
         // Only fail for IGNORE NULLS; RESPECT NULLS is the default behavior
         throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
           func.prettyName,
-          "IGNORE NULLS"
-        )
+          "IGNORE NULLS")
       case _ =>
         // RESPECT NULLS is the default, silently return unchanged
         func
@@ -278,19 +264,19 @@ class FunctionResolution(
       unbound: UnboundFunction,
       arguments: Seq[Expression],
       u: UnresolvedFunction): Expression = {
-    val inputType = StructType(arguments.zipWithIndex.map {
-      case (exp, pos) => StructField(s"_$pos", exp.dataType, exp.nullable)
+    val inputType = StructType(arguments.zipWithIndex.map { case (exp, pos) =>
+      StructField(s"_$pos", exp.dataType, exp.nullable)
     })
-    val bound = try {
-      unbound.bind(inputType)
-    } catch {
-      case unsupported: UnsupportedOperationException =>
-        throw QueryCompilationErrors.functionCannotProcessInputError(
-          unbound,
-          arguments,
-          unsupported
-        )
-    }
+    val bound =
+      try {
+        unbound.bind(inputType)
+      } catch {
+        case unsupported: UnsupportedOperationException =>
+          throw QueryCompilationErrors.functionCannotProcessInputError(
+            unbound,
+            arguments,
+            unsupported)
+      }
 
     if (bound.inputTypes().length != arguments.length) {
       throw QueryCompilationErrors.v2FunctionInvalidInputTypeLengthError(bound, arguments)
@@ -304,8 +290,7 @@ class FunctionResolution(
       case _ =>
         failAnalysis(
           errorClass = "INVALID_UDF_IMPLEMENTATION",
-          messageParameters = Map("funcName" -> toSQLId(bound.name()))
-        )
+          messageParameters = Map("funcName" -> toSQLId(bound.name())))
     }
   }
 
@@ -314,18 +299,18 @@ class FunctionResolution(
       arguments: Seq[Expression],
       u: UnresolvedFunction): Expression = {
     if (u.isDistinct) {
-      throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(scalarFunc.name(), "DISTINCT")
+      throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
+        scalarFunc.name(),
+        "DISTINCT")
     } else if (u.filter.isDefined) {
       throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
         scalarFunc.name(),
-        "FILTER clause"
-      )
+        "FILTER clause")
     } else if (u.ignoreNulls.contains(true)) {
       // Only fail for IGNORE NULLS; RESPECT NULLS is the default behavior
       throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
         scalarFunc.name(),
-        "IGNORE NULLS"
-      )
+        "IGNORE NULLS")
     } else {
       V2ExpressionUtils.resolveScalarFunction(scalarFunc, arguments)
     }
@@ -339,16 +324,15 @@ class FunctionResolution(
     if (u.ignoreNulls.contains(true)) {
       throw QueryCompilationErrors.functionWithUnsupportedSyntaxError(
         aggFunc.name(),
-        "IGNORE NULLS"
-      )
+        "IGNORE NULLS")
     }
     val aggregator = V2Aggregator(aggFunc, arguments)
     aggregator.toAggregateExpression(u.isDistinct, u.filter)
   }
 
-  private def failAnalysis(errorClass: String, messageParameters: Map[String, String]): Nothing = {
-    throw new AnalysisException(
-      errorClass = errorClass,
-      messageParameters = messageParameters)
+  private def failAnalysis(
+      errorClass: String,
+      messageParameters: Map[String, String]): Nothing = {
+    throw new AnalysisException(errorClass = errorClass, messageParameters = messageParameters)
   }
 }

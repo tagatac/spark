@@ -30,19 +30,12 @@ class ConstructPipelineEventSuite extends SparkFunSuite {
       origin = PipelineEventOrigin(
         datasetName = Some("dataset"),
         flowName = Some("flow"),
-        sourceCodeLocation = Some(
-          QueryOrigin(
-            filePath = Some("path"),
-            line = None,
-            startPosition = None
-          )
-        )
-      ),
+        sourceCodeLocation =
+          Some(QueryOrigin(filePath = Some("path"), line = None, startPosition = None))),
       level = EventLevel.INFO,
       message = "Flow 'b' has failed",
       details = FlowProgress(FlowStatus.FAILED),
-      eventTimestamp = Some(ts)
-    )
+      eventTimestamp = Some(ts))
     assert(event.origin.datasetName.contains("dataset"))
     assert(event.origin.flowName.contains("flow"))
     assert(event.origin.sourceCodeLocation.get.filePath.contains("path"))
@@ -54,12 +47,13 @@ class ConstructPipelineEventSuite extends SparkFunSuite {
 
   test("basic flow progress event has expected fields set") {
     val event = ConstructPipelineEvent(
-      origin =
-        PipelineEventOrigin(flowName = Option("a"), datasetName = None, sourceCodeLocation = None),
+      origin = PipelineEventOrigin(
+        flowName = Option("a"),
+        datasetName = None,
+        sourceCodeLocation = None),
       message = "Flow 'a' has completed",
       details = FlowProgress(FlowStatus.COMPLETED),
-      level = EventLevel.INFO
-    )
+      level = EventLevel.INFO)
     assert(event.message == "Flow 'a' has completed")
     assert(event.details.isInstanceOf[FlowProgress])
     assert(event.origin.flowName == Option("a"))

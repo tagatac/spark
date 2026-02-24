@@ -26,7 +26,6 @@ import org.apache.spark.{SparkConf, SparkEnv, SparkFunSuite}
 import org.apache.spark.internal.config.EXECUTOR_PROCESS_TREE_METRICS_ENABLED
 import org.apache.spark.util.Utils
 
-
 class ProcfsMetricsGetterSuite extends SparkFunSuite {
   private val sparkHome =
     sys.props.getOrElse("spark.test.home", fail("spark.test.home is not set!"))
@@ -79,10 +78,11 @@ class ProcfsMetricsGetterSuite extends SparkFunSuite {
       SparkEnv.set(sparkEnv)
       val p = new ProcfsMetricsGetter()
       val currentPid = ProcessHandle.current().pid()
-      val process = Utils.executeCommand(Seq(
-        s"$sparkHome/bin/spark-class",
-        this.getClass.getCanonicalName.stripSuffix("$"),
-        currentPid.toString))
+      val process = Utils.executeCommand(
+        Seq(
+          s"$sparkHome/bin/spark-class",
+          this.getClass.getCanonicalName.stripSuffix("$"),
+          currentPid.toString))
       val child = process.toHandle.pid()
       eventually(timeout(10.seconds), interval(100.milliseconds)) {
         val pids = p.computeProcessTree()

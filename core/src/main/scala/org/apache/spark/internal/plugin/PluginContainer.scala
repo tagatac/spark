@@ -41,31 +41,39 @@ private class DriverPluginContainer(
     sc: SparkContext,
     resources: java.util.Map[String, ResourceInformation],
     plugins: Seq[SparkPlugin])
-  extends PluginContainer with Logging {
+    extends PluginContainer
+    with Logging {
 
-  private val driverPlugins: Seq[(String, DriverPlugin, PluginContextImpl)] = plugins.flatMap { p =>
-    val driverPlugin = p.driverPlugin()
-    if (driverPlugin != null) {
-      val name = p.getClass().getName()
-      val ctx = new PluginContextImpl(name, sc.env.rpcEnv, sc.env.metricsSystem, sc.conf,
-        sc.env.executorId, resources)
+  private val driverPlugins: Seq[(String, DriverPlugin, PluginContextImpl)] = plugins.flatMap {
+    p =>
+      val driverPlugin = p.driverPlugin()
+      if (driverPlugin != null) {
+        val name = p.getClass().getName()
+        val ctx = new PluginContextImpl(
+          name,
+          sc.env.rpcEnv,
+          sc.env.metricsSystem,
+          sc.conf,
+          sc.env.executorId,
+          resources)
 
-      val extraConf = driverPlugin.init(sc, ctx)
-      if (extraConf != null) {
-        extraConf.asScala.foreach { case (k, v) =>
-          sc.conf.set(s"${PluginContainer.EXTRA_CONF_PREFIX}$name.$k", v)
+        val extraConf = driverPlugin.init(sc, ctx)
+        if (extraConf != null) {
+          extraConf.asScala.foreach { case (k, v) =>
+            sc.conf.set(s"${PluginContainer.EXTRA_CONF_PREFIX}$name.$k", v)
+          }
         }
+        logInfo(log"Initialized driver component for plugin ${MDC(LogKeys.CLASS_NAME, name)}.")
+        Some((p.getClass().getName(), driverPlugin, ctx))
+      } else {
+        None
       }
-      logInfo(log"Initialized driver component for plugin ${MDC(LogKeys.CLASS_NAME, name)}.")
-      Some((p.getClass().getName(), driverPlugin, ctx))
-    } else {
-      None
-    }
   }
 
   if (driverPlugins.nonEmpty) {
     val pluginsByName = driverPlugins.map { case (name, plugin, _) => (name, plugin) }.toMap
-    sc.env.rpcEnv.setupEndpoint(classOf[PluginEndpoint].getName(),
+    sc.env.rpcEnv.setupEndpoint(
+      classOf[PluginEndpoint].getName(),
       new PluginEndpoint(pluginsByName, sc.env.rpcEnv))
   }
 
@@ -105,7 +113,8 @@ private class ExecutorPluginContainer(
     env: SparkEnv,
     resources: java.util.Map[String, ResourceInformation],
     plugins: Seq[SparkPlugin])
-  extends PluginContainer with Logging {
+    extends PluginContainer
+    with Logging {
 
   private val executorPlugins: Seq[(String, ExecutorPlugin)] = {
     val allExtraConf = env.conf.getAllWithPrefix(PluginContainer.EXTRA_CONF_PREFIX)
@@ -120,8 +129,13 @@ private class ExecutorPluginContainer(
           .map { case (k, v) => k.substring(prefix.length()) -> v }
           .toMap
           .asJava
-        val ctx = new PluginContextImpl(name, env.rpcEnv, env.metricsSystem, env.conf,
-          env.executorId, resources)
+        val ctx = new PluginContextImpl(
+          name,
+          env.rpcEnv,
+          env.metricsSystem,
+          env.conf,
+          env.executorId,
+          resources)
         executorPlugin.init(ctx, extraConf)
         ctx.registerMetrics()
 
@@ -155,8 +169,10 @@ private class ExecutorPluginContainer(
         plugin.onTaskStart()
       } catch {
         case t: Throwable =>
-          logInfo(log"Exception while calling onTaskStart on" +
-            log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.", t)
+          logInfo(
+            log"Exception while calling onTaskStart on" +
+              log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.",
+            t)
       }
     }
   }
@@ -167,8 +183,10 @@ private class ExecutorPluginContainer(
         plugin.onTaskSucceeded()
       } catch {
         case t: Throwable =>
-          logInfo(log"Exception while calling onTaskSucceeded on" +
-            log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.", t)
+          logInfo(
+            log"Exception while calling onTaskSucceeded on" +
+              log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.",
+            t)
       }
     }
   }
@@ -179,8 +197,10 @@ private class ExecutorPluginContainer(
         plugin.onTaskFailed(failureReason)
       } catch {
         case t: Throwable =>
-          logInfo(log"Exception while calling onTaskFailed on" +
-            log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.", t)
+          logInfo(
+            log"Exception while calling onTaskFailed on" +
+              log" plugin ${MDC(LogKeys.CLASS_NAME, name)}.",
+            t)
       }
     }
   }
@@ -201,7 +221,6 @@ object PluginContainer {
       resources: java.util.Map[String, ResourceInformation]): Option[PluginContainer] = {
     PluginContainer(Right(env), resources)
   }
-
 
   private def apply(
       ctx: Either[SparkContext, SparkEnv],

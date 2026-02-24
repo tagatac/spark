@@ -40,8 +40,7 @@ abstract class SharedJDBCIntegrationSuite extends DockerJDBCIntegrationSuite {
   }
 
   /**
-   * Create a table with the same name that can be used to test common functionality
-   * in
+   * Create a table with the same name that can be used to test common functionality in
    * @param conn
    */
   def createSharedTable(conn: Connection): Unit = {
@@ -56,9 +55,11 @@ abstract class SharedJDBCIntegrationSuite extends DockerJDBCIntegrationSuite {
 
   test("SPARK-52184: Wrap external engine syntax error") {
     val ex = intercept[SparkException] {
-      spark.read.format("jdbc")
+      spark.read
+        .format("jdbc")
         .option("url", jdbcUrl)
-        .option("query", "THIS IS NOT VALID SQL").load()
+        .option("query", "THIS IS NOT VALID SQL")
+        .load()
     }
 
     // Exception should be detected in analysis phase first when we resolve a schema from
@@ -66,21 +67,20 @@ abstract class SharedJDBCIntegrationSuite extends DockerJDBCIntegrationSuite {
     checkErrorMatchPVals(
       ex,
       condition = "JDBC_EXTERNAL_ENGINE_SYNTAX_ERROR.DURING_OUTPUT_SCHEMA_RESOLUTION",
-      parameters = Map(
-        "jdbcQuery" -> "SELECT \\* FROM \\(.*",
-        "externalEngineError" -> "[\\s\\S]*"
-      )
-    )
+      parameters =
+        Map("jdbcQuery" -> "SELECT \\* FROM \\(.*", "externalEngineError" -> "[\\s\\S]*"))
   }
 
   test("SPARK-53386: Parameter `query` should work when ending with semicolons") {
-    val dfSingle = spark.read.format("jdbc")
+    val dfSingle = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", "SELECT x FROM tbl_shared; ")
       .load()
     checkAnswer(dfSingle, Seq(Row(1)))
 
-    val dfMultiple = spark.read.format("jdbc")
+    val dfMultiple = spark.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("query", "SELECT x FROM tbl_shared;;;")
       .load()

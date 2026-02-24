@@ -33,7 +33,8 @@ import org.apache.spark.util.Utils
 @SlowHiveTest
 class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestHiveSingleton {
 
-  createQueryTest("partition_based_table_scan_with_different_serde",
+  createQueryTest(
+    "partition_based_table_scan_with_different_serde",
     """
       |CREATE TABLE part_scan_test (key STRING, value STRING) PARTITIONED BY (ds STRING)
       |ROW FORMAT SERDE
@@ -56,7 +57,8 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
   // In unit test, kv1.txt is a small file and will be loaded as table src
   // Since the small file will be considered as a single split, we assume
   // Hive / SparkSQL HQL has the same output even for SORT BY
-  createQueryTest("file_split_for_small_table",
+  createQueryTest(
+    "file_split_for_small_table",
     """
       |SELECT key, value FROM src SORT BY key, value
     """.stripMargin)
@@ -70,8 +72,7 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
 
   test("Spark-4077: timestamp query for null value") {
     TestHive.sql("DROP TABLE IF EXISTS timestamp_query_null")
-    TestHive.sql(
-      """
+    TestHive.sql("""
         CREATE TABLE timestamp_query_null (time TIMESTAMP,id INT)
         ROW FORMAT DELIMITED
         FIELDS TERMINATED BY ','
@@ -81,8 +82,9 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
       Utils.getSparkClassLoader.getResource("data/files/issue-4077-data.txt").getFile()
 
     TestHive.sql(s"LOAD DATA LOCAL INPATH '$location' INTO TABLE timestamp_query_null")
-    assert(TestHive.sql("SELECT time from timestamp_query_null limit 2").collect()
-      === Array(Row(java.sql.Timestamp.valueOf("2014-12-11 00:00:00")), Row(null)))
+    assert(
+      TestHive.sql("SELECT time from timestamp_query_null limit 2").collect()
+        === Array(Row(java.sql.Timestamp.valueOf("2014-12-11 00:00:00")), Row(null)))
     TestHive.sql("DROP TABLE timestamp_query_null")
   }
 
@@ -90,9 +92,9 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
     withTable("spark_4959") {
       sql("create table spark_4959 (col1 string)")
       sql("""insert into table spark_4959 select "hi" from src limit 1""")
-      table("spark_4959").select(
-        $"col1".as("CaseSensitiveColName"),
-        $"col1".as("CaseSensitiveColName2")).createOrReplaceTempView("spark_4959_2")
+      table("spark_4959")
+        .select($"col1".as("CaseSensitiveColName"), $"col1".as("CaseSensitiveColName2"))
+        .createOrReplaceTempView("spark_4959_2")
 
       assert(sql("select CaseSensitiveColName from spark_4959_2").head() === Row("hi"))
       assert(sql("select casesensitivecolname from spark_4959_2").head() === Row("hi"))
@@ -101,9 +103,11 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
 
   private def checkNumScannedPartitions(stmt: String, expectedNumParts: Int): Unit = {
     val plan = sql(stmt).queryExecution.sparkPlan
-    val numPartitions = plan.collectFirst {
-      case p: HiveTableScanExec => p.rawPartitions.length
-    }.getOrElse(0)
+    val numPartitions = plan
+      .collectFirst { case p: HiveTableScanExec =>
+        p.rawPartitions.length
+      }
+      .getOrElse(0)
     assert(numPartitions == expectedNumParts)
   }
 
@@ -113,14 +117,12 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
       spark.range(1, 5).createOrReplaceTempView(view)
       val table = "table_with_partition"
       withTable(table) {
-        sql(
-          s"""
+        sql(s"""
              |CREATE TABLE $table(id string)
              |USING hive
              |PARTITIONED BY (p1 string,p2 string,p3 string,p4 string,p5 string)
            """.stripMargin)
-        sql(
-          s"""
+        sql(s"""
              |FROM $view v
              |INSERT INTO TABLE $table
              |PARTITION (p1='a',p2='b',p3='c',p4='d',p5='e')
@@ -136,7 +138,8 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
             // qualified partition; Otherwise, it return all the partitions.
             val expectedNumPartitions = if (hivePruning == "true") 1 else 2
             checkNumScannedPartitions(
-              stmt = s"SELECT id, p2 FROM $table WHERE p2 <= 'b'", expectedNumPartitions)
+              stmt = s"SELECT id, p2 FROM $table WHERE p2 <= 'b'",
+              expectedNumPartitions)
           }
         }
 
@@ -145,7 +148,8 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
             // If the pruning predicate does not exist, getHiveQlPartitions should always
             // return all the partitions.
             checkNumScannedPartitions(
-              stmt = s"SELECT id, p2 FROM $table WHERE id <= 3", expectedNumParts = 2)
+              stmt = s"SELECT id, p2 FROM $table WHERE id <= 3",
+              expectedNumParts = 2)
           }
         }
       }
@@ -158,14 +162,12 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
       spark.range(1, 5).createOrReplaceTempView(view)
       val table = "table_with_partition"
       withTable(table) {
-        sql(
-          s"""
+        sql(s"""
              |CREATE TABLE $table(id string)
              |USING hive
              |PARTITIONED BY (p1 string,p2 string,p3 string,p4 string,p5 string)
            """.stripMargin)
-        sql(
-          s"""
+        sql(s"""
              |FROM $view v
              |INSERT INTO TABLE $table
              |PARTITION (p1='a',p2='b',p3='c',p4='d',p5='e')
@@ -184,8 +186,7 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
   test("HiveTableScanExec canonicalization for different orders of partition filters") {
     val table = "hive_tbl_part"
     withTable(table) {
-      sql(
-        s"""
+      sql(s"""
            |CREATE TABLE $table (id int)
            |USING hive
            |PARTITIONED BY (a int, b int)
@@ -199,7 +200,8 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
   test("SPARK-32867: When explain, HiveTableRelation show limited message") {
     withSQLConf("hive.exec.dynamic.partition.mode" -> "nonstrict") {
       withTable("df") {
-        spark.range(30)
+        spark
+          .range(30)
           .select(col("id"), col("id").as("k"))
           .write
           .partitionBy("k")
@@ -208,8 +210,9 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
           .saveAsTable("df")
 
         val scan1 = getHiveTableScanExec("SELECT * FROM df WHERE df.k < 3")
-        assert(scan1.simpleString(100).replaceAll("#\\d+L", "") ==
-          s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
+        assert(
+          scan1.simpleString(100).replaceAll("#\\d+L", "") ==
+            s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
             " HiveTableRelation [" +
             s"`$SESSION_CATALOG_NAME`.`default`.`df`," +
             " org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe," +
@@ -220,8 +223,9 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
             " [isnotnull(k), (k < 3)]")
 
         val scan2 = getHiveTableScanExec("SELECT * FROM df WHERE df.k < 30")
-        assert(scan2.simpleString(100).replaceAll("#\\d+L", "") ==
-          s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
+        assert(
+          scan2.simpleString(100).replaceAll("#\\d+L", "") ==
+            s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
             " HiveTableRelation [" +
             s"`$SESSION_CATALOG_NAME`.`default`.`df`," +
             " org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe," +
@@ -232,15 +236,15 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
             "]," +
             " [isnotnull(k), (k < 30)]")
 
-        sql(
-          """
+        sql("""
             |ALTER TABLE df PARTITION (k=10) SET SERDE
             |'org.apache.hadoop.hive.serde2.columnar.ColumnarSerDe';
           """.stripMargin)
 
         val scan3 = getHiveTableScanExec("SELECT * FROM df WHERE df.k < 30")
-        assert(scan3.simpleString(100).replaceAll("#\\d+L", "") ==
-          s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
+        assert(
+          scan3.simpleString(100).replaceAll("#\\d+L", "") ==
+            s"Scan hive $SESSION_CATALOG_NAME.default.df [id, k]," +
             " HiveTableRelation [" +
             s"`$SESSION_CATALOG_NAME`.`default`.`df`," +
             " org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe," +
@@ -269,9 +273,11 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
           val e = intercept[IOException] {
             sql("SELECT * FROM t").collect()
           }
-          assert(e.getMessage.contains(s"Path: ${dir.getAbsoluteFile} is a directory, " +
-            s"which is not supported by the record reader " +
-            s"when `mapreduce.input.fileinputformat.input.dir.recursive` is false."))
+          assert(
+            e.getMessage.contains(
+              s"Path: ${dir.getAbsoluteFile} is a directory, " +
+                s"which is not supported by the record reader " +
+                s"when `mapreduce.input.fileinputformat.input.dir.recursive` is false."))
         }
         dir.delete()
       }
@@ -279,8 +285,8 @@ class HiveTableScanSuite extends HiveComparisonTest with SQLTestUtils with TestH
   }
 
   private def getHiveTableScanExec(query: String): HiveTableScanExec = {
-    sql(query).queryExecution.sparkPlan.collectFirst {
-      case p: HiveTableScanExec => p
+    sql(query).queryExecution.sparkPlan.collectFirst { case p: HiveTableScanExec =>
+      p
     }.get
   }
 }

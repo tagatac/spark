@@ -45,7 +45,7 @@ class KryoSerializerDistributedSuite extends SparkFunSuite with LocalSparkContex
 
     // Randomly mix the keys so that the join below will require a shuffle with each partition
     // sending data to multiple other partitions.
-    val shuffledRDD = cachedRDD.map { case (i, o) => (i * i * i - 10 * i * i, o)}
+    val shuffledRDD = cachedRDD.map { case (i, o) => (i * i * i - 10 * i * i, o) }
 
     // Join the two RDDs, and force evaluation
     assert(shuffledRDD.join(cachedRDD).collect().length == 1)
@@ -57,8 +57,7 @@ object KryoDistributedTest {
 
   class AppJarRegistrator extends KryoRegistrator {
     override def registerClasses(k: Kryo): Unit = {
-      k.register(Utils.classForName(AppJarRegistrator.customClassName,
-        noSparkClassLoader = true))
+      k.register(Utils.classForName(AppJarRegistrator.customClassName, noSparkClassLoader = true))
     }
   }
 

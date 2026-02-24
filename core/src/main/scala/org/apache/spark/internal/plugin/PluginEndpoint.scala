@@ -24,33 +24,33 @@ import org.apache.spark.rpc.{IsolatedThreadSafeRpcEndpoint, RpcCallContext, RpcE
 
 case class PluginMessage(pluginName: String, message: AnyRef)
 
-private class PluginEndpoint(
-    plugins: Map[String, DriverPlugin],
-    override val rpcEnv: RpcEnv)
-  extends IsolatedThreadSafeRpcEndpoint with Logging {
+private class PluginEndpoint(plugins: Map[String, DriverPlugin], override val rpcEnv: RpcEnv)
+    extends IsolatedThreadSafeRpcEndpoint
+    with Logging {
 
-  override def receive: PartialFunction[Any, Unit] = {
-    case PluginMessage(pluginName, message) =>
-      plugins.get(pluginName) match {
-        case Some(plugin) =>
-          try {
-            val reply = plugin.receive(message)
-            if (reply != null) {
-              logWarning(
-                log"Plugin ${MDC(PLUGIN_NAME, pluginName)} " +
-                  log"returned reply for one-way message of type " +
-                  log"${MDC(CLASS_NAME, message.getClass().getName())}.")
-            }
-          } catch {
-            case e: Exception =>
-              logWarning(log"Error in plugin ${MDC(PLUGIN_NAME, pluginName)} " +
-                log"when handling message of type " +
-                log"${MDC(CLASS_NAME, message.getClass().getName())}.", e)
+  override def receive: PartialFunction[Any, Unit] = { case PluginMessage(pluginName, message) =>
+    plugins.get(pluginName) match {
+      case Some(plugin) =>
+        try {
+          val reply = plugin.receive(message)
+          if (reply != null) {
+            logWarning(
+              log"Plugin ${MDC(PLUGIN_NAME, pluginName)} " +
+                log"returned reply for one-way message of type " +
+                log"${MDC(CLASS_NAME, message.getClass().getName())}.")
           }
+        } catch {
+          case e: Exception =>
+            logWarning(
+              log"Error in plugin ${MDC(PLUGIN_NAME, pluginName)} " +
+                log"when handling message of type " +
+                log"${MDC(CLASS_NAME, message.getClass().getName())}.",
+              e)
+        }
 
-        case None =>
-          throw new IllegalArgumentException(s"Received message for unknown plugin $pluginName.")
-      }
+      case None =>
+        throw new IllegalArgumentException(s"Received message for unknown plugin $pluginName.")
+    }
   }
 
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {

@@ -26,21 +26,21 @@ sealed trait RunTerminationReason {
   def terminalState: RunState
 
   /**
-   * User visible message associated with run termination. This will also be set as the message
-   * in the associated terminal run progress log.
+   * User visible message associated with run termination. This will also be set as the message in
+   * the associated terminal run progress log.
    */
   def message: String
 
   /**
-   * Exception associated with the given run termination. This exception will be
-   * included in the error details in the associated terminal run progress event.
+   * Exception associated with the given run termination. This exception will be included in the
+   * error details in the associated terminal run progress event.
    */
   def cause: Option[Throwable]
 }
 
 /**
- * Helper exception class that indicates that a run has to be terminated and
- * tracks the associated termination reason.
+ * Helper exception class that indicates that a run has to be terminated and tracks the associated
+ * termination reason.
  */
 case class RunTerminationException(reason: RunTerminationReason) extends Exception
 
@@ -81,11 +81,13 @@ case class QueryExecutionFailure(
       s"Run is $terminalState since flow '$flowName' has failed."
     } else {
       s"Run is $terminalState since flow '$flowName' has failed more " +
-      s"than $maxRetries times."
+        s"than $maxRetries times."
     }
 }
 
-/** Abstract class used to identify failures related to failures stopping an operation/timeouts. */
+/**
+ * Abstract class used to identify failures related to failures stopping an operation/timeouts.
+ */
 abstract class FailureStoppingOperation extends RunFailure {
 
   /** Name of the operation that failed to stop. */
@@ -101,7 +103,7 @@ case class FailureStoppingFlow(flowIdentifiers: Seq[TableIdentifier])
     if (flowIdentifiers.nonEmpty) {
       val flowNamesToPrint = flowIdentifiers.map(_.toString).sorted.take(5).mkString(", ")
       s"Run is $terminalState since following flows have failed to stop: " +
-      s"$flowNamesToPrint."
+        s"$flowNamesToPrint."
     } else {
       s"Run is $terminalState since stopping flow execution has failed."
     }
@@ -110,8 +112,8 @@ case class FailureStoppingFlow(flowIdentifiers: Seq[TableIdentifier])
 }
 
 /**
- * Run could not be associated with a proper root cause.
- * This is not expected and likely indicates a bug.
+ * Run could not be associated with a proper root cause. This is not expected and likely indicates
+ * a bug.
  */
 case class UnexpectedRunFailure() extends RunFailure {
   override def isFatal: Boolean = false

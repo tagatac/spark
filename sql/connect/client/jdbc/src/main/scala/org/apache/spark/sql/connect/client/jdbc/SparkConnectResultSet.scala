@@ -30,9 +30,8 @@ import org.apache.spark.sql.connect.client.SparkResult
 import org.apache.spark.sql.connect.client.jdbc.util.JdbcErrorUtils
 import org.apache.spark.sql.types.{TimestampNTZType, TimestampType}
 
-class SparkConnectResultSet(
-    sparkResult: SparkResult[Row],
-    stmt: SparkConnectStatement = null) extends ResultSet {
+class SparkConnectResultSet(sparkResult: SparkResult[Row], stmt: SparkConnectStatement = null)
+    extends ResultSet {
 
   private val iterator = sparkResult.destructiveIterator
 
@@ -90,8 +89,9 @@ class SparkConnectResultSet(
     // the passed index value is 1-indexed, but the underlying array is 0-indexed
     val index = columnIndex - 1
     if (index < 0 || index >= currentRow.length) {
-      throw new SQLException(s"The column index is out of range: $columnIndex, " +
-        s"number of columns: ${currentRow.length}.")
+      throw new SQLException(
+        s"The column index is out of range: $columnIndex, " +
+          s"number of columns: ${currentRow.length}.")
     }
 
     if (currentRow.isNullAt(index)) {

@@ -44,88 +44,97 @@ class ErrorPositionSuite extends QueryTest with TestHiveSingleton {
     }
   }
 
-  positionTest("ambiguous attribute reference 1",
-    "SELECT a from dupAttributes", "a")
+  positionTest("ambiguous attribute reference 1", "SELECT a from dupAttributes", "a")
 
-  positionTest("ambiguous attribute reference 2",
-    "SELECT a, b from dupAttributes", "a")
+  positionTest("ambiguous attribute reference 2", "SELECT a, b from dupAttributes", "a")
 
-  positionTest("ambiguous attribute reference 3",
-    "SELECT b, a from dupAttributes", "a")
+  positionTest("ambiguous attribute reference 3", "SELECT b, a from dupAttributes", "a")
 
-  positionTest("unresolved attribute 1",
-    "SELECT x FROM src", "x")
+  positionTest("unresolved attribute 1", "SELECT x FROM src", "x")
 
-  positionTest("unresolved attribute 2",
-    "SELECT        x FROM src", "x")
+  positionTest("unresolved attribute 2", "SELECT        x FROM src", "x")
 
-  positionTest("unresolved attribute 3",
-    "SELECT key, x FROM src", "x")
+  positionTest("unresolved attribute 3", "SELECT key, x FROM src", "x")
 
-  positionTest("unresolved attribute 4",
+  positionTest(
+    "unresolved attribute 4",
     """SELECT key,
       |x FROM src
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute 5",
+  positionTest(
+    "unresolved attribute 5",
     """SELECT key,
       |  x FROM src
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute 6",
+  positionTest(
+    "unresolved attribute 6",
     """SELECT key,
       |
       |  1 + x FROM src
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute 7",
+  positionTest(
+    "unresolved attribute 7",
     """SELECT key,
       |
       |  1 + x + 1 FROM src
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("multi-char unresolved attribute",
+  positionTest(
+    "multi-char unresolved attribute",
     """SELECT key,
       |
       |  1 + abcd + 1 FROM src
-    """.stripMargin, "abcd")
+    """.stripMargin,
+    "abcd")
 
-  positionTest("unresolved attribute group by",
+  positionTest(
+    "unresolved attribute group by",
     """SELECT key FROM src GROUP BY
        |x
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute order by",
+  positionTest(
+    "unresolved attribute order by",
     """SELECT key FROM src ORDER BY
       |x
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute where",
+  positionTest(
+    "unresolved attribute where",
     """SELECT key FROM src
       |WHERE x = true
-    """.stripMargin, "x")
+    """.stripMargin,
+    "x")
 
-  positionTest("unresolved attribute backticks",
-    "SELECT `x` FROM src", "`x`")
+  positionTest("unresolved attribute backticks", "SELECT `x` FROM src", "`x`")
 
-  positionTest("parse error",
-    "SELECT WHERE", "WHERE")
+  positionTest("parse error", "SELECT WHERE", "WHERE")
 
-  positionTest("bad relation",
-    "SELECT * FROM badTable", "badTable")
+  positionTest("bad relation", "SELECT * FROM badTable", "badTable")
 
   ignore("other expressions") {
-    positionTest("bad addition",
-      "SELECT 1 + array(1)", "1 + array")
+    positionTest("bad addition", "SELECT 1 + array(1)", "1 + array")
   }
 
   /**
    * Creates a test that checks to see if the error thrown when analyzing a given query includes
    * the location of the given token in the query string.
    *
-   * @param name the name of the test
-   * @param query the query to analyze
-   * @param token a unique token in the string that should be indicated by the exception
+   * @param name
+   *   the name of the test
+   * @param query
+   *   the query to analyze
+   * @param token
+   *   a unique token in the string that should be indicated by the exception
    */
   def positionTest(name: String, query: String, token: String): Unit = {
     def ast = spark.sessionState.sqlParser.parsePlan(query)
@@ -139,13 +148,16 @@ class ErrorPositionSuite extends QueryTest with TestHiveSingleton {
       assert(!error.getMessage.contains("Seq("))
       assert(!error.getMessage.contains("List("))
 
-      val (line, expectedLineNum) = query.split("\n").zipWithIndex.collect {
-        case (l, i) if l.contains(token) => (l, i + 1)
-      }.headOption.getOrElse(sys.error(s"Invalid test. Token $token not in $query"))
+      val (line, expectedLineNum) = query
+        .split("\n")
+        .zipWithIndex
+        .collect {
+          case (l, i) if l.contains(token) => (l, i + 1)
+        }
+        .headOption
+        .getOrElse(sys.error(s"Invalid test. Token $token not in $query"))
       val actualLine = error.line.getOrElse {
-        fail(
-          s"line not returned for error '${error.getMessage}' on token $token\n$parseTree"
-        )
+        fail(s"line not returned for error '${error.getMessage}' on token $token\n$parseTree")
       }
       assert(actualLine === expectedLineNum, "wrong line")
 
@@ -153,8 +165,9 @@ class ErrorPositionSuite extends QueryTest with TestHiveSingleton {
       val actualStart = error.startPosition.getOrElse {
         fail(s"start not returned for error on token $token\n${ast.treeString}")
       }
-      assert(expectedStart === actualStart,
-       s"""Incorrect start position.
+      assert(
+        expectedStart === actualStart,
+        s"""Incorrect start position.
           |== QUERY ==
           |$query
           |

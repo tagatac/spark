@@ -60,8 +60,11 @@ class KubernetesDriverBuilderSuite extends PodBuilderSuite {
   }
 
   private val ADDITION_PRE_RESOURCES = Seq(
-    new CustomResourceDefinitionBuilder().withNewMetadata().withName("preCRD").endMetadata().build()
-  )
+    new CustomResourceDefinitionBuilder()
+      .withNewMetadata()
+      .withName("preCRD")
+      .endMetadata()
+      .build())
 
   test("SPARK-37331: check driver pre kubernetes resource, empty by default") {
     val sparkConf = new SparkConf(false)
@@ -75,12 +78,11 @@ class KubernetesDriverBuilderSuite extends PodBuilderSuite {
   test("SPARK-37331: check driver pre kubernetes resource as expected") {
     val sparkConf = new SparkConf(false)
       .set(Config.CONTAINER_IMAGE, "spark-driver:latest")
-      .set(Config.KUBERNETES_DRIVER_POD_FEATURE_STEPS.key,
+      .set(
+        Config.KUBERNETES_DRIVER_POD_FEATURE_STEPS.key,
         "org.apache.spark.deploy.k8s.submit.TestStep")
     val client = mockKubernetesClient()
-    val conf = KubernetesTestConf.createDriverConf(
-      sparkConf = sparkConf
-    )
+    val conf = KubernetesTestConf.createDriverConf(sparkConf = sparkConf)
     val spec = new KubernetesDriverBuilder().buildFromFeatures(conf, client)
     assert(spec.driverPreKubernetesResources.size === 1)
     assert(spec.driverPreKubernetesResources === ADDITION_PRE_RESOURCES)
@@ -95,13 +97,11 @@ class TestStep extends KubernetesFeatureConfigStep {
 
   override def getAdditionalPreKubernetesResources(): Seq[HasMetadata] = Seq(
     new CustomResourceDefinitionBuilder()
-        .withNewMetadata()
-          .withName("preCRD")
-        .endMetadata()
-      .build()
-  )
+      .withNewMetadata()
+      .withName("preCRD")
+      .endMetadata()
+      .build())
 }
-
 
 /**
  * A test driver user feature step would be used in only driver.
@@ -118,7 +118,7 @@ class TestStepWithDrvConf extends KubernetesDriverCustomFeatureConfigStep {
   override def configurePod(pod: SparkPod): SparkPod = {
     val k8sPodBuilder = new PodBuilder(pod.pod)
       .editOrNewMetadata()
-       // The annotation key = TEST_ANNOTATION_KEY, value = TEST_ANNOTATION_VALUE
+      // The annotation key = TEST_ANNOTATION_KEY, value = TEST_ANNOTATION_VALUE
       .addToAnnotations("driver-annotation-key", driverConf.get("driver-annotation-key"))
       .endMetadata()
     val k8sPod = k8sPodBuilder.build()

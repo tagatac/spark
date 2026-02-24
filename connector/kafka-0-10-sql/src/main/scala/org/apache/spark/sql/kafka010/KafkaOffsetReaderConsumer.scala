@@ -33,15 +33,13 @@ import org.apache.spark.util.{UninterruptibleThread, UninterruptibleThreadRunner
 import org.apache.spark.util.ArrayImplicits._
 
 /**
- * This class uses Kafka's own [[org.apache.kafka.clients.consumer.KafkaConsumer]] API to
- * read data offsets from Kafka.
- * The [[ConsumerStrategy]] class defines which Kafka topics and partitions should be read
- * by this source. These strategies directly correspond to the different consumption options
- * in. This class is designed to return a configured
- * [[org.apache.kafka.clients.consumer.KafkaConsumer]] that is used by the
- * [[KafkaSource]] to query for the offsets. See the docs on
- * [[org.apache.spark.sql.kafka010.ConsumerStrategy]]
- * for more details.
+ * This class uses Kafka's own [[org.apache.kafka.clients.consumer.KafkaConsumer]] API to read
+ * data offsets from Kafka. The [[ConsumerStrategy]] class defines which Kafka topics and
+ * partitions should be read by this source. These strategies directly correspond to the different
+ * consumption options in. This class is designed to return a configured
+ * [[org.apache.kafka.clients.consumer.KafkaConsumer]] that is used by the [[KafkaSource]] to
+ * query for the offsets. See the docs on [[org.apache.spark.sql.kafka010.ConsumerStrategy]] for
+ * more details.
  *
  * Note: This class is not ThreadSafe
  */
@@ -49,7 +47,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
     consumerStrategy: ConsumerStrategy,
     override val driverKafkaParams: ju.Map[String, Object],
     readerOptions: CaseInsensitiveMap[String],
-    driverGroupIdPrefix: String) extends KafkaOffsetReaderBase {
+    driverGroupIdPrefix: String)
+    extends KafkaOffsetReaderBase {
 
   /**
    * [[UninterruptibleThreadRunner]] ensures that all
@@ -89,7 +88,7 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
   /**
    * Number of partitions to read from Kafka. If this value is greater than the number of Kafka
-   * topicPartitions, we will split up  the read tasks of the skewed partitions to multiple Spark
+   * topicPartitions, we will split up the read tasks of the skewed partitions to multiple Spark
    * tasks. The number of Spark tasks will be *approximately* `numPartitions`. It can be less or
    * more depending on rounding errors or Kafka partitions that didn't receive any new data.
    */
@@ -126,7 +125,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
   }
 
   /**
-   * @return The Set of TopicPartitions for a given topic
+   * @return
+   *   The Set of TopicPartitions for a given topic
    */
   private def fetchTopicPartitions(): Set[TopicPartition] =
     uninterruptibleThreadRunner.runUninterruptibly {
@@ -136,13 +136,14 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       val partitions = consumer.assignment()
       consumer.pause(partitions)
       partitions.asScala.toSet
-  }
+    }
 
   override def fetchPartitionOffsets(
       offsetRangeLimit: KafkaOffsetRangeLimit,
       isStartingOffsets: Boolean): Map[TopicPartition, Long] = {
-    def validateTopicPartitions(partitions: Set[TopicPartition],
-      partitionOffsets: Map[TopicPartition, Long]): Map[TopicPartition, Long] = {
+    def validateTopicPartitions(
+        partitions: Set[TopicPartition],
+        partitionOffsets: Map[TopicPartition, Long]): Map[TopicPartition, Long] = {
       if (partitions != partitionOffsets.keySet) {
         throw KafkaExceptions.startOffsetDoesNotMatchAssigned(partitionOffsets.keySet, partitions)
       }
@@ -152,20 +153,26 @@ private[kafka010] class KafkaOffsetReaderConsumer(
     val partitions = fetchTopicPartitions()
     // Obtain TopicPartition offsets with late binding support
     offsetRangeLimit match {
-      case EarliestOffsetRangeLimit => partitions.map {
-        case tp => tp -> KafkaOffsetRangeLimit.EARLIEST
-      }.toMap
-      case LatestOffsetRangeLimit => partitions.map {
-        case tp => tp -> KafkaOffsetRangeLimit.LATEST
-      }.toMap
+      case EarliestOffsetRangeLimit =>
+        partitions.map { case tp =>
+          tp -> KafkaOffsetRangeLimit.EARLIEST
+        }.toMap
+      case LatestOffsetRangeLimit =>
+        partitions.map { case tp =>
+          tp -> KafkaOffsetRangeLimit.LATEST
+        }.toMap
       case SpecificOffsetRangeLimit(partitionOffsets) =>
         validateTopicPartitions(partitions, partitionOffsets)
       case SpecificTimestampRangeLimit(partitionTimestamps, strategy) =>
-        fetchSpecificTimestampBasedOffsets(partitionTimestamps,
-          isStartingOffsets, strategy).partitionToOffsets
+        fetchSpecificTimestampBasedOffsets(
+          partitionTimestamps,
+          isStartingOffsets,
+          strategy).partitionToOffsets
       case GlobalTimestampRangeLimit(timestamp, strategy) =>
-        fetchGlobalTimestampBasedOffsets(timestamp,
-          isStartingOffsets, strategy).partitionToOffsets
+        fetchGlobalTimestampBasedOffsets(
+          timestamp,
+          isStartingOffsets,
+          strategy).partitionToOffsets
     }
   }
 
@@ -173,7 +180,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       partitionOffsets: Map[TopicPartition, Long],
       reportDataLoss: (String, () => Throwable) => Unit): KafkaSourceOffset = {
     val fnAssertParametersWithPartitions: ju.Set[TopicPartition] => Unit = { partitions =>
-      assert(partitions.asScala == partitionOffsets.keySet,
+      assert(
+        partitions.asScala == partitionOffsets.keySet,
         "If startingOffsets contains specific offsets, you must specify all TopicPartitions.\n" +
           "Use -1 for latest, -2 for earliest, if you don't care.\n" +
           s"Specified: ${partitionOffsets.keySet} Assigned: ${partitions.asScala}")
@@ -186,20 +194,22 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
     val fnAssertFetchedOffsets: Map[TopicPartition, Long] => Unit = { fetched =>
       partitionOffsets.foreach {
-        case (tp, off) if off != KafkaOffsetRangeLimit.LATEST &&
-          off != KafkaOffsetRangeLimit.EARLIEST =>
+        case (tp, off)
+            if off != KafkaOffsetRangeLimit.LATEST &&
+              off != KafkaOffsetRangeLimit.EARLIEST =>
           if (fetched(tp) != off) {
             reportDataLoss(
               s"startingOffsets for $tp was $off but consumer reset to ${fetched(tp)}",
-              () =>
-                KafkaExceptions.startOffsetReset(tp, off, fetched(tp)))
+              () => KafkaExceptions.startOffsetReset(tp, off, fetched(tp)))
           }
         case _ =>
         // no real way to check that beginning or end is reasonable
       }
     }
 
-    fetchSpecificOffsets0(fnAssertParametersWithPartitions, fnRetrievePartitionOffsets,
+    fetchSpecificOffsets0(
+      fnAssertParametersWithPartitions,
+      fnRetrievePartitionOffsets,
       fnAssertFetchedOffsets)
   }
 
@@ -207,14 +217,16 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       partitionTimestamps: Map[TopicPartition, Long],
       isStartingOffsets: Boolean,
       strategyOnNoMatchStartingOffset: StrategyOnNoMatchStartingOffset.Value)
-    : KafkaSourceOffset = {
+      : KafkaSourceOffset = {
 
     val fnAssertParametersWithPartitions: ju.Set[TopicPartition] => Unit = { partitions =>
       val specifiedPartitions = partitionTimestamps.keySet
       val assignedPartitions = partitions.asScala.toSet
       if (specifiedPartitions != assignedPartitions) {
         throw KafkaExceptions.timestampOffsetDoesNotMatchAssigned(
-          isStartingOffsets, specifiedPartitions, assignedPartitions)
+          isStartingOffsets,
+          specifiedPartitions,
+          assignedPartitions)
       }
       logDebug(s"Partitions assigned to consumer: $partitions. Seeking to $partitionTimestamps")
     }
@@ -236,7 +248,9 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
     val fnAssertFetchedOffsets: Map[TopicPartition, Long] => Unit = { _ => }
 
-    fetchSpecificOffsets0(fnAssertParametersWithPartitions, fnRetrievePartitionOffsets,
+    fetchSpecificOffsets0(
+      fnAssertParametersWithPartitions,
+      fnRetrievePartitionOffsets,
       fnAssertFetchedOffsets)
   }
 
@@ -244,7 +258,7 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       timestamp: Long,
       isStartingOffsets: Boolean,
       strategyOnNoMatchStartingOffset: StrategyOnNoMatchStartingOffset.Value)
-    : KafkaSourceOffset = {
+      : KafkaSourceOffset = {
 
     val fnAssertParametersWithPartitions: ju.Set[TopicPartition] => Unit = { partitions =>
       logDebug(s"Partitions assigned to consumer: $partitions. Seeking to $timestamp")
@@ -265,7 +279,9 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
     val fnAssertFetchedOffsets: Map[TopicPartition, Long] => Unit = { _ => }
 
-    fetchSpecificOffsets0(fnAssertParametersWithPartitions, fnRetrievePartitionOffsets,
+    fetchSpecificOffsets0(
+      fnAssertParametersWithPartitions,
+      fnRetrievePartitionOffsets,
       fnAssertFetchedOffsets)
   }
 
@@ -282,10 +298,11 @@ private[kafka010] class KafkaOffsetReaderConsumer(
             case StrategyOnNoMatchStartingOffset.ERROR =>
               // This is to match the old behavior - we used assert to check the condition.
               // scalastyle:off throwerror
-              throw new AssertionError("No offset " +
-                s"matched from request of topic-partition $tp and timestamp " +
-                s"${partitionTimestampFn(tp)}.")
-              // scalastyle:on throwerror
+              throw new AssertionError(
+                "No offset " +
+                  s"matched from request of topic-partition $tp and timestamp " +
+                  s"${partitionTimestampFn(tp)}.")
+            // scalastyle:on throwerror
 
             case StrategyOnNoMatchStartingOffset.LATEST =>
               KafkaOffsetRangeLimit.LATEST
@@ -305,8 +322,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       fnAssertParametersWithPartitions: ju.Set[TopicPartition] => Unit,
       fnRetrievePartitionOffsets: ju.Set[TopicPartition] => Map[TopicPartition, Long],
       fnAssertFetchedOffsets: Map[TopicPartition, Long] => Unit): KafkaSourceOffset = {
-    val fetched = partitionsAssignedToConsumer {
-      partitions => {
+    val fetched = partitionsAssignedToConsumer { partitions =>
+      {
         fnAssertParametersWithPartitions(partitions)
 
         val partitionOffsets = fnRetrievePartitionOffsets(partitions)
@@ -319,8 +336,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
           case (tp, off) => consumer.seek(tp, off)
         }
 
-        partitionOffsets.map {
-          case (tp, _) => tp -> consumer.position(tp)
+        partitionOffsets.map { case (tp, _) =>
+          tp -> consumer.position(tp)
         }
       }
     }
@@ -338,88 +355,95 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       val partitionOffsets = partitions.asScala.map(p => p -> consumer.position(p)).toMap
       logDebug(s"Got earliest offsets for partition : $partitionOffsets")
       partitionOffsets
-    }, fetchingEarliestOffset = true)
+    },
+    fetchingEarliestOffset = true)
 
   /**
-   * Specific to `KafkaOffsetReaderConsumer`:
-   * Kafka may return earliest offsets when we are requesting latest offsets if `poll` is called
-   * right before `seekToEnd` (KAFKA-7703). As a workaround, we will call `position` right after
-   * `poll` to wait until the potential offset request triggered by `poll(0)` is done.
+   * Specific to `KafkaOffsetReaderConsumer`: Kafka may return earliest offsets when we are
+   * requesting latest offsets if `poll` is called right before `seekToEnd` (KAFKA-7703). As a
+   * workaround, we will call `position` right after `poll` to wait until the potential offset
+   * request triggered by `poll(0)` is done.
    */
-  override def fetchLatestOffsets(
-      knownOffsets: Option[PartitionOffsetMap]): PartitionOffsetMap =
-    partitionsAssignedToConsumer { partitions => {
-      logDebug("Seeking to the end.")
+  override def fetchLatestOffsets(knownOffsets: Option[PartitionOffsetMap]): PartitionOffsetMap =
+    partitionsAssignedToConsumer { partitions =>
+      {
+        logDebug("Seeking to the end.")
 
-      if (knownOffsets.isEmpty) {
-        consumer.seekToEnd(partitions)
-        partitions.asScala.map(p => p -> consumer.position(p)).toMap
-      } else {
-        var partitionOffsets: PartitionOffsetMap = Map.empty
-
-        /**
-         * Compare `knownOffsets` and `partitionOffsets`. Returns all partitions that have incorrect
-         * latest offset (offset in `knownOffsets` is great than the one in `partitionOffsets`).
-         */
-        def findIncorrectOffsets(): Seq[(TopicPartition, Long, Long)] = {
-          val incorrectOffsets = ArrayBuffer[(TopicPartition, Long, Long)]()
-          partitionOffsets.foreach { case (tp, offset) =>
-            knownOffsets.foreach(_.get(tp).foreach { knownOffset =>
-              if (knownOffset > offset) {
-                val incorrectOffset = (tp, knownOffset, offset)
-                incorrectOffsets += incorrectOffset
-              }
-            })
-          }
-          incorrectOffsets.toSeq
-        }
-
-        // Retry to fetch latest offsets when detecting incorrect offsets. We don't use
-        // `withRetriesWithoutInterrupt` to retry because:
-        //
-        // - `withRetriesWithoutInterrupt` will reset the consumer for each attempt but a fresh
-        //    consumer has a much bigger chance to hit KAFKA-7703.
-        // - Avoid calling `consumer.poll(0)` which may cause KAFKA-7703.
-        var incorrectOffsets: Seq[(TopicPartition, Long, Long)] = Nil
-        var attempt = 0
-        do {
+        if (knownOffsets.isEmpty) {
           consumer.seekToEnd(partitions)
-          partitionOffsets = partitions.asScala.map(p => p -> consumer.position(p)).toMap
-          attempt += 1
+          partitions.asScala.map(p => p -> consumer.position(p)).toMap
+        } else {
+          var partitionOffsets: PartitionOffsetMap = Map.empty
 
-          incorrectOffsets = findIncorrectOffsets()
-          if (incorrectOffsets.nonEmpty) {
-            logWarning(log"Found incorrect offsets in some partitions " +
-              log"(partition, previous offset, fetched offset): ${MDC(OFFSETS, incorrectOffsets)}")
-            if (attempt < maxOffsetFetchAttempts) {
-              logWarning("Retrying to fetch latest offsets because of incorrect offsets")
-              Thread.sleep(offsetFetchAttemptIntervalMs)
+          /**
+           * Compare `knownOffsets` and `partitionOffsets`. Returns all partitions that have
+           * incorrect latest offset (offset in `knownOffsets` is great than the one in
+           * `partitionOffsets`).
+           */
+          def findIncorrectOffsets(): Seq[(TopicPartition, Long, Long)] = {
+            val incorrectOffsets = ArrayBuffer[(TopicPartition, Long, Long)]()
+            partitionOffsets.foreach { case (tp, offset) =>
+              knownOffsets.foreach(_.get(tp).foreach { knownOffset =>
+                if (knownOffset > offset) {
+                  val incorrectOffset = (tp, knownOffset, offset)
+                  incorrectOffsets += incorrectOffset
+                }
+              })
             }
+            incorrectOffsets.toSeq
           }
-        } while (incorrectOffsets.nonEmpty && attempt < maxOffsetFetchAttempts)
 
-        logDebug(s"Got latest offsets for partition : $partitionOffsets")
-        partitionOffsets
+          // Retry to fetch latest offsets when detecting incorrect offsets. We don't use
+          // `withRetriesWithoutInterrupt` to retry because:
+          //
+          // - `withRetriesWithoutInterrupt` will reset the consumer for each attempt but a fresh
+          //    consumer has a much bigger chance to hit KAFKA-7703.
+          // - Avoid calling `consumer.poll(0)` which may cause KAFKA-7703.
+          var incorrectOffsets: Seq[(TopicPartition, Long, Long)] = Nil
+          var attempt = 0
+          do {
+            consumer.seekToEnd(partitions)
+            partitionOffsets = partitions.asScala.map(p => p -> consumer.position(p)).toMap
+            attempt += 1
+
+            incorrectOffsets = findIncorrectOffsets()
+            if (incorrectOffsets.nonEmpty) {
+              logWarning(log"Found incorrect offsets in some partitions " +
+                log"(partition, previous offset, fetched offset): ${MDC(OFFSETS, incorrectOffsets)}")
+              if (attempt < maxOffsetFetchAttempts) {
+                logWarning("Retrying to fetch latest offsets because of incorrect offsets")
+                Thread.sleep(offsetFetchAttemptIntervalMs)
+              }
+            }
+          } while (incorrectOffsets.nonEmpty && attempt < maxOffsetFetchAttempts)
+
+          logDebug(s"Got latest offsets for partition : $partitionOffsets")
+          partitionOffsets
+        }
       }
     }
-  }
 
   override def fetchEarliestOffsets(
       newPartitions: Seq[TopicPartition]): Map[TopicPartition, Long] = {
     if (newPartitions.isEmpty) {
       Map.empty[TopicPartition, Long]
     } else {
-      partitionsAssignedToConsumer(partitions => {
-        // Get the earliest offset of each partition
-        consumer.seekToBeginning(partitions)
-        val partitionOffsets = newPartitions.filter { p =>
-          // When deleting topics happen at the same time, some partitions may not be in
-          // `partitions`. So we need to ignore them
-          partitions.contains(p)
-        }.map(p => p -> consumer.position(p)).toMap
-        logDebug(s"Got earliest offsets for new partitions: $partitionOffsets")
-        partitionOffsets
-      }, fetchingEarliestOffset = true)
+      partitionsAssignedToConsumer(
+        partitions => {
+          // Get the earliest offset of each partition
+          consumer.seekToBeginning(partitions)
+          val partitionOffsets = newPartitions
+            .filter { p =>
+              // When deleting topics happen at the same time, some partitions may not be in
+              // `partitions`. So we need to ignore them
+              partitions.contains(p)
+            }
+            .map(p => p -> consumer.position(p))
+            .toMap
+          logDebug(s"Got earliest offsets for new partitions: $partitionOffsets")
+          partitionOffsets
+        },
+        fetchingEarliestOffset = true)
     }
   }
 
@@ -435,14 +459,16 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       implicit val topicOrdering: Ordering[TopicPartition] = Ordering.by(t => t.topic())
       val fromTopics = fromPartitionOffsets.keySet.toList.sorted.mkString(",")
       val untilTopics = untilPartitionOffsets.keySet.toList.sorted.mkString(",")
-      throw new IllegalStateException("different topic partitions " +
-        s"for starting offsets topics[${fromTopics}] and " +
-        s"ending offsets topics[${untilTopics}]")
+      throw new IllegalStateException(
+        "different topic partitions " +
+          s"for starting offsets topics[${fromTopics}] and " +
+          s"ending offsets topics[${untilTopics}]")
     }
 
     // Calculate offset ranges
     val offsetRangesBase = untilPartitionOffsets.keySet.map { tp =>
-      val fromOffset = fromPartitionOffsets.getOrElse(tp,
+      val fromOffset = fromPartitionOffsets.getOrElse(
+        tp,
         // This should not happen since topicPartitions contains all partitions not in
         // fromPartitionOffsets
         throw new IllegalStateException(s"$tp doesn't have a from offset"))
@@ -452,8 +478,7 @@ private[kafka010] class KafkaOffsetReaderConsumer(
         fromOffset,
         untilOffset,
         tp,
-        KafkaExceptions.resolvedStartOffsetGreaterThanEndOffset
-      )
+        KafkaExceptions.resolvedStartOffsetGreaterThanEndOffset)
 
       KafkaOffsetRange(tp, fromOffset, untilOffset, None)
     }.toSeq
@@ -470,19 +495,26 @@ private[kafka010] class KafkaOffsetReaderConsumer(
       val resolvedUntilOffsets =
         fetchSpecificOffsets(untilOffsetsMap, (_, _) => ()).partitionToOffsets
       val ranges = offsetRangesBase.map(_.topicPartition).map { tp =>
-        KafkaOffsetRange(tp, resolvedFromOffsets(tp), resolvedUntilOffsets(tp), preferredLoc = None)
+        KafkaOffsetRange(
+          tp,
+          resolvedFromOffsets(tp),
+          resolvedUntilOffsets(tp),
+          preferredLoc = None)
       }
       val divvied = rangeCalculator.getRanges(ranges).groupBy(_.topicPartition)
-      divvied.flatMap { case (tp, splitOffsetRanges) =>
-        if (splitOffsetRanges.length == 1) {
-          Seq(KafkaOffsetRange(tp, fromOffsetsMap(tp), untilOffsetsMap(tp), None))
-        } else {
-          // the list can't be empty
-          val first = splitOffsetRanges.head.copy(fromOffset = fromOffsetsMap(tp))
-          val end = splitOffsetRanges.last.copy(untilOffset = untilOffsetsMap(tp))
-          Seq(first) ++ splitOffsetRanges.drop(1).dropRight(1) :+ end
+      divvied
+        .flatMap { case (tp, splitOffsetRanges) =>
+          if (splitOffsetRanges.length == 1) {
+            Seq(KafkaOffsetRange(tp, fromOffsetsMap(tp), untilOffsetsMap(tp), None))
+          } else {
+            // the list can't be empty
+            val first = splitOffsetRanges.head.copy(fromOffset = fromOffsetsMap(tp))
+            val end = splitOffsetRanges.last.copy(untilOffset = untilOffsetsMap(tp))
+            Seq(first) ++ splitOffsetRanges.drop(1).dropRight(1) :+ end
+          }
         }
-      }.toArray.toImmutableArraySeq
+        .toArray
+        .toImmutableArraySeq
     } else {
       offsetRangesBase
     }
@@ -490,31 +522,31 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
   private def partitionsAssignedToConsumer(
       body: ju.Set[TopicPartition] => Map[TopicPartition, Long],
-      fetchingEarliestOffset: Boolean = false)
-    : Map[TopicPartition, Long] = uninterruptibleThreadRunner.runUninterruptibly {
+      fetchingEarliestOffset: Boolean = false): Map[TopicPartition, Long] =
+    uninterruptibleThreadRunner.runUninterruptibly {
 
-    withRetriesWithoutInterrupt {
-      // Poll to get the latest assigned partitions
-      consumer.poll(0)
-      val partitions = consumer.assignment()
+      withRetriesWithoutInterrupt {
+        // Poll to get the latest assigned partitions
+        consumer.poll(0)
+        val partitions = consumer.assignment()
 
-      if (!fetchingEarliestOffset) {
-        // Call `position` to wait until the potential offset request triggered by `poll(0)` is
-        // done. This is a workaround for KAFKA-7703, which an async `seekToBeginning` triggered by
-        // `poll(0)` may reset offsets that should have been set by another request.
-        partitions.asScala.map(p => p -> consumer.position(p)).foreach(_ => {})
+        if (!fetchingEarliestOffset) {
+          // Call `position` to wait until the potential offset request triggered by `poll(0)` is
+          // done. This is a workaround for KAFKA-7703, which an async `seekToBeginning` triggered by
+          // `poll(0)` may reset offsets that should have been set by another request.
+          partitions.asScala.map(p => p -> consumer.position(p)).foreach(_ => {})
+        }
+
+        consumer.pause(partitions)
+        logDebug(s"Partitions assigned to consumer: $partitions.")
+        body(partitions)
       }
-
-      consumer.pause(partitions)
-      logDebug(s"Partitions assigned to consumer: $partitions.")
-      body(partitions)
     }
-  }
 
   /**
-   * Helper function that does multiple retries on a body of code that returns offsets.
-   * Retries are needed to handle transient failures. For e.g. race conditions between getting
-   * assignment and getting position while topics/partitions are deleted can cause NPEs.
+   * Helper function that does multiple retries on a body of code that returns offsets. Retries
+   * are needed to handle transient failures. For e.g. race conditions between getting assignment
+   * and getting position while topics/partitions are deleted can cause NPEs.
    *
    * This method also makes sure `body` won't be interrupted to workaround a potential issue in
    * `KafkaConsumer.poll`. (KAFKA-1894)
@@ -545,7 +577,8 @@ private[kafka010] class KafkaOffsetReaderConsumer(
                 case NonFatal(e) =>
                   lastException = e
                   logWarning(
-                    log"Error in attempt ${MDC(NUM_RETRY, attempt)} getting Kafka offsets: ", e)
+                    log"Error in attempt ${MDC(NUM_RETRY, attempt)} getting Kafka offsets: ",
+                    e)
                   attempt += 1
                   Thread.sleep(offsetFetchAttemptIntervalMs)
                   resetConsumer()
@@ -575,6 +608,6 @@ private[kafka010] class KafkaOffsetReaderConsumer(
 
   private def resetConsumer(): Unit = synchronized {
     stopConsumer()
-    _consumer = null  // will automatically get reinitialized again
+    _consumer = null // will automatically get reinitialized again
   }
 }

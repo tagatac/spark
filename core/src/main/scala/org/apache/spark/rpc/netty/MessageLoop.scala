@@ -80,19 +80,20 @@ private sealed abstract class MessageLoop(dispatcher: Dispatcher) extends Loggin
       }
     } catch {
       case _: InterruptedException => // exit
-        case t: Throwable =>
-          try {
-            // Re-submit a receive task so that message delivery will still work if
-            // UncaughtExceptionHandler decides to not kill JVM.
-            threadpool.execute(receiveLoopRunnable)
-          } finally {
-            throw t
-          }
+      case t: Throwable =>
+        try {
+          // Re-submit a receive task so that message delivery will still work if
+          // UncaughtExceptionHandler decides to not kill JVM.
+          threadpool.execute(receiveLoopRunnable)
+        } finally {
+          throw t
+        }
     }
   }
 }
 
 private object MessageLoop {
+
   /** A poison inbox that indicates the message loop should stop processing messages. */
   val PoisonPill = new Inbox(null, null)
 }
@@ -100,11 +101,8 @@ private object MessageLoop {
 /**
  * A message loop that serves multiple RPC endpoints, using a shared thread pool.
  */
-private class SharedMessageLoop(
-    conf: SparkConf,
-    dispatcher: Dispatcher,
-    numUsableCores: Int)
-  extends MessageLoop(dispatcher) {
+private class SharedMessageLoop(conf: SparkConf, dispatcher: Dispatcher, numUsableCores: Int)
+    extends MessageLoop(dispatcher) {
 
   private val endpoints = new ConcurrentHashMap[String, Inbox]()
 
@@ -112,13 +110,17 @@ private class SharedMessageLoop(
     val availableCores =
       if (numUsableCores > 0) numUsableCores else Runtime.getRuntime.availableProcessors()
 
-    val modNumThreads = conf.get(RPC_NETTY_DISPATCHER_NUM_THREADS)
+    val modNumThreads = conf
+      .get(RPC_NETTY_DISPATCHER_NUM_THREADS)
       .getOrElse(math.max(2, availableCores))
 
-    conf.get(EXECUTOR_ID).map { id =>
-      val role = if (id == SparkContext.DRIVER_IDENTIFIER) "driver" else "executor"
-      conf.getInt(s"spark.$role.rpc.netty.dispatcher.numThreads", modNumThreads)
-    }.getOrElse(modNumThreads)
+    conf
+      .get(EXECUTOR_ID)
+      .map { id =>
+        val role = if (id == SparkContext.DRIVER_IDENTIFIER) "driver" else "executor"
+        conf.getInt(s"spark.$role.rpc.netty.dispatcher.numThreads", modNumThreads)
+      }
+      .getOrElse(modNumThreads)
   }
 
   /** Thread pool used for dispatching messages. */
@@ -161,7 +163,7 @@ private class DedicatedMessageLoop(
     name: String,
     endpoint: IsolatedRpcEndpoint,
     dispatcher: Dispatcher)
-  extends MessageLoop(dispatcher) {
+    extends MessageLoop(dispatcher) {
 
   private val inbox = new Inbox(name, endpoint)
 
@@ -173,9 +175,9 @@ private class DedicatedMessageLoop(
 
   (1 to endpoint.threadCount()).foreach { _ =>
     /**
-     * We need to be careful not to use [[ExecutorService#submit]].
-     * `submit` api will swallow uncaught exceptions in [[FutureTask#setException]].
-     * */
+     * We need to be careful not to use [[ExecutorService#submit]]. `submit` api will swallow
+     * uncaught exceptions in [[FutureTask#setException]].
+     */
     threadpool.execute(receiveLoopRunnable)
   }
 

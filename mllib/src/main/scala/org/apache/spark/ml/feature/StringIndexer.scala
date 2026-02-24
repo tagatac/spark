@@ -39,28 +39,32 @@ import org.apache.spark.util.collection.OpenHashMap
 /**
  * Base trait for [[StringIndexer]] and [[StringIndexerModel]].
  */
-private[feature] trait StringIndexerBase extends Params with HasHandleInvalid with HasInputCol
-  with HasOutputCol with HasInputCols with HasOutputCols {
+private[feature] trait StringIndexerBase
+    extends Params
+    with HasHandleInvalid
+    with HasInputCol
+    with HasOutputCol
+    with HasInputCols
+    with HasOutputCols {
 
   /**
-   * Param for how to handle invalid data (unseen labels or NULL values).
-   * Options are 'skip' (filter out rows with invalid data),
-   * 'error' (throw an error), or 'keep' (put invalid data in a special additional
-   * bucket, at index numLabels).
-   * Default: "error"
+   * Param for how to handle invalid data (unseen labels or NULL values). Options are 'skip'
+   * (filter out rows with invalid data), 'error' (throw an error), or 'keep' (put invalid data in
+   * a special additional bucket, at index numLabels). Default: "error"
    * @group param
    */
   @Since("1.6.0")
-  override val handleInvalid: Param[String] = new Param[String](this, "handleInvalid",
+  override val handleInvalid: Param[String] = new Param[String](
+    this,
+    "handleInvalid",
     "How to handle invalid data (unseen labels or NULL values). " +
-    "Options are 'skip' (filter out rows with invalid data), error (throw an error), " +
-    "or 'keep' (put invalid data in a special additional bucket, at index numLabels).",
+      "Options are 'skip' (filter out rows with invalid data), error (throw an error), " +
+      "or 'keep' (put invalid data in a special additional bucket, at index numLabels).",
     ParamValidators.inArray(StringIndexer.supportedHandleInvalids))
 
   /**
-   * Param for how to order labels of string column. The first label after ordering is assigned
-   * an index of 0.
-   * Options are:
+   * Param for how to order labels of string column. The first label after ordering is assigned an
+   * index of 0. Options are:
    *   - 'frequencyDesc': descending order by label frequency (most frequent label assigned 0)
    *   - 'frequencyAsc': ascending order by label frequency (least frequent label assigned 0)
    *   - 'alphabetDesc': descending alphabetical order
@@ -68,18 +72,21 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
    * Default is 'frequencyDesc'.
    *
    * Note: In case of equal frequency when under frequencyDesc/Asc, the strings are further sorted
-   *       alphabetically.
+   * alphabetically.
    *
    * @group param
    */
   @Since("2.3.0")
-  final val stringOrderType: Param[String] = new Param(this, "stringOrderType",
+  final val stringOrderType: Param[String] = new Param(
+    this,
+    "stringOrderType",
     "How to order labels of string column. " +
-    "The first label after ordering is assigned an index of 0. " +
-    s"Supported options: ${StringIndexer.supportedStringOrderType.mkString(", ")}.",
+      "The first label after ordering is assigned an index of 0. " +
+      s"Supported options: ${StringIndexer.supportedStringOrderType.mkString(", ")}.",
     ParamValidators.inArray(StringIndexer.supportedStringOrderType))
 
-  setDefault(handleInvalid -> StringIndexer.ERROR_INVALID,
+  setDefault(
+    handleInvalid -> StringIndexer.ERROR_INVALID,
     stringOrderType -> StringIndexer.frequencyDesc)
 
   /** @group getParam */
@@ -93,7 +100,8 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
     if (isSet(inputCol)) {
       (Array($(inputCol)), Array($(outputCol)))
     } else {
-      require($(inputCols).length == $(outputCols).length,
+      require(
+        $(inputCols).length == $(outputCols).length,
         "The number of input columns does not match output columns")
       ($(inputCols), $(outputCols))
     }
@@ -104,10 +112,12 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
       inputColName: String,
       inputDataType: DataType,
       outputColName: String): StructField = {
-    require(inputDataType == StringType || inputDataType.isInstanceOf[NumericType],
+    require(
+      inputDataType == StringType || inputDataType.isInstanceOf[NumericType],
       s"The input column $inputColName must be either string type or numeric type, " +
         s"but got $inputDataType.")
-    require(schema.fields.forall(_.name != outputColName),
+    require(
+      schema.fields.forall(_.name != outputColName),
       s"Output column $outputColName already exists.")
     NominalAttribute.defaultAttr.withName(outputColName).toStructField()
   }
@@ -118,16 +128,15 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
       skipNonExistsCol: Boolean = false): StructType = {
     val (inputColNames, outputColNames) = getInOutCols()
 
-    require(outputColNames.distinct.length == outputColNames.length,
+    require(
+      outputColNames.distinct.length == outputColNames.length,
       s"Output columns should not be duplicate.")
 
-    val outputFields = inputColNames.zip(outputColNames).flatMap {
-      case (inputColName, outputColName) =>
+    val outputFields =
+      inputColNames.zip(outputColNames).flatMap { case (inputColName, outputColName) =>
         try {
           val dtype = SchemaUtils.getSchemaFieldType(schema, inputColName)
-          Some(
-            validateAndTransformField(schema, inputColName, dtype, outputColName)
-          )
+          Some(validateAndTransformField(schema, inputColName, dtype, outputColName))
         } catch {
           case e: SparkIllegalArgumentException if e.getCondition == "FIELD_NOT_FOUND" =>
             if (skipNonExistsCol) {
@@ -136,24 +145,25 @@ private[feature] trait StringIndexerBase extends Params with HasHandleInvalid wi
               throw new SparkException(s"Input column $inputColName does not exist.")
             }
         }
-    }
+      }
     StructType(schema.fields ++ outputFields)
   }
 }
 
 /**
- * A label indexer that maps string column(s) of labels to ML column(s) of label indices.
- * If the input columns are numeric, we cast them to string and index the string values.
- * The indices are in [0, numLabels). By default, this is ordered by label frequencies
- * so the most frequent label gets index 0. The ordering behavior is controlled by
- * setting `stringOrderType`.
+ * A label indexer that maps string column(s) of labels to ML column(s) of label indices. If the
+ * input columns are numeric, we cast them to string and index the string values. The indices are
+ * in [0, numLabels). By default, this is ordered by label frequencies so the most frequent label
+ * gets index 0. The ordering behavior is controlled by setting `stringOrderType`.
  *
- * @see `IndexToString` for the inverse transformation
+ * @see
+ *   `IndexToString` for the inverse transformation
  */
 @Since("1.4.0")
-class StringIndexer @Since("1.4.0") (
-    @Since("1.4.0") override val uid: String) extends Estimator[StringIndexerModel]
-  with StringIndexerBase with DefaultParamsWritable {
+class StringIndexer @Since("1.4.0") (@Since("1.4.0") override val uid: String)
+    extends Estimator[StringIndexerModel]
+    with StringIndexerBase
+    with DefaultParamsWritable {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("strIdx"))
@@ -183,8 +193,8 @@ class StringIndexer @Since("1.4.0") (
   def setOutputCols(value: Array[String]): this.type = set(outputCols, value)
 
   /**
-   * Gets columns from dataset. If a column is not string type, we replace NaN values
-   * with null. Columns are casted to string type.
+   * Gets columns from dataset. If a column is not string type, we replace NaN values with null.
+   * Columns are casted to string type.
    */
   private def getSelectedCols(dataset: Dataset[_], inputCols: Seq[String]): Seq[Column] = {
     inputCols.map { colName =>
@@ -207,7 +217,8 @@ class StringIndexer @Since("1.4.0") (
     val countCol = if (ascending) count(lit(1)) else negate(count(lit(1)))
 
     val result = Array.fill(numCols)(Array.empty[String])
-    dataset.select(posexplode(array(selectedCols: _*)).as(Seq("index", "value")))
+    dataset
+      .select(posexplode(array(selectedCols: _*)).as(Seq("index", "value")))
       .where(col("value").isNotNull)
       .groupBy("index", "value")
       .agg(countCol.as("count"))
@@ -224,7 +235,8 @@ class StringIndexer @Since("1.4.0") (
     val numCols = inputCols.length
 
     val result = Array.fill(numCols)(Array.empty[String])
-    dataset.select(posexplode(array(selectedCols: _*)).as(Seq("index", "value")))
+    dataset
+      .select(posexplode(array(selectedCols: _*)).as(Seq("index", "value")))
       .where(col("value").isNotNull)
       .groupBy("index")
       .agg(sort_array(collect_set("value"), ascending))
@@ -244,7 +256,7 @@ class StringIndexer @Since("1.4.0") (
       case StringIndexer.frequencyAsc => sortByFreq(dataset, ascending = true)
       case StringIndexer.alphabetDesc => sortByAlphabet(dataset, ascending = false)
       case StringIndexer.alphabetAsc => sortByAlphabet(dataset, ascending = true)
-     }
+    }
     copyValues(new StringIndexerModel(uid, labelsArray).setParent(this))
   }
 
@@ -278,19 +290,23 @@ object StringIndexer extends DefaultParamsReadable[StringIndexer] {
 /**
  * Model fitted by [[StringIndexer]].
  *
- * @param labelsArray Array of ordered list of labels, corresponding to indices to be assigned
- *                    for each input column.
+ * @param labelsArray
+ *   Array of ordered list of labels, corresponding to indices to be assigned for each input
+ *   column.
  *
- * @note During transformation, if any input column does not exist,
- * `StringIndexerModel.transform` would skip the input column.
- * If all input columns do not exist, it returns the input dataset unmodified.
- * This is a temporary fix for the case when target labels do not exist during prediction.
+ * @note
+ *   During transformation, if any input column does not exist, `StringIndexerModel.transform`
+ *   would skip the input column. If all input columns do not exist, it returns the input dataset
+ *   unmodified. This is a temporary fix for the case when target labels do not exist during
+ *   prediction.
  */
 @Since("1.4.0")
-class StringIndexerModel (
+class StringIndexerModel(
     @Since("1.4.0") override val uid: String,
     @Since("3.0.0") val labelsArray: Array[Array[String]])
-  extends Model[StringIndexerModel] with StringIndexerBase with MLWritable {
+    extends Model[StringIndexerModel]
+    with StringIndexerBase
+    with MLWritable {
 
   import StringIndexerModel._
 
@@ -301,17 +317,22 @@ class StringIndexerModel (
   def this(labels: Array[String]) = this(Identifiable.randomUID("strIdx"), Array(labels))
 
   @Since("3.0.0")
-  def this(labelsArray: Array[Array[String]]) = this(Identifiable.randomUID("strIdx"), labelsArray)
+  def this(labelsArray: Array[Array[String]]) =
+    this(Identifiable.randomUID("strIdx"), labelsArray)
 
   // For ml connect only
   private[ml] def this() = this("", Array.empty[Array[String]])
 
-  @deprecated("`labels` is deprecated and will be removed in 3.1.0. Use `labelsArray` " +
-    "instead.", "3.0.0")
+  @deprecated(
+    "`labels` is deprecated and will be removed in 3.1.0. Use `labelsArray` " +
+      "instead.",
+    "3.0.0")
   @Since("1.5.0")
   def labels: Array[String] = {
-    require(labelsArray.length == 1, "This StringIndexerModel is fit on multiple columns. " +
-      "Call `labelsArray` instead.")
+    require(
+      labelsArray.length == 1,
+      "This StringIndexerModel is fit on multiple columns. " +
+        "Call `labelsArray` instead.")
     labelsArray(0)
   }
 
@@ -364,7 +385,8 @@ class StringIndexerModel (
       filter(dataset(inputColName))
     }
 
-    dataset.na.drop(inputColNames.filter(dataset.schema.fieldNames.contains(_)))
+    dataset.na
+      .drop(inputColNames.filter(dataset.schema.fieldNames.contains(_)))
       .where(conditions.reduce(_ and _))
   }
 
@@ -376,8 +398,9 @@ class StringIndexerModel (
         if (keepInvalid) {
           labels.length
         } else {
-          throw new SparkException("StringIndexer encountered NULL value. To handle or skip " +
-            "NULLS, try setting StringIndexer.handleInvalid.")
+          throw new SparkException(
+            "StringIndexer encountered NULL value. To handle or skip " +
+              "NULLS, try setting StringIndexer.handleInvalid.")
         }
       } else {
         if (labelToIndex.contains(label)) {
@@ -385,8 +408,9 @@ class StringIndexerModel (
         } else if (keepInvalid) {
           labels.length
         } else {
-          throw new SparkException(s"Unseen label: $label. To handle unseen labels, " +
-            s"set Param handleInvalid to ${StringIndexer.KEEP_INVALID}.")
+          throw new SparkException(
+            s"Unseen label: $label. To handle unseen labels, " +
+              s"set Param handleInvalid to ${StringIndexer.KEEP_INVALID}.")
         }
       }
     }.asNondeterministic()
@@ -429,8 +453,9 @@ class StringIndexerModel (
           .as(outputColName, metadata)
       } catch {
         case _: AnalysisException =>
-          logWarning(log"Input column ${MDC(LogKeys.COLUMN_NAME, inputColName)} does not exist " +
-            log"during transformation. Skip StringIndexerModel for this column.")
+          logWarning(
+            log"Input column ${MDC(LogKeys.COLUMN_NAME, inputColName)} does not exist " +
+              log"during transformation. Skip StringIndexerModel for this column.")
           outputColNames(i) = null
       }
     }
@@ -440,7 +465,8 @@ class StringIndexerModel (
     require(filteredOutputColNames.length == filteredOutputColumns.length)
     if (filteredOutputColNames.length > 0) {
       filteredDataset.withColumns(
-        filteredOutputColNames.toImmutableArraySeq, filteredOutputColumns.toImmutableArraySeq)
+        filteredOutputColNames.toImmutableArraySeq,
+        filteredOutputColumns.toImmutableArraySeq)
     } else {
       filteredDataset.toDF()
     }
@@ -476,21 +502,20 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
   private[ml] def serializeData(data: Data, dos: DataOutputStream): Unit = {
     import ReadWriteUtils._
     serializeGenericArray[Seq[String]](
-      data.labelsArray.toArray, dos,
-      (strSeq, dos) => serializeStringArray(strSeq.toArray, dos)
-    )
+      data.labelsArray.toArray,
+      dos,
+      (strSeq, dos) => serializeStringArray(strSeq.toArray, dos))
   }
 
   private[ml] def deserializeData(dis: DataInputStream): Data = {
     import ReadWriteUtils._
-    val labelsArray = deserializeGenericArray[Seq[String]](
-      dis, dis => deserializeStringArray(dis).toSeq
-    ).toSeq
+    val labelsArray =
+      deserializeGenericArray[Seq[String]](dis, dis => deserializeStringArray(dis).toSeq).toSeq
     Data(labelsArray)
   }
 
-  private[StringIndexerModel]
-  class StringIndexModelWriter(instance: StringIndexerModel) extends MLWriter {
+  private[StringIndexerModel] class StringIndexModelWriter(instance: StringIndexerModel)
+      extends MLWriter {
 
     override protected def saveImpl(path: String): Unit = {
       DefaultParamsWriter.saveMetadata(instance, path, sparkSession)
@@ -513,7 +538,8 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
       val (majorVersion, minorVersion) = majorMinorVersion(metadata.sparkVersion)
       val labelsArray = if (majorVersion < 3) {
         // Spark 2.4 and before.
-        val data = sparkSession.read.parquet(dataPath)
+        val data = sparkSession.read
+          .parquet(dataPath)
           .select("labels")
           .head()
         val labels = data.getAs[Seq[String]](0).toArray
@@ -536,16 +562,19 @@ object StringIndexerModel extends MLReadable[StringIndexerModel] {
 }
 
 /**
- * A `Transformer` that maps a column of indices back to a new column of corresponding
- * string values.
- * The index-string mapping is either from the ML attributes of the input column,
- * or from user-supplied labels (which take precedence over ML attributes).
+ * A `Transformer` that maps a column of indices back to a new column of corresponding string
+ * values. The index-string mapping is either from the ML attributes of the input column, or from
+ * user-supplied labels (which take precedence over ML attributes).
  *
- * @see `StringIndexer` for converting strings into indices
+ * @see
+ *   `StringIndexer` for converting strings into indices
  */
 @Since("1.5.0")
 class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
-  extends Transformer with HasInputCol with HasOutputCol with DefaultParamsWritable {
+    extends Transformer
+    with HasInputCol
+    with HasOutputCol
+    with DefaultParamsWritable {
 
   @Since("1.5.0")
   def this() =
@@ -570,7 +599,9 @@ class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
    * @group param
    */
   @Since("1.5.0")
-  final val labels: StringArrayParam = new StringArrayParam(this, "labels",
+  final val labels: StringArrayParam = new StringArrayParam(
+    this,
+    "labels",
     "Optional array of labels specifying index-string mapping." +
       " If not provided or if empty, then metadata from inputCol is used instead.")
 
@@ -582,12 +613,14 @@ class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
   override def transformSchema(schema: StructType): StructType = {
     val inputColName = $(inputCol)
     val inputDataType = SchemaUtils.getSchemaFieldType(schema, inputColName)
-    require(inputDataType.isInstanceOf[NumericType],
+    require(
+      inputDataType.isInstanceOf[NumericType],
       s"The input column $inputColName must be a numeric type, " +
         s"but got $inputDataType.")
     val inputFields = schema.fields
     val outputColName = $(outputCol)
-    require(inputFields.forall(_.name != outputColName),
+    require(
+      inputFields.forall(_.name != outputColName),
       s"Output column $outputColName already exists.")
     val outputFields = inputFields :+ StructField($(outputCol), StringType)
     StructType(outputFields)
@@ -599,8 +632,11 @@ class IndexToString @Since("2.2.0") (@Since("1.5.0") override val uid: String)
     val inputColSchema = SchemaUtils.getSchemaField(dataset.schema, $(inputCol))
     // If the labels array is empty use column metadata
     val values = if (!isDefined(labels) || $(labels).isEmpty) {
-      Attribute.fromStructField(inputColSchema)
-        .asInstanceOf[NominalAttribute].values.get
+      Attribute
+        .fromStructField(inputColSchema)
+        .asInstanceOf[NominalAttribute]
+        .values
+        .get
     } else {
       $(labels)
     }

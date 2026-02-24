@@ -32,18 +32,21 @@ import org.apache.spark.util.{ThreadUtils, Utils}
 /**
  * Partition for UnionRDD.
  *
- * @param idx index of the partition
- * @param rdd the parent RDD this partition refers to
- * @param parentRddIndex index of the parent RDD this partition refers to
- * @param parentRddPartitionIndex index of the partition within the parent RDD
- *                                this partition refers to
+ * @param idx
+ *   index of the partition
+ * @param rdd
+ *   the parent RDD this partition refers to
+ * @param parentRddIndex
+ *   index of the parent RDD this partition refers to
+ * @param parentRddPartitionIndex
+ *   index of the partition within the parent RDD this partition refers to
  */
 private[spark] class UnionPartition[T: ClassTag](
     idx: Int,
     @transient private val rdd: RDD[T],
     val parentRddIndex: Int,
     @transient private val parentRddPartitionIndex: Int)
-  extends Partition {
+    extends Partition {
 
   var parentPartition: Partition = rdd.partitions(parentRddPartitionIndex)
 
@@ -65,10 +68,8 @@ object UnionRDD {
 }
 
 @DeveloperApi
-class UnionRDD[T: ClassTag](
-    sc: SparkContext,
-    var rdds: Seq[RDD[T]])
-  extends RDD[T](sc, Nil) {  // Nil since we implement getDependencies
+class UnionRDD[T: ClassTag](sc: SparkContext, var rdds: Seq[RDD[T]])
+    extends RDD[T](sc, Nil) { // Nil since we implement getDependencies
 
   // visible for testing
   private[spark] val isPartitionListingParallel: Boolean =

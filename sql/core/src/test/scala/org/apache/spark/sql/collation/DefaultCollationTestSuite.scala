@@ -48,11 +48,18 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
   }
 
   val defaultStringProducingExpressions: Seq[String] = Seq(
-    "current_timezone()", "current_database()", "md5('Spark' collate unicode)",
-    "soundex('Spark' collate unicode)", "url_encode('https://spark.apache.org' collate unicode)",
-    "url_decode('https%3A%2F%2Fspark.apache.org')", "uuid()", "chr(65)", "collation('UNICODE')",
-    "version()", "space(5)", "randstr(5, 123)"
-  )
+    "current_timezone()",
+    "current_database()",
+    "md5('Spark' collate unicode)",
+    "soundex('Spark' collate unicode)",
+    "url_encode('https://spark.apache.org' collate unicode)",
+    "url_decode('https%3A%2F%2Fspark.apache.org')",
+    "uuid()",
+    "chr(65)",
+    "collation('UNICODE')",
+    "version()",
+    "space(5)",
+    "randstr(5, 123)")
 
   protected val charVarcharLength: Int = 10
 
@@ -78,9 +85,7 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       ("UTF8_LCASE", Some("de")),
       ("de", Some("UTF8_BINARY")),
       ("de", Some("UTF8_LCASE")),
-      ("de", Some("de"))
-    )
-
+      ("de", Some("de")))
 
   // This is used for tests that don't depend on explicitly specifying the data type
   // (these tests still test the string type), or ones that are not applicable to char/varchar
@@ -94,8 +99,7 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
     "CREATE TABLE AS SELECT with inline table and DEFAULT COLLATION",
     "CREATE OR REPLACE TABLE AS SELECT with inline table and DEFAULT COLLATION",
     "CREATE  VIEW with inline table and DEFAULT COLLATION",
-    "CREATE OR REPLACE VIEW with inline table and DEFAULT COLLATION"
-  )
+    "CREATE OR REPLACE VIEW with inline table and DEFAULT COLLATION")
 
   def assertTableColumnCollation(
       table: String,
@@ -147,11 +151,13 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
   testDataType("create/alter table with table level collation") { dataType =>
     withTable(testTable1) {
       // create table with default table level collation and explicit collation for some columns
-      sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR," +
-        s" c3 $dataType COLLATE UTF8_BINARY, c4 $dataType, id INT) " +
-        s"DEFAULT COLLATION UTF8_LCASE")
-      sql(s"INSERT INTO TABLE $testTable1 VALUES " +
-        s"('a', 'b', 'c', 'd', 1), ('A', 'B', 'C', 'D', 2)")
+      sql(
+        s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR," +
+          s" c3 $dataType COLLATE UTF8_BINARY, c4 $dataType, id INT) " +
+          s"DEFAULT COLLATION UTF8_LCASE")
+      sql(
+        s"INSERT INTO TABLE $testTable1 VALUES " +
+          s"('a', 'b', 'c', 'd', 1), ('A', 'B', 'C', 'D', 2)")
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'a'"), Row(2))
 
       assertTableColumnCollation(testTable1, "c1", "UTF8_LCASE")
@@ -215,8 +221,9 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
     // VarcharType, etc.). If the type remains the same (e.g., CharType -> CharType), the
     // collation should not be inherited.
     withTable(testTable1) {
-      sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE UTF8_LCASE, " +
-        s"c3 $dataType) DEFAULT COLLATION UTF8_LCASE")
+      sql(
+        s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE UTF8_LCASE, " +
+          s"c3 $dataType) DEFAULT COLLATION UTF8_LCASE")
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c1 TYPE $dataType")
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c2 TYPE $dataType")
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c3 TYPE $dataType COLLATE UNICODE")
@@ -233,18 +240,16 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       "UTF8_BINARY",
       "UTF8_LCASE",
       "UNICODE",
-      "DE"
-    ).foreach { tableDefaultCollation =>
-      testCTASWithDefaultStringProducingExpressions(
-        tableDefaultCollation = Some(tableDefaultCollation))
+      "DE").foreach { tableDefaultCollation =>
+      testCTASWithDefaultStringProducingExpressions(tableDefaultCollation =
+        Some(tableDefaultCollation))
     }
   }
 
-  testDataType(
-    "default string producing expressions in CTAS definition - nested in expr tree") { dataType =>
-    withTable(testTable1) {
-      sql(
-        s"""
+  testDataType("default string producing expressions in CTAS definition - nested in expr tree") {
+    dataType =>
+      withTable(testTable1) {
+        sql(s"""
            |CREATE TABLE $testTable1
            |DEFAULT COLLATION UNICODE AS SELECT
            |SUBSTRING(current_database(), 1, 1) AS c1,
@@ -253,17 +258,16 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
            |SUBSTRING(CAST(current_database() AS $dataType COLLATE UTF8_BINARY), 1, 1) AS c4
            |""".stripMargin)
 
-      assertTableColumnCollation(testTable1, "c1", "UNICODE")
-      assertTableColumnCollation(testTable1, "c2", "UNICODE")
-      assertTableColumnCollation(testTable1, "c3", "UNICODE")
-      assertTableColumnCollation(testTable1, "c4", "UTF8_BINARY")
-    }
+        assertTableColumnCollation(testTable1, "c1", "UNICODE")
+        assertTableColumnCollation(testTable1, "c2", "UNICODE")
+        assertTableColumnCollation(testTable1, "c3", "UNICODE")
+        assertTableColumnCollation(testTable1, "c4", "UTF8_BINARY")
+      }
   }
 
   testDataType("CTAS with DEFAULT COLLATION") { dataType =>
     withTable(testTable1) {
-      sql(
-        s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE
+      sql(s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE
            | as SELECT 'a' as c1
            |""".stripMargin)
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'A'"), Seq(Row(1)))
@@ -273,8 +277,7 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       sql(s"INSERT INTO $testTable1 VALUES ('a'), ('A')")
       withTable(testTable2) {
         // scalastyle:off
-        sql(
-          s"""CREATE TABLE $testTable2 DEFAULT COLLATION SR_AI_CI
+        sql(s"""CREATE TABLE $testTable2 DEFAULT COLLATION SR_AI_CI
              | AS SELECT c1 FROM $testTable1
              | WHERE 'ć' = 'č'
              |""".stripMargin)
@@ -291,19 +294,19 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
         sql(s"INSERT INTO $testTable1 VALUES ('ć'), ('č')")
         // scalastyle:on
         withTable(testTable2) {
-          sql(
-            s"""CREATE TABLE $testTable2 DEFAULT COLLATION UNICODE
+          sql(s"""CREATE TABLE $testTable2 DEFAULT COLLATION UNICODE
                | AS SELECT CAST(c1 AS $dataType COLLATE SR_AI) FROM $testTable1
                |""".stripMargin)
           val prefix = "SYSTEM.BUILTIN"
-          checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable2"), Row(s"$prefix.sr_AI"))
+          checkAnswer(
+            sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable2"),
+            Row(s"$prefix.sr_AI"))
           checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable2 WHERE c1 = 'c'"), Row(2))
         }
       }
     }
     withTable(testTable1) {
-      sql(
-        s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE
+      sql(s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE
            | AS SELECT 'a' AS c1,
            | (SELECT (SELECT CASE 'a' = 'A' WHEN TRUE THEN 'a' ELSE 'b' END)
            |  WHERE (SELECT 'b' WHERE 'c' = 'C') = 'B') AS c2
@@ -316,8 +319,7 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
 
   testString(s"CREATE TABLE AS SELECT with inline table and DEFAULT COLLATION") { _ =>
     withTable(testTable1) {
-      sql(
-        s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS
+      sql(s"""CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS
            | SELECT *
            | FROM VALUES ('a', 'a' COLLATE UNICODE), ('b', 'b' COLLATE UNICODE),
            |  ('c', 'c' COLLATE UNICODE) AS T(c1, c2)
@@ -326,53 +328,53 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1"), Seq(Row(1)))
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'A'"), Seq(Row(1)))
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'B'"), Seq(Row(0)))
-      checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable1"),
         Row(s"${fullyQualifiedPrefix}UTF8_LCASE"))
-      checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
         Row(s"${fullyQualifiedPrefix}UNICODE"))
     }
   }
 
   // Table with schema level collation tests
-  schemaAndObjectCollationPairs.foreach {
-    case (schemaDefaultCollation, tableDefaultCollation) =>
-      testDataType(
-        s"""CREATE table with schema level collation
+  schemaAndObjectCollationPairs.foreach { case (schemaDefaultCollation, tableDefaultCollation) =>
+    testDataType(s"""CREATE table with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testCreateTableWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, tableDefaultCollation)
-      }
+      testCreateTableWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        tableDefaultCollation)
+    }
 
-      testDataType(
-        s"""ALTER table with schema level collation
+    testDataType(s"""ALTER table with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testAlterTableWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, tableDefaultCollation)
-      }
+      testAlterTableWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        tableDefaultCollation)
+    }
 
-      testDataType(
-        s"""CTAS with schema level collation
+    testDataType(s"""CTAS with schema level collation
            | (schema default collation = $schemaDefaultCollation,
            | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testCTASWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, tableDefaultCollation)
-      }
+      testCTASWithSchemaLevelCollation(dataType, schemaDefaultCollation, tableDefaultCollation)
+    }
 
-      testString(
-        s"""CTAS with default string producing expressions
+    testString(s"""CTAS with default string producing expressions
            | (schema default collation = $schemaDefaultCollation,
-           | table default collation = $tableDefaultCollation)""".stripMargin) {
-          _ =>
-        withDatabase(testSchema) {
-          sql(s"CREATE SCHEMA $testSchema DEFAULT COLLATION $schemaDefaultCollation")
-          sql(s"USE $testSchema")
+           | table default collation = $tableDefaultCollation)""".stripMargin) { _ =>
+      withDatabase(testSchema) {
+        sql(s"CREATE SCHEMA $testSchema DEFAULT COLLATION $schemaDefaultCollation")
+        sql(s"USE $testSchema")
 
-          testCTASWithDefaultStringProducingExpressions(
-            Some(schemaDefaultCollation), tableDefaultCollation)
-        }
+        testCTASWithDefaultStringProducingExpressions(
+          Some(schemaDefaultCollation),
+          tableDefaultCollation)
       }
+    }
   }
 
   Seq(
@@ -385,49 +387,50 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
     (Some("UTF8_BINARY"), "DE"),
     (Some("UTF8_LCASE"), "UTF8_BINARY"),
     (Some("UTF8_LCASE"), "UTF8_LCASE"),
-    (Some("UTF8_LCASE"), "DE")
-  ).foreach {
-    case (schemaOldCollation, schemaNewCollation) =>
-      val schemaOldCollationDefaultClause =
-        if (schemaOldCollation.isDefined) {
-          s"DEFAULT COLLATION ${schemaOldCollation.get}"
-        } else {
-          ""
+    (Some("UTF8_LCASE"), "DE")).foreach { case (schemaOldCollation, schemaNewCollation) =>
+    val schemaOldCollationDefaultClause =
+      if (schemaOldCollation.isDefined) {
+        s"DEFAULT COLLATION ${schemaOldCollation.get}"
+      } else {
+        ""
+      }
+
+    testDataType(
+      s"""ALTER schema default collation (old schema default collation = $schemaOldCollation,
+           | new schema default collation = $schemaNewCollation)""".stripMargin) { dataType =>
+      withDatabase(testSchema) {
+        sql(s"CREATE SCHEMA $testSchema $schemaOldCollationDefaultClause")
+        sql(s"USE $testSchema")
+
+        withTable(testTable1) {
+          sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI)")
+          val tableDefaultCollation =
+            if (schemaOldCollation.isDefined) {
+              schemaOldCollation.get
+            } else {
+              "UTF8_BINARY"
+            }
+
+          // ALTER SCHEMA
+          sql(s"ALTER SCHEMA $testSchema DEFAULT COLLATION $schemaNewCollation")
+
+          // Altering schema default collation should not affect existing objects.
+          addAndAlterColumns(
+            dataType,
+            tableDefaultCollation = tableDefaultCollation,
+            c2Collation = "sr_AI")
         }
 
-      testDataType(
-        s"""ALTER schema default collation (old schema default collation = $schemaOldCollation,
-           | new schema default collation = $schemaNewCollation)""".stripMargin) { dataType =>
-        withDatabase(testSchema) {
-          sql(s"CREATE SCHEMA $testSchema $schemaOldCollationDefaultClause")
-          sql(s"USE $testSchema")
-
-          withTable(testTable1) {
-            sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI)")
-            val tableDefaultCollation =
-              if (schemaOldCollation.isDefined) {
-                schemaOldCollation.get
-              } else {
-                "UTF8_BINARY"
-              }
-
-            // ALTER SCHEMA
-            sql(s"ALTER SCHEMA $testSchema DEFAULT COLLATION $schemaNewCollation")
-
-            // Altering schema default collation should not affect existing objects.
-            addAndAlterColumns(
-              dataType, tableDefaultCollation = tableDefaultCollation, c2Collation = "sr_AI")
-          }
-
-          withTable(testTable1) {
-            sql(s"CREATE TABLE $testTable1 " +
+        withTable(testTable1) {
+          sql(
+            s"CREATE TABLE $testTable1 " +
               s"(c1 $dataType, c2 $dataType COLLATE SR_AI, c3 $dataType COLLATE UTF8_BINARY)")
-            assertTableColumnCollation(testTable1, "c1", schemaNewCollation)
-            assertTableColumnCollation(testTable1, "c2", "SR_AI")
-            assertTableColumnCollation(testTable1, "c3", "UTF8_BINARY")
-          }
+          assertTableColumnCollation(testTable1, "c1", schemaNewCollation)
+          assertTableColumnCollation(testTable1, "c2", "SR_AI")
+          assertTableColumnCollation(testTable1, "c3", "UTF8_BINARY")
         }
       }
+    }
   }
 
   testDataType("create table as select") { dataType =>
@@ -476,11 +479,14 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
            |  array('a') AS c3
            |""".stripMargin)
 
-      checkAnswer(sql(s"SELECT COLLATION(c1.col1) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT COLLATION(c1.col1) FROM $testTable1"),
         Seq(Row(fullyQualifiedPrefix + "UTF8_BINARY")))
-      checkAnswer(sql(s"SELECT COLLATION(c2['a']) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT COLLATION(c2['a']) FROM $testTable1"),
         Seq(Row(fullyQualifiedPrefix + "UTF8_BINARY")))
-      checkAnswer(sql(s"SELECT COLLATION(c3[0]) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT COLLATION(c3[0]) FROM $testTable1"),
         Seq(Row(fullyQualifiedPrefix + "UTF8_BINARY")))
     }
   }
@@ -511,16 +517,14 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
 
   testDataType("ctas with nullif and window function") { dataType =>
     withTable(testTable1, testTable2) {
-      sql(
-        s"""CREATE TABLE $testTable1 (
+      sql(s"""CREATE TABLE $testTable1 (
            |  c1 $dataType,
            |  c2 $dataType
            |)""".stripMargin)
 
       sql(s"INSERT INTO $testTable1 VALUES ('livestream', 'A')")
 
-      sql(
-        s"""CREATE TABLE $testTable2
+      sql(s"""CREATE TABLE $testTable2
            |DEFAULT COLLATION UTF8_LCASE
            |AS
            |SELECT
@@ -529,10 +533,7 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
            |FROM $testTable1
            |""".stripMargin)
 
-      checkAnswer(
-        sql(s"SELECT * FROM $testTable2"),
-        Row("livestream", 1)
-      )
+      checkAnswer(sql(s"SELECT * FROM $testTable2"), Row("livestream", 1))
     }
   }
 
@@ -608,9 +609,10 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       sql(s"CREATE SCHEMA $testSchema DEFAULT COLLATION $schemaDefaultCollation")
       sql(s"USE $testSchema")
       withTable(testTable1) {
-        sql(s"CREATE $replace TABLE $testTable1 " +
-          s"(c1 $dataType, c2 $dataType COLLATE SR_AI, c3 $dataType COLLATE UTF8_BINARY) " +
-          s"$tableDefaultCollationClause")
+        sql(
+          s"CREATE $replace TABLE $testTable1 " +
+            s"(c1 $dataType, c2 $dataType COLLATE SR_AI, c3 $dataType COLLATE UTF8_BINARY) " +
+            s"$tableDefaultCollationClause")
         assertTableColumnCollation(testTable1, "c1", resolvedDefaultCollation)
         assertTableColumnCollation(testTable1, "c2", "SR_AI")
         assertTableColumnCollation(testTable1, "c3", "UTF8_BINARY")
@@ -634,17 +636,22 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       sql(s"USE $testSchema")
 
       withTable(testTable1) {
-        sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI) " +
-          s"$tableDefaultCollationClause")
+        sql(
+          s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI) " +
+            s"$tableDefaultCollationClause")
 
         addAndAlterColumns(
-          dataType, tableDefaultCollation = resolvedDefaultCollation, c2Collation = "sr_AI")
+          dataType,
+          tableDefaultCollation = resolvedDefaultCollation,
+          c2Collation = "sr_AI")
       }
     }
   }
 
   private def addAndAlterColumns(
-      dataType: String, tableDefaultCollation: String, c2Collation: String): Unit = {
+      dataType: String,
+      tableDefaultCollation: String,
+      c2Collation: String): Unit = {
     // ADD COLUMN
     sql(s"ALTER TABLE $testTable1 ADD COLUMN c3 $dataType")
     sql(s"ALTER TABLE $testTable1 ADD COLUMN c4 $dataType COLLATE SR_AI")
@@ -686,14 +693,16 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       }
 
       withTable(testTable1) {
-        sql(s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
-          s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
+        sql(
+          s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
+            s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
         sql(s"INSERT INTO $testTable1 VALUES ('a', 'b', 'c'), ('A', 'D', 'C')")
 
         withTable(testTable2) {
           // scalastyle:off
-          sql(s"CREATE $replace TABLE $testTable2 $tableDefaultCollationClause AS " +
-            s"SELECT *, 'd' AS c4  FROM $testTable1 WHERE c2 = 'B'  AND 'ć' != 'č'")
+          sql(
+            s"CREATE $replace TABLE $testTable2 $tableDefaultCollationClause AS " +
+              s"SELECT *, 'd' AS c4  FROM $testTable1 WHERE c2 = 'B'  AND 'ć' != 'č'")
           // scalastyle:on
 
           checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable2"), Row(1))
@@ -730,12 +739,13 @@ abstract class DefaultCollationTestSuite extends QueryTest with SharedSparkSessi
       }
 
     withTable(testTable1) {
-      val columns = defaultStringProducingExpressions.zipWithIndex.map {
-        case (expr, index) => s"$expr AS c${index + 1}"
-      }.mkString(", ")
+      val columns = defaultStringProducingExpressions.zipWithIndex
+        .map { case (expr, index) =>
+          s"$expr AS c${index + 1}"
+        }
+        .mkString(", ")
 
-      sql(
-        s"""
+      sql(s"""
            |CREATE TABLE $testTable1
            |$tableDefaultCollationClause
            |AS SELECT $columns
@@ -765,11 +775,9 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
     "Check AttributeReference dataType from View with default collation",
     "CTAS with DEFAULT COLLATION and VIEW",
     "default string producing expressions in view definition",
-    "View with UTF8_LCASE default collation from schema level"
-  )
+    "View with UTF8_LCASE default collation from schema level")
 
-    testString("Check AttributeReference dataType from View with default collation") {
-      _ =>
+  testString("Check AttributeReference dataType from View with default collation") { _ =>
     withView(testView) {
       sql(s"CREATE VIEW $testView DEFAULT COLLATION UTF8_LCASE AS SELECT 'a' AS c1")
 
@@ -790,16 +798,16 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       sql(s"CREATE VIEW $testView DEFAULT COLLATION UNICODE AS SELECT 'a' AS c1")
 
       withTable(testTable1) {
-        sql(s"CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS " +
-          s"SELECT c1, 'b' AS c2 FROM $testView WHERE c1 != 'A' AND 'b' = 'B'")
+        sql(
+          s"CREATE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS " +
+            s"SELECT c1, 'b' AS c2 FROM $testView WHERE c1 != 'A' AND 'b' = 'B'")
 
-        val expected = Seq(
-          Row(s"$prefix.UNICODE", s"$prefix.UTF8_LCASE")
-        )
+        val expected = Seq(Row(s"$prefix.UNICODE", s"$prefix.UTF8_LCASE"))
         val expectedSchema = new StructType()
           .add("collation(c1)", StringType)
           .add("collation(c2)", StringType)
-        checkAnswer(sql(s"SELECT COLLATION(c1), COLLATION(c2) FROM $testTable1"),
+        checkAnswer(
+          sql(s"SELECT COLLATION(c1), COLLATION(c2) FROM $testTable1"),
           spark.createDataFrame(spark.sparkContext.parallelize(expected), expectedSchema))
         checkAnswer(sql(s"SELECT * FROM $testTable1"), Row("a", "b"))
       }
@@ -895,18 +903,16 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       "UTF8_BINARY",
       "UTF8_LCASE",
       "UNICODE",
-      "DE"
-    ).foreach { viewDefaultCollation =>
-      testViewWithDefaultStringProducingExpressions(
-        viewDefaultCollation = Some(viewDefaultCollation))
+      "DE").foreach { viewDefaultCollation =>
+      testViewWithDefaultStringProducingExpressions(viewDefaultCollation =
+        Some(viewDefaultCollation))
     }
   }
 
-  testDataType(
-    "default string producing expressions in view definition - nested in expr tree") { dataType =>
-    withView(testTable1) {
-      sql(
-        s"""
+  testDataType("default string producing expressions in view definition - nested in expr tree") {
+    dataType =>
+      withView(testTable1) {
+        sql(s"""
            |CREATE view $testTable1
            |DEFAULT COLLATION UNICODE AS SELECT
            |SUBSTRING(current_database(), 1, 1) AS c1,
@@ -915,11 +921,11 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
            |SUBSTRING(CAST(current_database() AS $dataType COLLATE UTF8_BINARY), 1, 1) AS c4
            |""".stripMargin)
 
-      assertTableColumnCollation(testTable1, "c1", "UNICODE")
-      assertTableColumnCollation(testTable1, "c2", "UNICODE")
-      assertTableColumnCollation(testTable1, "c3", "UNICODE")
-      assertTableColumnCollation(testTable1, "c4", "UTF8_BINARY")
-    }
+        assertTableColumnCollation(testTable1, "c1", "UNICODE")
+        assertTableColumnCollation(testTable1, "c2", "UNICODE")
+        assertTableColumnCollation(testTable1, "c3", "UNICODE")
+        assertTableColumnCollation(testTable1, "c4", "UTF8_BINARY")
+      }
   }
 
   testDataType("CREATE OR REPLACE VIEW with DEFAULT COLLATION") { dataType =>
@@ -928,15 +934,20 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       sql(s"INSERT INTO $testTable1 VALUES ('a', 'a'), ('A', 'A'), ('b', 'b')")
       withView(testView) {
         // scalastyle:off
-        sql(
-          s"""CREATE OR REPLACE VIEW $testView
+        sql(s"""CREATE OR REPLACE VIEW $testView
              | DEFAULT COLLATION sr_ci_ai
              | AS SELECT *, 'ć' AS c3 FROM $testTable1
              |""".stripMargin)
         val prefix = "SYSTEM.BUILTIN"
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testView"), Row(s"$prefix.UTF8_BINARY"))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testView"), Row(s"$prefix.UTF8_LCASE"))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c3) FROM $testView"), Row(s"$prefix.sr_CI_AI"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c1) FROM $testView"),
+          Row(s"$prefix.UTF8_BINARY"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c2) FROM $testView"),
+          Row(s"$prefix.UTF8_LCASE"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c3) FROM $testView"),
+          Row(s"$prefix.sr_CI_AI"))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c1 = 'A'"), Row(1))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c2 = 'a'"), Row(2))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c3 = 'Č'"), Row(3))
@@ -945,8 +956,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
     }
     withView(testView) {
       // scalastyle:off
-      sql(
-        s"""CREATE OR REPLACE VIEW $testView
+      sql(s"""CREATE OR REPLACE VIEW $testView
           | (c1)
           | DEFAULT COLLATION sr_ai
           | AS SELECT 'Ć' as c1 WHERE 'Ć' = 'C'
@@ -958,8 +968,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
 
   testDataType("CREATE VIEW with DEFAULT COLLATION") { dataType =>
     withView(testView) {
-      sql(
-        s"""CREATE VIEW $testView DEFAULT COLLATION UTF8_LCASE
+      sql(s"""CREATE VIEW $testView DEFAULT COLLATION UTF8_LCASE
           | as SELECT 'a' as c1
           |""".stripMargin)
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c1 = 'A'"), Seq(Row(1)))
@@ -970,8 +979,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       withView(testView) {
         withSQLConf() {
           // scalastyle:off
-          sql(
-            s"""CREATE VIEW $testView DEFAULT COLLATION SR_AI_CI
+          sql(s"""CREATE VIEW $testView DEFAULT COLLATION SR_AI_CI
               | AS SELECT c1 FROM $testTable1
               | WHERE 'ć' = 'č'
               |""".stripMargin)
@@ -989,8 +997,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
         sql(s"INSERT INTO $testTable1 VALUES ('ć'), ('č')")
         // scalastyle:on
         withView(testView) {
-          sql(
-            s"""CREATE VIEW $testView DEFAULT COLLATION UNICODE
+          sql(s"""CREATE VIEW $testView DEFAULT COLLATION UNICODE
               | AS SELECT CAST(c1 AS $dataType COLLATE SR_AI) FROM $testTable1
               |""".stripMargin)
           val prefix = "SYSTEM.BUILTIN"
@@ -1000,8 +1007,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       }
     }
     withView(testView) {
-      sql(
-        s"""CREATE VIEW $testView DEFAULT COLLATION UTF8_LCASE
+      sql(s"""CREATE VIEW $testView DEFAULT COLLATION UTF8_LCASE
           | AS SELECT 'a' AS c1,
           | (SELECT (SELECT CASE 'a' = 'A' WHEN TRUE THEN 'a' ELSE 'b' END)
           |  WHERE (SELECT 'b' WHERE 'c' = 'C') = 'B') AS c2
@@ -1015,8 +1021,7 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
   Seq("", "OR REPLACE").foreach { replace =>
     testString(s"CREATE $replace VIEW with inline table and DEFAULT COLLATION") { _ =>
       withView(testView) {
-        sql(
-          s"""CREATE $replace VIEW $testView DEFAULT COLLATION UTF8_LCASE AS
+        sql(s"""CREATE $replace VIEW $testView DEFAULT COLLATION UTF8_LCASE AS
              | SELECT *
              | FROM VALUES ('a', 'a' COLLATE UNICODE), ('b', 'b' COLLATE UNICODE),
              |  ('c', 'c' COLLATE UNICODE) AS T(c1, c2)
@@ -1025,9 +1030,11 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView"), Seq(Row(1)))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c1 = 'A'"), Seq(Row(1)))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testView WHERE c1 = 'B'"), Seq(Row(0)))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testView"),
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c1) FROM $testView"),
           Row(s"${fullyQualifiedPrefix}UTF8_LCASE"))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testView"),
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c2) FROM $testView"),
           Row(s"${fullyQualifiedPrefix}UNICODE"))
       }
     }
@@ -1039,13 +1046,10 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
         sql(s"CREATE $temporary VIEW $testView DEFAULT COLLATION UTF8_LCASE AS SELECT 1")
         sql(s"ALTER VIEW $testView AS SELECT 'a' AS c1, 'b' AS c2")
         val prefix = "SYSTEM.BUILTIN"
-        checkAnswer(sql(s"SELECT COLLATION(c1) FROM $testView"),
-          Row(s"$prefix.UTF8_LCASE"))
-        checkAnswer(sql(s"SELECT COLLATION(c2) FROM $testView"),
-          Row(s"$prefix.UTF8_LCASE"))
+        checkAnswer(sql(s"SELECT COLLATION(c1) FROM $testView"), Row(s"$prefix.UTF8_LCASE"))
+        checkAnswer(sql(s"SELECT COLLATION(c2) FROM $testView"), Row(s"$prefix.UTF8_LCASE"))
         sql(s"ALTER VIEW $testView AS SELECT 'c' AS c3 WHERE 'a' = 'A'")
-        checkAnswer(sql(s"SELECT COLLATION(c3) FROM $testView"),
-          Row(s"$prefix.UTF8_LCASE"))
+        checkAnswer(sql(s"SELECT COLLATION(c3) FROM $testView"), Row(s"$prefix.UTF8_LCASE"))
       }
       withTable(testTable1) {
         sql(s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_LCASE, c2 $dataType, c3 INT)")
@@ -1053,18 +1057,15 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
         withView(testView) {
           sql(s"CREATE $temporary VIEW $testView DEFAULT COLLATION sr_AI_CI AS SELECT 'a' AS c1")
           // scalastyle:off
-          sql(
-            s"""ALTER VIEW $testView AS
+          sql(s"""ALTER VIEW $testView AS
               | SELECT *, 'c' AS c4,
               | (SELECT (SELECT CASE 'š' = 'S' WHEN TRUE THEN 'd' ELSE 'b' END)) AS c5
               | FROM $testTable1
               | WHERE c1 = 'A' AND 'ć' = 'Č'""".stripMargin)
           // scalastyle:on
           val prefix = "SYSTEM.BUILTIN"
-          checkAnswer(sql(s"SELECT COLLATION(c4) FROM $testView"),
-            Row(s"$prefix.sr_CI_AI"))
-          checkAnswer(sql(s"SELECT COLLATION(c5) FROM $testView"),
-            Row(s"$prefix.sr_CI_AI"))
+          checkAnswer(sql(s"SELECT COLLATION(c4) FROM $testView"), Row(s"$prefix.sr_CI_AI"))
+          checkAnswer(sql(s"SELECT COLLATION(c5) FROM $testView"), Row(s"$prefix.sr_CI_AI"))
           checkAnswer(sql(s"SELECT c5 FROM $testView"), Row("d"))
         }
       }
@@ -1072,52 +1073,57 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
   }
 
   // View with schema level collation tests
-  schemaAndObjectCollationPairs.foreach {
-    case (schemaDefaultCollation, viewDefaultCollation) =>
-      testDataType(
-        s"""CREATE VIEW with schema level collation
+  schemaAndObjectCollationPairs.foreach { case (schemaDefaultCollation, viewDefaultCollation) =>
+    testDataType(s"""CREATE VIEW with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | view default collation = $viewDefaultCollation)""".stripMargin) { dataType =>
-        testCreateViewWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, viewDefaultCollation)
-      }
+      testCreateViewWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        viewDefaultCollation)
+    }
 
-      testDataType(
-        s"""CREATE OR REPLACE VIEW with schema level collation
+    testDataType(s"""CREATE OR REPLACE VIEW with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | view default collation = $viewDefaultCollation)""".stripMargin) { dataType =>
-        testCreateViewWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, viewDefaultCollation, replaceView = true)
-      }
+      testCreateViewWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        viewDefaultCollation,
+        replaceView = true)
+    }
 
-      testDataType(
-        s"""ALTER VIEW with schema level collation
+    testDataType(s"""ALTER VIEW with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | view default collation = $viewDefaultCollation)""".stripMargin) { dataType =>
-        testAlterViewWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, viewDefaultCollation)
-      }
+      testAlterViewWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        viewDefaultCollation)
+    }
 
-      testDataType(
-        s"""ALTER VIEW after ALTER SCHEMA DEFAULT COLLATION
+    testDataType(s"""ALTER VIEW after ALTER SCHEMA DEFAULT COLLATION
           | (original schema default collation = $schemaDefaultCollation,
           | view default collation = $viewDefaultCollation)""".stripMargin) { dataType =>
-        testAlterViewWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, viewDefaultCollation, alterSchemaCollation = true)
-      }
+      testAlterViewWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        viewDefaultCollation,
+        alterSchemaCollation = true)
+    }
 
-      testString(
-        s"""View with default string producing expressions and schema level collation
+    testString(s"""View with default string producing expressions and schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | view default collation = $viewDefaultCollation)""".stripMargin) { _ =>
-        withDatabase(testSchema) {
-          sql(s"CREATE SCHEMA $testSchema DEFAULT COLLATION $schemaDefaultCollation")
-          sql(s"USE $testSchema")
+      withDatabase(testSchema) {
+        sql(s"CREATE SCHEMA $testSchema DEFAULT COLLATION $schemaDefaultCollation")
+        sql(s"USE $testSchema")
 
-          testViewWithDefaultStringProducingExpressions(
-            Some(schemaDefaultCollation), viewDefaultCollation)
-        }
+        testViewWithDefaultStringProducingExpressions(
+          Some(schemaDefaultCollation),
+          viewDefaultCollation)
       }
+    }
   }
 
   testString("View with UTF8_LCASE default collation from schema level") { _ =>
@@ -1158,14 +1164,16 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       }
 
       withTable(testTable1) {
-        sql(s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
-          s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
+        sql(
+          s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
+            s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
         sql(s"INSERT INTO $testTable1 VALUES ('a', 'b', 'c'), ('A', 'D', 'C')")
 
         withView(testView) {
           // scalastyle:off
-          sql(s"CREATE $replace VIEW $testView $viewDefaultCollationClause AS " +
-            s"SELECT *, 'd' AS c4  FROM $testTable1 WHERE c2 = 'B'  AND 'ć' != 'č'")
+          sql(
+            s"CREATE $replace VIEW $testView $viewDefaultCollationClause AS " +
+              s"SELECT *, 'd' AS c4  FROM $testTable1 WHERE c2 = 'B'  AND 'ć' != 'č'")
           // scalastyle:on
 
           checkAnswer(sql(s"SELECT COUNT(*) FROM $testView"), Row(1))
@@ -1198,8 +1206,9 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       withView(testView) {
         sql(s"CREATE VIEW $testView $viewDefaultCollationClause AS SELECT 'a' AS c1")
         withTable(testTable1) {
-          sql(s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
-            s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
+          sql(
+            s"CREATE TABLE $testTable1 (c1 $dataType COLLATE UTF8_BINARY, " +
+              s"c2 $dataType COLLATE UTF8_LCASE, c3 $dataType COLLATE UNICODE)")
           sql(s"INSERT INTO $testTable1 VALUES ('a', 'b', 'c'), ('A', 'D', 'C')")
 
           if (alterSchemaCollation) {
@@ -1208,8 +1217,9 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
           }
 
           // scalastyle:off
-          sql(s"ALTER VIEW $testView " +
-            s"AS SELECT *, 'd' AS c4 FROM $testTable1 WHERE c2 = 'B' AND 'ć' != 'č'")
+          sql(
+            s"ALTER VIEW $testView " +
+              s"AS SELECT *, 'd' AS c4 FROM $testTable1 WHERE c2 = 'B' AND 'ć' != 'č'")
           // scalastyle:on
 
           checkAnswer(sql(s"SELECT COUNT(*) FROM $testView"), Row(1))
@@ -1236,12 +1246,13 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
       }
 
     withView(testView) {
-      val columns = defaultStringProducingExpressions.zipWithIndex.map {
-        case (expr, index) => s"$expr AS c${index + 1}"
-      }.mkString(", ")
+      val columns = defaultStringProducingExpressions.zipWithIndex
+        .map { case (expr, index) =>
+          s"$expr AS c${index + 1}"
+        }
+        .mkString(", ")
 
-      sql(
-        s"""
+      sql(s"""
            |CREATE view $testView
            |$viewDefaultCollationClause
            |AS SELECT $columns
@@ -1255,7 +1266,8 @@ abstract class DefaultCollationTestSuiteV1 extends DefaultCollationTestSuite {
 }
 
 abstract class DefaultCollationTestSuiteV2
-    extends DefaultCollationTestSuite with DatasourceV2SQLBase {
+    extends DefaultCollationTestSuite
+    with DatasourceV2SQLBase {
   override def testCatalog: String = "testcat"
   override def testSchema: String = s"$testCatalog.${super.testSchema}"
 
@@ -1278,8 +1290,7 @@ abstract class DefaultCollationTestSuiteV2
 
   testDataType("CREATE OR REPLACE TABLE with DEFAULT COLLATION") { dataType =>
     withTable(testTable1) {
-      sql(
-        s"""CREATE OR REPLACE TABLE $testTable1
+      sql(s"""CREATE OR REPLACE TABLE $testTable1
            | (c1 $dataType, c2 $dataType COLLATE UTF8_LCASE)
            | DEFAULT COLLATION sr_ai
            |""".stripMargin)
@@ -1290,7 +1301,8 @@ abstract class DefaultCollationTestSuiteV2
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c2 = 'a'"), Row(2))
       val prefix = "SYSTEM.BUILTIN"
       checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable1"), Row(s"$prefix.sr_AI"))
-      checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
         Row(s"$prefix.UTF8_LCASE"))
     }
   }
@@ -1301,15 +1313,20 @@ abstract class DefaultCollationTestSuiteV2
       sql(s"INSERT INTO $testTable1 VALUES ('a', 'a'), ('A', 'A'), ('b', 'b')")
       withTable(testTable2) {
         // scalastyle:off
-        sql(
-          s"""CREATE OR REPLACE TABLE $testTable2
+        sql(s"""CREATE OR REPLACE TABLE $testTable2
              | DEFAULT COLLATION sr_ci_ai
              | AS SELECT *, 'ć' AS c3 FROM $testTable1
              |""".stripMargin)
         val prefix = "SYSTEM.BUILTIN"
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable2"), Row(s"$prefix.UTF8_BINARY"))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable2"), Row(s"$prefix.UTF8_LCASE"))
-        checkAnswer(sql(s"SELECT DISTINCT COLLATION(c3) FROM $testTable2"), Row(s"$prefix.sr_CI_AI"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable2"),
+          Row(s"$prefix.UTF8_BINARY"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable2"),
+          Row(s"$prefix.UTF8_LCASE"))
+        checkAnswer(
+          sql(s"SELECT DISTINCT COLLATION(c3) FROM $testTable2"),
+          Row(s"$prefix.sr_CI_AI"))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable2 WHERE c1 = 'A'"), Row(1))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable2 WHERE c2 = 'a'"), Row(2))
         checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable2 WHERE c3 = 'Č'"), Row(3))
@@ -1318,8 +1335,7 @@ abstract class DefaultCollationTestSuiteV2
     }
     withTable(testTable1) {
       // scalastyle:off
-      sql(
-        s"""CREATE OR REPLACE TABLE $testTable1
+      sql(s"""CREATE OR REPLACE TABLE $testTable1
            | DEFAULT COLLATION sr_ai
            | AS SELECT 'Ć' as c1 WHERE 'Ć' = 'C'
            |""".stripMargin)
@@ -1330,8 +1346,7 @@ abstract class DefaultCollationTestSuiteV2
 
   testString(s"CREATE OR REPLACE TABLE AS SELECT with inline table and DEFAULT COLLATION") { _ =>
     withTable(testTable1) {
-      sql(
-        s"""CREATE OR REPLACE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS
+      sql(s"""CREATE OR REPLACE TABLE $testTable1 DEFAULT COLLATION UTF8_LCASE AS
            | SELECT *
            | FROM VALUES ('a', 'a' COLLATE UNICODE), ('b', 'b' COLLATE UNICODE),
            |  ('c', 'c' COLLATE UNICODE) AS T(c1, c2)
@@ -1340,38 +1355,41 @@ abstract class DefaultCollationTestSuiteV2
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1"), Seq(Row(1)))
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'A'"), Seq(Row(1)))
       checkAnswer(sql(s"SELECT COUNT(*) FROM $testTable1 WHERE c1 = 'B'"), Seq(Row(0)))
-      checkAnswer(sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT DISTINCT COLLATION(c1) FROM $testTable1"),
         Row(s"${fullyQualifiedPrefix}UTF8_LCASE"))
-      checkAnswer(sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
+      checkAnswer(
+        sql(s"SELECT DISTINCT COLLATION(c2) FROM $testTable1"),
         Row(s"${fullyQualifiedPrefix}UNICODE"))
     }
   }
 
-  schemaAndObjectCollationPairs.foreach {
-    case (schemaDefaultCollation, tableDefaultCollation) =>
-      testDataType(
-        s"""CREATE OR REPLACE table with schema level collation
+  schemaAndObjectCollationPairs.foreach { case (schemaDefaultCollation, tableDefaultCollation) =>
+    testDataType(s"""CREATE OR REPLACE table with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testCreateTableWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, tableDefaultCollation, replaceTable = true)
-      }
+      testCreateTableWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        tableDefaultCollation,
+        replaceTable = true)
+    }
 
-      testDataType(
-        s"""CREATE OR REPLACE TABLE AS SELECT with schema level collation
+    testDataType(s"""CREATE OR REPLACE TABLE AS SELECT with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testCTASWithSchemaLevelCollation(
-          dataType, schemaDefaultCollation, tableDefaultCollation, replaceTable = true)
-      }
+      testCTASWithSchemaLevelCollation(
+        dataType,
+        schemaDefaultCollation,
+        tableDefaultCollation,
+        replaceTable = true)
+    }
 
-      testDataType(
-        s"""REPLACE COLUMNS with schema level collation
+    testDataType(s"""REPLACE COLUMNS with schema level collation
           | (schema default collation = $schemaDefaultCollation,
           | table default collation = $tableDefaultCollation)""".stripMargin) { dataType =>
-        testReplaceColumns(
-          dataType, schemaDefaultCollation, tableDefaultCollation)
-      }
+      testReplaceColumns(dataType, schemaDefaultCollation, tableDefaultCollation)
+    }
   }
 
   private def testReplaceColumns(
@@ -1390,11 +1408,13 @@ abstract class DefaultCollationTestSuiteV2
       sql(s"USE $testSchema")
 
       withTable(testTable1) {
-        sql(s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI) " +
-          s"$tableDefaultCollationClause")
+        sql(
+          s"CREATE TABLE $testTable1 (c1 $dataType, c2 $dataType COLLATE SR_AI) " +
+            s"$tableDefaultCollationClause")
 
-        sql(s"ALTER TABLE $testTable1 REPLACE COLUMNS " +
-          s"(c1 $dataType COLLATE UNICODE, c2 $dataType, c3 $dataType COLLATE UTF8_BINARY)")
+        sql(
+          s"ALTER TABLE $testTable1 REPLACE COLUMNS " +
+            s"(c1 $dataType COLLATE UNICODE, c2 $dataType, c3 $dataType COLLATE UTF8_BINARY)")
         assertTableColumnCollation(testTable1, "c1", "UNICODE")
         assertTableColumnCollation(testTable1, "c2", resolvedDefaultCollation)
         assertTableColumnCollation(testTable1, "c3", "UTF8_BINARY")
@@ -1421,8 +1441,9 @@ class DefaultCollationStringTestSuiteV2 extends DefaultCollationTestSuiteV2 {
   // We have this test for STRING type only, since we don't support altering STRING to CHAR/VARCHAR.
   test("alter char/varchar column to string type") {
     withTable(testTable1) {
-      sql(s"CREATE TABLE $testTable1 (c1 VARCHAR(10), c2 CHAR(10)) " +
-        s"DEFAULT COLLATION UTF8_LCASE")
+      sql(
+        s"CREATE TABLE $testTable1 (c1 VARCHAR(10), c2 CHAR(10)) " +
+          s"DEFAULT COLLATION UTF8_LCASE")
 
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c1 TYPE STRING")
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c2 TYPE STRING")
@@ -1431,8 +1452,9 @@ class DefaultCollationStringTestSuiteV2 extends DefaultCollationTestSuiteV2 {
     }
 
     withTable(testTable1) {
-      sql(s"CREATE TABLE $testTable1 (c1 VARCHAR(10), c2 CHAR(10)) " +
-        s"DEFAULT COLLATION UTF8_LCASE")
+      sql(
+        s"CREATE TABLE $testTable1 (c1 VARCHAR(10), c2 CHAR(10)) " +
+          s"DEFAULT COLLATION UTF8_LCASE")
 
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c1 TYPE STRING COLLATE UNICODE")
       sql(s"ALTER TABLE $testTable1 ALTER COLUMN c2 TYPE STRING COLLATE UNICODE")

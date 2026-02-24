@@ -46,8 +46,7 @@ private[spark] object SparkBuildInfo {
         props.getProperty("user", unknownProp),
         props.getProperty("url", unknownProp),
         props.getProperty("date", unknownProp),
-        props.getProperty("docroot", unknownProp)
-      )
+        props.getProperty("docroot", unknownProp))
     } catch {
       case e: Exception =>
         throw new SparkException("Error loading properties from spark-version-info.properties", e)

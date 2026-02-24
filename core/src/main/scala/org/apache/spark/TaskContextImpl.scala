@@ -34,16 +34,15 @@ import org.apache.spark.resource.ResourceInformation
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.util._
 
-
 /**
  * A [[TaskContext]] implementation.
  *
  * A small note on thread safety. The interrupted & fetchFailed fields are volatile, this makes
  * sure that updates are always visible across threads. The complete & failed flags and their
- * callbacks are protected by locking on the context instance. For instance, this ensures
- * that you cannot add a completion listener in one thread while we are completing in another
- * thread. Other state is immutable, however the exposed `TaskMetrics` & `MetricsSystem` objects are
- * not thread safe.
+ * callbacks are protected by locking on the context instance. For instance, this ensures that you
+ * cannot add a completion listener in one thread while we are completing in another thread. Other
+ * state is immutable, however the exposed `TaskMetrics` & `MetricsSystem` objects are not thread
+ * safe.
  */
 private[spark] class TaskContextImpl(
     override val stageId: Int,
@@ -59,14 +58,14 @@ private[spark] class TaskContextImpl(
     override val taskMetrics: TaskMetrics = TaskMetrics.empty,
     override val cpus: Int = SparkEnv.get.conf.get(config.CPUS_PER_TASK),
     override val resources: Map[String, ResourceInformation] = Map.empty)
-  extends TaskContext
-  with Logging {
+    extends TaskContext
+    with Logging {
 
   /**
    * List of callback functions to execute when the task completes.
    *
-   * Using a stack causes us to process listeners in reverse order of registration. As listeners are
-   * invoked, they are popped from the stack.
+   * Using a stack causes us to process listeners in reverse order of registration. As listeners
+   * are invoked, they are popped from the stack.
    */
   @transient private val onCompleteCallbacks = new Stack[TaskCompletionListener]
 
@@ -166,10 +165,7 @@ private[spark] class TaskContextImpl(
     }
   }
 
-  private def invokeListeners[T](
-      listeners: Stack[T],
-      name: String,
-      error: Option[Throwable])(
+  private def invokeListeners[T](listeners: Stack[T], name: String, error: Option[Throwable])(
       callback: T => Unit): Unit = {
     // This method is subject to two constraints:
     //
@@ -206,7 +202,7 @@ private[spark] class TaskContextImpl(
 
     val listenerExceptions = new ArrayBuffer[Throwable](2)
     var listenerOption: Option[T] = None
-    while ({listenerOption = getNextListenerOrDeregisterThread(); listenerOption.nonEmpty}) {
+    while ({ listenerOption = getNextListenerOrDeregisterThread(); listenerOption.nonEmpty }) {
       val listener = listenerOption.get
       try {
         callback(listener)
@@ -263,8 +259,8 @@ private[spark] class TaskContextImpl(
       }
     }
     if (listenerExceptions.nonEmpty) {
-      val exception = new TaskCompletionListenerException(
-        listenerExceptions.map(_.getMessage).toSeq, error)
+      val exception =
+        new TaskCompletionListenerException(listenerExceptions.map(_.getMessage).toSeq, error)
       listenerExceptions.foreach(exception.addSuppressed)
       throw exception
     }
@@ -308,7 +304,6 @@ private[spark] class TaskContextImpl(
   private[spark] override def fetchFailed: Option[FetchFailedException] = _fetchFailedException
 
   private[spark] override def getLocalProperties: Properties = localProperties
-
 
   override def interruptible(): Boolean = TaskContext.synchronized(_interruptible)
 

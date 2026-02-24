@@ -25,18 +25,25 @@ import org.apache.spark.mllib.tree.configuration.FeatureType._
 /**
  * Node in a decision tree.
  *
- * About node indexing:
- *   Nodes are indexed from 1.  Node 1 is the root; nodes 2, 3 are the left, right children.
- *   Node index 0 is not used.
+ * About node indexing: Nodes are indexed from 1. Node 1 is the root; nodes 2, 3 are the left,
+ * right children. Node index 0 is not used.
  *
- * @param id integer node id, from 1
- * @param predict predicted value at the node
- * @param impurity current node impurity
- * @param isLeaf whether the node is a leaf
- * @param split split to calculate left and right nodes
- * @param leftNode  left child
- * @param rightNode right child
- * @param stats information gain stats
+ * @param id
+ *   integer node id, from 1
+ * @param predict
+ *   predicted value at the node
+ * @param impurity
+ *   current node impurity
+ * @param isLeaf
+ *   whether the node is a leaf
+ * @param split
+ *   split to calculate left and right nodes
+ * @param leftNode
+ *   left child
+ * @param rightNode
+ *   right child
+ * @param stats
+ *   information gain stats
  */
 @Since("1.0.0")
 class Node @Since("1.2.0") (
@@ -47,7 +54,9 @@ class Node @Since("1.2.0") (
     @Since("1.0.0") var split: Option[Split],
     @Since("1.0.0") var leftNode: Option[Node],
     @Since("1.0.0") var rightNode: Option[Node],
-    @Since("1.0.0") var stats: Option[InformationGainStats]) extends Serializable with Logging {
+    @Since("1.0.0") var stats: Option[InformationGainStats])
+    extends Serializable
+    with Logging {
 
   override def toString: String = {
     s"id = $id, isLeaf = $isLeaf, predict = $predict, impurity = $impurity, " +
@@ -56,8 +65,10 @@ class Node @Since("1.2.0") (
 
   /**
    * predict value if node is not leaf
-   * @param features feature value
-   * @return predicted value
+   * @param features
+   *   feature value
+   * @return
+   *   predicted value
    */
   @Since("1.1.0")
   def predict(features: Vector): Double = {
@@ -98,8 +109,8 @@ class Node @Since("1.2.0") (
   }
 
   /**
-   * Get the number of nodes in tree below this node, including leaf nodes.
-   * E.g., if this is a leaf, returns 0.  If both children are leaves, returns 2.
+   * Get the number of nodes in tree below this node, including leaf nodes. E.g., if this is a
+   * leaf, returns 0. If both children are leaves, returns 2.
    */
   private[tree] def numDescendants: Int = if (isLeaf) {
     0
@@ -108,8 +119,7 @@ class Node @Since("1.2.0") (
   }
 
   /**
-   * Get depth of tree from this node.
-   * E.g.: Depth 0 means this is a leaf node.
+   * Get depth of tree from this node. E.g.: Depth 0 means this is a leaf node.
    */
   private[tree] def subtreeDepth: Int = if (isLeaf) {
     0
@@ -119,22 +129,25 @@ class Node @Since("1.2.0") (
 
   /**
    * Recursive print function.
-   * @param indentFactor  The number of spaces to add to each level of indentation.
+   * @param indentFactor
+   *   The number of spaces to add to each level of indentation.
    */
   private[tree] def subtreeToString(indentFactor: Int = 0): String = {
 
     def splitToString(split: Split, left: Boolean): String = {
       split.featureType match {
-        case Continuous => if (left) {
-          s"(feature ${split.feature} <= ${split.threshold})"
-        } else {
-          s"(feature ${split.feature} > ${split.threshold})"
-        }
-        case Categorical => if (left) {
-          s"(feature ${split.feature} in ${split.categories.mkString("{", ",", "}")})"
-        } else {
-          s"(feature ${split.feature} not in ${split.categories.mkString("{", ",", "}")})"
-        }
+        case Continuous =>
+          if (left) {
+            s"(feature ${split.feature} <= ${split.threshold})"
+          } else {
+            s"(feature ${split.feature} > ${split.threshold})"
+          }
+        case Categorical =>
+          if (left) {
+            s"(feature ${split.feature} in ${split.categories.mkString("{", ",", "}")})"
+          } else {
+            s"(feature ${split.feature} not in ${split.categories.mkString("{", ",", "}")})"
+          }
       }
     }
     val prefix: String = " ".repeat(indentFactor)
@@ -160,25 +173,25 @@ private[spark] object Node {
   /**
    * Return a node with the given node id (but nothing else set).
    */
-  def emptyNode(nodeIndex: Int): Node = new Node(nodeIndex, new Predict(Double.MinValue), -1.0,
-    false, None, None, None, None)
+  def emptyNode(nodeIndex: Int): Node =
+    new Node(nodeIndex, new Predict(Double.MinValue), -1.0, false, None, None, None, None)
 
   /**
-   * Construct a node with nodeIndex, predict, impurity and isLeaf parameters.
-   * This is used in `DecisionTree.findBestSplits` to construct child nodes
-   * after finding the best splits for parent nodes.
-   * Other fields are set at next level.
-   * @param nodeIndex integer node id, from 1
-   * @param predict predicted value at the node
-   * @param impurity current node impurity
-   * @param isLeaf whether the node is a leaf
-   * @return new node instance
+   * Construct a node with nodeIndex, predict, impurity and isLeaf parameters. This is used in
+   * `DecisionTree.findBestSplits` to construct child nodes after finding the best splits for
+   * parent nodes. Other fields are set at next level.
+   * @param nodeIndex
+   *   integer node id, from 1
+   * @param predict
+   *   predicted value at the node
+   * @param impurity
+   *   current node impurity
+   * @param isLeaf
+   *   whether the node is a leaf
+   * @return
+   *   new node instance
    */
-  def apply(
-      nodeIndex: Int,
-      predict: Predict,
-      impurity: Double,
-      isLeaf: Boolean): Node = {
+  def apply(nodeIndex: Int, predict: Predict, impurity: Double, isLeaf: Boolean): Node = {
     new Node(nodeIndex, predict, impurity, isLeaf, None, None, None, None)
   }
 
@@ -207,26 +220,27 @@ private[spark] object Node {
   }
 
   /**
-   * Returns true if this is a left child.
-   * Note: Returns false for the root.
+   * Returns true if this is a left child. Note: Returns false for the root.
    */
   def isLeftChild(nodeIndex: Int): Boolean = nodeIndex > 1 && nodeIndex % 2 == 0
 
   /**
    * Return the maximum number of nodes which can be in the given level of the tree.
-   * @param level  Level of tree (0 = root).
+   * @param level
+   *   Level of tree (0 = root).
    */
   def maxNodesInLevel(level: Int): Int = 1 << level
 
   /**
    * Return the index of the first node in the given level.
-   * @param level  Level of tree (0 = root).
+   * @param level
+   *   Level of tree (0 = root).
    */
   def startIndexInLevel(level: Int): Int = 1 << level
 
   /**
-   * Traces down from a root node to get the node with the given node index.
-   * This assumes the node exists.
+   * Traces down from a root node to get the node with the given node index. This assumes the node
+   * exists.
    */
   def getNode(nodeIndex: Int, rootNode: Node): Node = {
     var tmpNode: Node = rootNode

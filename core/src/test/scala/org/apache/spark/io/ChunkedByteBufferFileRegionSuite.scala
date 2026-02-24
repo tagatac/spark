@@ -122,7 +122,7 @@ class ChunkedByteBufferFileRegionSuite extends SparkFunSuite with MockitoSugar {
   }
 
   /**
-   * This mocks a channel which only accepts a limited number of bytes at a time.  It also verifies
+   * This mocks a channel which only accepts a limited number of bytes at a time. It also verifies
    * the written data matches our expectations as the data is received.
    */
   private class LimitedWritableByteChannel(maxWriteSize: Int) extends WritableByteChannel {

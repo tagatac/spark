@@ -34,7 +34,7 @@ import org.apache.spark.util.{LongAccumulator, ThreadUtils, Utils}
  * Runs a thread pool that deserializes and remotely fetches (if necessary) task results.
  */
 private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedulerImpl)
-  extends Logging {
+    extends Logging {
 
   private val THREADS = sparkEnv.conf.getInt("spark.resultGetter.threads", 4)
 
@@ -66,8 +66,11 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
             case directResult: DirectTaskResult[_] =>
               if (!taskSetManager.canFetchMoreResults(directResult.valueByteBuffer.size)) {
                 // kill the task so that it will not become zombie task
-                scheduler.handleFailedTask(taskSetManager, tid, TaskState.KILLED, TaskKilled(
-                  "Tasks result size has exceeded maxResultSize"))
+                scheduler.handleFailedTask(
+                  taskSetManager,
+                  tid,
+                  TaskState.KILLED,
+                  TaskKilled("Tasks result size has exceeded maxResultSize"))
                 return
               }
               // deserialize "value" without holding any lock so that it won't block other threads.
@@ -80,8 +83,11 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
                 // dropped by executor if size is larger than maxResultSize
                 sparkEnv.blockManager.master.removeBlock(blockId)
                 // kill the task so that it will not become zombie task
-                scheduler.handleFailedTask(taskSetManager, tid, TaskState.KILLED, TaskKilled(
-                  "Tasks result size has exceeded maxResultSize"))
+                scheduler.handleFailedTask(
+                  taskSetManager,
+                  tid,
+                  TaskState.KILLED,
+                  TaskKilled("Tasks result size has exceeded maxResultSize"))
                 return
               }
               logDebug(s"Fetching indirect task result for ${taskSetManager.taskName(tid)}")
@@ -92,7 +98,10 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
                  * between when the task ended and when we tried to fetch the result, or if the
                  * block manager had to flush the result. */
                 scheduler.handleFailedTask(
-                  taskSetManager, tid, TaskState.FINISHED, TaskResultLost)
+                  taskSetManager,
+                  tid,
+                  TaskState.FINISHED,
+                  TaskResultLost)
                 return
               }
               val deserializedResult = SerializerHelper
@@ -133,35 +142,38 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
     })
   }
 
-  def enqueueFailedTask(taskSetManager: TaskSetManager, tid: Long, taskState: TaskState,
-    serializedData: ByteBuffer): Unit = {
-    var reason : TaskFailedReason = UnknownReason
+  def enqueueFailedTask(
+      taskSetManager: TaskSetManager,
+      tid: Long,
+      taskState: TaskState,
+      serializedData: ByteBuffer): Unit = {
+    var reason: TaskFailedReason = UnknownReason
     try {
-      getTaskResultExecutor.execute(() => Utils.logUncaughtExceptions {
-        val loader = Utils.getContextOrSparkClassLoader
-        try {
-          if (serializedData != null && serializedData.limit() > 0) {
-            reason = serializer.get().deserialize[TaskFailedReason](
-              serializedData, loader)
+      getTaskResultExecutor.execute(() =>
+        Utils.logUncaughtExceptions {
+          val loader = Utils.getContextOrSparkClassLoader
+          try {
+            if (serializedData != null && serializedData.limit() > 0) {
+              reason = serializer.get().deserialize[TaskFailedReason](serializedData, loader)
+            }
+          } catch {
+            case _: ClassNotFoundException =>
+              // Log an error but keep going here -- the task failed, so not catastrophic
+              // if we can't deserialize the reason.
+              logError(
+                log"Could not deserialize TaskEndReason: ClassNotFound with classloader " +
+                  log"${MDC(CLASS_LOADER, loader)}")
+            case _: Exception => // No-op
+          } finally {
+            // If there's an error while deserializing the TaskEndReason, this Runnable
+            // will die. Still tell the scheduler about the task failure, to avoid a hang
+            // where the scheduler thinks the task is still running.
+            scheduler.handleFailedTask(taskSetManager, tid, taskState, reason)
           }
-        } catch {
-          case _: ClassNotFoundException =>
-            // Log an error but keep going here -- the task failed, so not catastrophic
-            // if we can't deserialize the reason.
-            logError(
-              log"Could not deserialize TaskEndReason: ClassNotFound with classloader " +
-                log"${MDC(CLASS_LOADER, loader)}")
-          case _: Exception => // No-op
-        } finally {
-          // If there's an error while deserializing the TaskEndReason, this Runnable
-          // will die. Still tell the scheduler about the task failure, to avoid a hang
-          // where the scheduler thinks the task is still running.
-          scheduler.handleFailedTask(taskSetManager, tid, taskState, reason)
-        }
-      })
+        })
     } catch {
       case e: RejectedExecutionException if sparkEnv.isStopped =>
-        // ignore it
+      // ignore it
     }
   }
 
@@ -169,9 +181,10 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
   // DAGScheduler to call `TaskSchedulerImpl.handlePartitionCompleted` directly, as it's
   // synchronized and may hurt the throughput of the scheduler.
   def enqueuePartitionCompletionNotification(stageId: Int, partitionId: Int): Unit = {
-    getTaskResultExecutor.execute(() => Utils.logUncaughtExceptions {
-      scheduler.handlePartitionCompleted(stageId, partitionId)
-    })
+    getTaskResultExecutor.execute(() =>
+      Utils.logUncaughtExceptions {
+        scheduler.handlePartitionCompleted(stageId, partitionId)
+      })
   }
 
   def stop(): Unit = {

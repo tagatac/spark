@@ -34,9 +34,9 @@ import org.apache.spark.storage.StorageLevel
 /**
  * A representation of a generic cluster graph used for storing information on RDD operations.
  *
- * Each graph is defined with a set of edges and a root cluster, which may contain children
- * nodes and children clusters. Additionally, a graph may also have edges that enter or exit
- * the graph from nodes that belong to adjacent graphs.
+ * Each graph is defined with a set of edges and a root cluster, which may contain children nodes
+ * and children clusters. Additionally, a graph may also have edges that enter or exit the graph
+ * from nodes that belong to adjacent graphs.
  */
 private[spark] case class RDDOperationGraph(
     edges: collection.Seq[RDDOperationEdge],
@@ -54,8 +54,8 @@ private[spark] case class RDDOperationNode(
     outputDeterministicLevel: DeterministicLevel.Value)
 
 /**
- * A directed edge connecting two nodes in an RDDOperationGraph.
- * This represents an RDD dependency.
+ * A directed edge connecting two nodes in an RDDOperationGraph. This represents an RDD
+ * dependency.
  */
 private[spark] case class RDDOperationEdge(fromId: Int, toId: Int)
 
@@ -101,9 +101,9 @@ private[spark] class RDDOperationCluster(
   override def equals(other: Any): Boolean = other match {
     case that: RDDOperationCluster =>
       (that canEqual this) &&
-          _childClusters == that._childClusters &&
-          id == that.id &&
-          _name == that._name
+      _childClusters == that._childClusters &&
+      id == that.id &&
+      _name == that._name
     case _ => false
   }
 
@@ -125,8 +125,8 @@ private[spark] object RDDOperationGraph extends Logging {
    * from the parent to the child.
    *
    * This does not currently merge common operation scopes across stages. This may be worth
-   * supporting in the future if we decide to group certain stages within the same job under
-   * a common scope (e.g. part of a SQL query).
+   * supporting in the future if we decide to group certain stages within the same job under a
+   * common scope (e.g. part of a SQL query).
    */
   def makeOperationGraph(stage: StageInfo, retainedNodes: Int): RDDOperationGraph = {
     val edges = new ListBuffer[RDDOperationEdge]
@@ -136,8 +136,9 @@ private[spark] object RDDOperationGraph extends Logging {
     // Root cluster is the stage cluster
     // Use a special prefix here to differentiate this cluster from other operation clusters
     val stageClusterId = STAGE_CLUSTER_PREFIX + stage.stageId
-    val stageClusterName = s"Stage ${stage.stageId}" +
-      { if (stage.attemptNumber() == 0) "" else s" (attempt ${stage.attemptNumber()})" }
+    val stageClusterName = s"Stage ${stage.stageId}" + {
+      if (stage.attemptNumber() == 0) "" else s" (attempt ${stage.attemptNumber()})"
+    }
     val rootCluster = new RDDOperationCluster(stageClusterId, false, stageClusterName)
 
     var rootNodeCount = 0
@@ -157,15 +158,23 @@ private[spark] object RDDOperationGraph extends Logging {
 
       if (isAllowed) {
         addRDDIds += rdd.id
-        edges ++= parentIds.filter(id => !dropRDDIds.contains(id)).map(RDDOperationEdge(_, rdd.id))
+        edges ++= parentIds
+          .filter(id => !dropRDDIds.contains(id))
+          .map(RDDOperationEdge(_, rdd.id))
       } else {
         dropRDDIds += rdd.id
       }
 
       // TODO: differentiate between the intention to cache an RDD and whether it's actually cached
-      val node = nodes.getOrElseUpdate(rdd.id, RDDOperationNode(
-        rdd.id, rdd.name, rdd.storageLevel != StorageLevel.NONE, rdd.isBarrier, rdd.callSite,
-        rdd.outputDeterministicLevel))
+      val node = nodes.getOrElseUpdate(
+        rdd.id,
+        RDDOperationNode(
+          rdd.id,
+          rdd.name,
+          rdd.storageLevel != StorageLevel.NONE,
+          rdd.isBarrier,
+          rdd.callSite,
+          rdd.outputDeterministicLevel))
       if (rdd.scope.isEmpty) {
         // This RDD has no encompassing scope, so we put it directly in the root cluster
         // This should happen only if an RDD is instantiated outside of a public RDD API
@@ -180,7 +189,8 @@ private[spark] object RDDOperationGraph extends Logging {
           val clusterId = scope.id
           val clusterName = scope.name.replaceAll("\\n", "\\\\n")
           clusters.getOrElseUpdate(
-            clusterId, new RDDOperationCluster(clusterId, false, clusterName))
+            clusterId,
+            new RDDOperationCluster(clusterId, false, clusterName))
         }
         // Build the cluster hierarchy for this RDD
         rddClusters.sliding(2).foreach { pc =>
@@ -215,8 +225,10 @@ private[spark] object RDDOperationGraph extends Logging {
         case (true, false) => outgoingEdges += e
         case (false, true) => incomingEdges += e
         // should never happen
-        case _ => logWarning(log"Found an orphan edge in stage " +
-          log"${MDC(STAGE_ID, stage.stageId)}: ${MDC(ERROR, e)}")
+        case _ =>
+          logWarning(
+            log"Found an orphan edge in stage " +
+              log"${MDC(STAGE_ID, stage.stageId)}: ${MDC(ERROR, e)}")
       }
     }
 
@@ -272,10 +284,12 @@ private[spark] object RDDOperationGraph extends Logging {
     s"""${node.id} [id="node_${node.id}" labelType="html" label="$label"]"""
   }
 
-  /** Update the dot representation of the RDDOperationGraph in cluster to subgraph.
+  /**
+   * Update the dot representation of the RDDOperationGraph in cluster to subgraph.
    *
-   * @param prefix The prefix of the subgraph id. 'graph_' for stages, 'cluster_' for
-   *               for child clusters. See also VizConstants in `spark-dag-viz.js`
+   * @param prefix
+   *   The prefix of the subgraph id. 'graph_' for stages, 'cluster_' for for child clusters. See
+   *   also VizConstants in `spark-dag-viz.js`
    */
   private def makeDotSubgraph(
       subgraph: StringBuilder,
@@ -283,10 +297,15 @@ private[spark] object RDDOperationGraph extends Logging {
       indent: String,
       prefix: String = "graph_"): Unit = {
     val clusterId = s"$prefix${cluster.id}"
-    subgraph.append(indent).append(s"subgraph $clusterId {\n")
-      .append(indent).append(s"""  id="$clusterId";\n""")
-      .append(indent).append(s"""  isCluster="true";\n""")
-      .append(indent).append(s"""  label="${StringEscapeUtils.escapeJava(cluster.name)}";\n""")
+    subgraph
+      .append(indent)
+      .append(s"subgraph $clusterId {\n")
+      .append(indent)
+      .append(s"""  id="$clusterId";\n""")
+      .append(indent)
+      .append(s"""  isCluster="true";\n""")
+      .append(indent)
+      .append(s"""  label="${StringEscapeUtils.escapeJava(cluster.name)}";\n""")
     cluster.childNodes.foreach { node =>
       subgraph.append(indent).append(s"  ${makeDotNode(node)};\n")
     }

@@ -31,7 +31,6 @@ import org.apache.spark.status.ElementTrackingStore
 import org.apache.spark.util.Utils
 import org.apache.spark.util.kvstore.InMemoryStore
 
-
 class ThriftServerPageSuite extends SparkFunSuite with BeforeAndAfter {
 
   private var kvstore: ElementTrackingStore = _
@@ -63,18 +62,28 @@ class ThriftServerPageSuite extends SparkFunSuite with BeforeAndAfter {
     val listener = new HiveThriftServer2Listener(kvstore, sparkConf, Some(server))
     val statusStore = new HiveThriftServer2AppStatusStore(kvstore)
 
-    listener.onOtherEvent(SparkListenerThriftServerSessionCreated("localhost", "sessionid", "user",
-      System.currentTimeMillis()))
-    listener.onOtherEvent(SparkListenerThriftServerOperationStart("id", "sessionid",
-      "dummy query", "groupid", System.currentTimeMillis(), "user"))
+    listener.onOtherEvent(
+      SparkListenerThriftServerSessionCreated(
+        "localhost",
+        "sessionid",
+        "user",
+        System.currentTimeMillis()))
+    listener.onOtherEvent(
+      SparkListenerThriftServerOperationStart(
+        "id",
+        "sessionid",
+        "dummy query",
+        "groupid",
+        System.currentTimeMillis(),
+        "user"))
     listener.onOtherEvent(SparkListenerThriftServerOperationParsed("id", "dummy plan"))
     listener.onOtherEvent(SparkListenerJobStart(0, System.currentTimeMillis(), Seq()))
-    listener.onOtherEvent(SparkListenerThriftServerOperationFinish("id",
-      System.currentTimeMillis()))
-    listener.onOtherEvent(SparkListenerThriftServerOperationClosed("id",
-      System.currentTimeMillis()))
-    listener.onOtherEvent(SparkListenerThriftServerSessionClosed("sessionid",
-      System.currentTimeMillis()))
+    listener.onOtherEvent(
+      SparkListenerThriftServerOperationFinish("id", System.currentTimeMillis()))
+    listener.onOtherEvent(
+      SparkListenerThriftServerOperationClosed("id", System.currentTimeMillis()))
+    listener.onOtherEvent(
+      SparkListenerThriftServerSessionClosed("sessionid", System.currentTimeMillis()))
 
     statusStore
   }
@@ -101,8 +110,9 @@ class ThriftServerPageSuite extends SparkFunSuite with BeforeAndAfter {
     assert(html.contains("<label>1 pages. jump to</label>"))
 
     // Hiding table support
-    assert(html.contains("class=\"collapse-aggregated-sessionstat" +
-       " collapse-table\" data-collapse-name=\"collapse-aggregated-sessionstat\""))
+    assert(
+      html.contains("class=\"collapse-aggregated-sessionstat" +
+        " collapse-table\" data-collapse-name=\"collapse-aggregated-sessionstat\""))
   }
 
   test("thriftserver session page should load successfully") {
@@ -127,8 +137,8 @@ class ThriftServerPageSuite extends SparkFunSuite with BeforeAndAfter {
     assert(html.contains("<label>1 pages. jump to</label>"))
 
     // Hiding table support
-    assert(html.contains("collapse-aggregated-sqlsessionstat collapse-table\"" +
-          " data-collapse-name=\"collapse-aggregated-sqlsessionstat\""))
+    assert(
+      html.contains("collapse-aggregated-sqlsessionstat collapse-table\"" +
+        " data-collapse-name=\"collapse-aggregated-sqlsessionstat\""))
   }
 }
-

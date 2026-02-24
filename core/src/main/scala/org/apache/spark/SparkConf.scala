@@ -36,6 +36,7 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 trait ReadOnlySparkConf {
+
   /** Get a parameter; throws a NoSuchElementException if it's not set */
   def get(key: String): String = {
     getOption(key).getOrElse(throw new NoSuchElementException(key))
@@ -49,9 +50,9 @@ trait ReadOnlySparkConf {
   /**
    * Retrieves the value of a pre-defined configuration entry.
    *
-   * - This is an internal Spark API.
-   * - The return type if defined by the configuration entry.
-   * - This will throw an exception is the config is not optional and the value is not set.
+   *   - This is an internal Spark API.
+   *   - The return type if defined by the configuration entry.
+   *   - This will throw an exception is the config is not optional and the value is not set.
    */
   private[spark] def get[T](entry: ConfigEntry[T]): T
 
@@ -59,18 +60,21 @@ trait ReadOnlySparkConf {
    * Get a time parameter as seconds; throws a NoSuchElementException if it's not set. If no
    * suffix is provided then seconds are assumed.
    *
-   * @throws java.util.NoSuchElementException If the time parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as seconds
+   * @throws java.util.NoSuchElementException
+   *   If the time parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as seconds
    */
   def getTimeAsSeconds(key: String): Long = catchIllegalValue(key) {
     Utils.timeStringAsSeconds(get(key))
   }
 
   /**
-   * Get a time parameter as seconds, falling back to a default if not set. If no
-   * suffix is provided then seconds are assumed.
+   * Get a time parameter as seconds, falling back to a default if not set. If no suffix is
+   * provided then seconds are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as seconds
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as seconds
    */
   def getTimeAsSeconds(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.timeStringAsSeconds(get(key, defaultValue))
@@ -80,39 +84,45 @@ trait ReadOnlySparkConf {
    * Get a time parameter as milliseconds; throws a NoSuchElementException if it's not set. If no
    * suffix is provided then milliseconds are assumed.
    *
-   * @throws java.util.NoSuchElementException If the time parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as milliseconds
+   * @throws java.util.NoSuchElementException
+   *   If the time parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as milliseconds
    */
   def getTimeAsMs(key: String): Long = catchIllegalValue(key) {
     Utils.timeStringAsMs(get(key))
   }
 
   /**
-   * Get a time parameter as milliseconds, falling back to a default if not set. If no
-   * suffix is provided then milliseconds are assumed.
+   * Get a time parameter as milliseconds, falling back to a default if not set. If no suffix is
+   * provided then milliseconds are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as milliseconds
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as milliseconds
    */
   def getTimeAsMs(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.timeStringAsMs(get(key, defaultValue))
   }
 
   /**
-   * Get a size parameter as bytes; throws a NoSuchElementException if it's not set. If no
-   * suffix is provided then bytes are assumed.
+   * Get a size parameter as bytes; throws a NoSuchElementException if it's not set. If no suffix
+   * is provided then bytes are assumed.
    *
-   * @throws java.util.NoSuchElementException If the size parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as bytes
+   * @throws java.util.NoSuchElementException
+   *   If the size parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as bytes
    */
   def getSizeAsBytes(key: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsBytes(get(key))
   }
 
   /**
-   * Get a size parameter as bytes, falling back to a default if not set. If no
-   * suffix is provided then bytes are assumed.
+   * Get a size parameter as bytes, falling back to a default if not set. If no suffix is provided
+   * then bytes are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as bytes
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as bytes
    */
   def getSizeAsBytes(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsBytes(get(key, defaultValue))
@@ -121,7 +131,8 @@ trait ReadOnlySparkConf {
   /**
    * Get a size parameter as bytes, falling back to a default if not set.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as bytes
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as bytes
    */
   def getSizeAsBytes(key: String, defaultValue: Long): Long = catchIllegalValue(key) {
     Utils.byteStringAsBytes(get(key, s"${defaultValue}B"))
@@ -131,18 +142,21 @@ trait ReadOnlySparkConf {
    * Get a size parameter as Kibibytes; throws a NoSuchElementException if it's not set. If no
    * suffix is provided then Kibibytes are assumed.
    *
-   * @throws java.util.NoSuchElementException If the size parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as Kibibytes
+   * @throws java.util.NoSuchElementException
+   *   If the size parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Kibibytes
    */
   def getSizeAsKb(key: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsKb(get(key))
   }
 
   /**
-   * Get a size parameter as Kibibytes, falling back to a default if not set. If no
-   * suffix is provided then Kibibytes are assumed.
+   * Get a size parameter as Kibibytes, falling back to a default if not set. If no suffix is
+   * provided then Kibibytes are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as Kibibytes
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Kibibytes
    */
   def getSizeAsKb(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsKb(get(key, defaultValue))
@@ -152,18 +166,21 @@ trait ReadOnlySparkConf {
    * Get a size parameter as Mebibytes; throws a NoSuchElementException if it's not set. If no
    * suffix is provided then Mebibytes are assumed.
    *
-   * @throws java.util.NoSuchElementException If the size parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as Mebibytes
+   * @throws java.util.NoSuchElementException
+   *   If the size parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Mebibytes
    */
   def getSizeAsMb(key: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsMb(get(key))
   }
 
   /**
-   * Get a size parameter as Mebibytes, falling back to a default if not set. If no
-   * suffix is provided then Mebibytes are assumed.
+   * Get a size parameter as Mebibytes, falling back to a default if not set. If no suffix is
+   * provided then Mebibytes are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as Mebibytes
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Mebibytes
    */
   def getSizeAsMb(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsMb(get(key, defaultValue))
@@ -173,18 +190,21 @@ trait ReadOnlySparkConf {
    * Get a size parameter as Gibibytes; throws a NoSuchElementException if it's not set. If no
    * suffix is provided then Gibibytes are assumed.
    *
-   * @throws java.util.NoSuchElementException If the size parameter is not set
-   * @throws NumberFormatException            If the value cannot be interpreted as Gibibytes
+   * @throws java.util.NoSuchElementException
+   *   If the size parameter is not set
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Gibibytes
    */
   def getSizeAsGb(key: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsGb(get(key))
   }
 
   /**
-   * Get a size parameter as Gibibytes, falling back to a default if not set. If no
-   * suffix is provided then Gibibytes are assumed.
+   * Get a size parameter as Gibibytes, falling back to a default if not set. If no suffix is
+   * provided then Gibibytes are assumed.
    *
-   * @throws NumberFormatException If the value cannot be interpreted as Gibibytes
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as Gibibytes
    */
   def getSizeAsGb(key: String, defaultValue: String): Long = catchIllegalValue(key) {
     Utils.byteStringAsGb(get(key, defaultValue))
@@ -199,7 +219,8 @@ trait ReadOnlySparkConf {
   /**
    * Get a parameter as an integer, falling back to a default if not set
    *
-   * @throws NumberFormatException If the value cannot be interpreted as an integer
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as an integer
    */
   def getInt(key: String, defaultValue: Int): Int = catchIllegalValue(key) {
     getOption(key).map(_.toInt).getOrElse(defaultValue)
@@ -208,7 +229,8 @@ trait ReadOnlySparkConf {
   /**
    * Get a parameter as a long, falling back to a default if not set
    *
-   * @throws NumberFormatException If the value cannot be interpreted as a long
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as a long
    */
   def getLong(key: String, defaultValue: Long): Long = catchIllegalValue(key) {
     getOption(key).map(_.toLong).getOrElse(defaultValue)
@@ -217,7 +239,8 @@ trait ReadOnlySparkConf {
   /**
    * Get a parameter as a double, falling back to a default if not ste
    *
-   * @throws NumberFormatException If the value cannot be interpreted as a double
+   * @throws NumberFormatException
+   *   If the value cannot be interpreted as a double
    */
   def getDouble(key: String, defaultValue: Double): Double = catchIllegalValue(key) {
     getOption(key).map(_.toDouble).getOrElse(defaultValue)
@@ -226,7 +249,8 @@ trait ReadOnlySparkConf {
   /**
    * Get a parameter as a boolean, falling back to a default if not set
    *
-   * @throws IllegalArgumentException If the value cannot be interpreted as a boolean
+   * @throws IllegalArgumentException
+   *   If the value cannot be interpreted as a boolean
    */
   def getBoolean(key: String, defaultValue: Boolean): Boolean = catchIllegalValue(key) {
     getOption(key).map(_.toBoolean).getOrElse(defaultValue)
@@ -239,8 +263,8 @@ trait ReadOnlySparkConf {
   def contains(entry: ConfigEntry[_]): Boolean = contains(entry.key)
 
   /**
-   * Wrapper method for get() methods which require some specific value format. This catches
-   * any [[NumberFormatException]] or [[IllegalArgumentException]] and re-raises it with the
+   * Wrapper method for get() methods which require some specific value format. This catches any
+   * [[NumberFormatException]] or [[IllegalArgumentException]] and re-raises it with the
    * incorrectly configured key in the exception message.
    */
   protected def catchIllegalValue[T](key: String)(getValue: => T): T = {
@@ -252,13 +276,14 @@ trait ReadOnlySparkConf {
         throw new NumberFormatException(s"Illegal value for config key $key: ${e.getMessage}")
           .initCause(e)
       case e: IllegalArgumentException =>
-        throw new IllegalArgumentException(s"Illegal value for config key $key: ${e.getMessage}", e)
+        throw new IllegalArgumentException(
+          s"Illegal value for config key $key: ${e.getMessage}",
+          e)
     }
   }
 
   /**
-   * By using this instead of System.getenv(), environment variables can be mocked
-   * in unit tests.
+   * By using this instead of System.getenv(), environment variables can be mocked in unit tests.
    */
   private[spark] def getenv(name: String): String = System.getenv(name)
 }
@@ -276,10 +301,12 @@ trait ReadOnlySparkConf {
  * All setter methods in this class support chaining. For example, you can write
  * `new SparkConf().setMaster("local").setAppName("My app")`.
  *
- * @param loadDefaults whether to also load values from Java system properties
+ * @param loadDefaults
+ *   whether to also load values from Java system properties
  *
- * @note Once a SparkConf object is passed to Spark, it is cloned and can no longer be modified
- * by the user. Spark does not support modifying the configuration at runtime.
+ * @note
+ *   Once a SparkConf object is passed to Spark, it is cloned and can no longer be modified by the
+ *   user. Spark does not support modifying the configuration at runtime.
  */
 class SparkConf(loadDefaults: Boolean)
     extends ReadOnlySparkConf
@@ -366,18 +393,18 @@ class SparkConf(loadDefaults: Boolean)
   }
 
   /**
-   * Set an environment variable to be used when launching executors for this application.
-   * These variables are stored as properties of the form spark.executorEnv.VAR_NAME
-   * (for example spark.executorEnv.PATH) but this method makes them easier to set.
+   * Set an environment variable to be used when launching executors for this application. These
+   * variables are stored as properties of the form spark.executorEnv.VAR_NAME (for example
+   * spark.executorEnv.PATH) but this method makes them easier to set.
    */
   def setExecutorEnv(variable: String, value: String): SparkConf = {
     set("spark.executorEnv." + variable, value)
   }
 
   /**
-   * Set multiple environment variables to be used when launching executors.
-   * These variables are stored as properties of the form spark.executorEnv.VAR_NAME
-   * (for example spark.executorEnv.PATH) but this method makes them easier to set.
+   * Set multiple environment variables to be used when launching executors. These variables are
+   * stored as properties of the form spark.executorEnv.VAR_NAME (for example
+   * spark.executorEnv.PATH) but this method makes them easier to set.
    */
   def setExecutorEnv(variables: Seq[(String, String)]): SparkConf = {
     for ((k, v) <- variables) {
@@ -387,8 +414,8 @@ class SparkConf(loadDefaults: Boolean)
   }
 
   /**
-   * Set multiple environment variables to be used when launching executors.
-   * (Java-friendly version.)
+   * Set multiple environment variables to be used when launching executors. (Java-friendly
+   * version.)
    */
   def setExecutorEnv(variables: Array[(String, String)]): SparkConf = {
     setExecutorEnv(variables.toImmutableArraySeq)
@@ -430,12 +457,13 @@ class SparkConf(loadDefaults: Boolean)
   }
 
   /**
-   * Use Kryo serialization and register the given set of classes with Kryo.
-   * If called multiple times, this will append the classes from all calls together.
+   * Use Kryo serialization and register the given set of classes with Kryo. If called multiple
+   * times, this will append the classes from all calls together.
    */
   def registerKryoClasses(classes: Array[Class[_]]): SparkConf = {
     val allClassNames = new LinkedHashSet[String]()
-    allClassNames ++= get(KRYO_CLASSES_TO_REGISTER).map(_.trim)
+    allClassNames ++= get(KRYO_CLASSES_TO_REGISTER)
+      .map(_.trim)
       .filter(!_.isEmpty)
     allClassNames ++= classes.map(_.getName)
 
@@ -447,8 +475,8 @@ class SparkConf(loadDefaults: Boolean)
   private final val avroNamespace = "avro.schema."
 
   /**
-   * Use Kryo serialization and register the given set of Avro schemas so that the generic
-   * record serializer can decrease network IO
+   * Use Kryo serialization and register the given set of Avro schemas so that the generic record
+   * serializer can decrease network IO
    */
   def registerAvroSchemas(schemas: Schema*): SparkConf = {
     for (schema <- schemas) {
@@ -459,7 +487,8 @@ class SparkConf(loadDefaults: Boolean)
 
   /** Gets all the avro schemas in the configuration used in the generic Avro record serializer */
   def getAvroSchema: Map[Long, String] = {
-    getAll.filter { case (k, v) => k.startsWith(avroNamespace) }
+    getAll
+      .filter { case (k, v) => k.startsWith(avroNamespace) }
       .map { case (k, v) => (k.substring(avroNamespace.length).toLong, v) }
       .toMap
   }
@@ -477,9 +506,9 @@ class SparkConf(loadDefaults: Boolean)
   /**
    * Retrieves the value of a pre-defined configuration entry.
    *
-   * - This is an internal Spark API.
-   * - The return type if defined by the configuration entry.
-   * - This will throw an exception is the config is not optional and the value is not set.
+   *   - This is an internal Spark API.
+   *   - The return type if defined by the configuration entry.
+   *   - This will throw an exception is the config is not optional and the value is not set.
    */
   private[spark] def get[T](entry: ConfigEntry[T]): T = {
     entry.readFrom(reader)
@@ -504,7 +533,8 @@ class SparkConf(loadDefaults: Boolean)
    * Get all parameters that start with `prefix`
    */
   def getAllWithPrefix(prefix: String): Array[(String, String)] = {
-    getAll.filter { case (k, v) => k.startsWith(prefix) }
+    getAll
+      .filter { case (k, v) => k.startsWith(prefix) }
       .map { case (k, v) => (k.substring(prefix.length), v) }
   }
 
@@ -512,7 +542,8 @@ class SparkConf(loadDefaults: Boolean)
    * Get all parameters that start with `prefix` and apply f.
    */
   def getAllWithPrefix[K](prefix: String, f: String => K): Array[(K, String)] = {
-    getAll.filter { case (k, _) => k.startsWith(prefix) }
+    getAll
+      .filter { case (k, _) => k.startsWith(prefix) }
       .map { case (k, v) => (f(k), v) }
   }
 
@@ -530,7 +561,7 @@ class SparkConf(loadDefaults: Boolean)
   /** Does the configuration contain a given parameter? */
   def contains(key: String): Boolean = {
     settings.containsKey(key) ||
-      configsWithAlternatives.get(key).toSeq.flatten.exists { alt => contains(alt.key) }
+    configsWithAlternatives.get(key).toSeq.flatten.exists { alt => contains(alt.key) }
   }
 
   /** Copy this object */
@@ -567,21 +598,24 @@ class SparkConf(loadDefaults: Boolean)
     }
 
     // Validate spark.executor.extraJavaOptions
-    Seq(EXECUTOR_JAVA_OPTIONS.key, "spark.executor.defaultJavaOptions").foreach { executorOptsKey =>
-      getOption(executorOptsKey).foreach { javaOpts =>
-        if (javaOpts.contains("-Dspark")) {
-          throw new SparkException(
-            errorClass = "INVALID_SPARK_CONFIG.INVALID_EXECUTOR_SPARK_OPTIONS",
-            messageParameters = Map("executorOptsKey" -> executorOptsKey, "javaOpts" -> javaOpts),
-            cause = null)
+    Seq(EXECUTOR_JAVA_OPTIONS.key, "spark.executor.defaultJavaOptions").foreach {
+      executorOptsKey =>
+        getOption(executorOptsKey).foreach { javaOpts =>
+          if (javaOpts.contains("-Dspark")) {
+            throw new SparkException(
+              errorClass = "INVALID_SPARK_CONFIG.INVALID_EXECUTOR_SPARK_OPTIONS",
+              messageParameters =
+                Map("executorOptsKey" -> executorOptsKey, "javaOpts" -> javaOpts),
+              cause = null)
+          }
+          if (javaOpts.contains("-Xmx")) {
+            throw new SparkException(
+              errorClass = "INVALID_SPARK_CONFIG.INVALID_EXECUTOR_MEMORY_OPTIONS",
+              messageParameters =
+                Map("executorOptsKey" -> executorOptsKey, "javaOpts" -> javaOpts),
+              cause = null)
+          }
         }
-        if (javaOpts.contains("-Xmx")) {
-          throw new SparkException(
-            errorClass = "INVALID_SPARK_CONFIG.INVALID_EXECUTOR_MEMORY_OPTIONS",
-            messageParameters = Map("executorOptsKey" -> executorOptsKey, "javaOpts" -> javaOpts),
-            cause = null)
-        }
-      }
     }
 
     // Validate memory fractions
@@ -593,18 +627,18 @@ class SparkConf(loadDefaults: Boolean)
       SparkException.require(
         value >= 0 && value <= 1,
         errorClass = "INVALID_SPARK_CONFIG.INVALID_MEMORY_FRACTION",
-        messageParameters = Map(
-          "memoryFractionKey" -> key,
-          "memoryFractionValue" -> value.toString))
+        messageParameters =
+          Map("memoryFractionKey" -> key, "memoryFractionValue" -> value.toString))
     }
 
     if (contains(SUBMIT_DEPLOY_MODE)) {
       get(SUBMIT_DEPLOY_MODE) match {
         case "cluster" | "client" =>
-        case _ => throw new SparkException(
-          errorClass = "INVALID_SPARK_CONFIG.INVALID_SPARK_SUBMIT_DEPLOY_MODE_KEY",
-          messageParameters = Map("sparkSubmitDeployModeKey" -> SUBMIT_DEPLOY_MODE.key),
-          cause = null)
+        case _ =>
+          throw new SparkException(
+            errorClass = "INVALID_SPARK_CONFIG.INVALID_SPARK_SUBMIT_DEPLOY_MODE_KEY",
+            messageParameters = Map("sparkSubmitDeployModeKey" -> SUBMIT_DEPLOY_MODE.key),
+            cause = null)
       }
     }
 
@@ -613,13 +647,14 @@ class SparkConf(loadDefaults: Boolean)
       val executorCores = get(EXECUTOR_CORES)
       val leftCores = totalCores % executorCores
       if (leftCores != 0) {
-        logWarning(log"Total executor cores: " +
-          log"${MDC(LogKeys.NUM_EXECUTOR_CORES_TOTAL, totalCores)} " +
-          log"is not divisible by cores per executor: " +
-          log"${MDC(LogKeys.NUM_EXECUTOR_CORES, executorCores)}, " +
-          log"the left cores: " +
-          log"${MDC(LogKeys.NUM_EXECUTOR_CORES_REMAINING, leftCores)} " +
-          log"will not be allocated")
+        logWarning(
+          log"Total executor cores: " +
+            log"${MDC(LogKeys.NUM_EXECUTOR_CORES_TOTAL, totalCores)} " +
+            log"is not divisible by cores per executor: " +
+            log"${MDC(LogKeys.NUM_EXECUTOR_CORES, executorCores)}, " +
+            log"the left cores: " +
+            log"${MDC(LogKeys.NUM_EXECUTOR_CORES_REMAINING, leftCores)} " +
+            log"will not be allocated")
       }
     }
 
@@ -663,77 +698,126 @@ private[spark] object SparkConf extends Logging {
    */
   private val deprecatedConfigs: Map[String, DeprecatedConfig] = {
     val configs = Seq(
-      DeprecatedConfig("spark.cache.class", "0.8",
+      DeprecatedConfig(
+        "spark.cache.class",
+        "0.8",
         "The spark.cache.class property is no longer being used! Specify storage levels using " +
-        "the RDD.persist() method instead."),
-      DeprecatedConfig("spark.yarn.user.classpath.first", "1.3",
+          "the RDD.persist() method instead."),
+      DeprecatedConfig(
+        "spark.yarn.user.classpath.first",
+        "1.3",
         "Please use spark.{driver,executor}.userClassPathFirst instead."),
-      DeprecatedConfig("spark.kryoserializer.buffer.mb", "1.4",
+      DeprecatedConfig(
+        "spark.kryoserializer.buffer.mb",
+        "1.4",
         "Please use spark.kryoserializer.buffer instead. The default value for " +
           "spark.kryoserializer.buffer.mb was previously specified as '0.064'. Fractional values " +
           "are no longer accepted. To specify the equivalent now, one may use '64k'."),
       DeprecatedConfig("spark.shuffle.spill", "1.6", "Not used anymore."),
       DeprecatedConfig("spark.rpc", "2.0", "Not used anymore."),
-      DeprecatedConfig("spark.scheduler.executorTaskBlacklistTime", "2.1.0",
+      DeprecatedConfig(
+        "spark.scheduler.executorTaskBlacklistTime",
+        "2.1.0",
         "Not used anymore. Please use the new excludedOnFailure options, spark.excludeOnFailure.*"),
       DeprecatedConfig("spark.yarn.am.port", "2.0.0", "Not used anymore"),
       DeprecatedConfig("spark.executor.port", "2.0.0", "Not used anymore"),
       DeprecatedConfig("spark.rpc.numRetries", "2.2.0", "Not used anymore"),
       DeprecatedConfig("spark.rpc.retry.wait", "2.2.0", "Not used anymore"),
-      DeprecatedConfig("spark.shuffle.service.index.cache.entries", "2.3.0",
+      DeprecatedConfig(
+        "spark.shuffle.service.index.cache.entries",
+        "2.3.0",
         "Not used anymore. Please use spark.shuffle.service.index.cache.size"),
-      DeprecatedConfig("spark.yarn.credentials.file.retention.count", "2.4.0", "Not used anymore."),
-      DeprecatedConfig("spark.yarn.credentials.file.retention.days", "2.4.0", "Not used anymore."),
+      DeprecatedConfig(
+        "spark.yarn.credentials.file.retention.count",
+        "2.4.0",
+        "Not used anymore."),
+      DeprecatedConfig(
+        "spark.yarn.credentials.file.retention.days",
+        "2.4.0",
+        "Not used anymore."),
       DeprecatedConfig("spark.yarn.services", "3.0.0", "Feature no longer available."),
-      DeprecatedConfig("spark.executor.plugins", "3.0.0",
+      DeprecatedConfig(
+        "spark.executor.plugins",
+        "3.0.0",
         "Feature replaced with new plugin API. See Monitoring documentation."),
-      DeprecatedConfig("spark.blacklist.enabled", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.enabled",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.enabled"),
-      DeprecatedConfig("spark.blacklist.task.maxTaskAttemptsPerExecutor", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.task.maxTaskAttemptsPerExecutor",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.task.maxTaskAttemptsPerExecutor"),
-      DeprecatedConfig("spark.blacklist.task.maxTaskAttemptsPerNode", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.task.maxTaskAttemptsPerNode",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.task.maxTaskAttemptsPerNode"),
-      DeprecatedConfig("spark.blacklist.application.maxFailedTasksPerExecutor", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.application.maxFailedTasksPerExecutor",
+        "3.1.0",
         "Not used anymore. Please use " +
           "spark.excludeOnFailure.application.maxFailedTasksPerExecutor"),
-      DeprecatedConfig("spark.blacklist.stage.maxFailedTasksPerExecutor", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.stage.maxFailedTasksPerExecutor",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.stage.maxFailedTasksPerExecutor"),
-      DeprecatedConfig("spark.blacklist.application.maxFailedExecutorsPerNode", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.application.maxFailedExecutorsPerNode",
+        "3.1.0",
         "Not used anymore. Please use " +
           "spark.excludeOnFailure.application.maxFailedExecutorsPerNode"),
-      DeprecatedConfig("spark.blacklist.stage.maxFailedExecutorsPerNode", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.stage.maxFailedExecutorsPerNode",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.stage.maxFailedExecutorsPerNode"),
-      DeprecatedConfig("spark.blacklist.timeout", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.timeout",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.timeout"),
-      DeprecatedConfig("spark.blacklist.application.fetchFailure.enabled", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.application.fetchFailure.enabled",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.application.fetchFailure.enabled"),
-      DeprecatedConfig("spark.scheduler.blacklist.unschedulableTaskSetTimeout", "3.1.0",
+      DeprecatedConfig(
+        "spark.scheduler.blacklist.unschedulableTaskSetTimeout",
+        "3.1.0",
         "Not used anymore. Please use " +
           "spark.scheduler.excludeOnFailure.unschedulableTaskSetTimeout"),
-      DeprecatedConfig("spark.blacklist.killBlacklistedExecutors", "3.1.0",
+      DeprecatedConfig(
+        "spark.blacklist.killBlacklistedExecutors",
+        "3.1.0",
         "Not used anymore. Please use spark.excludeOnFailure.killExcludedExecutors"),
-      DeprecatedConfig("spark.yarn.blacklist.executor.launch.blacklisting.enabled", "3.1.0",
+      DeprecatedConfig(
+        "spark.yarn.blacklist.executor.launch.blacklisting.enabled",
+        "3.1.0",
         "Not used anymore. Please use spark.yarn.executor.launch.excludeOnFailure.enabled"),
-      DeprecatedConfig("spark.network.remoteReadNioBufferConversion", "3.5.2",
+      DeprecatedConfig(
+        "spark.network.remoteReadNioBufferConversion",
+        "3.5.2",
         "Please open a JIRA ticket to report it if you need to use this configuration."),
-      DeprecatedConfig("spark.shuffle.unsafe.file.output.buffer", "4.0.0",
+      DeprecatedConfig(
+        "spark.shuffle.unsafe.file.output.buffer",
+        "4.0.0",
         "Please use spark.shuffle.localDisk.file.output.buffer"),
-      DeprecatedConfig("spark.shuffle.server.chunkFetchHandlerThreadsPercent", "4.2.0",
+      DeprecatedConfig(
+        "spark.shuffle.server.chunkFetchHandlerThreadsPercent",
+        "4.2.0",
         "Using separate chunkFetchHandlers could be problematic according to the underlying" +
           " netty layer"),
-      DeprecatedConfig("spark.shuffle.server.finalizeShuffleMergeThreadsPercent", "4.2.0",
+      DeprecatedConfig(
+        "spark.shuffle.server.finalizeShuffleMergeThreadsPercent",
+        "4.2.0",
         "Using separate finalizeWorkers could be problematic according to the underlying" +
-          " netty layer")
-    )
+          " netty layer"))
 
-    Map(configs.map { cfg => (cfg.key -> cfg) } : _*)
+    Map(configs.map { cfg => (cfg.key -> cfg) }: _*)
   }
 
   /**
    * Maps a current config key to alternate keys that were used in previous version of Spark.
    *
-   * The alternates are used in the order defined in this map. If deprecated configs are
-   * present in the user's configuration, a warning is logged.
+   * The alternates are used in the order defined in this map. If deprecated configs are present
+   * in the user's configuration, a warning is logged.
    *
    * TODO: consolidate it with `ConfigBuilder.withAlternative`.
    */
@@ -746,21 +830,22 @@ private[spark] object SparkConf extends Logging {
       AlternateConfig("spark.history.updateInterval", "1.3")),
     CLEANER_INTERVAL_S.key -> Seq(
       AlternateConfig("spark.history.fs.cleaner.interval.seconds", "1.4")),
-    MAX_LOG_AGE_S.key -> Seq(
-      AlternateConfig("spark.history.fs.cleaner.maxAge.seconds", "1.4")),
+    MAX_LOG_AGE_S.key -> Seq(AlternateConfig("spark.history.fs.cleaner.maxAge.seconds", "1.4")),
     "spark.yarn.am.waitTime" -> Seq(
-      AlternateConfig("spark.yarn.applicationMaster.waitTries", "1.3",
+      AlternateConfig(
+        "spark.yarn.applicationMaster.waitTries",
+        "1.3",
         // Translate old value to a duration, with 10s wait time per try.
         translation = s => s"${s.toLong * 10}s")),
-    REDUCER_MAX_SIZE_IN_FLIGHT.key -> Seq(
-      AlternateConfig("spark.reducer.maxMbInFlight", "1.4")),
+    REDUCER_MAX_SIZE_IN_FLIGHT.key -> Seq(AlternateConfig("spark.reducer.maxMbInFlight", "1.4")),
     KRYO_SERIALIZER_BUFFER_SIZE.key -> Seq(
-      AlternateConfig("spark.kryoserializer.buffer.mb", "1.4",
+      AlternateConfig(
+        "spark.kryoserializer.buffer.mb",
+        "1.4",
         translation = s => s"${(s.toDouble * 1000).toInt}k")),
     KRYO_SERIALIZER_MAX_BUFFER_SIZE.key -> Seq(
       AlternateConfig("spark.kryoserializer.buffer.max.mb", "1.4")),
-    SHUFFLE_FILE_BUFFER_SIZE.key -> Seq(
-      AlternateConfig("spark.shuffle.file.buffer.kb", "1.4")),
+    SHUFFLE_FILE_BUFFER_SIZE.key -> Seq(AlternateConfig("spark.shuffle.file.buffer.kb", "1.4")),
     EXECUTOR_LOGS_ROLLING_MAX_SIZE.key -> Seq(
       AlternateConfig("spark.executor.logs.rolling.size.maxBytes", "1.4")),
     IO_COMPRESSION_SNAPPY_BLOCKSIZE.key -> Seq(
@@ -771,23 +856,18 @@ private[spark] object SparkConf extends Logging {
       AlternateConfig("spark.streaming.minRememberDuration", "1.5")),
     "spark.yarn.max.executor.failures" -> Seq(
       AlternateConfig("spark.yarn.max.worker.failures", "1.5")),
-    MEMORY_OFFHEAP_ENABLED.key -> Seq(
-      AlternateConfig("spark.unsafe.offHeap", "1.6")),
-    "spark.yarn.jars" -> Seq(
-      AlternateConfig("spark.yarn.jar", "2.0")),
+    MEMORY_OFFHEAP_ENABLED.key -> Seq(AlternateConfig("spark.unsafe.offHeap", "1.6")),
+    "spark.yarn.jars" -> Seq(AlternateConfig("spark.yarn.jar", "2.0")),
     MAX_REMOTE_BLOCK_SIZE_FETCH_TO_MEM.key -> Seq(
       AlternateConfig("spark.reducer.maxReqSizeShuffleToMem", "2.3"),
       AlternateConfig("spark.maxRemoteBlockSizeFetchToMem", "3.0")),
     LISTENER_BUS_EVENT_QUEUE_CAPACITY.key -> Seq(
       AlternateConfig("spark.scheduler.listenerbus.eventqueue.size", "2.3")),
-    DRIVER_MEMORY_OVERHEAD.key -> Seq(
-      AlternateConfig("spark.yarn.driver.memoryOverhead", "2.3")),
+    DRIVER_MEMORY_OVERHEAD.key -> Seq(AlternateConfig("spark.yarn.driver.memoryOverhead", "2.3")),
     EXECUTOR_MEMORY_OVERHEAD.key -> Seq(
       AlternateConfig("spark.yarn.executor.memoryOverhead", "2.3")),
-    KEYTAB.key -> Seq(
-      AlternateConfig("spark.yarn.keytab", "3.0")),
-    PRINCIPAL.key -> Seq(
-      AlternateConfig("spark.yarn.principal", "3.0")),
+    KEYTAB.key -> Seq(AlternateConfig("spark.yarn.keytab", "3.0")),
+    PRINCIPAL.key -> Seq(AlternateConfig("spark.yarn.principal", "3.0")),
     KERBEROS_RELOGIN_PERIOD.key -> Seq(
       AlternateConfig("spark.yarn.kerberos.relogin.period", "3.0")),
     KERBEROS_FILESYSTEMS_TO_ACCESS.key -> Seq(
@@ -795,15 +875,13 @@ private[spark] object SparkConf extends Logging {
       AlternateConfig("spark.yarn.access.hadoopFileSystems", "3.0")),
     "spark.kafka.consumer.cache.capacity" -> Seq(
       AlternateConfig("spark.sql.kafkaConsumerCache.capacity", "3.0")),
-    MAX_EXECUTOR_FAILURES.key -> Seq(
-      AlternateConfig("spark.yarn.max.executor.failures", "3.5")),
+    MAX_EXECUTOR_FAILURES.key -> Seq(AlternateConfig("spark.yarn.max.executor.failures", "3.5")),
     EXECUTOR_ATTEMPT_FAILURE_VALIDITY_INTERVAL_MS.key -> Seq(
-      AlternateConfig("spark.yarn.executor.failuresValidityInterval", "3.5"))
-  )
+      AlternateConfig("spark.yarn.executor.failuresValidityInterval", "3.5")))
 
   /**
-   * A view of `configsWithAlternatives` that makes it more efficient to look up deprecated
-   * config keys.
+   * A view of `configsWithAlternatives` that makes it more efficient to look up deprecated config
+   * keys.
    *
    * Maps the deprecated config name to a 2-tuple (new config name, alternate config info).
    */
@@ -816,8 +894,8 @@ private[spark] object SparkConf extends Logging {
   /**
    * Return whether the given config should be passed to an executor on start-up.
    *
-   * Certain authentication configs are required from the executor when it connects to
-   * the scheduler, while the rest of the spark configs can be inherited from the driver later.
+   * Certain authentication configs are required from the executor when it connects to the
+   * scheduler, while the rest of the spark configs can be inherited from the driver later.
    */
   def isExecutorStartupConf(name: String): Boolean = {
     (name.startsWith("spark.auth") && name != SecurityManager.SPARK_AUTH_SECRET_CONF) ||
@@ -837,14 +915,15 @@ private[spark] object SparkConf extends Logging {
   }
 
   /**
-   * Looks for available deprecated keys for the given config option, and return the first
-   * value available.
+   * Looks for available deprecated keys for the given config option, and return the first value
+   * available.
    */
   def getDeprecatedConfig(key: String, conf: JMap[String, String]): Option[String] = {
     configsWithAlternatives.get(key).flatMap { alts =>
-      alts.collectFirst { case alt if conf.containsKey(alt.key) =>
-        val value = conf.get(alt.key)
-        if (alt.translation != null) alt.translation(value) else value
+      alts.collectFirst {
+        case alt if conf.containsKey(alt.key) =>
+          val value = conf.get(alt.key)
+          if (alt.translation != null) alt.translation(value) else value
       }
     }
   }
@@ -876,21 +955,24 @@ private[spark] object SparkConf extends Logging {
   /**
    * Holds information about keys that have been deprecated and do not have a replacement.
    *
-   * @param key The deprecated key.
-   * @param version Version of Spark where key was deprecated.
-   * @param deprecationMessage Message to include in the deprecation warning.
+   * @param key
+   *   The deprecated key.
+   * @param version
+   *   Version of Spark where key was deprecated.
+   * @param deprecationMessage
+   *   Message to include in the deprecation warning.
    */
-  private case class DeprecatedConfig(
-      key: String,
-      version: String,
-      deprecationMessage: String)
+  private case class DeprecatedConfig(key: String, version: String, deprecationMessage: String)
 
   /**
    * Information about an alternate configuration key that has been deprecated.
    *
-   * @param key The deprecated config key.
-   * @param version The Spark version in which the key was deprecated.
-   * @param translation A translation function for converting old config values into new ones.
+   * @param key
+   *   The deprecated config key.
+   * @param version
+   *   The Spark version in which the key was deprecated.
+   * @param translation
+   *   A translation function for converting old config values into new ones.
    */
   private case class AlternateConfig(
       key: String,

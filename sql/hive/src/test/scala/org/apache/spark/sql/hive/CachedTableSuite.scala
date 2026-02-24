@@ -58,15 +58,11 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     cacheTable("src")
     assertCached(sql("SELECT * FROM src"))
 
-    checkAnswer(
-      sql("SELECT * FROM src"),
-      preCacheResults)
+    checkAnswer(sql("SELECT * FROM src"), preCacheResults)
 
     assertCached(sql("SELECT * FROM src s"))
 
-    checkAnswer(
-      sql("SELECT * FROM src s"),
-      preCacheResults)
+    checkAnswer(sql("SELECT * FROM src s"), preCacheResults)
 
     uncacheTable("src")
     assertCached(sql("SELECT * FROM src"), 0)
@@ -111,10 +107,12 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
       uncacheTable("nonexistentTable")
     }
     checkErrorTableNotFound(e, "`nonexistentTable`")
-     e = intercept[AnalysisException] {
+    e = intercept[AnalysisException] {
       sql("UNCACHE TABLE nonexistentTable")
     }
-    checkErrorTableNotFound(e, "`nonexistentTable`",
+    checkErrorTableNotFound(
+      e,
+      "`nonexistentTable`",
       ExpectedContext("nonexistentTable", 14, 13 + "nonexistentTable".length))
     sql("UNCACHE TABLE IF EXISTS nonexistentTable")
   }
@@ -180,9 +178,7 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
       "Lazily cached in-memory table shouldn't be materialized eagerly")
 
     sql("SELECT COUNT(*) FROM src").collect()
-    assert(
-      isMaterialized(rddId),
-      "Lazily cached in-memory table should have been materialized")
+    assert(isMaterialized(rddId), "Lazily cached in-memory table should have been materialized")
 
     uncacheTable("src")
     assert(!isMaterialized(rddId), "Uncached in-memory table should have been unpersisted")
@@ -240,9 +236,7 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     table("src").write.mode(SaveMode.Overwrite).parquet(tempPath.toString)
     sql("DROP TABLE IF EXISTS refreshTable")
     sparkSession.catalog.createTable("refreshTable", tempPath.toString, "parquet")
-    checkAnswer(
-      table("refreshTable"),
-      table("src").collect().toImmutableArraySeq)
+    checkAnswer(table("refreshTable"), table("src").collect().toImmutableArraySeq)
     // Cache the table.
     sql("CACHE TABLE refreshTable")
     assertCached(table("refreshTable"))
@@ -284,13 +278,16 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
         activateDatabase(db) {
           assertCached(spark.table("cachedTable"))
           sql("UNCACHE TABLE cachedTable")
-          assert(!spark.catalog.isCached("cachedTable"), "Table 'cachedTable' should not be cached")
+          assert(
+            !spark.catalog.isCached("cachedTable"),
+            "Table 'cachedTable' should not be cached")
           sql(s"CACHE TABLE cachedTable")
           assert(spark.catalog.isCached("cachedTable"), "Table 'cachedTable' should be cached")
         }
 
         sql(s"UNCACHE TABLE $db.cachedTable")
-        assert(!spark.catalog.isCached(s"$db.cachedTable"),
+        assert(
+          !spark.catalog.isCached(s"$db.cachedTable"),
           "Table 'cachedTable' should not be cached")
       }
     }
@@ -302,8 +299,9 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
         val e = intercept[ParseException] {
           sql(s"CACHE TABLE $db.cachedTable AS SELECT 1")
         }.getMessage
-        assert(e.contains("It is not allowed to add catalog/namespace prefix ") &&
-          e.contains("to the table name in CACHE TABLE AS SELECT"))
+        assert(
+          e.contains("It is not allowed to add catalog/namespace prefix ") &&
+            e.contains("to the table name in CACHE TABLE AS SELECT"))
       }
     }
   }
@@ -368,14 +366,16 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
           // and then check whether the table is cached with expected name
           sql(s"CACHE TABLE $db.cachedTable OPTIONS('storageLevel' 'MEMORY_ONLY')")
           assertCached(sql(s"SELECT * FROM $db.cachedTable"), s"$db.cachedTable", MEMORY_ONLY)
-          assert(spark.catalog.isCached(s"$db.cachedTable"),
+          assert(
+            spark.catalog.isCached(s"$db.cachedTable"),
             s"Table '$db.cachedTable' should be cached.")
 
           // Refresh the table 'cachedTable' in temp db with qualified table name, and then check
           // whether the table is still cached with the same name and storage level.
           sql(s"REFRESH TABLE $db.cachedTable")
           assertCached(sql(s"select * from $db.cachedTable"), s"$db.cachedTable", MEMORY_ONLY)
-          assert(spark.catalog.isCached(s"$db.cachedTable"),
+          assert(
+            spark.catalog.isCached(s"$db.cachedTable"),
             s"Table '$db.cachedTable' should be cached after refreshing with its qualified name.")
 
           // Change the active database to the temp db and refresh the table with unqualified
@@ -386,14 +386,14 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
           activateDatabase(db) {
             sql("REFRESH TABLE cachedTable")
             assertCached(sql("SELECT * FROM cachedTable"), s"$db.cachedTable", MEMORY_ONLY)
-            assert(spark.catalog.isCached("cachedTable"),
+            assert(
+              spark.catalog.isCached("cachedTable"),
               s"Table '$db.cachedTable' should be cached after refreshing with its " +
                 "unqualified name.")
           }
         }
       }
     }
-
 
     // This section tests when a table is cached with its unqualified name but it is refreshed
     // with its qualified name.
@@ -413,7 +413,8 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
           // check whether the table is still cached with the same name.
           sql("REFRESH TABLE cachedTable")
           assertCached(sql("SELECT * FROM cachedTable"), "cachedTable", DISK_ONLY)
-          assert(spark.catalog.isCached("cachedTable"),
+          assert(
+            spark.catalog.isCached("cachedTable"),
             "Table 'cachedTable' should be cached after refreshing with its unqualified name.")
 
           // Change the active database to the temp db and refresh the table with qualified
@@ -423,9 +424,9 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
           // 'default.cachedTable', instead of 'cachedTable'
           activateDatabase(db) {
             sql("REFRESH TABLE default.cachedTable")
-            assertCached(
-              sql("SELECT * FROM default.cachedTable"), "cachedTable", DISK_ONLY)
-            assert(spark.catalog.isCached("default.cachedTable"),
+            assertCached(sql("SELECT * FROM default.cachedTable"), "cachedTable", DISK_ONLY)
+            assert(
+              spark.catalog.isCached("default.cachedTable"),
               "Table 'cachedTable' should be cached after refreshing with its qualified name.")
           }
         }
@@ -483,7 +484,8 @@ class CachedTableSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
   private def getPartitionLocation(t: String, partition: String): String = {
     val information = sql(s"SHOW TABLE EXTENDED LIKE '$t' PARTITION ($partition)")
       .select("information")
-      .first().getString(0)
+      .first()
+      .getString(0)
     information
       .split("\\r?\\n")
       .filter(_.startsWith("Location:"))

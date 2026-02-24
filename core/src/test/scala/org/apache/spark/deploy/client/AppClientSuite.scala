@@ -54,8 +54,8 @@ class AppClientSuite
   private var securityManager: SecurityManager = null
 
   /**
-   * Start the local cluster.
-   * Note: local-cluster mode is insufficient because we want a reference to the Master.
+   * Start the local cluster. Note: local-cluster mode is insufficient because we want a reference
+   * to the Master.
    */
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -90,13 +90,14 @@ class AppClientSuite
 
   test("interface methods of AppClient using local Master") {
     Utils.tryWithResource(new AppClientInst(masterRpcEnv.address.toSparkURL)) { ci =>
-
       ci.client.start()
 
       // Client should connect with one Master which registers the application
       eventually(timeout(10.seconds), interval(10.millis)) {
         val apps = getApplications()
-        assert(ci.listener.connectedIdList.size === 1, "client listener should have one connection")
+        assert(
+          ci.listener.connectedIdList.size === 1,
+          "client listener should have one connection")
         assert(apps.length === 1, "master should have 1 registered app")
       }
 
@@ -113,7 +114,6 @@ class AppClientSuite
         val apps = getApplications()
         assert(apps.head.getExecutorLimit === numExecutorsRequested, s"executor request failed")
       }
-
 
       // Save the executor id before decommissioning so we can kill it
       val application = getApplications().head
@@ -133,7 +133,8 @@ class AppClientSuite
         // We only record decommissioning for the executor we've requested
         assert(ci.listener.execDecommissionedMap.size === 1)
         val decommissionInfo = ci.listener.execDecommissionedMap.get(executorId)
-        assert(decommissionInfo != null && decommissionInfo.workerHost.isDefined,
+        assert(
+          decommissionInfo != null && decommissionInfo.workerHost.isDefined,
           s"$executorId should have been decommissioned along with its worker")
       }
 
@@ -173,7 +174,9 @@ class AppClientSuite
       // Client should connect with one Master which registers the application
       eventually(timeout(10.seconds), interval(10.millis)) {
         val apps = getApplications()
-        assert(ci.listener.connectedIdList.size === 1, "client listener should have one connection")
+        assert(
+          ci.listener.connectedIdList.size === 1,
+          "client listener should have one connection")
         assert(apps.length === 1, "master should have 1 registered app")
       }
 
@@ -184,10 +187,7 @@ class AppClientSuite
       ereqs.memory("1024m")
       rpBuilder.require(ereqs)
       val rp = rpBuilder.build()
-      val resourceProfileToTotalExecs = Map(
-        ci.desc.defaultProfile -> 1,
-        rp -> 2
-      )
+      val resourceProfileToTotalExecs = Map(ci.desc.defaultProfile -> 1, rp -> 2)
       whenReady(
         ci.client.requestTotalExecutors(resourceProfileToTotalExecs),
         timeout(10.seconds),
@@ -198,8 +198,9 @@ class AppClientSuite
       eventually(timeout(10.seconds), interval(10.millis)) {
         val app = getApplications().head
         assert(app.getRequestedRPIds().length == 2)
-        assert(app.getResourceProfileById(DEFAULT_RESOURCE_PROFILE_ID)
-          === ci.desc.defaultProfile)
+        assert(
+          app.getResourceProfileById(DEFAULT_RESOURCE_PROFILE_ID)
+            === ci.desc.defaultProfile)
         assert(app.getResourceProfileById(rp.id) === rp)
         assert(app.getTargetExecutorNumForRPId(DEFAULT_RESOURCE_PROFILE_ID) === 1)
         assert(app.getTargetExecutorNumForRPId(rp.id) === 2)
@@ -219,7 +220,6 @@ class AppClientSuite
 
   test("request from AppClient before initialized with master") {
     Utils.tryWithResource(new AppClientInst(masterRpcEnv.address.toSparkURL)) { ci =>
-
       // requests to master should fail immediately
       whenReady(ci.client.requestTotalExecutors(3), timeout(1.seconds)) { success =>
         assert(success === false)
@@ -242,8 +242,16 @@ class AppClientSuite
   private def makeWorkers(cores: Int, memory: Int): Seq[Worker] = {
     (0 until numWorkers).map { i =>
       val rpcEnv = workerRpcEnvs(i)
-      val worker = new Worker(rpcEnv, 0, cores, memory, Array(masterRpcEnv.address),
-        Worker.ENDPOINT_NAME, null, conf, securityManager)
+      val worker = new Worker(
+        rpcEnv,
+        0,
+        cores,
+        memory,
+        Array(masterRpcEnv.address),
+        Worker.ENDPOINT_NAME,
+        null,
+        conf,
+        securityManager)
       rpcEnv.setupEndpoint(Worker.ENDPOINT_NAME, worker)
       worker
     }
@@ -292,7 +300,10 @@ class AppClientSuite
     }
 
     def executorRemoved(
-        id: String, message: String, exitStatus: Option[Int], workerHost: Option[String]): Unit = {
+        id: String,
+        message: String,
+        exitStatus: Option[Int],
+        workerHost: Option[String]): Unit = {
       execRemovedList.add(id)
     }
 
@@ -307,8 +318,13 @@ class AppClientSuite
   /** Create AppClient and supporting objects */
   private class AppClientInst(masterUrl: String) extends Closeable {
     val rpcEnv = RpcEnv.create("spark", Utils.localHostName(), 0, conf, securityManager)
-    private val cmd = new Command(TestExecutor.getClass.getCanonicalName.stripSuffix("$"),
-      List(), Map(), Seq(), Seq(), Seq())
+    private val cmd = new Command(
+      TestExecutor.getClass.getCanonicalName.stripSuffix("$"),
+      List(),
+      Map(),
+      Seq(),
+      Seq(),
+      Seq())
     private val defaultRp = DeployTestUtils.createDefaultResourceProfile(512)
     val desc =
       ApplicationDescription("AppClientSuite", Some(1), cmd, "ignored", defaultRp)

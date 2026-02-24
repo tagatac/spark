@@ -18,8 +18,8 @@
 package org.apache.spark.sql.pipelines.graph
 
 /**
- * Uncaught exception handler which first calls the delegate and then calls the
- * OnFailure function with the uncaught exception.
+ * Uncaught exception handler which first calls the delegate and then calls the OnFailure function
+ * with the uncaught exception.
  */
 class UncaughtExceptionHandler(
     delegate: Option[Thread.UncaughtExceptionHandler],
@@ -38,14 +38,12 @@ class UncaughtExceptionHandler(
 object UncaughtExceptionHandler {
 
   /**
-   * Sets a handler which calls 'onFailure' function with the uncaught exception.
-   * If the thread already has a uncaught exception handler, it will be called first
-   * before calling the 'onFailure' function.
+   * Sets a handler which calls 'onFailure' function with the uncaught exception. If the thread
+   * already has a uncaught exception handler, it will be called first before calling the
+   * 'onFailure' function.
    */
   def addHandler(thread: Thread, onFailure: Throwable => Unit): Unit = {
     val currentHandler = Option(thread.getUncaughtExceptionHandler)
-    thread.setUncaughtExceptionHandler(
-      new UncaughtExceptionHandler(currentHandler, onFailure)
-    )
+    thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler(currentHandler, onFailure))
   }
 }

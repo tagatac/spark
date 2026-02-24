@@ -41,14 +41,16 @@ private[spark] class ExecutorMonitor(
     listenerBus: LiveListenerBus,
     clock: Clock,
     metrics: ExecutorAllocationManagerSource = null)
-  extends SparkListener with CleanerListener with Logging {
+    extends SparkListener
+    with CleanerListener
+    with Logging {
 
-  private val idleTimeoutNs = TimeUnit.SECONDS.toNanos(
-    conf.get(DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT))
-  private val storageTimeoutNs = TimeUnit.SECONDS.toNanos(
-    conf.get(DYN_ALLOCATION_CACHED_EXECUTOR_IDLE_TIMEOUT))
-  private val shuffleTimeoutNs = TimeUnit.MILLISECONDS.toNanos(
-    conf.get(DYN_ALLOCATION_SHUFFLE_TRACKING_TIMEOUT))
+  private val idleTimeoutNs =
+    TimeUnit.SECONDS.toNanos(conf.get(DYN_ALLOCATION_EXECUTOR_IDLE_TIMEOUT))
+  private val storageTimeoutNs =
+    TimeUnit.SECONDS.toNanos(conf.get(DYN_ALLOCATION_CACHED_EXECUTOR_IDLE_TIMEOUT))
+  private val shuffleTimeoutNs =
+    TimeUnit.MILLISECONDS.toNanos(conf.get(DYN_ALLOCATION_SHUFFLE_TRACKING_TIMEOUT))
 
   private val fetchFromShuffleSvcEnabled = conf.get(SHUFFLE_SERVICE_ENABLED) &&
     conf.get(SHUFFLE_SERVICE_FETCH_RDD_ENABLED)
@@ -118,7 +120,8 @@ private[spark] class ExecutorMonitor(
       var newNextTimeout = Long.MaxValue
       timedOutExecs = executors.asScala
         .filter { case (_, exec) =>
-          !exec.pendingRemoval && !exec.hasActiveShuffle && !exec.decommissioning}
+          !exec.pendingRemoval && !exec.hasActiveShuffle && !exec.decommissioning
+        }
         .filter { case (_, exec) =>
           val deadline = exec.timeoutAt
           if (deadline > now) {
@@ -130,7 +133,7 @@ private[spark] class ExecutorMonitor(
             true
           }
         }
-        .map { case (name, exec) => (name, exec.resourceProfileId)}
+        .map { case (name, exec) => (name, exec.resourceProfileId) }
         .toSeq
       updateNextTimeout(newNextTimeout)
     }
@@ -244,8 +247,9 @@ private[spark] class ExecutorMonitor(
       }
 
       if (activatedExecs.nonEmpty) {
-        logDebug(s"Activated executors $activatedExecs due to shuffle data needed by new job" +
-          s"${event.jobId}.")
+        logDebug(
+          s"Activated executors $activatedExecs due to shuffle data needed by new job" +
+            s"${event.jobId}.")
       }
 
       if (needTimeoutUpdate) {
@@ -296,8 +300,9 @@ private[spark] class ExecutorMonitor(
       }
 
       if (deactivatedExecs.nonEmpty) {
-        logDebug(s"Executors $deactivatedExecs do not have active shuffle data after job " +
-          s"${event.jobId} finished.")
+        logDebug(
+          s"Executors $deactivatedExecs do not have active shuffle data after job " +
+            s"${event.jobId} finished.")
       }
     }
 
@@ -342,8 +347,9 @@ private[spark] class ExecutorMonitor(
   override def onExecutorAdded(event: SparkListenerExecutorAdded): Unit = {
     val exec = ensureExecutorIsTracked(event.executorId, event.executorInfo.resourceProfileId)
     exec.updateRunningTasks(0)
-    logInfo(log"New executor ${MDC(LogKeys.EXECUTOR_ID, event.executorId)} has registered " +
-      log"(new total is ${MDC(LogKeys.COUNT, executors.size())})")
+    logInfo(
+      log"New executor ${MDC(LogKeys.EXECUTOR_ID, event.executorId)} has registered " +
+        log"(new total is ${MDC(LogKeys.COUNT, executors.size())})")
   }
 
   private def decrementExecResourceProfileCount(rpId: Int): Unit = {
@@ -360,7 +366,7 @@ private[spark] class ExecutorMonitor(
         (event.reason != null && event.reason.startsWith(ExecutorDecommission.msgPrefix))) {
         metrics.gracefullyDecommissioned.inc()
       } else if (removed.decommissioning) {
-          metrics.decommissionUnfinished.inc()
+        metrics.decommissionUnfinished.inc()
       } else if (removed.pendingRemoval) {
         metrics.driverKilled.inc()
       } else {
@@ -385,13 +391,15 @@ private[spark] class ExecutorMonitor(
       return
     }
 
-    val exec = ensureExecutorIsTracked(event.blockUpdatedInfo.blockManagerId.executorId,
+    val exec = ensureExecutorIsTracked(
+      event.blockUpdatedInfo.blockManagerId.executorId,
       UNKNOWN_RESOURCE_PROFILE_ID)
 
     // Check if it is a shuffle file, or RDD to pick the correct codepath for update
     if (!event.blockUpdatedInfo.blockId.isInstanceOf[RDDBlockId]) {
       if (event.blockUpdatedInfo.blockId.isInstanceOf[ShuffleDataBlockId] &&
         shuffleTrackingEnabled) {
+
         /**
          * The executor monitor keeps track of locations of cache and shuffle blocks and this can
          * be used to decide which executor(s) Spark should shutdown first. Since we move shuffle
@@ -415,8 +423,8 @@ private[spark] class ExecutorMonitor(
     // available. So don't count blocks that can be served by the external service.
     if (storageLevel.isValid && (!fetchFromShuffleSvcEnabled || !storageLevel.useDisk)) {
       val hadCachedBlocks = exec.cachedBlocks.nonEmpty
-      val blocks = exec.cachedBlocks.getOrElseUpdate(blockId.rddId,
-        new mutable.BitSet(blockId.splitIndex))
+      val blocks =
+        exec.cachedBlocks.getOrElseUpdate(blockId.rddId, new mutable.BitSet(blockId.splitIndex))
       blocks += blockId.splitIndex
 
       if (!hadCachedBlocks) {
@@ -449,7 +457,7 @@ private[spark] class ExecutorMonitor(
     case _ =>
   }
 
-  override def rddCleaned(rddId: Int): Unit = { }
+  override def rddCleaned(rddId: Int): Unit = {}
 
   override def shuffleCleaned(shuffleId: Int): Unit = {
     // Only post the event if tracking is enabled
@@ -460,15 +468,17 @@ private[spark] class ExecutorMonitor(
     }
   }
 
-  override def broadcastCleaned(broadcastId: Long): Unit = { }
+  override def broadcastCleaned(broadcastId: Long): Unit = {}
 
-  override def accumCleaned(accId: Long): Unit = { }
+  override def accumCleaned(accId: Long): Unit = {}
 
-  override def checkpointCleaned(rddId: Long): Unit = { }
+  override def checkpointCleaned(rddId: Long): Unit = {}
 
   // Visible for testing.
   private[scheduler] def isExecutorIdle(id: String): Boolean = {
-    Option(executors.get(id)).map(_.isIdle).getOrElse(throw SparkCoreErrors.noExecutorIdleError(id))
+    Option(executors.get(id))
+      .map(_.isIdle)
+      .getOrElse(throw SparkCoreErrors.noExecutorIdleError(id))
   }
 
   // Visible for testing
@@ -489,26 +499,30 @@ private[spark] class ExecutorMonitor(
   }
 
   /**
-   * This method should be used when updating executor state. It guards against a race condition in
-   * which the `SparkListenerTaskStart` event is posted before the `SparkListenerBlockManagerAdded`
-   * event, which is possible because these events are posted in different threads. (see SPARK-4951)
+   * This method should be used when updating executor state. It guards against a race condition
+   * in which the `SparkListenerTaskStart` event is posted before the
+   * `SparkListenerBlockManagerAdded` event, which is possible because these events are posted in
+   * different threads. (see SPARK-4951)
    */
   // Visible for testing.
-  private[scheduler] def ensureExecutorIsTracked(
-      id: String, resourceProfileId: Int) : Tracker = {
+  private[scheduler] def ensureExecutorIsTracked(id: String, resourceProfileId: Int): Tracker = {
     val numExecsWithRpId = execResourceProfileCount.computeIfAbsent(resourceProfileId, _ => 0)
-    val execTracker = executors.computeIfAbsent(id, _ => {
+    val execTracker = executors.computeIfAbsent(
+      id,
+      _ => {
         val newcount = numExecsWithRpId + 1
         execResourceProfileCount.put(resourceProfileId, newcount)
-        logDebug(s"Executor added with ResourceProfile id: $resourceProfileId " +
-          s"count is now $newcount")
+        logDebug(
+          s"Executor added with ResourceProfile id: $resourceProfileId " +
+            s"count is now $newcount")
         new Tracker(resourceProfileId)
       })
     // if we had added executor before without knowing the resource profile id, fix it up
     if (execTracker.resourceProfileId == UNKNOWN_RESOURCE_PROFILE_ID &&
-        resourceProfileId != UNKNOWN_RESOURCE_PROFILE_ID) {
-      logDebug(s"Executor: $id, resource profile id was unknown, setting " +
-        s"it to $resourceProfileId")
+      resourceProfileId != UNKNOWN_RESOURCE_PROFILE_ID) {
+      logDebug(
+        s"Executor: $id, resource profile id was unknown, setting " +
+          s"it to $resourceProfileId")
       execTracker.resourceProfileId = resourceProfileId
       // fix up the counts for each resource profile id
       execResourceProfileCount.put(resourceProfileId, numExecsWithRpId + 1)

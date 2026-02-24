@@ -27,46 +27,53 @@ import org.apache.spark.sql.Dataset
 private[r] object RWrapperUtils extends Logging {
 
   /**
-   * DataFrame column check.
-   * When loading libsvm data, default columns "features" and "label" will be added.
-   * And "features" would conflict with RFormula default feature column names.
-   * Here is to change the column name to avoid "column already exists" error.
+   * DataFrame column check. When loading libsvm data, default columns "features" and "label" will
+   * be added. And "features" would conflict with RFormula default feature column names. Here is
+   * to change the column name to avoid "column already exists" error.
    *
-   * @param rFormula RFormula instance
-   * @param data Input dataset
+   * @param rFormula
+   *   RFormula instance
+   * @param data
+   *   Input dataset
    */
   def checkDataColumns(rFormula: RFormula, data: Dataset[_]): Unit = {
     if (data.schema.fieldNames.contains(rFormula.getFeaturesCol)) {
       val newFeaturesName = s"${Identifiable.randomUID(rFormula.getFeaturesCol)}"
-      logInfo(log"data containing ${MDC(FEATURE_COLUMN, rFormula.getFeaturesCol)} column, " +
-        log"using new name ${MDC(NEW_FEATURE_COLUMN_NAME, newFeaturesName)} instead")
+      logInfo(
+        log"data containing ${MDC(FEATURE_COLUMN, rFormula.getFeaturesCol)} column, " +
+          log"using new name ${MDC(NEW_FEATURE_COLUMN_NAME, newFeaturesName)} instead")
       rFormula.setFeaturesCol(newFeaturesName)
     }
 
     if (rFormula.getForceIndexLabel && data.schema.fieldNames.contains(rFormula.getLabelCol)) {
       val newLabelName = s"${Identifiable.randomUID(rFormula.getLabelCol)}"
-      logInfo(log"data containing ${MDC(LABEL_COLUMN, rFormula.getLabelCol)} column and we force " +
-        log"to index label, using new name ${MDC(NEW_LABEL_COLUMN_NAME, newLabelName)} instead")
+      logInfo(
+        log"data containing ${MDC(LABEL_COLUMN, rFormula.getLabelCol)} column and we force " +
+          log"to index label, using new name ${MDC(NEW_LABEL_COLUMN_NAME, newLabelName)} instead")
       rFormula.setLabelCol(newLabelName)
     }
   }
 
   /**
-   * Get the feature names and original labels from the schema
-   * of DataFrame transformed by RFormulaModel.
+   * Get the feature names and original labels from the schema of DataFrame transformed by
+   * RFormulaModel.
    *
-   * @param rFormulaModel The RFormulaModel instance.
-   * @param data Input dataset.
-   * @return The feature names and original labels.
+   * @param rFormulaModel
+   *   The RFormulaModel instance.
+   * @param data
+   *   Input dataset.
+   * @return
+   *   The feature names and original labels.
    */
   def getFeaturesAndLabels(
       rFormulaModel: RFormulaModel,
       data: Dataset[_]): (Array[String], Array[String]) = {
     val schema = rFormulaModel.transform(data).schema
-    val featureAttrs = AttributeGroup.fromStructField(schema(rFormulaModel.getFeaturesCol))
-      .attributes.get
+    val featureAttrs =
+      AttributeGroup.fromStructField(schema(rFormulaModel.getFeaturesCol)).attributes.get
     val features = featureAttrs.map(_.name.get)
-    val labelAttr = Attribute.fromStructField(schema(rFormulaModel.getLabelCol))
+    val labelAttr = Attribute
+      .fromStructField(schema(rFormulaModel.getLabelCol))
       .asInstanceOf[NominalAttribute]
     val labels = labelAttr.values.get
     (features, labels)

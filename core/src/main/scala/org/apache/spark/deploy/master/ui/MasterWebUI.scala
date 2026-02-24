@@ -36,12 +36,14 @@ import org.apache.spark.util.ArrayImplicits._
 /**
  * Web UI server for the standalone master.
  */
-private[master]
-class MasterWebUI(
-    val master: Master,
-    requestedPort: Int)
-  extends WebUI(master.securityMgr, master.securityMgr.getSSLOptions("standalone"),
-    requestedPort, master.conf, name = "MasterUI") with Logging {
+private[master] class MasterWebUI(val master: Master, requestedPort: Int)
+    extends WebUI(
+      master.securityMgr,
+      master.securityMgr.getSSLOptions("standalone"),
+      requestedPort,
+      master.conf,
+      name = "MasterUI")
+    with Logging {
 
   val masterEndpointRef = master.self
   val killEnabled = master.conf.get(UI_KILL_ENABLED)
@@ -57,41 +59,57 @@ class MasterWebUI(
     attachPage(new LogPage(this))
     val envPage = new EnvironmentPage(this, master.conf)
     attachPage(envPage)
-    this.attachHandler(createServletHandler("/environment",
-      (request: HttpServletRequest) => envPage.render(request),
-      master.conf))
+    this.attachHandler(
+      createServletHandler(
+        "/environment",
+        (request: HttpServletRequest) => envPage.render(request),
+        master.conf))
     attachPage(masterPage)
     addStaticHandler(MasterWebUI.STATIC_RESOURCE_DIR)
     addRenderLogHandler(this, master.conf)
     if (killEnabled) {
-      attachHandler(createRedirectHandler(
-        "/app/kill", "/", masterPage.handleAppKillRequest, httpMethods = Set("POST")))
-      attachHandler(createRedirectHandler(
-        "/driver/kill", "/", masterPage.handleDriverKillRequest, httpMethods = Set("POST")))
+      attachHandler(
+        createRedirectHandler(
+          "/app/kill",
+          "/",
+          masterPage.handleAppKillRequest,
+          httpMethods = Set("POST")))
+      attachHandler(
+        createRedirectHandler(
+          "/driver/kill",
+          "/",
+          masterPage.handleDriverKillRequest,
+          httpMethods = Set("POST")))
     }
     if (decommissionEnabled) {
-      attachHandler(createServletHandler("/workers/kill", new HttpServlet {
-        override def doPost(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
-          val hostnames: Seq[String] = Option(req.getParameterValues("host"))
-            .getOrElse(Array[String]()).toImmutableArraySeq
-          if (!isDecommissioningRequestAllowed(req)) {
-            resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
-          } else {
-            val removedWorkers = masterEndpointRef.askSync[Integer](
-              DecommissionWorkersOnHosts(hostnames))
-            logInfo(log"Decommissioning of hosts ${MDC(HOSTS, hostnames)}" +
-              log" decommissioned ${MDC(NUM_REMOVED_WORKERS, removedWorkers)} workers")
-            if (removedWorkers > 0) {
-              resp.setStatus(HttpServletResponse.SC_OK)
-            } else if (removedWorkers == 0) {
-              resp.sendError(HttpServletResponse.SC_NOT_FOUND)
-            } else {
-              // We shouldn't even see this case.
-              resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+      attachHandler(
+        createServletHandler(
+          "/workers/kill",
+          new HttpServlet {
+            override def doPost(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+              val hostnames: Seq[String] = Option(req.getParameterValues("host"))
+                .getOrElse(Array[String]())
+                .toImmutableArraySeq
+              if (!isDecommissioningRequestAllowed(req)) {
+                resp.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED)
+              } else {
+                val removedWorkers =
+                  masterEndpointRef.askSync[Integer](DecommissionWorkersOnHosts(hostnames))
+                logInfo(
+                  log"Decommissioning of hosts ${MDC(HOSTS, hostnames)}" +
+                    log" decommissioned ${MDC(NUM_REMOVED_WORKERS, removedWorkers)} workers")
+                if (removedWorkers > 0) {
+                  resp.setStatus(HttpServletResponse.SC_OK)
+                } else if (removedWorkers == 0) {
+                  resp.sendError(HttpServletResponse.SC_NOT_FOUND)
+                } else {
+                  // We shouldn't even see this case.
+                  resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                }
+              }
             }
-          }
-        }
-      }, ""))
+          },
+          ""))
     }
   }
 

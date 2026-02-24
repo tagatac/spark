@@ -60,8 +60,7 @@ case class FlowsForTables(selectedTables: Set[TableIdentifier]) extends FlowFilt
 
   private def filterCondition(
       flows: Seq[ResolvedFlow],
-      useFilterNot: Boolean
-  ): Seq[ResolvedFlow] = {
+      useFilterNot: Boolean): Seq[ResolvedFlow] = {
     val (matchingFlows, nonMatchingFlows) = flows.partition { f =>
       selectedTables.contains(f.destinationIdentifier)
     }

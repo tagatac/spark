@@ -49,22 +49,26 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
   }
 
   def handleAppKillRequest(request: HttpServletRequest): Unit = {
-    handleKillRequest(request, id => {
-      parent.master.idToApp.get(id).foreach { app =>
-        parent.master.removeApplication(app, ApplicationState.KILLED)
-      }
-    })
+    handleKillRequest(
+      request,
+      id => {
+        parent.master.idToApp.get(id).foreach { app =>
+          parent.master.removeApplication(app, ApplicationState.KILLED)
+        }
+      })
   }
 
   def handleDriverKillRequest(request: HttpServletRequest): Unit = {
-    handleKillRequest(request, id => {
-      master.ask[KillDriverResponse](RequestKillDriver(id))
-    })
+    handleKillRequest(
+      request,
+      id => {
+        master.ask[KillDriverResponse](RequestKillDriver(id))
+      })
   }
 
   private def handleKillRequest(request: HttpServletRequest, action: String => Unit): Unit = {
     if (parent.killEnabled &&
-        parent.master.securityMgr.checkModifyPermissions(request.getRemoteUser)) {
+      parent.master.securityMgr.checkModifyPermissions(request.getRemoteUser)) {
       val killFlag = Option(request.getParameter("terminate")).getOrElse("false").toBoolean
       val id = Option(request.getParameter("id"))
       if (id.isDefined && killFlag) {
@@ -82,18 +86,20 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
   }
 
   private def formatMasterResourcesInUse(aliveWorkers: Array[WorkerInfo]): String = {
-    val totalInfo = aliveWorkers.map(_.resourcesInfo)
+    val totalInfo = aliveWorkers
+      .map(_.resourcesInfo)
       .flatMap(_.iterator)
       .groupBy(_._1) // group by resource name
       .map { case (rName, rInfoArr) =>
-      rName -> rInfoArr.map(_._2.addresses.length).sum
-    }
-    val usedInfo = aliveWorkers.map(_.resourcesInfoUsed)
+        rName -> rInfoArr.map(_._2.addresses.length).sum
+      }
+    val usedInfo = aliveWorkers
+      .map(_.resourcesInfoUsed)
       .flatMap(_.iterator)
       .groupBy(_._1) // group by resource name
       .map { case (rName, rInfoArr) =>
-      rName -> rInfoArr.map(_._2.addresses.length).sum
-    }
+        rName -> rInfoArr.map(_._2.addresses.length).sum
+      }
     formatResourcesUsed(totalInfo, usedInfo)
   }
 
@@ -111,21 +117,44 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
     val aliveWorkers = state.workers.filter(_.state == WorkerState.ALIVE)
     val workerTable = UIUtils.listingTable(workerHeaders, workerRow(showResourceColumn), workers)
 
-    val appHeaders = Seq("Application ID", "Name", "Cores", "Memory per Executor",
-      "Resources Per Executor", "Submitted Time", "User", "State", "Duration")
+    val appHeaders = Seq(
+      "Application ID",
+      "Name",
+      "Cores",
+      "Memory per Executor",
+      "Resources Per Executor",
+      "Submitted Time",
+      "User",
+      "State",
+      "Duration")
     val activeApps = state.activeApps.sortBy(_.startTime).reverse
     val activeAppsTable = UIUtils.listingTable(appHeaders, appRow, activeApps)
     val completedApps = state.completedApps.sortBy(_.endTime).reverse
     val completedAppsTable = UIUtils.listingTable(appHeaders, appRow, completedApps)
 
-    val activeDriverHeaders = Seq("Submission ID", "Submitted Time", "Worker", "State", "Cores",
-      "Memory", "Resources", "Main Class", "Duration")
+    val activeDriverHeaders = Seq(
+      "Submission ID",
+      "Submitted Time",
+      "Worker",
+      "State",
+      "Cores",
+      "Memory",
+      "Resources",
+      "Main Class",
+      "Duration")
     val activeDrivers = state.activeDrivers.sortBy(_.startTime).reverse
     val activeDriversTable =
       UIUtils.listingTable(activeDriverHeaders, activeDriverRow, activeDrivers)
 
-    val completedDriverHeaders = Seq("Submission ID", "Submitted Time", "Worker", "State", "Cores",
-      "Memory", "Resources", "Main Class")
+    val completedDriverHeaders = Seq(
+      "Submission ID",
+      "Submitted Time",
+      "Worker",
+      "State",
+      "Cores",
+      "Memory",
+      "Resources",
+      "Main Class")
     val completedDrivers = state.completedDrivers.sortBy(_.startTime).reverse
     val completedDriversTable =
       UIUtils.listingTable(completedDriverHeaders, completedDriverRow, completedDrivers)
@@ -135,18 +164,20 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
     def hasDrivers: Boolean = activeDrivers.length > 0 || completedDrivers.length > 0
 
     val content =
-        <div class="row">
+      <div class="row">
           <div class="col-12">
             <ul class="list-unstyled">
               <li><strong>URL:</strong> {state.uri}</li>
               {
-                state.restUri.map { uri =>
-                  <li>
+        state.restUri
+          .map { uri =>
+            <li>
                     <strong>REST URL:</strong> {uri}
                     <span class="rest-uri"> (cluster mode)</span>
                   </li>
-                }.getOrElse { Seq.empty }
-              }
+          }
+          .getOrElse { Seq.empty }
+      }
               <li><strong>Workers:</strong> {aliveWorkers.length} Alive,
                 {workers.count(_.state == WorkerState.DEAD)} Dead,
                 {workers.count(_.state == WorkerState.DECOMMISSIONED)} Decommissioned,
@@ -212,8 +243,9 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
         </div>
 
         <div>
-          {if (hasDrivers) {
-             <div class="row">
+          {
+        if (hasDrivers) {
+          <div class="row">
                <div class="col-12">
                  <span class="collapse-aggregated-activeDrivers collapse-table"
                      data-collapse-name="collapse-aggregated-activeDrivers"
@@ -228,8 +260,8 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
                  </div>
                </div>
              </div>
-           }
-          }
+        }
+      }
         </div>
 
         <div class="row">
@@ -250,8 +282,8 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
 
         <div>
           {
-            if (hasDrivers) {
-              <div class="row">
+        if (hasDrivers) {
+          <div class="row">
                 <div class="col-12">
                   <span class="collapse-aggregated-completedDrivers collapse-table"
                       data-collapse-name="collapse-aggregated-completedDrivers"
@@ -266,8 +298,8 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
                   </div>
                 </div>
               </div>
-            }
-          }
+        }
+      }
         </div>;
 
     UIUtils.basicSparkPage(request, content, title.getOrElse("Spark Master at " + state.uri))
@@ -277,14 +309,14 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
     <tr>
       <td>
         {
-          if (worker.isAlive()) {
-            <a href={UIUtils.makeHref(parent.master.reverseProxy, worker.id, worker.webUiAddress)}>
+      if (worker.isAlive()) {
+        <a href={UIUtils.makeHref(parent.master.reverseProxy, worker.id, worker.webUiAddress)}>
               {worker.id}
             </a>
-          } else {
-            worker.id
-          }
-        }
+      } else {
+        worker.id
+      }
+    }
       </td>
       <td>{worker.host}:{worker.port}</td>
       <td>{worker.state}</td>
@@ -293,23 +325,26 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
         {Utils.megabytesToString(worker.memory)}
         ({Utils.megabytesToString(worker.memoryUsed)} Used)
       </td>
-      {if (showResourceColumn) {
+      {
+      if (showResourceColumn) {
         <td>{formatWorkerResourcesDetails(worker)}</td>
-      }}
+      }
+    }
     </tr>
   }
 
   private def appRow(app: ApplicationInfo): Seq[Node] = {
-    val killLink = if (parent.killEnabled &&
-      (app.state == ApplicationState.RUNNING || app.state == ApplicationState.WAITING)) {
-      <form action="app/kill/" method="POST" style="display:inline">
+    val killLink =
+      if (parent.killEnabled &&
+        (app.state == ApplicationState.RUNNING || app.state == ApplicationState.WAITING)) {
+        <form action="app/kill/" method="POST" style="display:inline">
         <input type="hidden" name="id" value={app.id}/>
         <input type="hidden" name="terminate" value="true"/>
         <a href="#"
            data-kill-message={s"Are you sure you want to kill application ${app.id} ?"}
            class="kill-link">(kill)</a>
       </form>
-    }
+      }
     <tr>
       <td>
         <a href={"app/?appId=" + app.id}>{app.id}</a>
@@ -317,13 +352,14 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
       </td>
       <td>
         {
-          if (app.isFinished || app.desc.appUiUrl.isBlank()) {
-            app.desc.name
-          } else {
-            <a href={UIUtils.makeHref(parent.master.reverseProxy,
-              app.id, app.desc.appUiUrl)}>{app.desc.name}</a>
-          }
-        }
+      if (app.isFinished || app.desc.appUiUrl.isBlank()) {
+        app.desc.name
+      } else {
+        <a href={UIUtils.makeHref(parent.master.reverseProxy, app.id, app.desc.appUiUrl)}>{
+          app.desc.name
+        }</a>
+      }
+    }
       </td>
       <td>
         {app.coresGranted}
@@ -348,28 +384,33 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
   private def completedDriverRow(driver: DriverInfo) = driverRow(driver, showDuration = false)
 
   private def driverRow(driver: DriverInfo, showDuration: Boolean): Seq[Node] = {
-    val killLink = if (parent.killEnabled &&
-      (driver.state == DriverState.RUNNING ||
-        driver.state == DriverState.SUBMITTED)) {
-      <form action="driver/kill/" method="POST" style="display:inline">
+    val killLink =
+      if (parent.killEnabled &&
+        (driver.state == DriverState.RUNNING ||
+          driver.state == DriverState.SUBMITTED)) {
+        <form action="driver/kill/" method="POST" style="display:inline">
         <input type="hidden" name="id" value={driver.id}/>
         <input type="hidden" name="terminate" value="true"/>
         <a href="#"
            data-kill-message={s"Are you sure you want to kill driver ${driver.id} ?"}
            class="kill-link">(kill)</a>
       </form>
-    }
+      }
     <tr>
       <td>{driver.id} {killLink}</td>
       <td>{UIUtils.formatDate(driver.submitDate)}</td>
-      <td>{driver.worker.map(w =>
-        if (w.isAlive()) {
-          <a href={UIUtils.makeHref(parent.master.reverseProxy, w.id, w.webUiAddress)}>
+      <td>{
+      driver.worker
+        .map(w =>
+          if (w.isAlive()) {
+            <a href={UIUtils.makeHref(parent.master.reverseProxy, w.id, w.webUiAddress)}>
             {w.id}
           </a>
-        } else {
-          w.id
-        }).getOrElse("None")}
+          } else {
+            w.id
+          })
+        .getOrElse("None")
+    }
       </td>
       <td>{driver.state}</td>
       <td sorttable_customkey={driver.desc.cores.toString}>
@@ -380,11 +421,13 @@ private[ui] class MasterPage(parent: MasterWebUI) extends WebUIPage("") {
       </td>
       <td>{formatResourcesAddresses(driver.resources)}</td>
       <td>{driver.desc.command.arguments(2)}</td>
-      {if (showDuration) {
+      {
+      if (showDuration) {
         <td sorttable_customkey={(-driver.startTime).toString}>
           {UIUtils.formatDuration(System.currentTimeMillis() - driver.startTime)}
         </td>
-      }}
+      }
+    }
     </tr>
   }
 }

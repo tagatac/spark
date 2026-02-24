@@ -20,20 +20,18 @@ package org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.shuffle.checksum.RowBasedChecksum
 
 /**
- * A concrete implementation of RowBasedChecksum for computing checksum for UnsafeRow.
- * The checksum for each row is computed by first casting or converting the baseObject
- * in the UnsafeRow to a byte array, and then computing the checksum for the byte array.
+ * A concrete implementation of RowBasedChecksum for computing checksum for UnsafeRow. The
+ * checksum for each row is computed by first casting or converting the baseObject in the
+ * UnsafeRow to a byte array, and then computing the checksum for the byte array.
  *
- * Note that the input key is ignored in the checksum computation. As the Spark shuffle
- * currently uses a PartitionIdPassthrough partitioner, the keys are already the partition
- * IDs for sending the data, and they are the same for all rows in the same partition.
+ * Note that the input key is ignored in the checksum computation. As the Spark shuffle currently
+ * uses a PartitionIdPassthrough partitioner, the keys are already the partition IDs for sending
+ * the data, and they are the same for all rows in the same partition.
  */
 class UnsafeRowChecksum extends RowBasedChecksum() {
 
   override protected def calculateRowChecksum(key: Any, value: Any): Long = {
-    assert(
-      value.isInstanceOf[UnsafeRow],
-      "Expecting UnsafeRow but got " + value.getClass.getName)
+    assert(value.isInstanceOf[UnsafeRow], "Expecting UnsafeRow but got " + value.getClass.getName)
 
     // Casts or converts the baseObject in UnsafeRow to a byte array.
     val unsafeRow = value.asInstanceOf[UnsafeRow]
@@ -41,8 +39,7 @@ class UnsafeRowChecksum extends RowBasedChecksum() {
       unsafeRow.getBaseObject,
       unsafeRow.getBaseOffset,
       unsafeRow.getSizeInBytes,
-      0
-    )
+      0)
   }
 }
 

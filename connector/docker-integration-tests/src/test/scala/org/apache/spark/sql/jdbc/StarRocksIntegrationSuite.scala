@@ -51,24 +51,36 @@ class StarRocksIntegrationSuite extends SharedJDBCIntegrationSuite {
   override def dataPreparation(conn: Connection): Unit = {
     conn.prepareStatement("CREATE DATABASE foo").executeUpdate()
     conn.prepareStatement("USE foo").executeUpdate()
-    conn.prepareStatement("CREATE TABLE tbl (x INTEGER, y VARCHAR(8)) DISTRIBUTED BY HASH(x)")
+    conn
+      .prepareStatement("CREATE TABLE tbl (x INTEGER, y VARCHAR(8)) DISTRIBUTED BY HASH(x)")
       .executeUpdate()
     conn.prepareStatement("INSERT INTO tbl VALUES (42,'fred')").executeUpdate()
     conn.prepareStatement("INSERT INTO tbl VALUES (17,'dave')").executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE numbers (nor INT, big BIGINT, deci DECIMAL(38,18), "
-      + "dbl DOUBLE, tiny TINYINT) DISTRIBUTED BY HASH(nor)").executeUpdate()
-
-    conn.prepareStatement("INSERT INTO numbers VALUES (123456789, 123456789012345, "
-      + "123456789012345.123456789012345, 1.0000000000000002, -128)").executeUpdate()
-
-    conn.prepareStatement("CREATE TABLE dates (d DATE, dt DATETIME) DISTRIBUTED BY HASH(d)")
-      .executeUpdate()
-    conn.prepareStatement("INSERT INTO dates VALUES ('1991-11-09', '1996-01-01 01:23:45')")
+    conn
+      .prepareStatement(
+        "CREATE TABLE numbers (nor INT, big BIGINT, deci DECIMAL(38,18), "
+          + "dbl DOUBLE, tiny TINYINT) DISTRIBUTED BY HASH(nor)")
       .executeUpdate()
 
-    conn.prepareStatement("CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c STRING) " +
-      "DISTRIBUTED BY HASH(a)").executeUpdate()
+    conn
+      .prepareStatement(
+        "INSERT INTO numbers VALUES (123456789, 123456789012345, "
+          + "123456789012345.123456789012345, 1.0000000000000002, -128)")
+      .executeUpdate()
+
+    conn
+      .prepareStatement("CREATE TABLE dates (d DATE, dt DATETIME) DISTRIBUTED BY HASH(d)")
+      .executeUpdate()
+    conn
+      .prepareStatement("INSERT INTO dates VALUES ('1991-11-09', '1996-01-01 01:23:45')")
+      .executeUpdate()
+
+    conn
+      .prepareStatement(
+        "CREATE TABLE strings (a CHAR(10), b VARCHAR(10), c STRING) " +
+          "DISTRIBUTED BY HASH(a)")
+      .executeUpdate()
     conn.prepareStatement("INSERT INTO strings VALUES ('the', 'quick', 'brown')").executeUpdate()
   }
 
@@ -111,9 +123,7 @@ class StarRocksIntegrationSuite extends SharedJDBCIntegrationSuite {
   test("Date types") {
     withDefaultTimeZone(UTC) {
       val df = spark.read.jdbc(jdbcUrl, "foo.dates", new Properties)
-      checkAnswer(df, Row(
-        Date.valueOf("1991-11-09"),
-        Timestamp.valueOf("1996-01-01 01:23:45")))
+      checkAnswer(df, Row(Date.valueOf("1991-11-09"), Timestamp.valueOf("1996-01-01 01:23:45")))
     }
   }
 

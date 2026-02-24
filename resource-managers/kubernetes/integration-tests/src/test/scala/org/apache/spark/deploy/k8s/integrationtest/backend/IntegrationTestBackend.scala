@@ -30,9 +30,12 @@ private[spark] trait IntegrationTestBackend {
   def getKubernetesClient: KubernetesClient
   def cleanUp(): Unit = {}
   def describePods(labels: String): Seq[String] =
-    ProcessUtils.executeProcess(
-      Array("bash", "-c", s"kubectl describe pods --all-namespaces -l $labels"),
-      timeout = 60, dumpOutput = false).filter { !_.contains("https://github.com/kubernetes") }
+    ProcessUtils
+      .executeProcess(
+        Array("bash", "-c", s"kubectl describe pods --all-namespaces -l $labels"),
+        timeout = 60,
+        dumpOutput = false)
+      .filter { !_.contains("https://github.com/kubernetes") }
 }
 
 private[spark] object IntegrationTestBackendFactory {
@@ -45,8 +48,10 @@ private[spark] object IntegrationTestBackendFactory {
         new KubeConfigBackend(System.getProperty(CONFIG_KEY_KUBE_CONFIG_CONTEXT))
       case BACKEND_DOCKER_DESKTOP => DockerForDesktopBackend
       case BACKEND_RANCHER_DESKTOP => RancherDesktopBackend
-      case _ => throw new IllegalArgumentException("Invalid " +
-        CONFIG_KEY_DEPLOY_MODE + ": " + deployMode)
+      case _ =>
+        throw new IllegalArgumentException(
+          "Invalid " +
+            CONFIG_KEY_DEPLOY_MODE + ": " + deployMode)
     }
   }
 }

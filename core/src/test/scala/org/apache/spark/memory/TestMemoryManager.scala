@@ -25,7 +25,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.storage.BlockId
 
 class TestMemoryManager(conf: SparkConf)
-  extends MemoryManager(conf, numCores = 1, Long.MaxValue, Long.MaxValue) {
+    extends MemoryManager(conf, numCores = 1, Long.MaxValue, Long.MaxValue) {
 
   @GuardedBy("this")
   private var consequentOOM = 0
@@ -67,7 +67,7 @@ class TestMemoryManager(conf: SparkConf)
     require(
       newMemoryUsage >= 0,
       s"Attempting to free $numBytes of memory for task attempt $taskAttemptId, but it only " +
-      s"allocated $existingMemoryUsage bytes of memory")
+        s"allocated $existingMemoryUsage bytes of memory")
     memoryForTask(taskAttemptId) = newMemoryUsage
   }
 
@@ -104,16 +104,16 @@ class TestMemoryManager(conf: SparkConf)
   override def maxOffHeapStorageMemory: Long = 0L
 
   /**
-   * Causes the next call to [[acquireExecutionMemory()]] to fail to allocate
-   * memory (returning `0`), simulating low-on-memory / out-of-memory conditions.
+   * Causes the next call to [[acquireExecutionMemory()]] to fail to allocate memory (returning
+   * `0`), simulating low-on-memory / out-of-memory conditions.
    */
   def markExecutionAsOutOfMemoryOnce(): Unit = {
     markConsequentOOM(1)
   }
 
   /**
-   * Causes the next `n` calls to [[acquireExecutionMemory()]] to fail to allocate
-   * memory (returning `0`), simulating low-on-memory / out-of-memory conditions.
+   * Causes the next `n` calls to [[acquireExecutionMemory()]] to fail to allocate memory
+   * (returning `0`), simulating low-on-memory / out-of-memory conditions.
    */
   def markConsequentOOM(n: Int): Unit = synchronized {
     consequentOOM += n

@@ -32,9 +32,7 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 /** The base class of reader which will read the information of event log file(s). */
-abstract class EventLogFileReader(
-    protected val fileSystem: FileSystem,
-    val rootPath: Path) {
+abstract class EventLogFileReader(protected val fileSystem: FileSystem, val rootPath: Path) {
 
   protected def fileSizeForDFS(path: Path): Option[Long] = {
     Utils.tryWithResource(fileSystem.open(path)) { in =>
@@ -60,8 +58,8 @@ abstract class EventLogFileReader(
   def lastIndex: Option[Long]
 
   /**
-   * Returns the size of file for the last index of event log files. Returns its size for
-   * single event log file.
+   * Returns the size of file for the last index of event log files. Returns its size for single
+   * event log file.
    */
   def fileSizeForLastIndex: Long
 
@@ -75,15 +73,15 @@ abstract class EventLogFileReader(
   def fileSizeForLastIndexForDFS: Option[Long]
 
   /**
-   * Returns the modification time for the last index (itself for single event log file)
-   * of event log files.
+   * Returns the modification time for the last index (itself for single event log file) of event
+   * log files.
    */
   def modificationTime: Long
 
   /**
    * This method compresses the files passed in, and writes the compressed data out into the
-   * ZipOutputStream passed in. Each file is written as a new ZipEntry with its name being
-   * the name of the file being compressed.
+   * ZipOutputStream passed in. Each file is written as a new ZipEntry with its name being the
+   * name of the file being compressed.
    */
   def zipEventLogFiles(zipStream: ZipOutputStream): Unit
 
@@ -101,10 +99,7 @@ object EventLogFileReader extends Logging {
   // A cache for compression codecs to avoid creating the same codec many times
   private val codecMap = new ConcurrentHashMap[String, CompressionCodec]()
 
-  def apply(
-      fs: FileSystem,
-      path: Path,
-      lastIndex: Option[Long]): EventLogFileReader = {
+  def apply(fs: FileSystem, path: Path, lastIndex: Option[Long]): EventLogFileReader = {
     lastIndex match {
       case Some(_) => new RollingEventLogFilesFileReader(fs, path)
       case None => new SingleFileEventLogFileReader(fs, path)
@@ -121,7 +116,7 @@ object EventLogFileReader extends Logging {
     } else if (isRollingEventLogs(status)) {
       val files = fs.listStatus(status.getPath)
       if (files.exists(RollingEventLogFilesWriter.isEventLogFile) &&
-          files.exists(RollingEventLogFilesWriter.isAppStatusFile)) {
+        files.exists(RollingEventLogFilesWriter.isAppStatusFile)) {
         Some(new RollingEventLogFilesFileReader(fs, status.getPath))
       } else {
         logDebug(s"Rolling event log directory have no event log file at ${status.getPath}")
@@ -135,7 +130,8 @@ object EventLogFileReader extends Logging {
   /**
    * Opens an event log file and returns an input stream that contains the event data.
    *
-   * @return input stream that holds one JSON record per line.
+   * @return
+   *   input stream that holds one JSON record per line.
    */
   def openEventLog(log: Path, fs: FileSystem): InputStream = {
     val in = new BufferedInputStream(fs.open(log))
@@ -153,10 +149,10 @@ object EventLogFileReader extends Logging {
 
   private def isSingleEventLog(status: FileStatus): Boolean = {
     !status.isDirectory &&
-      // FsHistoryProvider used to generate a hidden file which can't be read.  Accidentally
-      // reading a garbage file is safe, but we would log an error which can be scary to
-      // the end-user.
-      !status.getPath.getName.startsWith(".")
+    // FsHistoryProvider used to generate a hidden file which can't be read.  Accidentally
+    // reading a garbage file is safe, but we would log an error which can be scary to
+    // the end-user.
+    !status.getPath.getName.startsWith(".")
   }
 
   private def isRollingEventLogs(status: FileStatus): Boolean = {
@@ -167,15 +163,15 @@ object EventLogFileReader extends Logging {
 /**
  * The reader which will read the information of single event log file.
  *
- * This reader gets the status of event log file only once when required;
- * It may not give "live" status of file that could be changing concurrently, and
- * FileNotFoundException could occur if the log file is renamed before getting the
- * status of log file.
+ * This reader gets the status of event log file only once when required; It may not give "live"
+ * status of file that could be changing concurrently, and FileNotFoundException could occur if
+ * the log file is renamed before getting the status of log file.
  */
 private[history] class SingleFileEventLogFileReader(
     fs: FileSystem,
     path: Path,
-    maybeStatus: Option[FileStatus]) extends EventLogFileReader(fs, path) {
+    maybeStatus: Option[FileStatus])
+    extends EventLogFileReader(fs, path) {
   private lazy val status = maybeStatus.getOrElse(fileSystem.getFileStatus(rootPath))
 
   def this(fs: FileSystem, path: Path) = this(fs, path, None)
@@ -184,7 +180,8 @@ private[history] class SingleFileEventLogFileReader(
 
   override def fileSizeForLastIndex: Long = status.getLen
 
-  override def completed: Boolean = !rootPath.getName.stripSuffix(EventLogFileWriter.COMPACTED)
+  override def completed: Boolean = !rootPath.getName
+    .stripSuffix(EventLogFileWriter.COMPACTED)
     .endsWith(EventLogFileWriter.IN_PROGRESS)
 
   override def fileSizeForLastIndexForDFS: Option[Long] = {
@@ -211,12 +208,11 @@ private[history] class SingleFileEventLogFileReader(
 /**
  * The reader which will read the information of rolled multiple event log files.
  *
- * This reader lists the files only once; if caller would like to play with updated list,
- * it needs to create another reader instance.
+ * This reader lists the files only once; if caller would like to play with updated list, it needs
+ * to create another reader instance.
  */
-private[history] class RollingEventLogFilesFileReader(
-    fs: FileSystem,
-    path: Path) extends EventLogFileReader(fs, path) {
+private[history] class RollingEventLogFilesFileReader(fs: FileSystem, path: Path)
+    extends EventLogFileReader(fs, path) {
   import RollingEventLogFilesWriter._
 
   private lazy val files: Seq[FileStatus] = {
@@ -240,8 +236,10 @@ private[history] class RollingEventLogFilesFileReader(
     }
     val filesToRead = dropBeforeLastCompactFile(eventLogFiles)
     val indices = filesToRead.map { file => getEventLogFileIndex(file.getPath.getName) }
-    require((indices.head to indices.last) == indices, "Found missing event log file, expected" +
-      s" indices: ${indices.head to indices.last}, actual: ${indices}")
+    require(
+      (indices.head to indices.last) == indices,
+      "Found missing event log file, expected" +
+        s" indices: ${indices.head to indices.last}, actual: ${indices}")
     filesToRead
   }
 

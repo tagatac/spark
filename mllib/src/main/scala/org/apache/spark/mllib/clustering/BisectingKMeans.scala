@@ -34,26 +34,29 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 
 /**
- * A bisecting k-means algorithm based on the paper "A comparison of document clustering techniques"
- * by Steinbach, Karypis, and Kumar, with modification to fit Spark.
- * The algorithm starts from a single cluster that contains all points.
- * Iteratively it finds divisible clusters on the bottom level and bisects each of them using
- * k-means, until there are `k` leaf clusters in total or no leaf clusters are divisible.
- * The bisecting steps of clusters on the same level are grouped together to increase parallelism.
- * If bisecting all divisible clusters on the bottom level would result more than `k` leaf clusters,
- * larger clusters get higher priority.
+ * A bisecting k-means algorithm based on the paper "A comparison of document clustering
+ * techniques" by Steinbach, Karypis, and Kumar, with modification to fit Spark. The algorithm
+ * starts from a single cluster that contains all points. Iteratively it finds divisible clusters
+ * on the bottom level and bisects each of them using k-means, until there are `k` leaf clusters
+ * in total or no leaf clusters are divisible. The bisecting steps of clusters on the same level
+ * are grouped together to increase parallelism. If bisecting all divisible clusters on the bottom
+ * level would result more than `k` leaf clusters, larger clusters get higher priority.
  *
- * @param k the desired number of leaf clusters (default: 4). The actual number could be smaller if
- *          there are no divisible leaf clusters.
- * @param maxIterations the max number of k-means iterations to split clusters (default: 20)
- * @param minDivisibleClusterSize the minimum number of points (if greater than or equal 1.0) or
- *                                the minimum proportion of points (if less than 1.0) of a divisible
- *                                cluster (default: 1)
- * @param seed a random seed (default: hash value of the class name)
+ * @param k
+ *   the desired number of leaf clusters (default: 4). The actual number could be smaller if there
+ *   are no divisible leaf clusters.
+ * @param maxIterations
+ *   the max number of k-means iterations to split clusters (default: 20)
+ * @param minDivisibleClusterSize
+ *   the minimum number of points (if greater than or equal 1.0) or the minimum proportion of
+ *   points (if less than 1.0) of a divisible cluster (default: 1)
+ * @param seed
+ *   a random seed (default: hash value of the class name)
  *
- * @see <a href="http://glaros.dtc.umn.edu/gkhome/fetch/papers/docclusterKDDTMW00.pdf">
- * Steinbach, Karypis, and Kumar, A comparison of document clustering techniques,
- * KDD Workshop on Text Mining, 2000.</a>
+ * @see
+ *   <a href="http://glaros.dtc.umn.edu/gkhome/fetch/papers/docclusterKDDTMW00.pdf"> Steinbach,
+ *   Karypis, and Kumar, A comparison of document clustering techniques, KDD Workshop on Text
+ *   Mining, 2000.</a>
  */
 @Since("1.6.0")
 class BisectingKMeans private (
@@ -61,7 +64,8 @@ class BisectingKMeans private (
     private var maxIterations: Int,
     private var minDivisibleClusterSize: Double,
     private var seed: Long,
-    private var distanceMeasure: String) extends Logging {
+    private var distanceMeasure: String)
+    extends Logging {
 
   import BisectingKMeans._
 
@@ -72,8 +76,8 @@ class BisectingKMeans private (
   def this() = this(4, 20, 1.0, classOf[BisectingKMeans].getName.##, DistanceMeasure.EUCLIDEAN)
 
   /**
-   * Sets the desired number of leaf clusters (default: 4).
-   * The actual number could be smaller if there are no divisible leaf clusters.
+   * Sets the desired number of leaf clusters (default: 4). The actual number could be smaller if
+   * there are no divisible leaf clusters.
    */
   @Since("1.6.0")
   def setK(k: Int): this.type = {
@@ -105,20 +109,21 @@ class BisectingKMeans private (
   def getMaxIterations: Int = this.maxIterations
 
   /**
-   * Sets the minimum number of points (if greater than or equal to `1.0`) or the minimum proportion
-   * of points (if less than `1.0`) of a divisible cluster (default: 1).
+   * Sets the minimum number of points (if greater than or equal to `1.0`) or the minimum
+   * proportion of points (if less than `1.0`) of a divisible cluster (default: 1).
    */
   @Since("1.6.0")
   def setMinDivisibleClusterSize(minDivisibleClusterSize: Double): this.type = {
-    require(minDivisibleClusterSize > 0.0,
+    require(
+      minDivisibleClusterSize > 0.0,
       s"minDivisibleClusterSize must be positive but got $minDivisibleClusterSize.")
     this.minDivisibleClusterSize = minDivisibleClusterSize
     this
   }
 
   /**
-   * Gets the minimum number of points (if greater than or equal to `1.0`) or the minimum proportion
-   * of points (if less than `1.0`) of a divisible cluster.
+   * Gets the minimum number of points (if greater than or equal to `1.0`) or the minimum
+   * proportion of points (if less than `1.0`) of a divisible cluster.
    */
   @Since("1.6.0")
   def getMinDivisibleClusterSize: Double = minDivisibleClusterSize
@@ -163,7 +168,8 @@ class BisectingKMeans private (
 
     val dMeasure = DistanceMeasure.decodeFromString(this.distanceMeasure)
     val norms = instances.map(d => Vectors.norm(d._1, 2.0))
-    val vectors = instances.zip(norms)
+    val vectors = instances
+      .zip(norms)
       .map { case ((x, weight), norm) => new VectorWithNorm(x, norm, weight) }
 
     if (handlePersistence) {
@@ -186,8 +192,9 @@ class BisectingKMeans private (
     } else {
       math.ceil(minDivisibleClusterSize * n).toLong
     }
-    logInfo(log"The minimum number of points of a divisible cluster is " +
-      log"${MDC(MIN_POINT_PER_CLUSTER, minSize)}.")
+    logInfo(
+      log"The minimum number of points of a divisible cluster is " +
+        log"${MDC(MIN_POINT_PER_CLUSTER, minSize)}.")
     var inactiveClusters = mutable.Seq.empty[(Long, ClusterSummary)]
     val random = new Random(seed)
     var numLeafClustersNeeded = k - 1
@@ -201,27 +208,34 @@ class BisectingKMeans private (
       }
       // If we don't need all divisible clusters, take the larger ones.
       if (divisibleClusters.size > numLeafClustersNeeded) {
-        divisibleClusters = divisibleClusters.toSeq.sortBy { case (_, summary) =>
+        divisibleClusters = divisibleClusters.toSeq
+          .sortBy { case (_, summary) =>
             -summary.size
-          }.take(numLeafClustersNeeded)
+          }
+          .take(numLeafClustersNeeded)
           .toMap
       }
       if (divisibleClusters.nonEmpty) {
         val divisibleIndices = divisibleClusters.keys.toSet
-        logInfo(log"Dividing ${MDC(DIVISIBLE_CLUSTER_INDICES_SIZE, divisibleIndices.size)}" +
-          log" clusters on level ${MDC(CLUSTER_LEVEL, level)}.")
-        var newClusterCenters = divisibleClusters.flatMap { case (index, summary) =>
-          val (left, right) = splitCenter(summary.center, random, dMeasure)
-          Iterator((leftChildIndex(index), left), (rightChildIndex(index), right))
-        }.map(identity) // workaround for a Scala bug (SI-7005) that produces a not serializable map
+        logInfo(
+          log"Dividing ${MDC(DIVISIBLE_CLUSTER_INDICES_SIZE, divisibleIndices.size)}" +
+            log" clusters on level ${MDC(CLUSTER_LEVEL, level)}.")
+        var newClusterCenters = divisibleClusters
+          .flatMap { case (index, summary) =>
+            val (left, right) = splitCenter(summary.center, random, dMeasure)
+            Iterator((leftChildIndex(index), left), (rightChildIndex(index), right))
+          }
+          .map(
+            identity
+          ) // workaround for a Scala bug (SI-7005) that produces a not serializable map
         var newClusters: Map[Long, ClusterSummary] = null
         var newAssignments: RDD[(Long, VectorWithNorm)] = null
         for (iter <- 0 until maxIterations) {
-          newAssignments = updateAssignments(assignments, divisibleIndices, newClusterCenters,
-              dMeasure)
-            .filter { case (index, _) =>
-            divisibleIndices.contains(parentIndex(index))
-          }
+          newAssignments =
+            updateAssignments(assignments, divisibleIndices, newClusterCenters, dMeasure)
+              .filter { case (index, _) =>
+                divisibleIndices.contains(parentIndex(index))
+              }
           newClusters = summarize(d, newAssignments, dMeasure)
           newClusterCenters = newClusters.transform((_, v) => v.center).map(identity)
         }
@@ -229,15 +243,17 @@ class BisectingKMeans private (
           preIndices.unpersist()
         }
         preIndices = indices
-        indices = updateAssignments(assignments, divisibleIndices, newClusterCenters, dMeasure).keys
-          .persist(StorageLevel.MEMORY_AND_DISK)
+        indices =
+          updateAssignments(assignments, divisibleIndices, newClusterCenters, dMeasure).keys
+            .persist(StorageLevel.MEMORY_AND_DISK)
         assignments = indices.zip(vectors)
         inactiveClusters ++= activeClusters
         activeClusters = newClusters
         numLeafClustersNeeded -= divisibleClusters.size
       } else {
-        logInfo(log"None active and divisible clusters left " +
-          log"on level ${MDC(CLUSTER_LEVEL, level)}. Stop iterations.")
+        logInfo(
+          log"None active and divisible clusters left " +
+            log"on level ${MDC(CLUSTER_LEVEL, level)}. Stop iterations.")
         inactiveClusters ++= activeClusters
         activeClusters = Map.empty
       }
@@ -246,7 +262,8 @@ class BisectingKMeans private (
 
     if (preIndices != null) { preIndices.unpersist() }
     if (indices != null) { indices.unpersist() }
-    if (handlePersistence) { vectors.unpersist() } else { norms.unpersist() }
+    if (handlePersistence) { vectors.unpersist() }
+    else { norms.unpersist() }
 
     val clusters = activeClusters ++ inactiveClusters
     val root = buildTree(clusters, dMeasure)
@@ -256,8 +273,10 @@ class BisectingKMeans private (
 
   /**
    * Runs the bisecting k-means algorithm.
-   * @param input RDD of vectors
-   * @return model for the bisecting kmeans
+   * @param input
+   *   RDD of vectors
+   * @return
+   *   model for the bisecting kmeans
    */
   @Since("1.6.0")
   def run(input: RDD[Vector]): BisectingKMeansModel = {
@@ -300,24 +319,30 @@ private object BisectingKMeans extends Serializable {
 
   /**
    * Summarizes data by each cluster as Map.
-   * @param d feature dimension
-   * @param assignments pairs of point and its cluster index
-   * @return a map from cluster indices to corresponding cluster summaries
+   * @param d
+   *   feature dimension
+   * @param assignments
+   *   pairs of point and its cluster index
+   * @return
+   *   a map from cluster indices to corresponding cluster summaries
    */
   private def summarize(
       d: Int,
       assignments: RDD[(Long, VectorWithNorm)],
       distanceMeasure: DistanceMeasure): Map[Long, ClusterSummary] = {
-    assignments.aggregateByKey(new ClusterSummaryAggregator(d, distanceMeasure))(
+    assignments
+      .aggregateByKey(new ClusterSummaryAggregator(d, distanceMeasure))(
         seqOp = (agg, v) => agg.add(v),
-        combOp = (agg1, agg2) => agg1.merge(agg2)
-      ).mapValues(_.summary)
-      .collect().toMap
+        combOp = (agg1, agg2) => agg1.merge(agg2))
+      .mapValues(_.summary)
+      .collect()
+      .toMap
   }
 
   /**
    * Cluster summary aggregator.
-   * @param d feature dimension
+   * @param d
+   *   feature dimension
    */
   private class ClusterSummaryAggregator(val d: Int, val distanceMeasure: DistanceMeasure)
       extends Serializable {
@@ -331,7 +356,7 @@ private object BisectingKMeans extends Serializable {
       n += 1L
       weightSum += v.weight
       // TODO: use a numerically stable approach to estimate cost
-      sumSq += v.norm * v.norm  * v.weight
+      sumSq += v.norm * v.norm * v.weight
       distanceMeasure.updateClusterSum(v, sum)
       this
     }
@@ -348,8 +373,7 @@ private object BisectingKMeans extends Serializable {
     /** Returns the summary. */
     def summary: ClusterSummary = {
       val center = distanceMeasure.centroid(sum.copy, weightSum)
-      val cost = distanceMeasure.clusterCost(center, new VectorWithNorm(sum), weightSum,
-        sumSq)
+      val cost = distanceMeasure.clusterCost(center, new VectorWithNorm(sum), weightSum, sumSq)
       ClusterSummary(n, weightSum, center, cost)
     }
   }
@@ -357,9 +381,12 @@ private object BisectingKMeans extends Serializable {
   /**
    * Bisects a cluster center.
    *
-   * @param center current cluster center
-   * @param random a random number generator
-   * @return initial centers
+   * @param center
+   *   current cluster center
+   * @param random
+   *   a random number generator
+   * @return
+   *   initial centers
    */
   private def splitCenter(
       center: VectorWithNorm,
@@ -374,10 +401,14 @@ private object BisectingKMeans extends Serializable {
 
   /**
    * Updates assignments.
-   * @param assignments current assignments
-   * @param divisibleIndices divisible cluster indices
-   * @param newClusterCenters new cluster centers
-   * @return new assignments
+   * @param assignments
+   *   current assignments
+   * @param divisibleIndices
+   *   divisible cluster indices
+   * @param newClusterCenters
+   *   new cluster centers
+   * @return
+   *   new assignments
    */
   private def updateAssignments(
       assignments: RDD[(Long, VectorWithNorm)],
@@ -407,8 +438,10 @@ private object BisectingKMeans extends Serializable {
 
   /**
    * Builds a clustering tree by re-indexing internal and leaf clusters.
-   * @param clusters a map from cluster indices to corresponding cluster summaries
-   * @return the root node of the clustering tree
+   * @param clusters
+   *   a map from cluster indices to corresponding cluster summaries
+   * @return
+   *   the root node of the clustering tree
    */
   private def buildTree(
       clusters: Map[Long, ClusterSummary],
@@ -450,10 +483,14 @@ private object BisectingKMeans extends Serializable {
   /**
    * Summary of a cluster.
    *
-   * @param size the number of points within this cluster
-   * @param weightSum the weightSum within this cluster
-   * @param center the center of the points within this cluster
-   * @param cost the sum of squared distances to the center
+   * @param size
+   *   the number of points within this cluster
+   * @param weightSum
+   *   the weightSum within this cluster
+   * @param center
+   *   the center of the points within this cluster
+   * @param cost
+   *   the sum of squared distances to the center
    */
   private case class ClusterSummary(
       size: Long,
@@ -465,13 +502,19 @@ private object BisectingKMeans extends Serializable {
 /**
  * Represents a node in a clustering tree.
  *
- * @param index node index, negative for internal nodes and non-negative for leaf nodes
- * @param size size of the cluster
- * @param centerWithNorm cluster center with norm
- * @param cost cost of the cluster, i.e., the sum of squared distances to the center
- * @param height height of the node in the dendrogram. Currently this is defined as the max distance
- *               from the center to the centers of the children's, but subject to change.
- * @param children children nodes
+ * @param index
+ *   node index, negative for internal nodes and non-negative for leaf nodes
+ * @param size
+ *   size of the cluster
+ * @param centerWithNorm
+ *   cluster center with norm
+ * @param cost
+ *   cost of the cluster, i.e., the sum of squared distances to the center
+ * @param height
+ *   height of the node in the dendrogram. Currently this is defined as the max distance from the
+ *   center to the centers of the children's, but subject to change.
+ * @param children
+ *   children nodes
  */
 @Since("1.6.0")
 private[clustering] class ClusteringTreeNode private[clustering] (
@@ -480,7 +523,8 @@ private[clustering] class ClusteringTreeNode private[clustering] (
     private[clustering] val centerWithNorm: VectorWithNorm,
     val cost: Double,
     val height: Double,
-    val children: Array[ClusteringTreeNode]) extends Serializable {
+    val children: Array[ClusteringTreeNode])
+    extends Serializable {
 
   /** Whether this is a leaf node. */
   val isLeaf: Boolean = children.isEmpty
@@ -534,9 +578,12 @@ private[clustering] class ClusteringTreeNode private[clustering] (
 
   /**
    * Predicts the cluster index and the cost of the input point.
-   * @param pointWithNorm input point
-   * @param cost the cost to the current center
-   * @return (predicted leaf cluster index, cost)
+   * @param pointWithNorm
+   *   input point
+   * @param cost
+   *   the cost to the current center
+   * @return
+   *   (predicted leaf cluster index, cost)
    */
   @tailrec
   private def predict(
@@ -546,9 +593,11 @@ private[clustering] class ClusteringTreeNode private[clustering] (
     if (isLeaf) {
       (index, cost)
     } else {
-      val (selectedChild, minCost) = children.map { child =>
-        (child, distanceMeasure.cost(child.centerWithNorm, pointWithNorm))
-      }.minBy(_._2)
+      val (selectedChild, minCost) = children
+        .map { child =>
+          (child, distanceMeasure.cost(child.centerWithNorm, pointWithNorm))
+        }
+        .minBy(_._2)
       selectedChild.predict(pointWithNorm, minCost, distanceMeasure)
     }
   }

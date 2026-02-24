@@ -37,7 +37,8 @@ class PostgresNamespaceSuite extends DockerJDBCIntegrationSuite with V2JDBCNames
   override val db = new PostgresDatabaseOnDocker
 
   val map = new CaseInsensitiveStringMap(
-    Map("url" -> db.getJdbcUrl(dockerIp, externalPort),
+    Map(
+      "url" -> db.getJdbcUrl(dockerIp, externalPort),
       "driver" -> "org.postgresql.Driver").asJava)
 
   catalog.initialize("postgresql", map)

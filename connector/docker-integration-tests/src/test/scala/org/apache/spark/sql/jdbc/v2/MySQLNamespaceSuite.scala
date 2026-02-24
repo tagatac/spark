@@ -39,7 +39,8 @@ class MySQLNamespaceSuite extends DockerJDBCIntegrationSuite with V2JDBCNamespac
   override val db = new MySQLDatabaseOnDocker
 
   val map = new CaseInsensitiveStringMap(
-    Map("url" -> db.getJdbcUrl(dockerIp, externalPort),
+    Map(
+      "url" -> db.getJdbcUrl(dockerIp, externalPort),
       "driver" -> "com.mysql.cj.jdbc.Driver").asJava)
 
   catalog.initialize("mysql", map)
@@ -63,8 +64,7 @@ class MySQLNamespaceSuite extends DockerJDBCIntegrationSuite with V2JDBCNamespac
         catalog.createNamespace(Array("foo"), Map("comment" -> "test comment").asJava)
       },
       condition = "UNSUPPORTED_FEATURE.COMMENT_NAMESPACE",
-      parameters = Map("namespace" -> "`foo`")
-    )
+      parameters = Map("namespace" -> "`foo`"))
     assert(catalog.namespaceExists(Array("foo")) === false)
     catalog.createNamespace(Array("foo"), Map.empty[String, String].asJava)
     assert(catalog.namespaceExists(Array("foo")) === true)
@@ -75,24 +75,21 @@ class MySQLNamespaceSuite extends DockerJDBCIntegrationSuite with V2JDBCNamespac
           NamespaceChange.setProperty("comment", "comment for foo"))
       },
       condition = "UNSUPPORTED_FEATURE.COMMENT_NAMESPACE",
-      parameters = Map("namespace" -> "`foo`")
-    )
+      parameters = Map("namespace" -> "`foo`"))
 
     checkError(
       exception = intercept[SparkSQLFeatureNotSupportedException] {
         catalog.alterNamespace(Array("foo"), NamespaceChange.removeProperty("comment"))
       },
       condition = "UNSUPPORTED_FEATURE.REMOVE_NAMESPACE_COMMENT",
-      parameters = Map("namespace" -> "`foo`")
-    )
+      parameters = Map("namespace" -> "`foo`"))
 
     checkError(
       exception = intercept[SparkSQLFeatureNotSupportedException] {
         catalog.dropNamespace(Array("foo"), cascade = false)
       },
       condition = "UNSUPPORTED_FEATURE.DROP_NAMESPACE",
-      parameters = Map("namespace" -> "`foo`")
-    )
+      parameters = Map("namespace" -> "`foo`"))
     catalog.dropNamespace(Array("foo"), cascade = true)
     assert(catalog.namespaceExists(Array("foo")) === false)
   }

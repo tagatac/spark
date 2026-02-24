@@ -41,10 +41,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.rpc.RpcEnv
 import org.apache.spark.util.Utils
 
-class ExecutorClassLoaderSuite
-  extends SparkFunSuite
-  with MockitoSugar
-  with Logging {
+class ExecutorClassLoaderSuite extends SparkFunSuite with MockitoSugar with Logging {
 
   val childClassNames = List("ReplFakeClass1", "ReplFakeClass2")
   val parentClassNames = List("ReplFakeClass1", "ReplFakeClass2", "ReplFakeClass3")
@@ -88,9 +85,9 @@ class ExecutorClassLoaderSuite
       }
     }
     // compile fake scala.Option class
-    ToolProvider
-      .getSystemJavaCompiler
-      .getTask(null, null, null, null, null, Collections.singletonList(scalaOptionFile)).call()
+    ToolProvider.getSystemJavaCompiler
+      .getTask(null, null, null, null, null, Collections.singletonList(scalaOptionFile))
+      .call()
 
     // create 'scala' dir in tempDir1
     val scalaDir = new File(tempDir1, "scala")
@@ -107,8 +104,7 @@ class ExecutorClassLoaderSuite
 
     // construct class loader tree
     val parentLoader = new URLClassLoader(urls2, null)
-    val classLoader = new ExecutorClassLoader(
-      new SparkConf(), null, url1, parentLoader, true)
+    val classLoader = new ExecutorClassLoader(new SparkConf(), null, url1, parentLoader, true)
 
     // scalastyle:off classforname
     // load 'scala.Option', using Class.forName to do the exact same behavior as
@@ -116,7 +112,8 @@ class ExecutorClassLoaderSuite
     val optionClass = Class.forName("scala.Option", false, classLoader)
     // scalastyle:on classforname
 
-    assert(optionClass.getClassLoader == classLoader,
+    assert(
+      optionClass.getClassLoader == classLoader,
       "scala.Option didn't come from ExecutorClassLoader")
   }
 
@@ -201,8 +198,12 @@ class ExecutorClassLoaderSuite
       }
     })
 
-    val classLoader = new ExecutorClassLoader(new SparkConf(), env, "spark://localhost:1234",
-      getClass().getClassLoader(), false)
+    val classLoader = new ExecutorClassLoader(
+      new SparkConf(),
+      env,
+      "spark://localhost:1234",
+      getClass().getClassLoader(),
+      false)
 
     val fakeClass = classLoader.loadClass("ReplFakeClass2").getConstructor().newInstance()
     val fakeClassVersion = fakeClass.toString
@@ -217,7 +218,7 @@ class ExecutorClassLoaderSuite
       val magic = new Array[Byte](4)
       fakeClassInputStream.read(magic)
       // first 4 bytes should match the magic number of Class file
-      assert(magic === Array[Byte](0xCA.toByte, 0xFE.toByte, 0xBA.toByte, 0xBE.toByte))
+      assert(magic === Array[Byte](0xca.toByte, 0xfe.toByte, 0xba.toByte, 0xbe.toByte))
     } finally {
       if (fakeClassInputStream != null) fakeClassInputStream.close()
     }
@@ -241,18 +242,16 @@ class ExecutorClassLoaderSuite
         "localhost",
         0,
         sc.conf,
-        new SecurityManager(conf), 0, clientMode = true)
+        new SecurityManager(conf),
+        0,
+        clientMode = true)
 
       try {
         val env = mock[SparkEnv]
         when(env.rpcEnv).thenReturn(rpcEnv)
 
-        val classLoader = new ExecutorClassLoader(
-          conf,
-          env,
-          replClassUri,
-          getClass().getClassLoader(),
-          false)
+        val classLoader =
+          new ExecutorClassLoader(conf, env, replClassUri, getClass().getClassLoader(), false)
 
         // Test loading a nonexistent class
         intercept[java.lang.ClassNotFoundException] {
@@ -279,8 +278,9 @@ class ExecutorClassLoaderSuite
     }
   }
 
-  test("SPARK-20547 ExecutorClassLoader should not throw ClassNotFoundException without " +
-    "acknowledgment from driver") {
+  test(
+    "SPARK-20547 ExecutorClassLoader should not throw ClassNotFoundException without " +
+      "acknowledgment from driver") {
     val tempDir = Utils.createTempDir()
     try {
       // Create two classes, "TestClassB" calls "TestClassA", so when calling "TestClassB.foo", JVM
@@ -291,7 +291,10 @@ class ExecutorClassLoaderSuite
           |}""".stripMargin
       val sourceFileA = new JavaSourceFromString("TestClassA", sourceCodeOfClassA)
       TestUtils.createCompiledClass(
-        sourceFileA.name, tempDir, sourceFileA, Seq(tempDir.toURI.toURL))
+        sourceFileA.name,
+        tempDir,
+        sourceFileA,
+        Seq(tempDir.toURI.toURL))
 
       val sourceCodeOfClassB =
         """public class TestClassB implements java.io.Serializable {
@@ -300,7 +303,10 @@ class ExecutorClassLoaderSuite
         |}""".stripMargin
       val sourceFileB = new JavaSourceFromString("TestClassB", sourceCodeOfClassB)
       TestUtils.createCompiledClass(
-        sourceFileB.name, tempDir, sourceFileB, Seq(tempDir.toURI.toURL))
+        sourceFileB.name,
+        tempDir,
+        sourceFileB,
+        Seq(tempDir.toURI.toURL))
 
       val env = mock[SparkEnv]
       val rpcEnv = mock[RpcEnv]
@@ -317,16 +323,19 @@ class ExecutorClassLoaderSuite
             val channel = mock[ReadableByteChannel]
             when(channel.read(any())).thenThrow(new IOException("broken pipe"))
             channel
-          }
-          else {
+          } else {
             val path = Paths.get(tempDir.getAbsolutePath(), classFileName)
             FileChannel.open(path, StandardOpenOption.READ)
           }
         }
       })
 
-      val classLoader = new ExecutorClassLoader(new SparkConf(), env, "spark://localhost:1234",
-        getClass().getClassLoader(), false)
+      val classLoader = new ExecutorClassLoader(
+        new SparkConf(),
+        env,
+        "spark://localhost:1234",
+        getClass().getClassLoader(),
+        false)
 
       def callClassBFoo(): String = {
         // scalastyle:off classforname

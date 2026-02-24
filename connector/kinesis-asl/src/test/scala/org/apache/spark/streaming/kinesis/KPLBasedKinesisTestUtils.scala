@@ -24,8 +24,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 import com.google.common.util.concurrent.{FutureCallback, Futures}
-import software.amazon.kinesis.producer.{KinesisProducer => KPLProducer,
-  KinesisProducerConfiguration, UserRecordResult}
+import software.amazon.kinesis.producer.{KinesisProducer => KPLProducer, KinesisProducerConfiguration, UserRecordResult}
 
 private[kinesis] class KPLBasedKinesisTestUtils(streamShardCount: Int = 2)
     extends KinesisTestUtils(streamShardCount) {
@@ -64,8 +63,8 @@ private[kinesis] class KPLDataGenerator(regionName: String) extends KinesisDataG
         override def onSuccess(result: UserRecordResult): Unit = {
           val shardId = result.getShardId
           val seqNumber = result.getSequenceNumber
-          val sentSeqNumbers = shardIdToSeqNumbers.getOrElseUpdate(shardId,
-            new ArrayBuffer[(Int, String)]())
+          val sentSeqNumbers =
+            shardIdToSeqNumbers.getOrElseUpdate(shardId, new ArrayBuffer[(Int, String)]())
           sentSeqNumbers += ((num, seqNumber))
         }
       }

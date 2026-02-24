@@ -24,7 +24,9 @@ import scala.util.Using
 import org.apache.spark.sql.connect.client.jdbc.test.JdbcHelper
 import org.apache.spark.sql.connect.test.{ConnectFunSuite, RemoteSparkSession}
 
-class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSession
+class SparkConnectJdbcDataTypeSuite
+    extends ConnectFunSuite
+    with RemoteSparkSession
     with JdbcHelper {
 
   override def jdbcUrl: String = s"jdbc:sc://localhost:$serverPort"
@@ -162,7 +164,7 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
   test("get float type") {
     withExecuteQuery("SELECT cast(1.2 as float)") { rs =>
       assert(rs.next())
-      assert(rs.getFloat(1) === 1.2F)
+      assert(rs.getFloat(1) === 1.2f)
       assert(!rs.wasNull)
       assert(!rs.next())
 
@@ -183,7 +185,7 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
   test("get double type") {
     withExecuteQuery("SELECT cast(1.2 as double)") { rs =>
       assert(rs.next())
-      assert(rs.getDouble(1) === 1.2D)
+      assert(rs.getDouble(1) === 1.2d)
       assert(!rs.wasNull)
       assert(!rs.next())
 
@@ -230,8 +232,7 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
         ("-0.12345", 6, 5, 8),
         ("-123.45", 5, 2, 7),
         ("12345", 5, 0, 6),
-        ("-12345", 5, 0, 6)
-      ).foreach {
+        ("-12345", 5, 0, 6)).foreach {
         case (value, precision, scale, expectedColumnDisplaySize) =>
           val decimalType = s"DECIMAL($precision,$scale)"
           withExecuteQuery(stmt, s"SELECT cast('$value' as $decimalType)") { rs =>
@@ -273,18 +274,18 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
         ("date '2025-11-15'", (rs: ResultSet) => rs.getBytes(999)),
         ("time '12:34:56.123456'", (rs: ResultSet) => rs.getBytes(999)),
         ("timestamp '2025-11-15 10:30:45.123456'", (rs: ResultSet) => rs.getTimestamp(999)),
-        ("timestamp_ntz '2025-11-15 10:30:45.789012'", (rs: ResultSet) => rs.getTimestamp(999))
-      ).foreach {
-        case (query, getter) =>
+        ("timestamp_ntz '2025-11-15 10:30:45.789012'", (rs: ResultSet) => rs.getTimestamp(999)))
+        .foreach { case (query, getter) =>
           withExecuteQuery(stmt, s"SELECT $query") { rs =>
             assert(rs.next())
             val exception = intercept[SQLException] {
               getter(rs)
             }
-            assert(exception.getMessage() ===
-              "The column index is out of range: 999, number of columns: 1.")
+            assert(
+              exception.getMessage() ===
+                "The column index is out of range: 999, number of columns: 1.")
           }
-      }
+        }
     }
   }
 
@@ -299,34 +300,40 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
         ("cast(1 AS BIGINT)", (rs: ResultSet) => rs.getLong(1), 1.toLong),
         ("cast(1 AS FLOAT)", (rs: ResultSet) => rs.getFloat(1), 1.toFloat),
         ("cast(1 AS DOUBLE)", (rs: ResultSet) => rs.getDouble(1), 1.toDouble),
-        ("cast(1 AS DECIMAL(10,5))", (rs: ResultSet) => rs.getBigDecimal(1),
+        (
+          "cast(1 AS DECIMAL(10,5))",
+          (rs: ResultSet) => rs.getBigDecimal(1),
           new java.math.BigDecimal("1.00000")),
-        ("CAST(X'0A0B0C' AS BINARY)", (rs: ResultSet) => rs.getBytes(1),
-          Array[Byte](0x0A, 0x0B, 0x0C)),
-        ("date '2023-11-15'", (rs: ResultSet) => rs.getDate(1),
-            java.sql.Date.valueOf("2023-11-15")),
-        ("time '12:34:56.123456'", (rs: ResultSet) => rs.getTime(1), {
-          val millis = timeToMillis(12, 34, 56, 123)
-          new java.sql.Time(millis)
-        })
-      ).foreach {
-        case (query, getter, expectedValue) =>
-          var resultSet: Option[ResultSet] = None
-          withExecuteQuery(stmt, s"SELECT $query") { rs =>
-            assert(rs.next())
-            expectedValue match {
-              case arr: Array[Byte] =>
-                assert(getter(rs).asInstanceOf[Array[Byte]].sameElements(arr))
-              case other => assert(getter(rs) === other)
-            }
-            assert(!rs.wasNull)
-            resultSet = Some(rs)
+        (
+          "CAST(X'0A0B0C' AS BINARY)",
+          (rs: ResultSet) => rs.getBytes(1),
+          Array[Byte](0x0a, 0x0b, 0x0c)),
+        (
+          "date '2023-11-15'",
+          (rs: ResultSet) => rs.getDate(1),
+          java.sql.Date.valueOf("2023-11-15")),
+        (
+          "time '12:34:56.123456'",
+          (rs: ResultSet) => rs.getTime(1), {
+            val millis = timeToMillis(12, 34, 56, 123)
+            new java.sql.Time(millis)
+          })).foreach { case (query, getter, expectedValue) =>
+        var resultSet: Option[ResultSet] = None
+        withExecuteQuery(stmt, s"SELECT $query") { rs =>
+          assert(rs.next())
+          expectedValue match {
+            case arr: Array[Byte] =>
+              assert(getter(rs).asInstanceOf[Array[Byte]].sameElements(arr))
+            case other => assert(getter(rs) === other)
           }
-          assert(resultSet.isDefined)
-          val exception = intercept[SQLException] {
-            getter(resultSet.get)
-          }
-          assert(exception.getMessage() === "JDBC Statement is closed.")
+          assert(!rs.wasNull)
+          resultSet = Some(rs)
+        }
+        assert(resultSet.isDefined)
+        val exception = intercept[SQLException] {
+          getter(resultSet.get)
+        }
+        assert(exception.getMessage() === "JDBC Statement is closed.")
       }
     }
   }
@@ -440,7 +447,7 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
       }
 
       // Test binary type by column label
-      val testBytes2 = Array[Byte](0x0A, 0x0B, 0x0C)
+      val testBytes2 = Array[Byte](0x0a, 0x0b, 0x0c)
       val hexString3 = testBytes2.map(b => "%02X".format(b)).mkString
       withExecuteQuery(stmt, s"SELECT CAST(X'$hexString3' AS BINARY) as test_binary") { rs =>
         assert(rs.next())
@@ -547,13 +554,13 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
         ("08:15:45.123456", 3, 12, timeToMillis(8, 15, 45, 123)),
         // HH:MM:SS.fff (999ms) . Spark TIME values can have microsecond precision,
         // but java.sql.Time can only store up to millisecond precision
-        ("23:59:59.999999", 6, 15, timeToMillis(23, 59, 59, 999))
-      ).foreach {
+        ("23:59:59.999999", 6, 15, timeToMillis(23, 59, 59, 999))).foreach {
         case (timeValue, precision, expectedDisplaySize, expectedMillis) =>
           withExecuteQuery(stmt, s"SELECT cast(time '$timeValue' as time($precision))") { rs =>
             assert(rs.next(), s"Failed to get next row for precision $precision")
             val time = rs.getTime(1)
-            assert(time.getTime === expectedMillis,
+            assert(
+              time.getTime === expectedMillis,
               s"Time millis mismatch for precision" +
                 s" $precision: expected $expectedMillis, got ${time.getTime}")
             assert(!rs.wasNull, s"wasNull should be false for precision $precision")
@@ -561,17 +568,21 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
 
             val metaData = rs.getMetaData
             assert(metaData.getColumnCount === 1)
-            assert(metaData.getColumnType(1) === Types.TIME,
+            assert(
+              metaData.getColumnType(1) === Types.TIME,
               s"Column type mismatch for precision $precision")
-            assert(metaData.getColumnTypeName(1) === s"TIME($precision)",
+            assert(
+              metaData.getColumnTypeName(1) === s"TIME($precision)",
               s"Column type name mismatch for precision $precision")
-            assert(metaData.getColumnClassName(1) === "java.sql.Time",
+            assert(
+              metaData.getColumnClassName(1) === "java.sql.Time",
               s"Column class name mismatch for precision $precision")
-            assert(metaData.getPrecision(1) === precision,
+            assert(
+              metaData.getPrecision(1) === precision,
               s"Precision mismatch for precision $precision")
-            assert(metaData.getScale(1) === 0,
-              s"Scale should be 0 for precision $precision")
-            assert(metaData.getColumnDisplaySize(1) === expectedDisplaySize,
+            assert(metaData.getScale(1) === 0, s"Scale should be 0 for precision $precision")
+            assert(
+              metaData.getColumnDisplaySize(1) === expectedDisplaySize,
               s"Display size mismatch for precision $precision: " +
                 s"expected $expectedDisplaySize, got ${metaData.getColumnDisplaySize(1)}")
           }
@@ -671,8 +682,8 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
         assert(timestampUTC !== null)
         assert(timestampUTC.getTime === timestamp.getTime)
 
-        val calPST = java.util.Calendar.getInstance(
-          java.util.TimeZone.getTimeZone("America/Los_Angeles"))
+        val calPST =
+          java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("America/Los_Angeles"))
         val timestampPST = rs.getTimestamp(1, calPST)
         assert(timestampPST !== null)
         // Same value regardless of calendar
@@ -765,8 +776,7 @@ class SparkConnectJdbcDataTypeSuite extends ConnectFunSuite with RemoteSparkSess
       Seq(true, false).foreach { java8APIEnabled =>
         stmt.execute(s"set spark.sql.datetime.java8API.enabled=$java8APIEnabled")
 
-        Using.resource(stmt.executeQuery(
-          """SELECT
+        Using.resource(stmt.executeQuery("""SELECT
             |  timestamp '2025-11-15 10:30:45.123456' as ts,
             |  timestamp_ntz '2025-11-15 14:22:33.789012' as ts_ntz
             |""".stripMargin)) { rs =>

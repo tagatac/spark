@@ -38,25 +38,26 @@ import org.apache.spark.sql.types.StructType
 
 /**
  * <a href="http://en.wikipedia.org/wiki/Gradient_boosting">Gradient-Boosted Trees (GBTs)</a>
- * learning algorithm for regression.
- * It supports both continuous and categorical features.
+ * learning algorithm for regression. It supports both continuous and categorical features.
  *
  * The implementation is based upon: J.H. Friedman. "Stochastic Gradient Boosting." 1999.
  *
  * Notes on Gradient Boosting vs. TreeBoost:
- *  - This implementation is for Stochastic Gradient Boosting, not for TreeBoost.
- *  - Both algorithms learn tree ensembles by minimizing loss functions.
- *  - TreeBoost (Friedman, 1999) additionally modifies the outputs at tree leaf nodes
- *    based on the loss function, whereas the original gradient boosting method does not.
+ *   - This implementation is for Stochastic Gradient Boosting, not for TreeBoost.
+ *   - Both algorithms learn tree ensembles by minimizing loss functions.
+ *   - TreeBoost (Friedman, 1999) additionally modifies the outputs at tree leaf nodes based on
+ *     the loss function, whereas the original gradient boosting method does not.
  *     - When the loss is SquaredError, these methods give the same result, but they could differ
  *       for other loss functions.
- *  - We expect to implement TreeBoost in the future:
- *    [https://issues.apache.org/jira/browse/SPARK-4240]
+ *   - We expect to implement TreeBoost in the future:
+ *     [https://issues.apache.org/jira/browse/SPARK-4240]
  */
 @Since("1.4.0")
 class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
-  extends Regressor[Vector, GBTRegressor, GBTRegressionModel]
-  with GBTRegressorParams with DefaultParamsWritable with Logging {
+    extends Regressor[Vector, GBTRegressor, GBTRegressionModel]
+    with GBTRegressorParams
+    with DefaultParamsWritable
+    with Logging {
 
   @Since("1.4.0")
   def this() = this(Identifiable.randomUID("gbtr"))
@@ -94,11 +95,9 @@ class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   def setCacheNodeIds(value: Boolean): this.type = set(cacheNodeIds, value)
 
   /**
-   * Specifies how often to checkpoint the cached node IDs.
-   * E.g. 10 means that the cache will get checkpointed every 10 iterations.
-   * This is only used if cacheNodeIds is true and if the checkpoint directory is set in
-   * [[org.apache.spark.SparkContext]].
-   * Must be at least 1.
+   * Specifies how often to checkpoint the cached node IDs. E.g. 10 means that the cache will get
+   * checkpointed every 10 iterations. This is only used if cacheNodeIds is true and if the
+   * checkpoint directory is set in [[org.apache.spark.SparkContext]]. Must be at least 1.
    * (default = 10)
    * @group setParam
    */
@@ -106,8 +105,8 @@ class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   def setCheckpointInterval(value: Int): this.type = set(checkpointInterval, value)
 
   /**
-   * The impurity setting is ignored for GBT models.
-   * Individual trees are built using impurity "Variance."
+   * The impurity setting is ignored for GBT models. Individual trees are built using impurity
+   * "Variance."
    *
    * @group setParam
    */
@@ -155,9 +154,8 @@ class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   }
 
   /**
-   * Sets the value of param [[weightCol]].
-   * If this is not set or empty, we treat all instance weights as 1.0.
-   * By default the weightCol is not set, so all instances have weight 1.0.
+   * Sets the value of param [[weightCol]]. If this is not set or empty, we treat all instance
+   * weights as 1.0. By default the weightCol is not set, so all instances have weight 1.0.
    *
    * @group setParam
    */
@@ -167,7 +165,8 @@ class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
   override protected def train(dataset: Dataset[_]): GBTRegressionModel = instrumented { instr =>
     val withValidation = isDefined(validationIndicatorCol) && $(validationIndicatorCol).nonEmpty
     val (trainDataset, validationDataset) = if (withValidation) {
-      (extractInstances(this, dataset.filter(not(col($(validationIndicatorCol))))),
+      (
+        extractInstances(this, dataset.filter(not(col($(validationIndicatorCol))))),
         extractInstances(this, dataset.filter(col($(validationIndicatorCol)))))
     } else {
       (extractInstances(this, dataset), null)
@@ -175,19 +174,48 @@ class GBTRegressor @Since("1.4.0") (@Since("1.4.0") override val uid: String)
 
     instr.logPipelineStage(this)
     instr.logDataset(dataset)
-    instr.logParams(this, labelCol, featuresCol, predictionCol, leafCol, weightCol, impurity,
-      lossType, maxDepth, maxBins, maxIter, maxMemoryInMB, minInfoGain, minInstancesPerNode,
-      minWeightFractionPerNode, seed, stepSize, subsamplingRate, cacheNodeIds, checkpointInterval,
-      featureSubsetStrategy, validationIndicatorCol, validationTol)
+    instr.logParams(
+      this,
+      labelCol,
+      featuresCol,
+      predictionCol,
+      leafCol,
+      weightCol,
+      impurity,
+      lossType,
+      maxDepth,
+      maxBins,
+      maxIter,
+      maxMemoryInMB,
+      minInfoGain,
+      minInstancesPerNode,
+      minWeightFractionPerNode,
+      seed,
+      stepSize,
+      subsamplingRate,
+      cacheNodeIds,
+      checkpointInterval,
+      featureSubsetStrategy,
+      validationIndicatorCol,
+      validationTol)
 
     val categoricalFeatures = MetadataUtils.getCategoricalFeatures(dataset.schema($(featuresCol)))
     val boostingStrategy = super.getOldBoostingStrategy(categoricalFeatures, OldAlgo.Regression)
     val (baseLearners, learnerWeights) = if (withValidation) {
-      GradientBoostedTrees.runWithValidation(trainDataset, validationDataset, boostingStrategy,
-        $(seed), $(featureSubsetStrategy), Some(instr))
+      GradientBoostedTrees.runWithValidation(
+        trainDataset,
+        validationDataset,
+        boostingStrategy,
+        $(seed),
+        $(featureSubsetStrategy),
+        Some(instr))
     } else {
-      GradientBoostedTrees.run(trainDataset, boostingStrategy,
-        $(seed), $(featureSubsetStrategy), Some(instr))
+      GradientBoostedTrees.run(
+        trainDataset,
+        boostingStrategy,
+        $(seed),
+        $(featureSubsetStrategy),
+        Some(instr))
     }
     baseLearners.foreach(copyValues(_))
 
@@ -214,29 +242,36 @@ object GBTRegressor extends DefaultParamsReadable[GBTRegressor] {
 
 /**
  * <a href="http://en.wikipedia.org/wiki/Gradient_boosting">Gradient-Boosted Trees (GBTs)</a>
- * model for regression.
- * It supports both continuous and categorical features.
- * @param _trees  Decision trees in the ensemble.
- * @param _treeWeights  Weights for the decision trees in the ensemble.
+ * model for regression. It supports both continuous and categorical features.
+ * @param _trees
+ *   Decision trees in the ensemble.
+ * @param _treeWeights
+ *   Weights for the decision trees in the ensemble.
  */
 @Since("1.4.0")
-class GBTRegressionModel private[ml](
+class GBTRegressionModel private[ml] (
     override val uid: String,
     private val _trees: Array[DecisionTreeRegressionModel],
     private val _treeWeights: Array[Double],
     override val numFeatures: Int)
-  extends RegressionModel[Vector, GBTRegressionModel]
-  with GBTRegressorParams with TreeEnsembleModel[DecisionTreeRegressionModel]
-  with MLWritable with Serializable {
+    extends RegressionModel[Vector, GBTRegressionModel]
+    with GBTRegressorParams
+    with TreeEnsembleModel[DecisionTreeRegressionModel]
+    with MLWritable
+    with Serializable {
 
   require(_trees.nonEmpty, "GBTRegressionModel requires at least 1 tree.")
-  require(_trees.length == _treeWeights.length, "GBTRegressionModel given trees, treeWeights of" +
-    s" non-matching lengths (${_trees.length}, ${_treeWeights.length}, respectively).")
+  require(
+    _trees.length == _treeWeights.length,
+    "GBTRegressionModel given trees, treeWeights of" +
+      s" non-matching lengths (${_trees.length}, ${_treeWeights.length}, respectively).")
 
   /**
    * Construct a GBTRegressionModel
-   * @param _trees  Decision trees in the ensemble.
-   * @param _treeWeights  Weights for the decision trees in the ensemble.
+   * @param _trees
+   *   Decision trees in the ensemble.
+   * @param _treeWeights
+   *   Weights for the decision trees in the ensemble.
    */
   @Since("1.4.0")
   def this(uid: String, _trees: Array[DecisionTreeRegressionModel], _treeWeights: Array[Double]) =
@@ -293,8 +328,9 @@ class GBTRegressionModel private[ml](
     if (predictionColNames.nonEmpty) {
       dataset.withColumns(predictionColNames, predictionColumns)
     } else {
-      this.logWarning(log"${MDC(LogKeys.UUID, uid)}: GBTRegressionModel.transform() " +
-        log"does nothing because no output columns were set.")
+      this.logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: GBTRegressionModel.transform() " +
+          log"does nothing because no output columns were set.")
       dataset.toDF()
     }
   }
@@ -308,8 +344,8 @@ class GBTRegressionModel private[ml](
 
   @Since("1.4.0")
   override def copy(extra: ParamMap): GBTRegressionModel = {
-    copyValues(new GBTRegressionModel(uid, _trees, _treeWeights, numFeatures),
-      extra).setParent(parent)
+    copyValues(new GBTRegressionModel(uid, _trees, _treeWeights, numFeatures), extra)
+      .setParent(parent)
   }
 
   @Since("1.4.0")
@@ -325,7 +361,8 @@ class GBTRegressionModel private[ml](
    * (Hastie, Tibshirani, Friedman. "The Elements of Statistical Learning, 2nd Edition." 2001.)
    * and follows the implementation from scikit-learn.
    *
-   * @see `DecisionTreeRegressionModel.featureImportances`
+   * @see
+   *   `DecisionTreeRegressionModel.featureImportances`
    */
   @Since("2.0.0")
   lazy val featureImportances: Vector =
@@ -339,14 +376,20 @@ class GBTRegressionModel private[ml](
   /**
    * Method to compute error or loss for every iteration of gradient boosting.
    *
-   * @param dataset Dataset for validation.
-   * @param loss The loss function used to compute error. Supported options: squared, absolute
+   * @param dataset
+   *   Dataset for validation.
+   * @param loss
+   *   The loss function used to compute error. Supported options: squared, absolute
    */
   @Since("2.4.0")
   def evaluateEachIteration(dataset: Dataset[_], loss: String): Array[Double] = {
     val data = extractInstances(this, dataset)
-    GradientBoostedTrees.evaluateEachIteration(data, trees, treeWeights,
-      convertToOldLossType(loss), OldAlgo.Regression)
+    GradientBoostedTrees.evaluateEachIteration(
+      data,
+      trees,
+      treeWeights,
+      convertToOldLossType(loss),
+      OldAlgo.Regression)
   }
 
   @Since("2.0.0")
@@ -362,13 +405,12 @@ object GBTRegressionModel extends MLReadable[GBTRegressionModel] {
   @Since("2.0.0")
   override def load(path: String): GBTRegressionModel = super.load(path)
 
-  private[GBTRegressionModel]
-  class GBTRegressionModelWriter(instance: GBTRegressionModel) extends MLWriter {
+  private[GBTRegressionModel] class GBTRegressionModelWriter(instance: GBTRegressionModel)
+      extends MLWriter {
 
     override protected def saveImpl(path: String): Unit = {
-      val extraMetadata: JObject = Map(
-        "numFeatures" -> instance.numFeatures,
-        "numTrees" -> instance.getNumTrees)
+      val extraMetadata: JObject =
+        Map("numFeatures" -> instance.numFeatures, "numTrees" -> instance.getNumTrees)
       EnsembleModelReadWrite.saveImpl(instance, path, sparkSession, extraMetadata)
     }
   }
@@ -387,15 +429,16 @@ object GBTRegressionModel extends MLReadable[GBTRegressionModel] {
       val numFeatures = (metadata.metadata \ "numFeatures").extract[Int]
       val numTrees = (metadata.metadata \ "numTrees").extract[Int]
 
-      val trees = treesData.map {
-        case (treeMetadata, root) =>
-          val tree = new DecisionTreeRegressionModel(treeMetadata.uid, root, numFeatures)
-          treeMetadata.getAndSetParams(tree)
-          tree
+      val trees = treesData.map { case (treeMetadata, root) =>
+        val tree = new DecisionTreeRegressionModel(treeMetadata.uid, root, numFeatures)
+        treeMetadata.getAndSetParams(tree)
+        tree
       }
 
-      require(numTrees == trees.length, s"GBTRegressionModel.load expected $numTrees" +
-        s" trees based on metadata but found ${trees.length} trees.")
+      require(
+        numTrees == trees.length,
+        s"GBTRegressionModel.load expected $numTrees" +
+          s" trees based on metadata but found ${trees.length} trees.")
 
       val model = new GBTRegressionModel(metadata.uid, trees, treeWeights, numFeatures)
       metadata.getAndSetParams(model)
@@ -409,8 +452,10 @@ object GBTRegressionModel extends MLReadable[GBTRegressionModel] {
       parent: GBTRegressor,
       categoricalFeatures: Map[Int, Int],
       numFeatures: Int = -1): GBTRegressionModel = {
-    require(oldModel.algo == OldAlgo.Regression, "Cannot convert GradientBoostedTreesModel" +
-      s" with algo=${oldModel.algo} (old API) to GBTRegressionModel (new API).")
+    require(
+      oldModel.algo == OldAlgo.Regression,
+      "Cannot convert GradientBoostedTreesModel" +
+        s" with algo=${oldModel.algo} (old API) to GBTRegressionModel (new API).")
     val newTrees = oldModel.trees.map { tree =>
       // parent for each tree is null since there is no good way to set this.
       DecisionTreeRegressionModel.fromOld(tree, null, categoricalFeatures)

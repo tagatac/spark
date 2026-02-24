@@ -32,15 +32,17 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTableType
 /**
  * Spark's own GetTableTypesOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
  */
 private[hive] class SparkGetTableTypesOperation(
     val session: SparkSession,
     parentSession: HiveSession)
-  extends GetTableTypesOperation(parentSession)
-  with SparkOperation
-  with Logging {
+    extends GetTableTypesOperation(parentSession)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     statementId = UUID.randomUUID().toString

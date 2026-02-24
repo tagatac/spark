@@ -39,15 +39,15 @@ trait UserDefinedFunction {
   def name: FunctionIdentifier
 
   /**
-   * Additional properties to be serialized for the function.
-   * Use this to preserve the runtime configuration that should be used during the function
-   * execution, such as SQL configs etc. See [[SQLConf]] for more info.
+   * Additional properties to be serialized for the function. Use this to preserve the runtime
+   * configuration that should be used during the function execution, such as SQL configs etc. See
+   * [[SQLConf]] for more info.
    */
   def properties: Map[String, String]
 
   /**
-   * Get SQL configs from the function properties.
-   * Use this to restore the SQL configs that should be used for this function.
+   * Get SQL configs from the function properties. Use this to restore the SQL configs that should
+   * be used for this function.
    */
   def getSQLConfigs: Map[String, String] = {
     UserDefinedFunction.propertiesToSQLConfigs(properties)
@@ -116,15 +116,19 @@ object UserDefinedFunction {
       name: FunctionIdentifier): Seq[FunctionResource] = {
     val blob = mapper.writeValueAsString(props)
     val threshold = HIVE_FUNCTION_RESOURCE_URI_LENGTH_THRESHOLD - INDEX_LENGTH
-    blob.grouped(threshold).zipWithIndex.map { case (part, i) =>
-      // Add a sequence number to the part and pad it to a given length.
-      // E.g. 1 will become "001" if the given length is 3.
-      val index = s"%0${INDEX_LENGTH}d".format(i)
-      if (index.length > INDEX_LENGTH) {
-        throw UserDefinedFunctionErrors.routinePropertyTooLarge(name.funcName)
+    blob
+      .grouped(threshold)
+      .zipWithIndex
+      .map { case (part, i) =>
+        // Add a sequence number to the part and pad it to a given length.
+        // E.g. 1 will become "001" if the given length is 3.
+        val index = s"%0${INDEX_LENGTH}d".format(i)
+        if (index.length > INDEX_LENGTH) {
+          throw UserDefinedFunctionErrors.routinePropertyTooLarge(name.funcName)
+        }
+        FunctionResource(FileResource, index + part)
       }
-      FunctionResource(FileResource, index + part)
-    }.toSeq
+      .toSeq
   }
 
   /**
@@ -141,8 +145,9 @@ object UserDefinedFunction {
   /**
    * Convert a [[CatalogFunction]] into a corresponding UDF.
    */
-  def fromCatalogFunction(function: CatalogFunction, parser: ParserInterface)
-  : UserDefinedFunction = {
+  def fromCatalogFunction(
+      function: CatalogFunction,
+      parser: ParserInterface): UserDefinedFunction = {
     val className = function.className
     if (SQLFunction.isSQLFunction(className)) {
       SQLFunction.fromCatalogFunction(function, parser)
@@ -164,8 +169,10 @@ object UserDefinedFunction {
       for ((key, value) <- properties if key.startsWith(SQL_CONFIG_PREFIX))
         yield (key.substring(SQL_CONFIG_PREFIX.length), value)
     } catch {
-      case e: Exception => throw SparkException.internalError(
-        "Corrupted user defined function SQL configs in catalog", cause = e)
+      case e: Exception =>
+        throw SparkException.internalError(
+          "Corrupted user defined function SQL configs in catalog",
+          cause = e)
     }
   }
 }

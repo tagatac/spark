@@ -110,9 +110,9 @@ private[spark] object ThreadUtils {
   }
 
   /**
-   * An `ExecutionContextExecutor` that runs each task in the thread that invokes `execute/submit`.
-   * The caller should make sure the tasks running in this `ExecutionContextExecutor` are short and
-   * never block.
+   * An `ExecutionContextExecutor` that runs each task in the thread that invokes
+   * `execute/submit`. The caller should make sure the tasks running in this
+   * `ExecutionContextExecutor` are short and never block.
    */
   def sameThread: ExecutionContextExecutor = sameThreadExecutionContext
 
@@ -137,7 +137,9 @@ private[spark] object ThreadUtils {
    * are formatted as prefix-ID, where ID is a unique, sequentially assigned integer.
    */
   def newDaemonCachedThreadPool(
-      prefix: String, maxThreadNumber: Int, keepAliveSeconds: Int = 60): ThreadPoolExecutor = {
+      prefix: String,
+      maxThreadNumber: Int,
+      keepAliveSeconds: Int = 60): ThreadPoolExecutor = {
     val threadFactory = namedThreadFactory(prefix)
     val threadPool = new ThreadPoolExecutor(
       maxThreadNumber, // corePoolSize: the max number of threads to create before queuing the tasks
@@ -163,20 +165,22 @@ private[spark] object ThreadUtils {
    * Wrapper over newFixedThreadPool with single daemon thread.
    */
   def newDaemonSingleThreadExecutor(threadName: String): ThreadPoolExecutor = {
-    val threadFactory = new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
+    val threadFactory =
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
     Executors.newFixedThreadPool(1, threadFactory).asInstanceOf[ThreadPoolExecutor]
   }
 
   /**
-   * Wrapper over newSingleThreadExecutor that allows the specification
-   * of a RejectedExecutionHandler
+   * Wrapper over newSingleThreadExecutor that allows the specification of a
+   * RejectedExecutionHandler
    */
   def newDaemonSingleThreadExecutorWithRejectedExecutionHandler(
       threadName: String,
       taskQueueCapacity: Int,
       rejectedExecutionHandler: RejectedExecutionHandler): ThreadPoolExecutor = {
 
-    val threadFactory = new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
+    val threadFactory =
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
 
     new ThreadPoolExecutor(
       1,
@@ -189,18 +193,24 @@ private[spark] object ThreadUtils {
   }
 
   /**
-   * Simliar to newDaemonFixedThreadPool, but with a bound workQueue, task submission will
-   * be blocked when queue is full.
+   * Simliar to newDaemonFixedThreadPool, but with a bound workQueue, task submission will be
+   * blocked when queue is full.
    *
-   * @param nThreads the number of threads in the pool
-   * @param workQueueSize the capacity of the queue to use for holding tasks before they are
-   *                      executed. Task submission will be blocked when queue is full.
-   * @param prefix thread names are formatted as prefix-ID, where ID is a unique, sequentially
-   *               assigned integer.
-   * @return BlockingThreadPoolExecutorService
+   * @param nThreads
+   *   the number of threads in the pool
+   * @param workQueueSize
+   *   the capacity of the queue to use for holding tasks before they are executed. Task
+   *   submission will be blocked when queue is full.
+   * @param prefix
+   *   thread names are formatted as prefix-ID, where ID is a unique, sequentially assigned
+   *   integer.
+   * @return
+   *   BlockingThreadPoolExecutorService
    */
   def newDaemonBlockingThreadPoolExecutorService(
-      nThreads: Int, workQueueSize: Int, prefix: String): ExecutorService = {
+      nThreads: Int,
+      workQueueSize: Int,
+      prefix: String): ExecutorService = {
     val threadFactory = namedThreadFactory(prefix)
     new BlockingThreadPoolExecutorService(nThreads, workQueueSize, threadFactory)
   }
@@ -209,7 +219,8 @@ private[spark] object ThreadUtils {
    * Wrapper over ScheduledThreadPoolExecutor the pool with daemon threads.
    */
   def newDaemonSingleThreadScheduledExecutor(threadName: String): ScheduledExecutorService = {
-    val threadFactory = new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
+    val threadFactory =
+      new ThreadFactoryBuilder().setDaemon(true).setNameFormat(threadName).build()
     val executor = new ScheduledThreadPoolExecutor(1, threadFactory)
     // By default, a cancelled task is not automatically removed from the work queue until its delay
     // elapses. We have to enable it manually.
@@ -232,8 +243,9 @@ private[spark] object ThreadUtils {
   /**
    * Wrapper over ScheduledThreadPoolExecutor.
    */
-  def newDaemonThreadPoolScheduledExecutor(threadNamePrefix: String, numThreads: Int)
-      : ScheduledExecutorService = {
+  def newDaemonThreadPoolScheduledExecutor(
+      threadNamePrefix: String,
+      numThreads: Int): ScheduledExecutorService = {
     val threadFactory = new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat(s"$threadNamePrefix-%d")
@@ -250,15 +262,11 @@ private[spark] object ThreadUtils {
    * thrown in the caller thread with an adjusted stack trace that removes references to this
    * method for clarity. The exception stack traces will be like the following:
    *
-   * SomeException: exception-message
-   *   at CallerClass.body-method (sourcefile.scala)
-   *   at ... run in separate thread using org.apache.spark.util.ThreadUtils ... ()
-   *   at CallerClass.caller-method (sourcefile.scala)
-   *   ...
+   * SomeException: exception-message at CallerClass.body-method (sourcefile.scala) at ... run in
+   * separate thread using org.apache.spark.util.ThreadUtils ... () at CallerClass.caller-method
+   * (sourcefile.scala) ...
    */
-  def runInNewThread[T](
-      threadName: String,
-      isDaemon: Boolean = true)(body: => T): T = {
+  def runInNewThread[T](threadName: String, isDaemon: Boolean = true)(body: => T): T = {
     @volatile var exception: Option[Throwable] = None
     @volatile var result: T = null.asInstanceOf[T]
 
@@ -285,27 +293,27 @@ private[spark] object ThreadUtils {
   }
 
   /**
-   * Adjust exception stack stace to wrap with caller side thread stack trace.
-   * The exception stack traces will be like the following:
+   * Adjust exception stack stace to wrap with caller side thread stack trace. The exception stack
+   * traces will be like the following:
    *
-   * SomeException: exception-message
-   *   at CallerClass.body-method (sourcefile.scala)
-   *   at ... run in separate thread using org.apache.spark.util.ThreadUtils ... ()
-   *   at CallerClass.caller-method (sourcefile.scala)
-   *   ...
+   * SomeException: exception-message at CallerClass.body-method (sourcefile.scala) at ... run in
+   * separate thread using org.apache.spark.util.ThreadUtils ... () at CallerClass.caller-method
+   * (sourcefile.scala) ...
    */
   def wrapCallerStacktrace[T <: Throwable](
-       realException: T,
-       combineMessage: String =
-         s"run in separate thread using ${ThreadUtils.getClass.getName.stripSuffix("$")}",
-       dropStacks: Int = 1): T = {
+      realException: T,
+      combineMessage: String =
+        s"run in separate thread using ${ThreadUtils.getClass.getName.stripSuffix("$")}",
+      dropStacks: Int = 1): T = {
     require(dropStacks >= 0, "dropStacks must be zero or positive")
     val simpleName = this.getClass.getSimpleName
     // Remove the part of the stack that shows method calls into this helper method
     // This means drop everything from the top until the stack element
     // ThreadUtils.wrapCallerStack(), and then drop that as well (hence the `drop(1)`).
     // Large dropStacks allows caller to drop more stacks.
-    val baseStackTrace = Thread.currentThread().getStackTrace
+    val baseStackTrace = Thread
+      .currentThread()
+      .getStackTrace
       .dropWhile(!_.getClassName.contains(simpleName))
       .drop(dropStacks)
 
@@ -334,7 +342,9 @@ private[spark] object ThreadUtils {
           setName(prefix + "-" + super.getName)
         }
     }
-    new ForkJoinPool(maxThreadNumber, factory,
+    new ForkJoinPool(
+      maxThreadNumber,
+      factory,
       null, // handler
       false // asyncMode
     )
@@ -344,15 +354,15 @@ private[spark] object ThreadUtils {
   /**
    * Preferred alternative to `Await.result()`.
    *
-   * This method wraps and re-throws any exceptions thrown by the underlying `Await` call, ensuring
-   * that this thread's stack trace appears in logs.
+   * This method wraps and re-throws any exceptions thrown by the underlying `Await` call,
+   * ensuring that this thread's stack trace appears in logs.
    *
    * In addition, it calls `Awaitable.result` directly to avoid using `ForkJoinPool`'s
-   * `BlockingContext`. Codes running in the user's thread may be in a thread of Scala ForkJoinPool.
-   * As concurrent executions in ForkJoinPool may see some [[ThreadLocal]] value unexpectedly, this
-   * method basically prevents ForkJoinPool from running other tasks in the current waiting thread.
-   * In general, we should use this method because many places in Spark use [[ThreadLocal]] and it's
-   * hard to debug when [[ThreadLocal]]s leak to other tasks.
+   * `BlockingContext`. Codes running in the user's thread may be in a thread of Scala
+   * ForkJoinPool. As concurrent executions in ForkJoinPool may see some [[ThreadLocal]] value
+   * unexpectedly, this method basically prevents ForkJoinPool from running other tasks in the
+   * current waiting thread. In general, we should use this method because many places in Spark
+   * use [[ThreadLocal]] and it's hard to debug when [[ThreadLocal]]s leak to other tasks.
    */
   @throws(classOf[SparkException])
   def awaitResult[T](awaitable: Awaitable[T], atMost: Duration): T = {
@@ -370,8 +380,7 @@ private[spark] object ThreadUtils {
     } catch {
       case e: SparkFatalException =>
         throw e.throwable
-      case NonFatal(t)
-        if !t.isInstanceOf[TimeoutException] =>
+      case NonFatal(t) if !t.isInstanceOf[TimeoutException] =>
         throw new SparkException("Exception thrown in awaitResult: ", t)
     }
   }
@@ -380,7 +389,8 @@ private[spark] object ThreadUtils {
   /**
    * Preferred alternative to `Await.ready()`.
    *
-   * @see [[awaitResult]]
+   * @see
+   *   [[awaitResult]]
    */
   @throws(classOf[SparkException])
   def awaitReady[T](awaitable: Awaitable[T], atMost: Duration): awaitable.type = {

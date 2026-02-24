@@ -38,74 +38,91 @@ class FPGrowthSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
       val data = dataset.withColumn("items", col("items").cast(ArrayType(dt)))
       val model = new FPGrowth().setMinSupport(0.5).fit(data)
       val generatedRules = model.setMinConfidence(0.5).associationRules
-      val expectedRules = spark.createDataFrame(Seq(
-        (Array("2"), Array("1"), 1.0, 1.0, 0.75),
-        (Array("1"), Array("2"), 0.75, 1.0, 0.75)
-      )).toDF("antecedent", "consequent", "confidence", "lift", "support")
+      val expectedRules = spark
+        .createDataFrame(
+          Seq(
+            (Array("2"), Array("1"), 1.0, 1.0, 0.75),
+            (Array("1"), Array("2"), 0.75, 1.0, 0.75)))
+        .toDF("antecedent", "consequent", "confidence", "lift", "support")
         .withColumn("antecedent", col("antecedent").cast(ArrayType(dt)))
         .withColumn("consequent", col("consequent").cast(ArrayType(dt)))
-      assert(expectedRules.sort("antecedent").rdd.collect().sameElements(
-        generatedRules.sort("antecedent").rdd.collect()))
+      assert(
+        expectedRules
+          .sort("antecedent")
+          .rdd
+          .collect()
+          .sameElements(generatedRules.sort("antecedent").rdd.collect()))
 
       val transformed = model.transform(data)
-      val expectedTransformed = spark.createDataFrame(Seq(
-        (0, Array("1", "2"), Array.emptyIntArray),
-        (0, Array("1", "2"), Array.emptyIntArray),
-        (0, Array("1", "2"), Array.emptyIntArray),
-        (0, Array("1", "3"), Array(2))
-      )).toDF("id", "items", "prediction")
+      val expectedTransformed = spark
+        .createDataFrame(
+          Seq(
+            (0, Array("1", "2"), Array.emptyIntArray),
+            (0, Array("1", "2"), Array.emptyIntArray),
+            (0, Array("1", "2"), Array.emptyIntArray),
+            (0, Array("1", "3"), Array(2))))
+        .toDF("id", "items", "prediction")
         .withColumn("items", col("items").cast(ArrayType(dt)))
         .withColumn("prediction", col("prediction").cast(ArrayType(dt)))
-      assert(expectedTransformed.collect().toSet.equals(
-        transformed.collect().toSet))
+      assert(expectedTransformed.collect().toSet.equals(transformed.collect().toSet))
     }
   }
 
   test("FPGrowth associationRules") {
-    val dataset = spark.createDataFrame(Seq(
-        (1, Array("1", "2")),
-        (2, Array("3")),
-        (3, Array("4", "5")),
-        (4, Array("1", "2", "3")),
-        (5, Array("2"))
-      )).toDF("id", "items")
+    val dataset = spark
+      .createDataFrame(
+        Seq(
+          (1, Array("1", "2")),
+          (2, Array("3")),
+          (3, Array("4", "5")),
+          (4, Array("1", "2", "3")),
+          (5, Array("2"))))
+      .toDF("id", "items")
     val model = new FPGrowth().setMinSupport(0.1).setMinConfidence(0.1).fit(dataset)
-    val expectedRules = spark.createDataFrame(Seq(
-      (Array("2"), Array("1"), 0.6666666666666666, 1.6666666666666665, 0.4),
-      (Array("2"), Array("3"), 0.3333333333333333, 0.8333333333333333, 0.2),
-      (Array("3"), Array("1"), 0.5, 1.25, 0.2),
-      (Array("3"), Array("2"), 0.5, 0.8333333333333334, 0.2),
-      (Array("1", "3"), Array("2"), 1.0, 1.6666666666666667, 0.2),
-      (Array("1", "2"), Array("3"), 0.5, 1.25, 0.2),
-      (Array("4"), Array("5"), 1.0, 5.0, 0.2),
-      (Array("5"), Array("4"), 1.0, 5.0, 0.2),
-      (Array("1"), Array("3"), 0.5, 1.25, 0.2),
-      (Array("1"), Array("2"), 1.0, 1.6666666666666667, 0.4),
-      (Array("3", "2"), Array("1"), 1.0, 2.5, 0.2)
-    )).toDF("antecedent", "consequent", "confidence", "lift", "support")
+    val expectedRules = spark
+      .createDataFrame(
+        Seq(
+          (Array("2"), Array("1"), 0.6666666666666666, 1.6666666666666665, 0.4),
+          (Array("2"), Array("3"), 0.3333333333333333, 0.8333333333333333, 0.2),
+          (Array("3"), Array("1"), 0.5, 1.25, 0.2),
+          (Array("3"), Array("2"), 0.5, 0.8333333333333334, 0.2),
+          (Array("1", "3"), Array("2"), 1.0, 1.6666666666666667, 0.2),
+          (Array("1", "2"), Array("3"), 0.5, 1.25, 0.2),
+          (Array("4"), Array("5"), 1.0, 5.0, 0.2),
+          (Array("5"), Array("4"), 1.0, 5.0, 0.2),
+          (Array("1"), Array("3"), 0.5, 1.25, 0.2),
+          (Array("1"), Array("2"), 1.0, 1.6666666666666667, 0.4),
+          (Array("3", "2"), Array("1"), 1.0, 2.5, 0.2)))
+      .toDF("antecedent", "consequent", "confidence", "lift", "support")
     assert(expectedRules.collect().toSet.equals(model.associationRules.collect().toSet))
   }
 
   test("FPGrowth getFreqItems") {
     val model = new FPGrowth().setMinSupport(0.7).fit(dataset)
-    val expectedFreq = spark.createDataFrame(Seq(
-      (Array("1"), 4L),
-      (Array("2"), 3L),
-      (Array("1", "2"), 3L),
-      (Array("2", "1"), 3L) // duplicate as the items sequence is not guaranteed
-    )).toDF("items", "expectedFreq")
+    val expectedFreq = spark
+      .createDataFrame(
+        Seq(
+          (Array("1"), 4L),
+          (Array("2"), 3L),
+          (Array("1", "2"), 3L),
+          (Array("2", "1"), 3L) // duplicate as the items sequence is not guaranteed
+        ))
+      .toDF("items", "expectedFreq")
     val freqItems = model.freqItemsets
 
     val checkDF = freqItems.join(expectedFreq, "items")
-    assert(checkDF.count() == 3 && checkDF.filter(col("freq") === col("expectedFreq")).count() == 3)
+    assert(
+      checkDF.count() == 3 && checkDF.filter(col("freq") === col("expectedFreq")).count() == 3)
   }
 
   test("FPGrowth getFreqItems with Null") {
-    val df = spark.createDataFrame(Seq(
-      (1, Array("1", "2", "3", "5")),
-      (2, Array("1", "2", "3", "4")),
-      (3, null.asInstanceOf[Array[String]])
-    )).toDF("id", "items")
+    val df = spark
+      .createDataFrame(
+        Seq(
+          (1, Array("1", "2", "3", "5")),
+          (2, Array("1", "2", "3", "4")),
+          (3, null.asInstanceOf[Array[String]])))
+      .toDF("id", "items")
     val model = new FPGrowth().setMinSupport(0.7).fit(dataset)
     val prediction = model.transform(df)
     assert(prediction.select("prediction").where("id=3").first().getSeq[String](0).isEmpty)
@@ -113,15 +130,14 @@ class FPGrowthSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("FPGrowth prediction should not contain duplicates") {
     // This should generate rule 1 -> 3, 2 -> 3
-    val dataset = spark.createDataFrame(Seq(
-      Array("1", "3"),
-      Array("2", "3")
-    ).map(Tuple1(_))).toDF("items")
+    val dataset =
+      spark.createDataFrame(Seq(Array("1", "3"), Array("2", "3")).map(Tuple1(_))).toDF("items")
     val model = new FPGrowth().fit(dataset)
 
-    val prediction = model.transform(
-      spark.createDataFrame(Seq(Tuple1(Array("1", "2")))).toDF("items")
-    ).first().getAs[scala.collection.Seq[String]]("prediction")
+    val prediction = model
+      .transform(spark.createDataFrame(Seq(Tuple1(Array("1", "2")))).toDF("items"))
+      .first()
+      .getAs[scala.collection.Seq[String]]("prediction")
 
     assert(prediction === Seq("3"))
   }
@@ -143,7 +159,8 @@ class FPGrowthSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("FPGrowth parameter check") {
     val fpGrowth = new FPGrowth().setMinSupport(0.4567)
-    val model = fpGrowth.fit(dataset)
+    val model = fpGrowth
+      .fit(dataset)
       .setMinConfidence(0.5678)
     assert(fpGrowth.getMinSupport === 0.4567)
     assert(model.getMinConfidence === 0.5678)
@@ -156,39 +173,48 @@ class FPGrowthSuite extends SparkFunSuite with MLlibTestSparkContext with Defaul
 
   test("read/write") {
     def checkModelData(model: FPGrowthModel, model2: FPGrowthModel): Unit = {
-      assert(model.freqItemsets.collect().toSet.equals(
-        model2.freqItemsets.collect().toSet))
-      assert(model.associationRules.collect().toSet.equals(
-        model2.associationRules.collect().toSet))
-      assert(model.setMinConfidence(0.9).associationRules.collect().toSet.equals(
-        model2.setMinConfidence(0.9).associationRules.collect().toSet))
+      assert(model.freqItemsets.collect().toSet.equals(model2.freqItemsets.collect().toSet))
+      assert(
+        model.associationRules.collect().toSet.equals(model2.associationRules.collect().toSet))
+      assert(
+        model
+          .setMinConfidence(0.9)
+          .associationRules
+          .collect()
+          .toSet
+          .equals(model2.setMinConfidence(0.9).associationRules.collect().toSet))
     }
     val fPGrowth = new FPGrowth()
-    testEstimatorAndModelReadWrite(fPGrowth, dataset, FPGrowthSuite.allParamSettings,
-      FPGrowthSuite.allParamSettings, checkModelData)
+    testEstimatorAndModelReadWrite(
+      fPGrowth,
+      dataset,
+      FPGrowthSuite.allParamSettings,
+      FPGrowthSuite.allParamSettings,
+      checkModelData)
   }
 }
 
 object FPGrowthSuite {
 
   def getFPGrowthData(spark: SparkSession): DataFrame = {
-    spark.createDataFrame(Seq(
-      (0, Array("1", "2")),
-      (0, Array("1", "2")),
-      (0, Array("1", "2")),
-      (0, Array("1", "3"))
-    )).toDF("id", "items")
+    spark
+      .createDataFrame(
+        Seq(
+          (0, Array("1", "2")),
+          (0, Array("1", "2")),
+          (0, Array("1", "2")),
+          (0, Array("1", "3"))))
+      .toDF("id", "items")
   }
 
   /**
-   * Mapping from all Params to valid settings which differ from the defaults.
-   * This is useful for tests which need to exercise all Params, such as save/load.
-   * This excludes input columns to simplify some tests.
+   * Mapping from all Params to valid settings which differ from the defaults. This is useful for
+   * tests which need to exercise all Params, such as save/load. This excludes input columns to
+   * simplify some tests.
    */
   val allParamSettings: Map[String, Any] = Map(
     "minSupport" -> 0.321,
     "minConfidence" -> 0.456,
     "numPartitions" -> 5,
-    "predictionCol" -> "myPrediction"
-  )
+    "predictionCol" -> "myPrediction")
 }

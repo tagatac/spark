@@ -30,18 +30,16 @@ import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.io.{CompressionCodec => SparkCompressionCodec}
 
 /**
- * An utility object to look up Hadoop compression codecs and create input streams.
- * In addition to standard Hadoop codecs, it also supports Spark's Zstandard codec
- * if Hadopp is not compiled with Zstandard support. Additionally, it supports
- * non-standard file extensions like `.zstd` and `.gzip` for Zstandard and Gzip codecs.
+ * An utility object to look up Hadoop compression codecs and create input streams. In addition to
+ * standard Hadoop codecs, it also supports Spark's Zstandard codec if Hadopp is not compiled with
+ * Zstandard support. Additionally, it supports non-standard file extensions like `.zstd` and
+ * `.gzip` for Zstandard and Gzip codecs.
  */
 object HadoopCodecStreams {
   private val ZSTD_EXTENSIONS = Seq(".zstd", ".zst")
 
   // get codec based on file name extension
-  def getDecompressionCodec(
-    config: Configuration,
-    file: Path): Option[CompressionCodec] = {
+  def getDecompressionCodec(config: Configuration, file: Path): Option[CompressionCodec] = {
     val factory = new CompressionCodecFactory(config)
     Option(factory.getCodec(file)).orElse {
       // Try some non-standards extensions for Zstandard and Gzip
@@ -55,9 +53,7 @@ object HadoopCodecStreams {
     }
   }
 
-  def createZstdInputStream(
-    file: Path,
-    inputStream: InputStream): Option[InputStream] = {
+  def createZstdInputStream(file: Path, inputStream: InputStream): Option[InputStream] = {
     val sparkConf = Option(SparkEnv.get).map(_.conf).getOrElse(new SparkConf)
     val fileName = file.getName.toLowerCase(Locale.ROOT)
 
@@ -65,17 +61,14 @@ object HadoopCodecStreams {
       Some(
         SparkCompressionCodec
           .createCodec(sparkConf, SparkCompressionCodec.ZSTD)
-          .compressedInputStream(inputStream)
-      )
+          .compressedInputStream(inputStream))
     } else {
       None
     }
     isOpt
   }
 
-  def createInputStream(
-    config: Configuration,
-    file: Path): InputStream = {
+  def createInputStream(config: Configuration, file: Path): InputStream = {
     val fs = file.getFileSystem(config)
     val inputStream: InputStream = fs.open(file)
 
@@ -89,6 +82,7 @@ object HadoopCodecStreams {
             // support. In that case, we try to use Spark's Zstandard codec.
             createZstdInputStream(file, inputStream).getOrElse(throw e)
         }
-      }.getOrElse(inputStream)
+      }
+      .getOrElse(inputStream)
   }
 }

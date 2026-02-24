@@ -27,9 +27,8 @@ import org.apache.spark.sql.catalyst.expressions.{Expression, UnaryExpression}
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.types.{BinaryType, DataType}
 
-case class CatalystDataToAvro(
-    child: Expression,
-    jsonFormatSchema: Option[String]) extends UnaryExpression {
+case class CatalystDataToAvro(child: Expression, jsonFormatSchema: Option[String])
+    extends UnaryExpression {
 
   override def dataType: DataType = BinaryType
 
@@ -61,8 +60,7 @@ case class CatalystDataToAvro(
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     val expr = ctx.addReferenceObj("this", this)
-    defineCodeGen(ctx, ev, input =>
-      s"(byte[]) $expr.nullSafeEval($input)")
+    defineCodeGen(ctx, ev, input => s"(byte[]) $expr.nullSafeEval($input)")
   }
 
   override protected def withNewChildInternal(newChild: Expression): CatalystDataToAvro =

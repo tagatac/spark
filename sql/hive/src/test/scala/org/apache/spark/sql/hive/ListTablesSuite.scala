@@ -23,9 +23,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.AnalysisTest
 import org.apache.spark.sql.hive.test.TestHiveSingleton
 
-class ListTablesSuite extends QueryTest
-  with AnalysisTest
-  with TestHiveSingleton {
+class ListTablesSuite extends QueryTest with AnalysisTest with TestHiveSingleton {
   import hiveContext._
   import hiveContext.sparkSession.implicits._
 
@@ -35,7 +33,10 @@ class ListTablesSuite extends QueryTest
     super.beforeAll()
     // The catalog in HiveContext is a case insensitive one.
     createTempView(
-      sessionState.catalog, "ListTablesSuiteTable", df.logicalPlan, overrideIfExists = true)
+      sessionState.catalog,
+      "ListTablesSuiteTable",
+      df.logicalPlan,
+      overrideIfExists = true)
     sql("CREATE TABLE HiveListTablesSuiteTable (key int, value string)")
     sql("CREATE DATABASE IF NOT EXISTS ListTablesSuiteDB")
     sql("CREATE TABLE ListTablesSuiteDB.HiveInDBListTablesSuiteTable (key int, value string)")
@@ -44,7 +45,9 @@ class ListTablesSuite extends QueryTest
   override def afterAll(): Unit = {
     try {
       sessionState.catalog.dropTable(
-        TableIdentifier("ListTablesSuiteTable"), ignoreIfNotExists = true, purge = false)
+        TableIdentifier("ListTablesSuiteTable"),
+        ignoreIfNotExists = true,
+        purge = false)
       sql("DROP TABLE IF EXISTS HiveListTablesSuiteTable")
       sql("DROP TABLE IF EXISTS ListTablesSuiteDB.HiveInDBListTablesSuiteTable")
       sql("DROP DATABASE IF EXISTS ListTablesSuiteDB")
@@ -54,16 +57,15 @@ class ListTablesSuite extends QueryTest
   }
 
   test("get all tables of current database") {
-    Seq(tables(), sql("SHOW TABLes")).foreach {
-      case allTables =>
-        // We are using default DB.
-        checkAnswer(
-          allTables.filter("tableName = 'listtablessuitetable'"),
-          Row("", "listtablessuitetable", true))
-        checkAnswer(
-          allTables.filter("tableName = 'hivelisttablessuitetable'"),
-          Row("default", "hivelisttablessuitetable", false))
-        assert(allTables.filter("tableName = 'hiveindblisttablessuitetable'").count() === 0)
+    Seq(tables(), sql("SHOW TABLes")).foreach { case allTables =>
+      // We are using default DB.
+      checkAnswer(
+        allTables.filter("tableName = 'listtablessuitetable'"),
+        Row("", "listtablessuitetable", true))
+      checkAnswer(
+        allTables.filter("tableName = 'hivelisttablessuitetable'"),
+        Row("default", "hivelisttablessuitetable", false))
+      assert(allTables.filter("tableName = 'hiveindblisttablessuitetable'").count() === 0)
     }
   }
 

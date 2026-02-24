@@ -23,19 +23,20 @@ import org.apache.hadoop.mapreduce.{TaskAttemptContext => NewTaskAttemptContext}
 import org.apache.spark.internal.LogKeys
 
 /**
- * An [[FileCommitProtocol]] implementation backed by an underlying Hadoop OutputCommitter
- * (from the old mapred API).
+ * An [[FileCommitProtocol]] implementation backed by an underlying Hadoop OutputCommitter (from
+ * the old mapred API).
  *
  * Unlike Hadoop's OutputCommitter, this implementation is serializable.
  */
 class HadoopMapRedCommitProtocol(jobId: String, path: String)
-  extends HadoopMapReduceCommitProtocol(jobId, path) {
+    extends HadoopMapReduceCommitProtocol(jobId, path) {
 
   override def setupCommitter(context: NewTaskAttemptContext): OutputCommitter = {
     val config = context.getConfiguration.asInstanceOf[JobConf]
     val committer = config.getOutputCommitter
-    logInfo(log"Using output committer class" +
-      log" ${MDC(LogKeys.CLASS_NAME, committer.getClass.getCanonicalName)}")
+    logInfo(
+      log"Using output committer class" +
+        log" ${MDC(LogKeys.CLASS_NAME, committer.getClass.getCanonicalName)}")
     committer
   }
 }

@@ -29,7 +29,8 @@ private[history] class HistoryPage(parent: HistoryServer) extends WebUIPage("") 
 
   def render(request: HttpServletRequest): Seq[Node] = {
     val requestedIncomplete = Option(request.getParameter("showIncomplete"))
-      .getOrElse("false").toBoolean
+      .getOrElse("false")
+      .toBoolean
 
     val displayApplications = shouldDisplayApplications(requestedIncomplete)
     val eventLogsUnderProcessCount = parent.getEventLogsUnderProcess()
@@ -42,70 +43,74 @@ private[history] class HistoryPage(parent: HistoryServer) extends WebUIPage("") 
           {providerConfig.map { case (k, v) => <li><strong>{k}:</strong> {v}</li> }}
         </ul>
         {
-          if (eventLogsUnderProcessCount > 0) {
+        if (eventLogsUnderProcessCount > 0) {
           <p>There are {eventLogsUnderProcessCount} event log(s) currently being
             processed which may result in additional applications getting listed on this page.
             Refresh the page to view updates. </p>
-          } else Seq.empty
+        } else Seq.empty
 
-        }
+      }
         {
-          if (lastUpdatedTime > 0) {
-            <p>Last updated: <span id="last-updated">{lastUpdatedTime}</span></p>
-          } else Seq.empty
-        }
+        if (lastUpdatedTime > 0) {
+          <p>Last updated: <span id="last-updated">{lastUpdatedTime}</span></p>
+        } else Seq.empty
+      }
         {
-          <p>Client local time zone: <span id="time-zone"></span></p>
-        }
+        <p>Client local time zone: <span id="time-zone"></span></p>
+      }
       </div>
 
     val appList =
       <div class="container-fluid">
         {
-          val js =
-            s"""
+        val js =
+          s"""
                |${formatImportJavaScript(request, "/static/historypage.js", "setAppLimit")}
                |
                |setAppLimit(${parent.maxApplications});
                |""".stripMargin
 
-          if (displayApplications) {
-            <script src={UIUtils.prependBaseUri(
-              request, "/static/dataTables.rowsGroup.js")}></script> ++
-            <script type="module" src={UIUtils.prependBaseUri(
-              request, "/static/historypage.js")} ></script> ++
+        if (displayApplications) {
+          <script src={
+            UIUtils.prependBaseUri(request, "/static/dataTables.rowsGroup.js")
+          }></script> ++
+            <script type="module" src={
+              UIUtils.prependBaseUri(request, "/static/historypage.js")
+            } ></script> ++
             <script type="module" nonce={CspNonce.get}>{Unparsed(js)}</script> ++
-              <div id="history-summary"></div>
-          } else if (requestedIncomplete) {
-            <h4>No incomplete applications found!</h4>
-          } else if (eventLogsUnderProcessCount > 0) {
-            <h4>No completed applications found!</h4>
-          } else {
-            <h4>No completed applications found!</h4> ++ parent.emptyListingHtml()
-          }
+            <div id="history-summary"></div>
+        } else if (requestedIncomplete) {
+          <h4>No incomplete applications found!</h4>
+        } else if (eventLogsUnderProcessCount > 0) {
+          <h4>No completed applications found!</h4>
+        } else {
+          <h4>No completed applications found!</h4> ++ parent.emptyListingHtml()
         }
+      }
       </div>
 
     val pageLink =
       <div class="container-fluid">
         <a href={makePageLink(request, !requestedIncomplete)}>
           {
-            if (requestedIncomplete) {
-              "Back to completed applications"
-            } else {
-              "Show incomplete applications"
-            }
-          }
+        if (requestedIncomplete) {
+          "Back to completed applications"
+        } else {
+          "Show incomplete applications"
+        }
+      }
         </a>
         <p><a href={UIUtils.prependBaseUri(request, "/logPage/?self&logType=out")}>
           Show server log</a></p>
       </div>
     val content =
-      <script type="module" src={UIUtils.prependBaseUri(
-        request, "/static/historypage-common.js")}></script> ++
-      <script type="module" src={UIUtils.prependBaseUri(
-        request, "/static/utils.js")}></script> ++
-      summary ++ appList ++ pageLink
+      <script type="module" src={
+        UIUtils.prependBaseUri(request, "/static/historypage-common.js")
+      }></script> ++
+        <script type="module" src={
+          UIUtils.prependBaseUri(request, "/static/utils.js")
+        }></script> ++
+        summary ++ appList ++ pageLink
     UIUtils.basicSparkPage(request, content, parent.title, true)
   }
 

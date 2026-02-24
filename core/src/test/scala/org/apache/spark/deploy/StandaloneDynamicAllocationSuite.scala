@@ -41,9 +41,9 @@ import org.apache.spark.scheduler.cluster.CoarseGrainedClusterMessages.{Launched
  * End-to-end tests for dynamic allocation in standalone mode.
  */
 class StandaloneDynamicAllocationSuite
-  extends SparkFunSuite
-  with LocalSparkContext
-  with PrivateMethodTester {
+    extends SparkFunSuite
+    with LocalSparkContext
+    with PrivateMethodTester {
 
   private val numWorkers = 2
   private val conf = new SparkConf()
@@ -55,8 +55,8 @@ class StandaloneDynamicAllocationSuite
   private var workers: Seq[Worker] = null
 
   /**
-   * Start the local cluster.
-   * Note: local-cluster mode is insufficient because we want a reference to the Master.
+   * Start the local cluster. Note: local-cluster mode is insufficient because we want a reference
+   * to the Master.
    */
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -295,9 +295,10 @@ class StandaloneDynamicAllocationSuite
   }
 
   test("dynamic allocation with cores per executor AND max cores") {
-    sc = new SparkContext(appConf
-      .set(config.EXECUTOR_CORES, 2)
-      .set(config.CORES_MAX, 8))
+    sc = new SparkContext(
+      appConf
+        .set(config.EXECUTOR_CORES, 2)
+        .set(config.CORES_MAX, 8))
     val appId = sc.applicationId
     eventually(timeout(10.seconds), interval(10.millis)) {
       val apps = getApplications()
@@ -504,8 +505,15 @@ class StandaloneDynamicAllocationSuite
     val endpointRef = mock(classOf[RpcEndpointRef])
     val mockAddress = mock(classOf[RpcAddress])
     when(endpointRef.address).thenReturn(mockAddress)
-    val message = RegisterExecutor("one", endpointRef, "excluded-host", 10, Map.empty,
-      Map.empty, Map.empty, ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID)
+    val message = RegisterExecutor(
+      "one",
+      endpointRef,
+      "excluded-host",
+      10,
+      Map.empty,
+      Map.empty,
+      Map.empty,
+      ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID)
 
     val taskScheduler = mock(classOf[TaskSchedulerImpl])
     when(taskScheduler.excludedNodes()).thenReturn(Set("excluded-host"))
@@ -590,7 +598,10 @@ class StandaloneDynamicAllocationSuite
     syncExecutors(sc)
     sc.schedulerBackend match {
       case b: CoarseGrainedSchedulerBackend =>
-        b.killExecutors(Seq(executorId), adjustTargetNumExecutors = true, countFailures = false,
+        b.killExecutors(
+          Seq(executorId),
+          adjustTargetNumExecutors = true,
+          countFailures = false,
           force)
       case _ => fail("expected coarse grained scheduler")
     }
@@ -599,9 +610,9 @@ class StandaloneDynamicAllocationSuite
   /**
    * Return a list of executor IDs belonging to this application.
    *
-   * Note that we must use the executor IDs according to the Master, which has the most
-   * updated view. We cannot rely on the executor IDs according to the driver because we
-   * don't wait for executors to register. Otherwise the tests will take much longer to run.
+   * Note that we must use the executor IDs according to the Master, which has the most updated
+   * view. We cannot rely on the executor IDs according to the driver because we don't wait for
+   * executors to register. Otherwise the tests will take much longer to run.
    */
   private def getExecutorIds(sc: SparkContext): Seq[String] = {
     val app = getApplications().find(_.id == sc.applicationId)
@@ -614,8 +625,8 @@ class StandaloneDynamicAllocationSuite
   /**
    * Sync executor IDs between the driver and the Master.
    *
-   * This allows us to avoid waiting for new executors to register with the driver before
-   * we submit a request to kill them. This must be called before each kill request.
+   * This allows us to avoid waiting for new executors to register with the driver before we
+   * submit a request to kill them. This must be called before each kill request.
    */
   private def syncExecutors(sc: SparkContext): Unit = {
     val backend = sc.schedulerBackend.asInstanceOf[CoarseGrainedSchedulerBackend]
@@ -627,8 +638,15 @@ class StandaloneDynamicAllocationSuite
       val endpointRef = mock(classOf[RpcEndpointRef])
       val mockAddress = mock(classOf[RpcAddress])
       when(endpointRef.address).thenReturn(mockAddress)
-      val message = RegisterExecutor(id, endpointRef, "localhost", 10, Map.empty, Map.empty,
-        Map.empty, ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID)
+      val message = RegisterExecutor(
+        id,
+        endpointRef,
+        "localhost",
+        10,
+        Map.empty,
+        Map.empty,
+        Map.empty,
+        ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID)
       backend.driverEndpoint.askSync[Boolean](message)
       backend.driverEndpoint.send(LaunchedExecutor(id))
       eventually(timeout(10.seconds), interval(100.millis)) {
@@ -639,14 +657,21 @@ class StandaloneDynamicAllocationSuite
 
   /**
    * Worker implementation that does not actually launch any executors, but reports them as
-   * running so the Master keeps track of them. This requires that `syncExecutors` be used
-   * to make sure the Master instance and the SparkContext under test agree about what
-   * executors are running.
+   * running so the Master keeps track of them. This requires that `syncExecutors` be used to make
+   * sure the Master instance and the SparkContext under test agree about what executors are
+   * running.
    */
   private class TestWorker(rpcEnv: RpcEnv, cores: Int, memory: Int)
-    extends Worker(
-      rpcEnv, 0, cores, memory, Array(masterRpcEnv.address), Worker.ENDPOINT_NAME,
-      null, conf, securityManager) {
+      extends Worker(
+        rpcEnv,
+        0,
+        cores,
+        memory,
+        Array(masterRpcEnv.address),
+        Worker.ENDPOINT_NAME,
+        null,
+        conf,
+        securityManager) {
 
     override def receive: PartialFunction[Any, Unit] = testReceive.orElse(super.receive)
 

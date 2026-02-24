@@ -22,8 +22,8 @@ import org.apache.spark.sql.catalyst.analysis.NamespaceAlreadyExistsException
 import org.apache.spark.sql.execution.command.v1
 
 /**
- * The class contains tests for the `CREATE NAMESPACE` command to check V1 Hive external
- * table catalog.
+ * The class contains tests for the `CREATE NAMESPACE` command to check V1 Hive external table
+ * catalog.
  */
 class CreateNamespaceSuite extends v1.CreateNamespaceSuiteBase with CommandSuiteBase {
   override def commandVersion: String = super[CreateNamespaceSuiteBase].commandVersion
@@ -35,11 +35,7 @@ class CreateNamespaceSuite extends v1.CreateNamespaceSuiteBase with CommandSuite
         sql(s"CREATE NAMESPACE $catalog.$namespace")
       },
       condition = "REQUIRES_SINGLE_PART_NAMESPACE",
-      parameters = Map(
-        "sessionCatalog" -> catalog,
-        "identifier" -> "`ns1`.`ns2`"
-      )
-    )
+      parameters = Map("sessionCatalog" -> catalog, "identifier" -> "`ns1`.`ns2`"))
   }
 
   test("hive client calls") {

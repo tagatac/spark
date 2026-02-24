@@ -23,8 +23,8 @@ import org.apache.spark.internal.LogKeys.{STAGE_ATTEMPT_ID, STAGE_ID}
 import org.apache.spark.internal.MessageWithContext
 
 /**
- * A set of tasks submitted together to the low-level TaskScheduler, usually representing
- * missing partitions of a particular stage.
+ * A set of tasks submitted together to the low-level TaskScheduler, usually representing missing
+ * partitions of a particular stage.
  */
 private[spark] class TaskSet(
     val tasks: Array[Task[_]],

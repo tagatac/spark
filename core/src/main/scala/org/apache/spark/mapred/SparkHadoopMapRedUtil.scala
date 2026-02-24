@@ -29,8 +29,9 @@ import org.apache.spark.internal.LogKeys.{TASK_ATTEMPT_ID, TOTAL_TIME}
 import org.apache.spark.util.Utils
 
 object SparkHadoopMapRedUtil extends Logging {
+
   /**
-   * Commits a task output.  Before committing the task output, we need to know whether some other
+   * Commits a task output. Before committing the task output, we need to know whether some other
    * task attempt might be racing to commit the same output partition. Therefore, coordinate with
    * the driver in order to determine whether this attempt can commit (please see SPARK-4879 for
    * details).
@@ -50,8 +51,9 @@ object SparkHadoopMapRedUtil extends Logging {
     def performCommit(): Unit = {
       try {
         val (_, timeCost) = Utils.timeTakenMs(committer.commitTask(mrTaskContext))
-        logInfo(log"${MDC(TASK_ATTEMPT_ID, mrTaskAttemptID)}: Committed." +
-          log" Elapsed time: ${MDC(TOTAL_TIME, timeCost)} ms.")
+        logInfo(
+          log"${MDC(TASK_ATTEMPT_ID, mrTaskAttemptID)}: Committed." +
+            log" Elapsed time: ${MDC(TOTAL_TIME, timeCost)} ms.")
       } catch {
         case cause: IOException =>
           logError(
@@ -75,8 +77,11 @@ object SparkHadoopMapRedUtil extends Logging {
       if (shouldCoordinateWithDriver) {
         val outputCommitCoordinator = SparkEnv.get.outputCommitCoordinator
         val ctx = TaskContext.get()
-        val canCommit = outputCommitCoordinator.canCommit(ctx.stageId(), ctx.stageAttemptNumber(),
-          splitId, ctx.attemptNumber())
+        val canCommit = outputCommitCoordinator.canCommit(
+          ctx.stageId(),
+          ctx.stageAttemptNumber(),
+          splitId,
+          ctx.attemptNumber())
 
         if (canCommit) {
           performCommit()
@@ -86,7 +91,10 @@ object SparkHadoopMapRedUtil extends Logging {
           logInfo(message)
           // We need to abort the task so that the driver can reschedule new attempts, if necessary
           committer.abortTask(mrTaskContext)
-          throw new CommitDeniedException(message.message, ctx.stageId(), splitId,
+          throw new CommitDeniedException(
+            message.message,
+            ctx.stageId(),
+            splitId,
             ctx.attemptNumber())
         }
       } else {
@@ -95,8 +103,9 @@ object SparkHadoopMapRedUtil extends Logging {
       }
     } else {
       // Some other attempt committed the output, so we do nothing and signal success
-      logInfo(log"No need to commit output of task because needsTaskCommit=false:" +
-        log" ${MDC(TASK_ATTEMPT_ID, mrTaskAttemptID)}")
+      logInfo(
+        log"No need to commit output of task because needsTaskCommit=false:" +
+          log" ${MDC(TASK_ATTEMPT_ID, mrTaskAttemptID)}")
     }
   }
 }

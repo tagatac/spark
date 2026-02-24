@@ -30,13 +30,12 @@ import org.apache.spark.rpc.{RpcEndpointRef, RpcTimeout}
 import org.apache.spark.storage.BlockManagerMessages._
 import org.apache.spark.util.{RpcUtils, ThreadUtils}
 
-private[spark]
-class BlockManagerMaster(
+private[spark] class BlockManagerMaster(
     var driverEndpoint: RpcEndpointRef,
     var driverHeartbeatEndPoint: RpcEndpointRef,
     conf: SparkConf,
     isDriver: Boolean)
-  extends Logging {
+    extends Logging {
 
   val timeout = RpcUtils.askRpcTimeout(conf)
 
@@ -49,8 +48,8 @@ class BlockManagerMaster(
     logInfo(log"Removed ${MDC(EXECUTOR_ID, execId)} successfully in removeExecutor")
   }
 
-  /** Decommission block managers corresponding to given set of executors
-   * Non-blocking.
+  /**
+   * Decommission block managers corresponding to given set of executors Non-blocking.
    */
   def decommissionBlockManagers(executorIds: Seq[String]): Unit = {
     driverEndpoint.ask[Boolean](DecommissionBlockManagers(executorIds))
@@ -61,8 +60,9 @@ class BlockManagerMaster(
     driverEndpoint.askSync[Seq[ReplicateBlock]](GetReplicateInfoForRDDBlocks(blockManagerId))
   }
 
-  /** Request removal of a dead executor from the driver endpoint.
-   *  This is only called on the driver side. Non-blocking
+  /**
+   * Request removal of a dead executor from the driver endpoint. This is only called on the
+   * driver side. Non-blocking
    */
   def removeExecutorAsync(execId: String): Unit = {
     driverEndpoint.ask[Boolean](RemoveExecutor(execId))
@@ -89,9 +89,7 @@ class BlockManagerMaster(
         maxOnHeapMemSize,
         maxOffHeapMemSize,
         storageEndpoint,
-        isReRegister
-      )
-    )
+        isReRegister))
     if (updatedId.executorId == BlockManagerId.INVALID_EXECUTOR_ID) {
       assert(isReRegister, "Got invalid executor id from non re-register case")
       logInfo(log"Re-register BlockManager ${MDC(BLOCK_MANAGER_ID, id)} failed")
@@ -146,8 +144,8 @@ class BlockManagerMaster(
   }
 
   /**
-   * Check if block manager master has a block. Note that this can be used to check for only
-   * those blocks that are reported to block manager master.
+   * Check if block manager master has a block. Note that this can be used to check for only those
+   * blocks that are reported to block manager master.
    */
   def contains(blockId: BlockId): Boolean = {
     getLocations(blockId).nonEmpty
@@ -159,8 +157,8 @@ class BlockManagerMaster(
   }
 
   /**
-   * Get a list of unique shuffle service locations where an executor is successfully
-   * registered in the past for block push/merge with push based shuffle.
+   * Get a list of unique shuffle service locations where an executor is successfully registered
+   * in the past for block push/merge with push based shuffle.
    */
   def getShufflePushMergerLocations(
       numMergersNeeded: Int,
@@ -170,8 +168,8 @@ class BlockManagerMaster(
   }
 
   /**
-   * Remove the host from the candidate list of shuffle push mergers. This can be
-   * triggered if there is a FetchFailedException on the host. Non-blocking.
+   * Remove the host from the candidate list of shuffle push mergers. This can be triggered if
+   * there is a FetchFailedException on the host. Non-blocking.
    * @param host
    */
   def removeShufflePushMergerLocation(host: String): Unit = {
@@ -195,9 +193,10 @@ class BlockManagerMaster(
   def removeRdd(rddId: Int, blocking: Boolean): Unit = {
     val future = driverEndpoint.askSync[Future[Seq[Int]]](RemoveRdd(rddId))
     future.failed.foreach(e =>
-      logWarning(log"Failed to remove RDD ${MDC(RDD_ID, rddId)} - " +
-        log"${MDC(ERROR, e.getMessage)}", e)
-    )(ThreadUtils.sameThread)
+      logWarning(
+        log"Failed to remove RDD ${MDC(RDD_ID, rddId)} - " +
+          log"${MDC(ERROR, e.getMessage)}",
+        e))(ThreadUtils.sameThread)
     if (blocking) {
       waitBlockRemovalTimeout.awaitResult(future)
     }
@@ -207,9 +206,10 @@ class BlockManagerMaster(
   def removeShuffle(shuffleId: Int, blocking: Boolean): Unit = {
     val future = driverEndpoint.askSync[Future[Seq[Boolean]]](RemoveShuffle(shuffleId))
     future.failed.foreach(e =>
-      logWarning(log"Failed to remove shuffle ${MDC(SHUFFLE_ID, shuffleId)} - " +
-        log"${MDC(ERROR, e.getMessage)}", e)
-    )(ThreadUtils.sameThread)
+      logWarning(
+        log"Failed to remove shuffle ${MDC(SHUFFLE_ID, shuffleId)} - " +
+          log"${MDC(ERROR, e.getMessage)}",
+        e))(ThreadUtils.sameThread)
     if (blocking) {
       waitBlockRemovalTimeout.awaitResult(future)
     }
@@ -217,23 +217,23 @@ class BlockManagerMaster(
 
   /** Remove all blocks belonging to the given broadcast. */
   def removeBroadcast(broadcastId: Long, removeFromMaster: Boolean, blocking: Boolean): Unit = {
-    val future = driverEndpoint.askSync[Future[Seq[Int]]](
-      RemoveBroadcast(broadcastId, removeFromMaster))
+    val future =
+      driverEndpoint.askSync[Future[Seq[Int]]](RemoveBroadcast(broadcastId, removeFromMaster))
     future.failed.foreach(e =>
-      logWarning(log"Failed to remove broadcast ${MDC(BROADCAST_ID, broadcastId)}" +
-        log" with removeFromMaster = ${MDC(REMOVE_FROM_MASTER, removeFromMaster)} - " +
-        log"${MDC(ERROR, e.getMessage)}", e)
-    )(ThreadUtils.sameThread)
+      logWarning(
+        log"Failed to remove broadcast ${MDC(BROADCAST_ID, broadcastId)}" +
+          log" with removeFromMaster = ${MDC(REMOVE_FROM_MASTER, removeFromMaster)} - " +
+          log"${MDC(ERROR, e.getMessage)}",
+        e))(ThreadUtils.sameThread)
     if (blocking) {
       waitBlockRemovalTimeout.awaitResult(future)
     }
   }
 
   /**
-   * Return the memory status for each block manager, in the form of a map from
-   * the block manager's id to two long values. The first value is the maximum
-   * amount of memory allocated for the block manager, while the second is the
-   * amount of remaining memory.
+   * Return the memory status for each block manager, in the form of a map from the block
+   * manager's id to two long values. The first value is the maximum amount of memory allocated
+   * for the block manager, while the second is the amount of remaining memory.
    */
   def getMemoryStatus: Map[BlockManagerId, (Long, Long)] = {
     if (driverEndpoint == null) return Map.empty
@@ -246,12 +246,12 @@ class BlockManagerMaster(
   }
 
   /**
-   * Return the block's status on all block managers, if any. NOTE: This is a
-   * potentially expensive operation and should only be used for testing.
+   * Return the block's status on all block managers, if any. NOTE: This is a potentially
+   * expensive operation and should only be used for testing.
    *
    * If askStorageEndpoints is true, this invokes the master to query each block manager for the
-   * most updated block statuses. This is useful when the master is not informed of the given block
-   * by all block managers.
+   * most updated block statuses. This is useful when the master is not informed of the given
+   * block by all block managers.
    */
   def getBlockStatus(
       blockId: BlockId,
@@ -262,22 +262,23 @@ class BlockManagerMaster(
      * should not block on waiting for a block manager, which can in turn be waiting for the
      * master endpoint for a response to a prior message.
      */
-    val response = driverEndpoint.
-      askSync[Map[BlockManagerId, Future[Option[BlockStatus]]]](msg)
+    val response = driverEndpoint.askSync[Map[BlockManagerId, Future[Option[BlockStatus]]]](msg)
     val (blockManagerIds, futures) = response.unzip
     val cbf =
-      implicitly[
-        BuildFrom[Iterable[Future[Option[BlockStatus]]],
+      implicitly[BuildFrom[
+        Iterable[Future[Option[BlockStatus]]],
         Option[BlockStatus],
         Iterable[Option[BlockStatus]]]]
-    val blockStatus = timeout.awaitResult(
-      Future.sequence(futures)(cbf, ThreadUtils.sameThread))
+    val blockStatus = timeout.awaitResult(Future.sequence(futures)(cbf, ThreadUtils.sameThread))
     if (blockStatus == null) {
       throw SparkCoreErrors.blockStatusQueryReturnedNullError(blockId)
     }
-    blockManagerIds.zip(blockStatus).flatMap { case (blockManagerId, status) =>
-      status.map { s => (blockManagerId, s) }
-    }.toMap
+    blockManagerIds
+      .zip(blockStatus)
+      .flatMap { case (blockManagerId, status) =>
+        status.map { s => (blockManagerId, s) }
+      }
+      .toMap
   }
 
   /**
@@ -285,8 +286,8 @@ class BlockManagerMaster(
    * is a potentially expensive operation and should only be used for testing.
    *
    * If askStorageEndpoints is true, this invokes the master to query each block manager for the
-   * most updated block statuses. This is useful when the master is not informed of the given block
-   * by all block managers.
+   * most updated block statuses. This is useful when the master is not informed of the given
+   * block by all block managers.
    */
   def getMatchingBlockIds(
       filter: BlockId => Boolean,

@@ -44,8 +44,8 @@ class KerberosConfDriverFeatureStepSuite extends SparkFunSuite {
 
   test("mount krb5 config map if defined") {
     val configMap = "testConfigMap"
-    val step = createStep(
-      new SparkConf(false).set(KUBERNETES_KERBEROS_KRB5_CONFIG_MAP, configMap))
+    val step =
+      createStep(new SparkConf(false).set(KUBERNETES_KERBEROS_KRB5_CONFIG_MAP, configMap))
 
     checkPodForKrbConf(step.configurePod(SparkPod.initialPod()), configMap)
     assert(step.getAdditionalPodSystemProperties().isEmpty)
@@ -126,10 +126,12 @@ class KerberosConfDriverFeatureStepSuite extends SparkFunSuite {
         val step = createStep(new SparkConf(false))
 
         val dtSecret = filter[Secret](step.getAdditionalKubernetesResources()).head
-        assert(dtSecret.getData().get(KERBEROS_SECRET_KEY) ===
-          Base64.getEncoder().encodeToString(tokens))
+        assert(
+          dtSecret.getData().get(KERBEROS_SECRET_KEY) ===
+            Base64.getEncoder().encodeToString(tokens))
 
-        checkPodForTokens(step.configurePod(SparkPod.initialPod()),
+        checkPodForTokens(
+          step.configurePod(SparkPod.initialPod()),
           dtSecret.getMetadata().getName())
 
         assert(step.getAdditionalPodSystemProperties().isEmpty)
@@ -153,11 +155,17 @@ class KerberosConfDriverFeatureStepSuite extends SparkFunSuite {
   }
 
   private def checkPodForTokens(pod: SparkPod, dtSecretName: String): Unit = {
-    val podVolume = pod.pod.getSpec().getVolumes().asScala
+    val podVolume = pod.pod
+      .getSpec()
+      .getVolumes()
+      .asScala
       .find(_.getName() == SPARK_APP_HADOOP_SECRET_VOLUME_NAME)
     assert(podVolume.isDefined)
-    assert(containerHasVolume(pod.container, SPARK_APP_HADOOP_SECRET_VOLUME_NAME,
-      SPARK_APP_HADOOP_CREDENTIALS_BASE_DIR))
+    assert(
+      containerHasVolume(
+        pod.container,
+        SPARK_APP_HADOOP_SECRET_VOLUME_NAME,
+        SPARK_APP_HADOOP_CREDENTIALS_BASE_DIR))
     assert(containerHasEnvVar(pod.container, ENV_HADOOP_TOKEN_FILE_LOCATION))
     assert(podVolume.get.getSecret().getSecretName() === dtSecretName)
   }

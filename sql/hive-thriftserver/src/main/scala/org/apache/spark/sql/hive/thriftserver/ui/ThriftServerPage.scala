@@ -39,7 +39,7 @@ private[ui] class ThriftServerPage(parent: ThriftServerTab) extends WebUIPage(""
   def render(request: HttpServletRequest): Seq[Node] = {
     val content = store.synchronized { // make sure all parts in this page are consistent
       generateBasicStats() ++
-          <br/> ++
+        <br/> ++
         <h4>
           {store.getOnlineSessionNum}
           session(s) are online,
@@ -79,15 +79,16 @@ private[ui] class ThriftServerPage(parent: ThriftServerTab) extends WebUIPage(""
         Option(request.getParameter(s"$sqlTableTag.page")).map(_.toInt).getOrElse(1)
 
       try {
-        Some(new SqlStatsPagedTable(
-          request,
-          parent,
-          store.getExecutionList,
-          "sqlserver",
-          UIUtils.prependBaseUri(request, parent.basePath),
-          sqlTableTag).table(sqlTablePage))
+        Some(
+          new SqlStatsPagedTable(
+            request,
+            parent,
+            store.getExecutionList,
+            "sqlserver",
+            UIUtils.prependBaseUri(request, parent.basePath),
+            sqlTableTag).table(sqlTablePage))
       } catch {
-        case e@(_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
+        case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
           Some(<div class="alert alert-error">
             <p>Error while rendering job table:</p>
             <pre>
@@ -124,16 +125,16 @@ private[ui] class ThriftServerPage(parent: ThriftServerTab) extends WebUIPage(""
         Option(request.getParameter(s"$sessionTableTag.page")).map(_.toInt).getOrElse(1)
 
       try {
-        Some(new SessionStatsPagedTable(
-          request,
-          parent,
-          store.getSessionList,
-          "sqlserver",
-          UIUtils.prependBaseUri(request, parent.basePath),
-          sessionTableTag
-        ).table(sessionTablePage))
+        Some(
+          new SessionStatsPagedTable(
+            request,
+            parent,
+            store.getSessionList,
+            "sqlserver",
+            UIUtils.prependBaseUri(request, parent.basePath),
+            sessionTableTag).table(sessionTablePage))
       } catch {
-        case e@(_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
+        case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
           Some(<div class="alert alert-error">
             <p>Error while rendering job table:</p>
             <pre>
@@ -146,7 +147,7 @@ private[ui] class ThriftServerPage(parent: ThriftServerTab) extends WebUIPage(""
     }
 
     val content =
-    <span id="sessionstat" class="collapse-aggregated-sessionstat collapse-table"
+      <span id="sessionstat" class="collapse-aggregated-sessionstat collapse-table"
           data-collapse-name="collapse-aggregated-sessionstat"
           data-collapse-table="aggregated-sessionstat">
       <h4>
@@ -154,7 +155,7 @@ private[ui] class ThriftServerPage(parent: ThriftServerTab) extends WebUIPage(""
         <a>Session Statistics ({numSessions})</a>
       </h4>
     </span> ++
-      <div class="aggregated-sessionstat collapsible-table">
+        <div class="aggregated-sessionstat collapsible-table">
         {table.getOrElse("No statistics have been generated yet.")}
       </div>
 
@@ -168,7 +169,8 @@ private[ui] class SqlStatsPagedTable(
     data: Seq[ExecutionInfo],
     subPath: String,
     basePath: String,
-    sqlStatsTableTag: String) extends PagedTable[SqlStatsTableRow] {
+    sqlStatsTableTag: String)
+    extends PagedTable[SqlStatsTableRow] {
 
   private val (sortColumn, desc, pageSize) =
     getTableParameters(request, sqlStatsTableTag, "Start Time")
@@ -219,8 +221,14 @@ private[ui] class SqlStatsPagedTable(
 
     isSortColumnValid(sqlTableHeadersAndTooltips, sortColumn)
 
-    headerRow(sqlTableHeadersAndTooltips, desc, pageSize, sortColumn, parameterPath,
-      sqlStatsTableTag, sqlStatsTableTag)
+    headerRow(
+      sqlTableHeadersAndTooltips,
+      desc,
+      pageSize,
+      sortColumn,
+      parameterPath,
+      sqlStatsTableTag,
+      sqlStatsTableTag)
   }
 
   override def row(sqlStatsTableRow: SqlStatsTableRow): Seq[Node] = {
@@ -283,7 +291,8 @@ private[ui] class SessionStatsPagedTable(
     data: Seq[SessionInfo],
     subPath: String,
     basePath: String,
-    sessionStatsTableTag: String) extends PagedTable[SessionInfo] {
+    sessionStatsTableTag: String)
+    extends PagedTable[SessionInfo] {
 
   private val (sortColumn, desc, pageSize) =
     getTableParameters(request, sessionStatsTableTag, "Start Time")
@@ -330,13 +339,21 @@ private[ui] class SessionStatsPagedTable(
 
     isSortColumnValid(sessionTableHeadersAndTooltips, sortColumn)
 
-    headerRow(sessionTableHeadersAndTooltips, desc, pageSize, sortColumn,
-      parameterPath, sessionStatsTableTag, sessionStatsTableTag)
+    headerRow(
+      sessionTableHeadersAndTooltips,
+      desc,
+      pageSize,
+      sortColumn,
+      parameterPath,
+      sessionStatsTableTag,
+      sessionStatsTableTag)
   }
 
   override def row(session: SessionInfo): Seq[Node] = {
     val sessionLink = "%s/%s/session/?id=%s".format(
-      UIUtils.prependBaseUri(request, parent.basePath), parent.prefix, session.sessionId)
+      UIUtils.prependBaseUri(request, parent.basePath),
+      parent.prefix,
+      session.sessionId)
     <tr>
       <td> {session.userName} </td>
       <td> {session.ip} </td>
@@ -360,7 +377,8 @@ private[ui] class SqlStatsTableDataSource(
     info: Seq[ExecutionInfo],
     pageSize: Int,
     sortColumn: String,
-    desc: Boolean) extends PagedDataSource[SqlStatsTableRow](pageSize) {
+    desc: Boolean)
+    extends PagedDataSource[SqlStatsTableRow](pageSize) {
 
   // Convert ExecutionInfo to SqlStatsTableRow which contains the final contents to show in
   // the table so that we can avoid creating duplicate contents during sorting the data
@@ -373,7 +391,8 @@ private[ui] class SqlStatsTableDataSource(
   private def sqlStatsTableRow(executionInfo: ExecutionInfo): SqlStatsTableRow = {
     val duration = executionInfo.totalTime(executionInfo.closeTimestamp)
     val executionTime = executionInfo.totalTime(executionInfo.finishTimestamp)
-    val detail = Option(executionInfo.detail).filter(!_.isEmpty)
+    val detail = Option(executionInfo.detail)
+      .filter(!_.isEmpty)
       .getOrElse(executionInfo.executePlan)
     val jobId = executionInfo.jobId.toSeq.sorted
 
@@ -410,7 +429,8 @@ private[ui] class SessionStatsTableDataSource(
     info: Seq[SessionInfo],
     pageSize: Int,
     sortColumn: String,
-    desc: Boolean) extends PagedDataSource[SessionInfo](pageSize) {
+    desc: Boolean)
+    extends PagedDataSource[SessionInfo](pageSize) {
 
   // Sorting SessionInfo data
   private val data = info.sorted(ordering(sortColumn, desc))

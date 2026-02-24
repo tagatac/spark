@@ -42,19 +42,23 @@ import org.apache.spark.util.{ShutdownHookManager, UninterruptibleThread}
 /**
  * This class simplifies the usages of Kafka consumer in Spark SQL Kafka connector.
  *
- * NOTE: Like KafkaConsumer, this class is not thread-safe.
- * NOTE for contributors: It is possible for the instance to be used from multiple callers,
- * so all the methods should not rely on current cursor and use seek manually.
+ * NOTE: Like KafkaConsumer, this class is not thread-safe. NOTE for contributors: It is possible
+ * for the instance to be used from multiple callers, so all the methods should not rely on
+ * current cursor and use seek manually.
  */
 private[kafka010] class InternalKafkaConsumer(
     val topicPartition: TopicPartition,
-    val kafkaParams: ju.Map[String, Object]) extends Closeable with Logging {
+    val kafkaParams: ju.Map[String, Object])
+    extends Closeable
+    with Logging {
 
   val groupId = kafkaParams.get(ConsumerConfig.GROUP_ID_CONFIG).asInstanceOf[String]
 
   // Exposed for testing
   private[consumer] val clusterConfig = KafkaTokenUtil.findMatchingTokenClusterConfig(
-    SparkEnv.get.conf, kafkaParams.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)
+    SparkEnv.get.conf,
+    kafkaParams
+      .get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)
       .asInstanceOf[String])
 
   // Kafka consumer is not able to give back the params instantiated with so we need to store it.
@@ -71,17 +75,19 @@ private[kafka010] class InternalKafkaConsumer(
   }
 
   /**
-   * Poll messages from Kafka starting from `offset` and returns a pair of "list of consumer record"
-   * and "offset after poll". The list of consumer record may be empty if the Kafka consumer fetches
-   * some messages but all of them are not visible messages (either transaction messages,
-   * or aborted messages when `isolation.level` is `read_committed`).
+   * Poll messages from Kafka starting from `offset` and returns a pair of "list of consumer
+   * record" and "offset after poll". The list of consumer record may be empty if the Kafka
+   * consumer fetches some messages but all of them are not visible messages (either transaction
+   * messages, or aborted messages when `isolation.level` is `read_committed`).
    *
-   * @throws OffsetOutOfRangeException if `offset` is out of range.
-   * @throws TimeoutException if the consumer position is not changed after polling. It means the
-   *                          consumer polls nothing before timeout.
+   * @throws OffsetOutOfRangeException
+   *   if `offset` is out of range.
+   * @throws TimeoutException
+   *   if the consumer position is not changed after polling. It means the consumer polls nothing
+   *   before timeout.
    */
-  def fetch(offset: Long, pollTimeoutMs: Long):
-      (ju.List[ConsumerRecord[Array[Byte], Array[Byte]]], Long, AvailableOffsetRange) = {
+  def fetch(offset: Long, pollTimeoutMs: Long)
+      : (ju.List[ConsumerRecord[Array[Byte], Array[Byte]]], Long, AvailableOffsetRange) = {
 
     // Seek to the offset because we may call seekToBeginning or seekToEnd before this.
     seek(offset)
@@ -111,8 +117,8 @@ private[kafka010] class InternalKafkaConsumer(
   }
 
   /**
-   * Return the available offset range of the current partition. It's a pair of the earliest offset
-   * and the latest offset.
+   * Return the available offset range of the current partition. It's a pair of the earliest
+   * offset and the latest offset.
    */
   def getAvailableOffsetRange(): AvailableOffsetRange = {
     consumer.seekToBeginning(Set(topicPartition).asJava)
@@ -147,12 +153,16 @@ private[kafka010] class InternalKafkaConsumer(
 /**
  * The internal object to store the fetched data from Kafka consumer and the next offset to poll.
  *
- * @param _records the pre-fetched Kafka records.
- * @param _nextOffsetInFetchedData the next offset in `records`. We use this to verify if we
- *                                 should check if the pre-fetched data is still valid.
- * @param _offsetAfterPoll the Kafka offset after calling `poll`. We will use this offset to
- *                           poll when `records` is drained.
- * @param _availableOffsetRange the available offset range in Kafka when polling the records.
+ * @param _records
+ *   the pre-fetched Kafka records.
+ * @param _nextOffsetInFetchedData
+ *   the next offset in `records`. We use this to verify if we should check if the pre-fetched
+ *   data is still valid.
+ * @param _offsetAfterPoll
+ *   the Kafka offset after calling `poll`. We will use this offset to poll when `records` is
+ *   drained.
+ * @param _availableOffsetRange
+ *   the available offset range in Kafka when polling the records.
  */
 private[consumer] case class FetchedData(
     private var _records: ju.ListIterator[ConsumerRecord[Array[Byte], Array[Byte]]],
@@ -241,25 +251,28 @@ private[consumer] case class FetchedRecord(
  * seeking overhead in real time mode.
  */
 private[sql] trait KafkaDataConsumerIterator {
+
   /**
    * Return the next record
-   * @return None if no new record is available after `timeoutMs`.
+   * @return
+   *   None if no new record is available after `timeoutMs`.
    */
   def nextWithTimeout(timeoutMs: Long): Option[ConsumerRecord[Array[Byte], Array[Byte]]]
 }
 
 /**
- * This class helps caller to read from Kafka leveraging consumer pool as well as fetched data pool.
- * This class throws error when data loss is detected while reading from Kafka.
+ * This class helps caller to read from Kafka leveraging consumer pool as well as fetched data
+ * pool. This class throws error when data loss is detected while reading from Kafka.
  *
- * NOTE for contributors: we need to ensure all the public methods to initialize necessary resources
- * via calling `getOrRetrieveConsumer` and `getOrRetrieveFetchedData`.
+ * NOTE for contributors: we need to ensure all the public methods to initialize necessary
+ * resources via calling `getOrRetrieveConsumer` and `getOrRetrieveFetchedData`.
  */
 private[kafka010] class KafkaDataConsumer(
     topicPartition: TopicPartition,
     kafkaParams: ju.Map[String, Object],
     consumerPool: InternalKafkaConsumerPool,
-    fetchedDataPool: FetchedDataPool) extends Logging {
+    fetchedDataPool: FetchedDataPool)
+    extends Logging {
   import KafkaDataConsumer._
 
   private var offsetOutOfRange = 0L
@@ -276,8 +289,8 @@ private[kafka010] class KafkaDataConsumer(
   private val cacheKey = CacheKey(groupId, topicPartition)
 
   /**
-   * The fetched record returned from the `fetchRecord` method. This is a reusable private object to
-   * avoid memory allocation.
+   * The fetched record returned from the `fetchRecord` method. This is a reusable private object
+   * to avoid memory allocation.
    */
   private val fetchedRecord: FetchedRecord = FetchedRecord(null, UNKNOWN_OFFSET)
 
@@ -293,14 +306,14 @@ private[kafka010] class KafkaDataConsumer(
   private var startTimestampNano: Long = System.nanoTime()
 
   /**
-   * Get an iterator that can return the next entry. It is used exclusively for real-time
-   * mode.
+   * Get an iterator that can return the next entry. It is used exclusively for real-time mode.
    *
    * It is called by KafkaBatchPartitionReader.nextWithTimeout(). Unlike get(), there is no
    * out-of-bound check in this function. Since there is no endOffset given, we assume anything
    * record is valid to return as long as it is at or after `offset`.
    *
-   * @param startOffset, the starting positions to read from, inclusive.
+   * @param startOffset,
+   *   the starting positions to read from, inclusive.
    */
   def getIterator(startOffset: Long): KafkaDataConsumerIterator = {
     new KafkaDataConsumerIterator {
@@ -371,102 +384,113 @@ private[kafka010] class KafkaDataConsumer(
   /**
    * Get the record for the given offset if available.
    *
-   * If the record is invisible (either a
-   * transaction message, or an aborted message when the consumer's `isolation.level` is
-   * `read_committed`), it will be skipped and this method will try to fetch next available record
-   * within [offset, untilOffset).
+   * If the record is invisible (either a transaction message, or an aborted message when the
+   * consumer's `isolation.level` is `read_committed`), it will be skipped and this method will
+   * try to fetch next available record within [offset, untilOffset).
    *
-   * This method also will try its best to detect data loss. If `failOnDataLoss` is `true`, it will
-   * throw an exception when it detects an unavailable offset. If `failOnDataLoss` is `false`, this
-   * method will try to fetch next available record within [offset, untilOffset). When this method
-   * reaches `untilOffset` and still can't find an available record, it will return `null`.
+   * This method also will try its best to detect data loss. If `failOnDataLoss` is `true`, it
+   * will throw an exception when it detects an unavailable offset. If `failOnDataLoss` is
+   * `false`, this method will try to fetch next available record within [offset, untilOffset).
+   * When this method reaches `untilOffset` and still can't find an available record, it will
+   * return `null`.
    *
-   * @param offset         the offset to fetch.
-   * @param untilOffset    the max offset to fetch. Exclusive.
-   * @param pollTimeoutMs  timeout in milliseconds to poll data from Kafka.
-   * @param failOnDataLoss When `failOnDataLoss` is `true`, this method will either return record at
-   *                       offset if available, or throw an exception. When `failOnDataLoss` is
-   *                       `false`, this method will return record at offset if available, or return
-   *                       the record at the next earliest available offset that is less than
-   *                       untilOffset, otherwise null.
+   * @param offset
+   *   the offset to fetch.
+   * @param untilOffset
+   *   the max offset to fetch. Exclusive.
+   * @param pollTimeoutMs
+   *   timeout in milliseconds to poll data from Kafka.
+   * @param failOnDataLoss
+   *   When `failOnDataLoss` is `true`, this method will either return record at offset if
+   *   available, or throw an exception. When `failOnDataLoss` is `false`, this method will return
+   *   record at offset if available, or return the record at the next earliest available offset
+   *   that is less than untilOffset, otherwise null.
    */
   def get(
       offset: Long,
       untilOffset: Long,
       pollTimeoutMs: Long,
-      failOnDataLoss: Boolean):
-    ConsumerRecord[Array[Byte], Array[Byte]] = runUninterruptiblyIfPossible {
-    require(offset < untilOffset,
-      s"offset must always be less than untilOffset [offset: $offset, untilOffset: $untilOffset]")
+      failOnDataLoss: Boolean): ConsumerRecord[Array[Byte], Array[Byte]] =
+    runUninterruptiblyIfPossible {
+      require(
+        offset < untilOffset,
+        s"offset must always be less than untilOffset [offset: $offset, untilOffset: $untilOffset]")
 
-    val consumer = getOrRetrieveConsumer()
-    val fetchedData = getOrRetrieveFetchedData(offset)
+      val consumer = getOrRetrieveConsumer()
+      val fetchedData = getOrRetrieveFetchedData(offset)
 
-    logDebug(s"Get $groupId $topicPartition nextOffset ${fetchedData.nextOffsetInFetchedData} " +
-      s"requested $offset")
+      logDebug(
+        s"Get $groupId $topicPartition nextOffset ${fetchedData.nextOffsetInFetchedData} " +
+          s"requested $offset")
 
-    // The following loop is basically for `failOnDataLoss = false`. When `failOnDataLoss` is
-    // `false`, we will try to fetch the record at `offset`, if the record does not exist, we will
-    // try to fetch next available record within [offset, untilOffset).
-    // If `failOnDataLoss` is `true`, the loop body will be executed only once, either return the
-    // record at `offset` or throw an exception when the record does not exist.
-    var toFetchOffset = offset
-    var fetchedRecord: FetchedRecord = null
-    // We want to break out of the while loop on a successful fetch to avoid using "return"
-    // which may cause a NonLocalReturnControl exception when this method is used as a function.
-    var isFetchComplete = false
+      // The following loop is basically for `failOnDataLoss = false`. When `failOnDataLoss` is
+      // `false`, we will try to fetch the record at `offset`, if the record does not exist, we will
+      // try to fetch next available record within [offset, untilOffset).
+      // If `failOnDataLoss` is `true`, the loop body will be executed only once, either return the
+      // record at `offset` or throw an exception when the record does not exist.
+      var toFetchOffset = offset
+      var fetchedRecord: FetchedRecord = null
+      // We want to break out of the while loop on a successful fetch to avoid using "return"
+      // which may cause a NonLocalReturnControl exception when this method is used as a function.
+      var isFetchComplete = false
 
-    while (toFetchOffset != UNKNOWN_OFFSET && !isFetchComplete) {
-      try {
-        fetchedRecord = fetchRecord(consumer, fetchedData, toFetchOffset, untilOffset,
-          pollTimeoutMs, failOnDataLoss)
-        if (fetchedRecord.record != null) {
-          isFetchComplete = true
-        } else {
-          toFetchOffset = fetchedRecord.nextOffsetToFetch
-          if (toFetchOffset >= untilOffset) {
+      while (toFetchOffset != UNKNOWN_OFFSET && !isFetchComplete) {
+        try {
+          fetchedRecord = fetchRecord(
+            consumer,
+            fetchedData,
+            toFetchOffset,
+            untilOffset,
+            pollTimeoutMs,
+            failOnDataLoss)
+          if (fetchedRecord.record != null) {
+            isFetchComplete = true
+          } else {
+            toFetchOffset = fetchedRecord.nextOffsetToFetch
+            if (toFetchOffset >= untilOffset) {
+              fetchedData.reset()
+              toFetchOffset = UNKNOWN_OFFSET
+            } else {
+              logDebug(s"Skipped offsets [$offset, $toFetchOffset]")
+            }
+          }
+        } catch {
+          case e: OffsetOutOfRangeException =>
+            // When there is some error thrown, it's better to use a new consumer to drop all cached
+            // states in the old consumer. We don't need to worry about the performance because this
+            // is not a common path.
+            releaseConsumer()
             fetchedData.reset()
-            toFetchOffset = UNKNOWN_OFFSET
-          } else {
-            logDebug(s"Skipped offsets [$offset, $toFetchOffset]")
-          }
+
+            if (failOnDataLoss) {
+              throwOnDataLoss(toFetchOffset, untilOffset, topicPartition, groupId, e)
+            } else {
+              logOnDataLoss(topicPartition, groupId, s"Cannot fetch offset $toFetchOffset", e)
+            }
+
+            val oldToFetchOffsetd = toFetchOffset
+            toFetchOffset =
+              getEarliestAvailableOffsetBetween(consumer, toFetchOffset, untilOffset)
+            if (toFetchOffset == UNKNOWN_OFFSET) {
+              offsetOutOfRange += (untilOffset - oldToFetchOffsetd)
+            } else {
+              offsetOutOfRange += (toFetchOffset - oldToFetchOffsetd)
+            }
         }
-      } catch {
-        case e: OffsetOutOfRangeException =>
-          // When there is some error thrown, it's better to use a new consumer to drop all cached
-          // states in the old consumer. We don't need to worry about the performance because this
-          // is not a common path.
-          releaseConsumer()
-          fetchedData.reset()
+      }
 
-          if (failOnDataLoss) {
-            throwOnDataLoss(toFetchOffset, untilOffset, topicPartition, groupId, e)
-          } else {
-            logOnDataLoss(topicPartition, groupId, s"Cannot fetch offset $toFetchOffset", e)
-          }
-
-          val oldToFetchOffsetd = toFetchOffset
-          toFetchOffset = getEarliestAvailableOffsetBetween(consumer, toFetchOffset, untilOffset)
-          if (toFetchOffset == UNKNOWN_OFFSET) {
-            offsetOutOfRange += (untilOffset - oldToFetchOffsetd)
-          } else {
-            offsetOutOfRange += (toFetchOffset - oldToFetchOffsetd)
-          }
+      if (isFetchComplete) {
+        totalRecordsRead += 1
+        fetchedRecord.record
+      } else {
+        fetchedData.reset()
+        null
       }
     }
 
-    if (isFetchComplete) {
-      totalRecordsRead += 1
-      fetchedRecord.record
-    } else {
-      fetchedData.reset()
-      null
-    }
-  }
-
   /**
-   * Return the available offset range of the current partition. It's a pair of the earliest offset
-   * and the latest offset.
+   * Return the available offset range of the current partition. It's a pair of the earliest
+   * offset and the latest offset.
    */
   def getAvailableOffsetRange(): AvailableOffsetRange = runUninterruptiblyIfPossible {
     val consumer = getOrRetrieveConsumer()
@@ -497,14 +521,14 @@ private[kafka010] class KafkaDataConsumer(
       log"."
     }
 
-    logInfo(log"From Kafka ${MDC(CONSUMER, kafkaMeta)} read " +
-      log"${MDC(NUM_RECORDS_READ, totalRecordsRead)} records through " +
-      log"${MDC(NUM_KAFKA_PULLS, numPolls)} polls " +
-      log"(polled out ${MDC(NUM_KAFKA_RECORDS_PULLED, numRecordsPolled)} records), " +
-      log"taking ${MDC(TOTAL_TIME_READ, totalTimeReadNanos / NANOS_PER_MILLIS.toDouble)} ms, " +
-      log"during time span of ${MDC(TIME, walTime / NANOS_PER_MILLIS.toDouble)} ms" +
-      taskContextInfo
-    )
+    logInfo(
+      log"From Kafka ${MDC(CONSUMER, kafkaMeta)} read " +
+        log"${MDC(NUM_RECORDS_READ, totalRecordsRead)} records through " +
+        log"${MDC(NUM_KAFKA_PULLS, numPolls)} polls " +
+        log"(polled out ${MDC(NUM_KAFKA_RECORDS_PULLED, numRecordsPolled)} records), " +
+        log"taking ${MDC(TOTAL_TIME_READ, totalTimeReadNanos / NANOS_PER_MILLIS.toDouble)} ms, " +
+        log"during time span of ${MDC(TIME, walTime / NANOS_PER_MILLIS.toDouble)} ms" +
+        taskContextInfo)
 
     releaseConsumer()
     releaseFetchedData()
@@ -536,8 +560,9 @@ private[kafka010] class KafkaDataConsumer(
     val range = timeNanos {
       consumer.getAvailableOffsetRange()
     }
-    logWarning(log"Some data may be lost. Recovering from the earliest offset: " +
-      log"${MDC(OFFSET, range.earliest)}")
+    logWarning(
+      log"Some data may be lost. Recovering from the earliest offset: " +
+        log"${MDC(OFFSET, range.earliest)}")
 
     val topicPartition = consumer.topicPartition
     val groupId = consumer.groupId
@@ -555,12 +580,12 @@ private[kafka010] class KafkaDataConsumer(
       //      |          |              |                |
       //   offset   untilOffset   earliestOffset   latestOffset
       val warningMessage =
-      log"""
+        log"""
          |The current available offset range is ${MDC(RANGE, range)}.
          | Offset ${MDC(OFFSET, offset)} is out of range, and records in
          | [${MDC(OFFSET, offset)}, ${MDC(UNTIL_OFFSET, untilOffset)}] will be
          | skipped""".stripMargin +
-        additionalWarningMessage(topicPartition, groupId)
+          additionalWarningMessage(topicPartition, groupId)
       logWarning(warningMessage)
       UNKNOWN_OFFSET
     } else if (offset >= range.earliest) {
@@ -572,8 +597,9 @@ private[kafka010] class KafkaDataConsumer(
       // This will happen when a topic is deleted and recreated, and new data are pushed very fast,
       // then we will see `offset` disappears first then appears again. Although the parameters
       // are same, the state in Kafka cluster is changed, so the outer loop won't be endless.
-      logWarning(log"Found a disappeared offset ${MDC(OFFSET, offset)}. Some data may be lost " +
-        additionalWarningMessage(topicPartition, groupId))
+      logWarning(
+        log"Found a disappeared offset ${MDC(OFFSET, offset)}. Some data may be lost " +
+          additionalWarningMessage(topicPartition, groupId))
       offset
     } else {
       // ------------------------------------------------------------------------------
@@ -581,12 +607,12 @@ private[kafka010] class KafkaDataConsumer(
       //      |           |                       |                                 |
       //   offset   earliestOffset   min(untilOffset,latestOffset)   max(untilOffset, latestOffset)
       val warningMessage =
-      s"""
+        s"""
          |The current available offset range is ${MDC(RANGE, range)}.
          | Offset ${MDC(OFFSET, offset)} is out of range, and records in
          | [${MDC(OFFSET, offset)}, ${MDC(UNTIL_OFFSET, range.earliest)}] will be
          | skipped""".stripMargin +
-        additionalWarningMessage(topicPartition, groupId)
+          additionalWarningMessage(topicPartition, groupId)
       logWarning(warningMessage)
       range.earliest
     }
@@ -599,12 +625,14 @@ private[kafka010] class KafkaDataConsumer(
    * consumer's `isolation.level` is `read_committed`), it will return a `FetchedRecord` with the
    * next offset to fetch.
    *
-   * This method also will try the best to detect data loss. If `failOnDataLoss` is `true`, it will
-   * throw an exception when we detect an unavailable offset. If `failOnDataLoss` is `false`, this
-   * method will return `null` if the next available record is within [offset, untilOffset).
+   * This method also will try the best to detect data loss. If `failOnDataLoss` is `true`, it
+   * will throw an exception when we detect an unavailable offset. If `failOnDataLoss` is `false`,
+   * this method will return `null` if the next available record is within [offset, untilOffset).
    *
-   * @throws OffsetOutOfRangeException if `offset` is out of range
-   * @throws TimeoutException if cannot fetch the record in `pollTimeoutMs` milliseconds.
+   * @throws OffsetOutOfRangeException
+   *   if `offset` is out of range
+   * @throws TimeoutException
+   *   if cannot fetch the record in `pollTimeoutMs` milliseconds.
    */
   private def fetchRecord(
       consumer: InternalKafkaConsumer,
@@ -634,7 +662,8 @@ private[kafka010] class KafkaDataConsumer(
       // When we reach here, we have already tried to poll from Kafka. As `fetchedData` is still
       // empty, all messages in [offset, fetchedData.offsetAfterPoll) are invisible. Return a
       // record to ask the next call to start from `fetchedData.offsetAfterPoll`.
-      assert(offset <= fetchedData.offsetAfterPoll,
+      assert(
+        offset <= fetchedData.offsetAfterPoll,
         s"seek to $offset and poll but the offset was reset to ${fetchedData.offsetAfterPoll}")
       fetchedRecord.withRecord(null, fetchedData.offsetAfterPoll)
     } else {
@@ -657,12 +686,16 @@ private[kafka010] class KafkaDataConsumer(
           throw new IllegalStateException(
             "reportDataLoss didn't throw an exception when 'failOnDataLoss' is true")
         } else if (record.offset >= untilOffset) {
-          logOnDataLoss(consumer.topicPartition, consumer.groupId,
+          logOnDataLoss(
+            consumer.topicPartition,
+            consumer.groupId,
             s"Skip missing records in [$offset, $untilOffset)")
           // Set `nextOffsetToFetch` to `untilOffset` to finish the current batch.
           fetchedRecord.withRecord(null, untilOffset)
         } else {
-          logOnDataLoss(consumer.topicPartition, consumer.groupId,
+          logOnDataLoss(
+            consumer.topicPartition,
+            consumer.groupId,
             s"Skip missing records in [$offset, ${record.offset})")
           fetchedRecord.withRecord(record, fetchedData.nextOffsetInFetchedData)
         }
@@ -678,13 +711,16 @@ private[kafka010] class KafkaDataConsumer(
   }
 
   /**
-   * Poll messages from Kafka starting from `offset` and update `fetchedData`. `fetchedData` may be
-   * empty if the Kafka consumer fetches some messages but all of them are not visible messages
-   * (either transaction messages, or aborted messages when `isolation.level` is `read_committed`).
+   * Poll messages from Kafka starting from `offset` and update `fetchedData`. `fetchedData` may
+   * be empty if the Kafka consumer fetches some messages but all of them are not visible messages
+   * (either transaction messages, or aborted messages when `isolation.level` is
+   * `read_committed`).
    *
-   * @throws OffsetOutOfRangeException if `offset` is out of range.
-   * @throws TimeoutException if the consumer position is not changed after polling. It means the
-   *                          consumer polls nothing before timeout.
+   * @throws OffsetOutOfRangeException
+   *   if `offset` is out of range.
+   * @throws TimeoutException
+   *   if the consumer position is not changed after polling. It means the consumer polls nothing
+   *   before timeout.
    */
   private def fetchData(
       consumer: InternalKafkaConsumer,
@@ -705,7 +741,8 @@ private[kafka010] class KafkaDataConsumer(
     }
     require(_consumer.isDefined, "Consumer must be defined")
     if (isTokenProviderEnabled && KafkaTokenUtil.needTokenUpdate(
-        _consumer.get.kafkaParamsWithSecurity, _consumer.get.clusterConfig)) {
+        _consumer.get.kafkaParamsWithSecurity,
+        _consumer.get.clusterConfig)) {
       logDebug("Cached consumer uses an old delegation token, invalidating.")
       releaseConsumer()
       consumerPool.invalidateKey(cacheKey)
@@ -789,8 +826,9 @@ private[kafka010] class KafkaDataConsumer(
     case ut: UninterruptibleThread =>
       ut.runUninterruptibly(body)
     case _ =>
-      logWarning("KafkaDataConsumer is not running in UninterruptibleThread. " +
-        "It may hang when KafkaDataConsumer's methods are interrupted because of KAFKA-1894")
+      logWarning(
+        "KafkaDataConsumer is not running in UninterruptibleThread. " +
+          "It may hang when KafkaDataConsumer's methods are interrupted because of KAFKA-1894")
       body
   }
 
@@ -828,9 +866,9 @@ private[kafka010] object KafkaDataConsumer extends Logging {
   }
 
   /**
-   * Get a data reader for groupId, assigned to topic and partition.
-   * If matching consumer doesn't already exist, will be created using kafkaParams.
-   * The returned data reader must be released explicitly.
+   * Get a data reader for groupId, assigned to topic and partition. If matching consumer doesn't
+   * already exist, will be created using kafkaParams. The returned data reader must be released
+   * explicitly.
    */
   def acquire(
       topicPartition: TopicPartition,

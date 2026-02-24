@@ -21,8 +21,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
-import io.fabric8.kubernetes.api.model.{PersistentVolumeClaim,
-  PersistentVolumeClaimBuilder, PodSpec, PodSpecBuilder, PodTemplateSpec}
+import io.fabric8.kubernetes.api.model.{PersistentVolumeClaim, PersistentVolumeClaimBuilder, PodSpec, PodSpecBuilder, PodTemplateSpec}
 import io.fabric8.kubernetes.client.KubernetesClient
 
 import org.apache.spark.{SecurityManager, SparkConf, SparkException}
@@ -40,11 +39,14 @@ class StatefulSetPodsAllocator(
     executorBuilder: KubernetesExecutorBuilder,
     kubernetesClient: KubernetesClient,
     snapshotsStore: ExecutorPodsSnapshotsStore,
-    clock: Clock) extends AbstractPodsAllocator() with Logging {
+    clock: Clock)
+    extends AbstractPodsAllocator()
+    with Logging {
 
   protected val rpIdToResourceProfile = new mutable.HashMap[Int, ResourceProfile]
 
-  protected val driverPodReadinessTimeout = conf.get(KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT)
+  protected val driverPodReadinessTimeout =
+    conf.get(KUBERNETES_ALLOCATION_DRIVER_READINESS_TIMEOUT)
 
   protected val namespace = conf.get(KUBERNETES_NAMESPACE)
 
@@ -52,13 +54,16 @@ class StatefulSetPodsAllocator(
     .get(KUBERNETES_DRIVER_POD_NAME)
 
   val driverPod = kubernetesDriverPodName
-    .map(name => Option(kubernetesClient.pods()
-      .inNamespace(namespace)
-      .withName(name)
-      .get())
-      .getOrElse(throw new SparkException(
-        s"No pod was found named $name in the cluster in the " +
-          s"namespace $namespace (this was supposed to be the driver pod.).")))
+    .map(name =>
+      Option(
+        kubernetesClient
+          .pods()
+          .inNamespace(namespace)
+          .withName(name)
+          .get())
+        .getOrElse(
+          throw new SparkException(s"No pod was found named $name in the cluster in the " +
+            s"namespace $namespace (this was supposed to be the driver pod.).")))
 
   protected var appId: String = _
 
@@ -101,20 +106,26 @@ class StatefulSetPodsAllocator(
       applicationId: String,
       resourceProfileId: Int): Unit = {
     if (setsCreated.contains(resourceProfileId)) {
-      val statefulset = kubernetesClient.apps().statefulSets().inNamespace(namespace).withName(
-        setName(applicationId, resourceProfileId: Int))
-      statefulset.scale(expected, false /* wait */)
+      val statefulset = kubernetesClient
+        .apps()
+        .statefulSets()
+        .inNamespace(namespace)
+        .withName(setName(applicationId, resourceProfileId: Int))
+      statefulset.scale(expected, false /* wait */ )
     } else {
       // We need to make the new replicaset which is going to involve building
       // a pod.
       val executorConf = KubernetesConf.createExecutorConf(
         conf,
-        "EXECID",// template exec IDs
+        "EXECID", // template exec IDs
         applicationId,
         driverPod,
         resourceProfileId)
-      val resolvedExecutorSpec = executorBuilder.buildFromFeatures(executorConf, secMgr,
-        kubernetesClient, rpIdToResourceProfile(resourceProfileId))
+      val resolvedExecutorSpec = executorBuilder.buildFromFeatures(
+        executorConf,
+        secMgr,
+        kubernetesClient,
+        rpIdToResourceProfile(resourceProfileId))
       val executorPod = resolvedExecutorSpec.pod
       val podSpecBuilder = executorPod.pod.getSpec() match {
         case null => new PodSpecBuilder()
@@ -130,11 +141,12 @@ class StatefulSetPodsAllocator(
       val resources = resolvedExecutorSpec.executorKubernetesResources
       // We'll let PVCs be handled by the statefulset. Note user is responsible for
       // cleaning up PVCs. Future work: integrate with KEP1847 once stabilized.
-      val dynamicVolumeClaims = resources.filter(_.getKind == "PersistentVolumeClaim")
+      val dynamicVolumeClaims = resources
+        .filter(_.getKind == "PersistentVolumeClaim")
         .map(_.asInstanceOf[PersistentVolumeClaim])
       // Remove the dynamic volumes from our pod
-      val dynamicVolumeClaimNames: Set[String] = dynamicVolumeClaims.map(_.getMetadata().getName())
-        .toSet
+      val dynamicVolumeClaimNames: Set[String] =
+        dynamicVolumeClaims.map(_.getMetadata().getName()).toSet
       val podVolumes = podWithAttachedContainer.getVolumes().asScala
       val staticVolumes = podVolumes.filter { v =>
         val pvc = v.getPersistentVolumeClaim()
@@ -144,23 +156,26 @@ class StatefulSetPodsAllocator(
             !dynamicVolumeClaimNames.contains(pvc.getClaimName())
         }
       }
-      val dynamicClaimToVolumeName = podVolumes.filter { v =>
-        val pvc = v.getPersistentVolumeClaim()
-        pvc match {
-          case null => false
-          case _ =>
-            dynamicVolumeClaimNames.contains(pvc.getClaimName())
+      val dynamicClaimToVolumeName = podVolumes
+        .filter { v =>
+          val pvc = v.getPersistentVolumeClaim()
+          pvc match {
+            case null => false
+            case _ =>
+              dynamicVolumeClaimNames.contains(pvc.getClaimName())
+          }
         }
-      }.map { v =>
-        (v.getPersistentVolumeClaim().getClaimName(), v.getName())
-      }.toMap
+        .map { v =>
+          (v.getPersistentVolumeClaim().getClaimName(), v.getName())
+        }
+        .toMap
       // This just mutates it. Java style API
       podWithAttachedContainer.setVolumes(staticVolumes.asJava)
       // Rewrite the dynamic volume names to not ref our fake EXECID.
       val newNamedVolumes = dynamicVolumeClaims.zipWithIndex.map { case (v, i) =>
         new PersistentVolumeClaimBuilder(v)
           .editMetadata()
-            .withName(dynamicClaimToVolumeName.get(v.getMetadata().getName()).get)
+          .withName(dynamicClaimToVolumeName.get(v.getMetadata().getName()).get)
           .endMetadata()
           .build()
       }
@@ -170,19 +185,19 @@ class StatefulSetPodsAllocator(
 
       val statefulSet = new io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder()
         .withNewMetadata()
-          .withName(setName(applicationId, resourceProfileId))
-          .withNamespace(namespace)
+        .withName(setName(applicationId, resourceProfileId))
+        .withNamespace(namespace)
         .endMetadata()
         .withNewSpec()
-          .withPodManagementPolicy("Parallel")
-          .withReplicas(expected)
-          .withNewSelector()
-            .addToMatchLabels(SPARK_APP_ID_LABEL, applicationId)
-            .addToMatchLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
-            .addToMatchLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, resourceProfileId.toString)
-          .endSelector()
-          .withTemplate(podTemplateSpec)
-          .addAllToVolumeClaimTemplates(newNamedVolumes.asJava)
+        .withPodManagementPolicy("Parallel")
+        .withReplicas(expected)
+        .withNewSelector()
+        .addToMatchLabels(SPARK_APP_ID_LABEL, applicationId)
+        .addToMatchLabels(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
+        .addToMatchLabels(SPARK_RESOURCE_PROFILE_ID_LABEL, resourceProfileId.toString)
+        .endSelector()
+        .withTemplate(podTemplateSpec)
+        .addAllToVolumeClaimTemplates(newNamedVolumes.asJava)
         .endSpec()
         .build()
 

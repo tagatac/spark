@@ -21,11 +21,11 @@ import org.scalatest._
 import org.scalatest.featurespec.AnyFeatureSpec
 
 /**
- * This test is just for demonstration purpose.
- * Real test suites in Spark codebase should use SparkFunSuite.
+ * This test is just for demonstration purpose. Real test suites in Spark codebase should use
+ * SparkFunSuite.
  */
 class FeatureSpecSparkTestSuite
-  extends AnyFeatureSpec
+    extends AnyFeatureSpec
     with GivenWhenThen
     with SparkTestSuite
     with LocalSparkContext {

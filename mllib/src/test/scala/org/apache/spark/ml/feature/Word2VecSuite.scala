@@ -43,13 +43,14 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
     val codes = Map(
       "a" -> Array(-0.2811822295188904, -0.6356269121170044, -0.3020961284637451),
       "b" -> Array(1.0309048891067505, -1.29472815990448, 0.22276712954044342),
-      "c" -> Array(-0.08456747233867645, 0.5137411952018738, 0.11731560528278351)
-    )
+      "c" -> Array(-0.08456747233867645, 0.5137411952018738, 0.11731560528278351))
 
     val expected = doc.map { sentence =>
-      Vectors.dense(sentence.map(codes.apply).reduce((word1, word2) =>
-        word1.zip(word2).map { case (v1, v2) => v1 + v2 }
-      ).map(_ / numOfWords))
+      Vectors.dense(
+        sentence
+          .map(codes.apply)
+          .reduce((word1, word2) => word1.zip(word2).map { case (v1, v2) => v1 + v2 })
+          .map(_ / numOfWords))
     }
 
     val docDF = doc.zip(expected).toDF("text", "expected")
@@ -71,7 +72,7 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
     val magicExp = Vectors.dense(-0.11654884266582402, 0.3115301721475341, -0.6879349987615239)
     testTransformer[(Seq[String], Vector)](docDF, model, "result", "expected") {
       case Row(vector1: Vector, vector2: Vector) =>
-        assert(vector1 ~== magicExp absTol 1E-5, "Transformed vector is different with expected.")
+        assert(vector1 ~== magicExp absTol 1e-5, "Transformed vector is different with expected.")
     }
   }
 
@@ -87,20 +88,23 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       .setSeed(42L)
       .fit(docDF)
 
-    val realVectors = model.getVectors.sort("word").select("vector").rdd.map {
-      case Row(v: Vector) => v
-    }.collect()
+    val realVectors = model.getVectors
+      .sort("word")
+      .select("vector")
+      .rdd
+      .map { case Row(v: Vector) =>
+        v
+      }
+      .collect()
     // These expectations are just magic values, characterizing the current
     // behavior.  The test needs to be updated to be more general, see SPARK-11502
     val magicExpected = Seq(
       Vectors.dense(0.12662248313426971, 0.6108677387237549, -0.006755620241165161),
       Vectors.dense(-0.3870747685432434, 0.023309476673603058, -1.567158818244934),
-      Vectors.dense(-0.08617416769266129, -0.09897610545158386, 0.6113300323486328)
-    )
+      Vectors.dense(-0.08617416769266129, -0.09897610545158386, 0.6113300323486328))
 
-    realVectors.zip(magicExpected).foreach {
-      case (real, expected) =>
-        assert(real ~== expected absTol 1E-5, "Actual vector is different from expected.")
+    realVectors.zip(magicExpected).foreach { case (real, expected) =>
+      assert(real ~== expected absTol 1e-5, "Actual vector is different from expected.")
     }
   }
 
@@ -118,21 +122,23 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       .fit(docDF)
 
     val expected = Map(("b", -0.024012837558984756), ("c", -0.19355152547359467))
-    val findSynonymsResult = model.findSynonyms("a", 2).rdd.map {
-      case Row(w: String, sim: Double) => (w, sim)
-    }.collectAsMap()
+    val findSynonymsResult = model
+      .findSynonyms("a", 2)
+      .rdd
+      .map { case Row(w: String, sim: Double) =>
+        (w, sim)
+      }
+      .collectAsMap()
 
-    expected.foreach {
-      case (expectedSynonym, expectedSimilarity) =>
-        assert(findSynonymsResult.contains(expectedSynonym))
-        assert(expectedSimilarity ~== findSynonymsResult(expectedSynonym) absTol 1E-5)
+    expected.foreach { case (expectedSynonym, expectedSimilarity) =>
+      assert(findSynonymsResult.contains(expectedSynonym))
+      assert(expectedSimilarity ~== findSynonymsResult(expectedSynonym) absTol 1e-5)
     }
 
     val findSynonymsArrayResult = model.findSynonymsArray("a", 2).toMap
-    findSynonymsResult.foreach {
-      case (expectedSynonym, expectedSimilarity) =>
-        assert(findSynonymsArrayResult.contains(expectedSynonym))
-        assert(expectedSimilarity ~== findSynonymsArrayResult(expectedSynonym) absTol 1E-5)
+    findSynonymsResult.foreach { case (expectedSynonym, expectedSimilarity) =>
+      assert(findSynonymsArrayResult.contains(expectedSynonym))
+      assert(expectedSimilarity ~== findSynonymsArrayResult(expectedSynonym) absTol 1e-5)
     }
   }
 
@@ -150,9 +156,14 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       .setSeed(42L)
       .fit(docDF)
 
-    val (synonyms, similarity) = model.findSynonyms("a", 6).rdd.map {
-      case Row(w: String, sim: Double) => (w, sim)
-    }.collect().unzip
+    val (synonyms, similarity) = model
+      .findSynonyms("a", 6)
+      .rdd
+      .map { case Row(w: String, sim: Double) =>
+        (w, sim)
+      }
+      .collect()
+      .unzip
 
     // Increase the window size
     val biggerModel = new Word2Vec()
@@ -163,19 +174,28 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       .setWindowSize(10)
       .fit(docDF)
 
-    val (synonymsLarger, similarityLarger) = model.findSynonyms("a", 6).rdd.map {
-      case Row(w: String, sim: Double) => (w, sim)
-    }.collect().unzip
+    val (synonymsLarger, similarityLarger) = model
+      .findSynonyms("a", 6)
+      .rdd
+      .map { case Row(w: String, sim: Double) =>
+        (w, sim)
+      }
+      .collect()
+      .unzip
     // The similarity score should be very different with the larger window
-    assert(math.abs(similarity(5) - similarityLarger(5) / similarity(5)) > 1E-5)
+    assert(math.abs(similarity(5) - similarityLarger(5) / similarity(5)) > 1e-5)
   }
 
   test("Word2Vec read/write numPartitions calculation") {
     val smallModelNumPartitions = Word2VecModel.Word2VecModelWriter.calculateNumberOfPartitions(
-      Utils.byteStringAsBytes("64m"), numWords = 10, vectorSize = 5)
+      Utils.byteStringAsBytes("64m"),
+      numWords = 10,
+      vectorSize = 5)
     assert(smallModelNumPartitions === 1)
     val largeModelNumPartitions = Word2VecModel.Word2VecModelWriter.calculateNumberOfPartitions(
-      Utils.byteStringAsBytes("64m"), numWords = 1000000, vectorSize = 5000)
+      Utils.byteStringAsBytes("64m"),
+      numWords = 1000000,
+      vectorSize = 5000)
     assert(largeModelNumPartitions > 1)
   }
 
@@ -198,13 +218,13 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       ("china", Array(0.50f, 0.50f, 0.50f, 0.50f)),
       ("japan", Array(0.40f, 0.50f, 0.50f, 0.50f)),
       ("taiwan", Array(0.60f, 0.50f, 0.50f, 0.50f)),
-      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f))
-    )
+      ("korea", Array(0.45f, 0.60f, 0.60f, 0.60f)))
     val oldModel = new OldWord2VecModel(word2VecMap)
     val instance = new Word2VecModel("myWord2VecModel", oldModel)
     val newInstance = testDefaultReadWrite(instance)
-    assert(newInstance.getVectors.collect().sortBy(_.getString(0)) ===
-      instance.getVectors.collect().sortBy(_.getString(0)))
+    assert(
+      newInstance.getVectors.collect().sortBy(_.getString(0)) ===
+        instance.getVectors.collect().sortBy(_.getString(0)))
   }
 
   test("Word2Vec works with input that is non-nullable (NGram)") {
@@ -222,8 +242,8 @@ class Word2VecSuite extends MLTest with DefaultReadWriteTest {
       .fit(ngramDF)
 
     // Just test that this transformation succeeds
-    testTransformerByGlobalCheckFunc[(Seq[String], Seq[String])](ngramDF, model, "result") { _ => }
+    testTransformerByGlobalCheckFunc[(Seq[String], Seq[String])](ngramDF, model, "result") { _ =>
+    }
   }
 
 }
-

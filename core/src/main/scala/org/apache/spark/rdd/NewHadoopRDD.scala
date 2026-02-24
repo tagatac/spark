@@ -51,7 +51,7 @@ private[spark] class NewHadoopPartition(
     rddId: Int,
     val index: Int,
     rawSplit: InputSplit with Writable)
-  extends Partition {
+    extends Partition {
 
   val serializableHadoopSplit = new SerializableWritable(rawSplit)
 
@@ -61,33 +61,41 @@ private[spark] class NewHadoopPartition(
 }
 
 /**
- * :: DeveloperApi ::
- * An RDD that provides core functionality for reading data stored in Hadoop (e.g., files in HDFS,
- * sources in HBase, or S3), using the new MapReduce API (`org.apache.hadoop.mapreduce`).
+ * :: DeveloperApi :: An RDD that provides core functionality for reading data stored in Hadoop
+ * (e.g., files in HDFS, sources in HBase, or S3), using the new MapReduce API
+ * (`org.apache.hadoop.mapreduce`).
  *
- * @param sc The SparkContext to associate the RDD with.
- * @param inputFormatClass Storage format of the data to be read.
- * @param keyClass Class of the key associated with the inputFormatClass.
- * @param valueClass Class of the value associated with the inputFormatClass.
- * @param ignoreCorruptFiles Whether to ignore corrupt files.
- * @param ignoreMissingFiles Whether to ignore missing files.
+ * @param sc
+ *   The SparkContext to associate the RDD with.
+ * @param inputFormatClass
+ *   Storage format of the data to be read.
+ * @param keyClass
+ *   Class of the key associated with the inputFormatClass.
+ * @param valueClass
+ *   Class of the value associated with the inputFormatClass.
+ * @param ignoreCorruptFiles
+ *   Whether to ignore corrupt files.
+ * @param ignoreMissingFiles
+ *   Whether to ignore missing files.
  *
- * @note Instantiating this class directly is not recommended, please use
- * `org.apache.spark.SparkContext.newAPIHadoopRDD()`
+ * @note
+ *   Instantiating this class directly is not recommended, please use
+ *   `org.apache.spark.SparkContext.newAPIHadoopRDD()`
  */
 @DeveloperApi
 class NewHadoopRDD[K, V](
-    sc : SparkContext,
+    sc: SparkContext,
     inputFormatClass: Class[_ <: InputFormat[K, V]],
     keyClass: Class[K],
     valueClass: Class[V],
     @transient private val _conf: Configuration,
     ignoreCorruptFiles: Boolean,
     ignoreMissingFiles: Boolean)
-  extends RDD[(K, V)](sc, Nil) with Logging {
+    extends RDD[(K, V)](sc, Nil)
+    with Logging {
 
   def this(
-      sc : SparkContext,
+      sc: SparkContext,
       inputFormatClass: Class[_ <: InputFormat[K, V]],
       keyClass: Class[K],
       valueClass: Class[V],
@@ -101,7 +109,6 @@ class NewHadoopRDD[K, V](
       ignoreCorruptFiles = sc.conf.get(IGNORE_CORRUPT_FILES),
       ignoreMissingFiles = sc.conf.get(IGNORE_MISSING_FILES))
   }
-
 
   // A Hadoop Configuration can be about 10 KB, which is pretty big, so broadcast it
   private val confBroadcast = SerializableConfiguration.broadcast(sc, _conf)
@@ -149,7 +156,8 @@ class NewHadoopRDD[K, V](
     val inputFormat = inputFormatClass.getConstructor().newInstance()
     // setMinPartitions below will call FileInputFormat.listStatus(), which can be quite slow when
     // traversing a large number of directories and files. Parallelize it.
-    _conf.setIfUnset(FileInputFormat.LIST_STATUS_NUM_THREADS,
+    _conf.setIfUnset(
+      FileInputFormat.LIST_STATUS_NUM_THREADS,
       Runtime.getRuntime.availableProcessors().toString)
     inputFormat match {
       case configurable: Configurable =>
@@ -170,13 +178,15 @@ class NewHadoopRDD[K, V](
         if (fileSplit.getLength > conf.get(IO_WARNING_LARGEFILETHRESHOLD)) {
           val codecFactory = new CompressionCodecFactory(_conf)
           if (Utils.isFileSplittable(path, codecFactory)) {
-            logWarning(log"Loading one large file ${MDC(PATH, path.toString)} " +
-              log"with only one partition, " +
-              log"we can increase partition numbers for improving performance.")
+            logWarning(
+              log"Loading one large file ${MDC(PATH, path.toString)} " +
+                log"with only one partition, " +
+                log"we can increase partition numbers for improving performance.")
           } else {
-            logWarning(log"Loading one large unsplittable file ${MDC(PATH, path.toString)} " +
-              log"with only one " +
-              log"partition, because the file is compressed by unsplittable compression codec.")
+            logWarning(
+              log"Loading one large unsplittable file ${MDC(PATH, path.toString)} " +
+                log"with only one " +
+                log"partition, because the file is compressed by unsplittable compression codec.")
           }
         }
       }
@@ -184,22 +194,27 @@ class NewHadoopRDD[K, V](
       val result = new Array[Partition](rawSplits.size)
       for (i <- rawSplits.indices) {
         result(i) =
-            new NewHadoopPartition(id, i, rawSplits(i).asInstanceOf[InputSplit with Writable])
+          new NewHadoopPartition(id, i, rawSplits(i).asInstanceOf[InputSplit with Writable])
       }
       result
     } catch {
       case e: InvalidInputException if ignoreMissingFiles =>
-        logWarning(log"${MDC(PATH, _conf.get(FileInputFormat.INPUT_DIR))} " +
-          log"doesn't exist and no partitions returned from this path.", e)
+        logWarning(
+          log"${MDC(PATH, _conf.get(FileInputFormat.INPUT_DIR))} " +
+            log"doesn't exist and no partitions returned from this path.",
+          e)
         Array.empty[Partition]
     }
   }
 
-  override def compute(theSplit: Partition, context: TaskContext): InterruptibleIterator[(K, V)] = {
+  override def compute(
+      theSplit: Partition,
+      context: TaskContext): InterruptibleIterator[(K, V)] = {
     val iter = new Iterator[(K, V)] {
       private val split = theSplit.asInstanceOf[NewHadoopPartition]
-      logInfo(log"Task (TID ${MDC(TASK_ID, context.taskAttemptId())}) input split: " +
-        log"${MDC(INPUT_SPLIT, split.serializableHadoopSplit)}")
+      logInfo(
+        log"Task (TID ${MDC(TASK_ID, context.taskAttemptId())}) input split: " +
+          log"${MDC(INPUT_SPLIT, split.serializableHadoopSplit)}")
       private val conf = getConf
 
       private val inputMetrics = context.taskMetrics().inputMetrics
@@ -245,10 +260,11 @@ class NewHadoopRDD[K, V](
         try {
           Utils.createResourceUninterruptiblyIfInTaskThread {
             Utils.tryInitializeResource(
-              format.createRecordReader(split.serializableHadoopSplit.value, hadoopAttemptContext)
-            ) { reader =>
-              reader.initialize(split.serializableHadoopSplit.value, hadoopAttemptContext)
-              reader
+              format
+                .createRecordReader(split.serializableHadoopSplit.value, hadoopAttemptContext)) {
+              reader =>
+                reader.initialize(split.serializableHadoopSplit.value, hadoopAttemptContext)
+                reader
             }
           }
         } catch {
@@ -258,7 +274,7 @@ class NewHadoopRDD[K, V](
             null
           // Throw FileNotFoundException even if `ignoreCorruptFiles` is true
           case e: FileNotFoundException if !ignoreMissingFiles => throw e
-          case e @ (_ : AccessControlException | _ : BlockMissingException) => throw e
+          case e @ (_: AccessControlException | _: BlockMissingException) => throw e
           case e: IOException if ignoreCorruptFiles =>
             logWarning(
               log"Skipped the rest content in the corrupted file: " +
@@ -284,11 +300,13 @@ class NewHadoopRDD[K, V](
             finished = !reader.nextKeyValue
           } catch {
             case e: FileNotFoundException if ignoreMissingFiles =>
-              logWarning(log"Skipped missing file: ${MDC(PATH, split.serializableHadoopSplit)}", e)
+              logWarning(
+                log"Skipped missing file: ${MDC(PATH, split.serializableHadoopSplit)}",
+                e)
               finished = true
             // Throw FileNotFoundException even if `ignoreCorruptFiles` is true
             case e: FileNotFoundException if !ignoreMissingFiles => throw e
-            case e @ (_ : AccessControlException | _ : BlockMissingException) => throw e
+            case e @ (_: AccessControlException | _: BlockMissingException) => throw e
             case e: IOException if ignoreCorruptFiles =>
               logWarning(
                 log"Skipped the rest content in the corrupted file: " +
@@ -337,7 +355,7 @@ class NewHadoopRDD[K, V](
           if (getBytesReadCallback.isDefined) {
             updateBytesRead()
           } else if (split.serializableHadoopSplit.value.isInstanceOf[FileSplit] ||
-                     split.serializableHadoopSplit.value.isInstanceOf[CombineFileSplit]) {
+            split.serializableHadoopSplit.value.isInstanceOf[CombineFileSplit]) {
             // If we can't get the bytes read from the FS stats, fall back to the split size,
             // which may be inaccurate.
             try {
@@ -353,7 +371,9 @@ class NewHadoopRDD[K, V](
     new InterruptibleIterator(context, iter)
   }
 
-  /** Maps over a partition, providing the InputSplit that was used as the base of the partition. */
+  /**
+   * Maps over a partition, providing the InputSplit that was used as the base of the partition.
+   */
   @DeveloperApi
   def mapPartitionsWithInputSplit[U: ClassTag](
       f: (InputSplit, Iterator[(K, V)]) => Iterator[U],
@@ -379,21 +399,22 @@ class NewHadoopRDD[K, V](
 }
 
 private[spark] object NewHadoopRDD {
+
   /**
-   * Configuration's constructor is not threadsafe (see SPARK-1097 and HADOOP-10456).
-   * Therefore, we synchronize on this lock before calling new Configuration().
+   * Configuration's constructor is not threadsafe (see SPARK-1097 and HADOOP-10456). Therefore,
+   * we synchronize on this lock before calling new Configuration().
    */
   val CONFIGURATION_INSTANTIATION_LOCK = new Object()
 
   /**
-   * Analogous to [[org.apache.spark.rdd.MapPartitionsRDD]], but passes in an InputSplit to
-   * the given function rather than the index of the partition.
+   * Analogous to [[org.apache.spark.rdd.MapPartitionsRDD]], but passes in an InputSplit to the
+   * given function rather than the index of the partition.
    */
   private[spark] class NewHadoopMapPartitionsWithSplitRDD[U: ClassTag, T: ClassTag](
       prev: RDD[T],
       f: (InputSplit, Iterator[T]) => Iterator[U],
       preservesPartitioning: Boolean = false)
-    extends RDD[U](prev) {
+      extends RDD[U](prev) {
 
     override val partitioner = if (preservesPartitioning) firstParent[T].partitioner else None
 

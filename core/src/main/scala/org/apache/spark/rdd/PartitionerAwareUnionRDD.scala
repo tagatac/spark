@@ -28,11 +28,10 @@ import org.apache.spark.util.Utils
  * Class representing partitions of PartitionerAwareUnionRDD, which maintains the list of
  * corresponding partitions of parent RDDs.
  */
-private[spark]
-class PartitionerAwareUnionRDDPartition(
+private[spark] class PartitionerAwareUnionRDDPartition(
     @transient val rdds: Seq[RDD[_]],
-    override val index: Int
-  ) extends Partition {
+    override val index: Int)
+    extends Partition {
   var parents = rdds.map(_.partitions(index)).toArray
 
   override def hashCode(): Int = index
@@ -47,11 +46,10 @@ class PartitionerAwareUnionRDDPartition(
   }
 }
 
-private[spark]
-abstract class PartitionerAwareUnionRDDBase[T: ClassTag](
+private[spark] abstract class PartitionerAwareUnionRDDBase[T: ClassTag](
     sc: SparkContext,
-    var rdds: Seq[RDD[T]]
-  ) extends RDD[T](sc, rdds.map(x => new OneToOneDependency(x))) {
+    var rdds: Seq[RDD[T]])
+    extends RDD[T](sc, rdds.map(x => new OneToOneDependency(x))) {
   require(rdds.nonEmpty, "RDDs cannot be empty")
 
   override val partitioner = rdds.head.partitioner
@@ -67,11 +65,10 @@ abstract class PartitionerAwareUnionRDDBase[T: ClassTag](
   override def getPreferredLocations(s: Partition): Seq[String] = {
     logDebug("Finding preferred location for " + this + ", partition " + s.index)
     val parentPartitions = s.asInstanceOf[PartitionerAwareUnionRDDPartition].parents
-    val locations = rdds.zip(parentPartitions).flatMap {
-      case (rdd, part) =>
-        val parentLocations = currPrefLocs(rdd, part)
-        logDebug("Location of " + rdd + " partition " + part.index + " = " + parentLocations)
-        parentLocations
+    val locations = rdds.zip(parentPartitions).flatMap { case (rdd, part) =>
+      val parentLocations = currPrefLocs(rdd, part)
+      logDebug("Location of " + rdd + " partition " + part.index + " = " + parentLocations)
+      parentLocations
     }
     val location = if (locations.isEmpty) {
       None
@@ -85,8 +82,8 @@ abstract class PartitionerAwareUnionRDDBase[T: ClassTag](
 
   override def compute(s: Partition, context: TaskContext): Iterator[T] = {
     val parentPartitions = s.asInstanceOf[PartitionerAwareUnionRDDPartition].parents
-    rdds.zip(parentPartitions).iterator.flatMap {
-      case (rdd, p) => rdd.iterator(p, context)
+    rdds.zip(parentPartitions).iterator.flatMap { case (rdd, p) =>
+      rdd.iterator(p, context)
     }
   }
 
@@ -105,37 +102,37 @@ abstract class PartitionerAwareUnionRDDBase[T: ClassTag](
  * Class representing an RDD that can take multiple RDDs partitioned by the same partitioner and
  * unify them into a single RDD while preserving the partitioner. So m RDDs with p partitions each
  * will be unified to a single RDD with p partitions and the same partitioner. The preferred
- * location for each partition of the unified RDD will be the most common preferred location
- * of the corresponding partitions of the parent RDDs. For example, location of partition 0
- * of the unified RDD will be where most of partition 0 of the parent RDDs are located.
+ * location for each partition of the unified RDD will be the most common preferred location of
+ * the corresponding partitions of the parent RDDs. For example, location of partition 0 of the
+ * unified RDD will be where most of partition 0 of the parent RDDs are located.
  */
-private[spark]
-class PartitionerAwareUnionRDD[T: ClassTag](
+private[spark] class PartitionerAwareUnionRDD[T: ClassTag](
     sc: SparkContext,
-    var _rdds: Seq[RDD[T]]
-  ) extends PartitionerAwareUnionRDDBase(sc, _rdds) {
+    var _rdds: Seq[RDD[T]])
+    extends PartitionerAwareUnionRDDBase(sc, _rdds) {
   require(_rdds.forall(_.partitioner.isDefined))
-  require(_rdds.flatMap(_.partitioner).toSet.size == 1,
+  require(
+    _rdds.flatMap(_.partitioner).toSet.size == 1,
     "Parent RDDs have different partitioners: " + _rdds.flatMap(_.partitioner))
 }
 
 /**
- * This is similar to [[PartitionerAwareUnionRDD]], but it doesn't require the parent RDDs
- * to have defined partitioner and have the same partitioner if defined.
- * It is because SQL's shuffle RDD's partitioner is not defined in `ShuffledRowRDD`.
- * The actual partitioning is implemented in `ShuffleExchangeExec.prepareShuffleDependency`.
+ * This is similar to [[PartitionerAwareUnionRDD]], but it doesn't require the parent RDDs to have
+ * defined partitioner and have the same partitioner if defined. It is because SQL's shuffle RDD's
+ * partitioner is not defined in `ShuffledRowRDD`. The actual partitioning is implemented in
+ * `ShuffleExchangeExec.prepareShuffleDependency`.
  *
- * Thus, this RDD doesn't check the partitioner of parent RDDs. Its correctness relies on the
- * fact that the given RDDs are partitioned in the same way. So before using this RDD, you must
- * ensure that all parent RDDs are partitioned correctly by checking their SQL output partitioning.
+ * Thus, this RDD doesn't check the partitioner of parent RDDs. Its correctness relies on the fact
+ * that the given RDDs are partitioned in the same way. So before using this RDD, you must ensure
+ * that all parent RDDs are partitioned correctly by checking their SQL output partitioning.
  */
-private[spark]
-class SQLPartitioningAwareUnionRDD[T: ClassTag](
+private[spark] class SQLPartitioningAwareUnionRDD[T: ClassTag](
     sc: SparkContext,
     var _rdds: Seq[RDD[T]],
-    val numPartitions: Int
-  ) extends PartitionerAwareUnionRDDBase(sc, _rdds) {
-  require(partitioner.isEmpty || partitioner.get.numPartitions == numPartitions,
+    val numPartitions: Int)
+    extends PartitionerAwareUnionRDDBase(sc, _rdds) {
+  require(
+    partitioner.isEmpty || partitioner.get.numPartitions == numPartitions,
     "Partitioner of parent RDDs does not match the number of partitions: " +
       s"expected $numPartitions, but got ${partitioner.map(_.numPartitions).getOrElse("none")}")
 
@@ -145,4 +142,3 @@ class SQLPartitioningAwareUnionRDD[T: ClassTag](
     }.toArray
   }
 }
-

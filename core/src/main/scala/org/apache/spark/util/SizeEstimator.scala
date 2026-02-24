@@ -33,22 +33,21 @@ import org.apache.spark.util.Utils
 import org.apache.spark.util.collection.OpenHashSet
 
 /**
- * A trait that allows a class to give [[SizeEstimator]] more accurate size estimation.
- * When a class extends it, [[SizeEstimator]] will query the `estimatedSize`, and use
- * the returned size as the size of the object. The difference between a [[KnownSizeEstimation]]
- * and [[org.apache.spark.util.collection.SizeTracker]] is that, a
- * [[org.apache.spark.util.collection.SizeTracker]] still uses [[SizeEstimator]] to
- * estimate the size. However, a [[KnownSizeEstimation]] can provide a better estimation without
- * using [[SizeEstimator]].
+ * A trait that allows a class to give [[SizeEstimator]] more accurate size estimation. When a
+ * class extends it, [[SizeEstimator]] will query the `estimatedSize`, and use the returned size
+ * as the size of the object. The difference between a [[KnownSizeEstimation]] and
+ * [[org.apache.spark.util.collection.SizeTracker]] is that, a
+ * [[org.apache.spark.util.collection.SizeTracker]] still uses [[SizeEstimator]] to estimate the
+ * size. However, a [[KnownSizeEstimation]] can provide a better estimation without using
+ * [[SizeEstimator]].
  */
 private[spark] trait KnownSizeEstimation {
   def estimatedSize: Long
 }
 
 /**
- * :: DeveloperApi ::
- * Estimates the sizes of Java objects (number of bytes of memory they occupy), for use in
- * memory-aware caches.
+ * :: DeveloperApi :: Estimates the sizes of Java objects (number of bytes of memory they occupy),
+ * for use in memory-aware caches.
  *
  * Based on the following JavaWorld article:
  * https://www.infoworld.com/article/2077408/sizeof-for-java.html
@@ -58,8 +57,8 @@ object SizeEstimator extends Logging {
 
   /**
    * Estimate the number of bytes that the given object takes up on the JVM heap. The estimate
-   * includes space taken up by objects referenced by the given object, their references, and so on
-   * and so forth.
+   * includes space taken up by objects referenced by the given object, their references, and so
+   * on and so forth.
    *
    * This is useful for determining the amount of heap space a broadcast variable will occupy on
    * each executor or the amount of space each object will take when caching objects in
@@ -111,13 +110,15 @@ object SizeEstimator extends Logging {
     is64bit = arch.contains("64") || arch.contains("s390x")
     isCompressedOops = getIsCompressedOops
 
-    objectSize = if (!is64bit) 8 else {
-      if (!isCompressedOops) {
-        16
-      } else {
-        12
+    objectSize =
+      if (!is64bit) 8
+      else {
+        if (!isCompressedOops) {
+          16
+        } else {
+          12
+        }
       }
-    }
     pointerSize = if (is64bit && !isCompressedOops) 8 else 4
     classInfos.clear()
     classInfos.put(classOf[Object], new ClassInfo(objectSize, Nil))
@@ -143,20 +144,21 @@ object SizeEstimator extends Logging {
       // NOTE: This should throw an exception in non-Sun JVMs
       // scalastyle:off classforname
       val hotSpotMBeanClass = Class.forName("com.sun.management.HotSpotDiagnosticMXBean")
-      val getVMMethod = hotSpotMBeanClass.getDeclaredMethod("getVMOption",
-          Class.forName("java.lang.String"))
+      val getVMMethod =
+        hotSpotMBeanClass.getDeclaredMethod("getVMOption", Class.forName("java.lang.String"))
       // scalastyle:on classforname
 
-      val bean = ManagementFactory.newPlatformMXBeanProxy(server,
-        hotSpotMBeanName, hotSpotMBeanClass)
+      val bean =
+        ManagementFactory.newPlatformMXBeanProxy(server, hotSpotMBeanName, hotSpotMBeanClass)
       // TODO: We could use reflection on the VMOption returned ?
       getVMMethod.invoke(bean, "UseCompressedOops").toString.contains("true")
     } catch {
       case _: Exception =>
         // Guess whether they've enabled UseCompressedOops based on whether maxMemory < 32 GB
-        val guess = Runtime.getRuntime.maxMemory < (32L*1024*1024*1024)
-        logWarning(log"Failed to check whether UseCompressedOops is set; " +
-          log"assuming " + (if (guess) log"yes" else log"not"))
+        val guess = Runtime.getRuntime.maxMemory < (32L * 1024 * 1024 * 1024)
+        logWarning(
+          log"Failed to check whether UseCompressedOops is set; " +
+            log"assuming " + (if (guess) log"yes" else log"not"))
         guess
     }
   }
@@ -191,9 +193,7 @@ object SizeEstimator extends Logging {
    * (size of all non-static fields plus the java.lang.Object size), and any fields that are
    * pointers to objects.
    */
-  private class ClassInfo(
-    val shellSize: Long,
-    val pointerFields: List[Field]) {}
+  private class ClassInfo(val shellSize: Long, val pointerFields: List[Field]) {}
 
   private def estimate(obj: AnyRef, visited: IdentityHashMap[AnyRef, AnyRef]): Long = {
     val state = new SearchState(visited)
@@ -308,7 +308,7 @@ object SizeEstimator extends Logging {
       DOUBLE_SIZE
     } else {
       throw new IllegalArgumentException(
-      "Non-primitive class " + cls + " passed to primitiveSize()")
+        "Non-primitive class " + cls + " passed to primitiveSize()")
     }
   }
 
@@ -342,7 +342,7 @@ object SizeEstimator extends Logging {
             // If the field isn't accessible, we can still record the pointer size
             // but can't know more about the field, so ignore it
             case _: SecurityException =>
-              // do nothing
+            // do nothing
           }
           sizeCount(pointerSize) += 1
         }
@@ -387,11 +387,11 @@ object SizeEstimator extends Logging {
   private def alignSize(size: Long): Long = alignSizeUp(size, ALIGN_SIZE)
 
   /**
-   * Compute aligned size. The alignSize must be 2^n, otherwise the result will be wrong.
-   * When alignSize = 2^n, alignSize - 1 = 2^n - 1. The binary representation of (alignSize - 1)
-   * will only have n trailing 1s(0b00...001..1). ~(alignSize - 1) will be 0b11..110..0. Hence,
-   * (size + alignSize - 1) & ~(alignSize - 1) will set the last n bits to zeros, which leads to
-   * multiple of alignSize.
+   * Compute aligned size. The alignSize must be 2^n, otherwise the result will be wrong. When
+   * alignSize = 2^n, alignSize - 1 = 2^n - 1. The binary representation of (alignSize - 1) will
+   * only have n trailing 1s(0b00...001..1). ~(alignSize - 1) will be 0b11..110..0. Hence, (size +
+   * alignSize - 1) & ~(alignSize - 1) will set the last n bits to zeros, which leads to multiple
+   * of alignSize.
    */
   private def alignSizeUp(size: Long, alignSize: Int): Long =
     (size + alignSize - 1) & ~(alignSize - 1)

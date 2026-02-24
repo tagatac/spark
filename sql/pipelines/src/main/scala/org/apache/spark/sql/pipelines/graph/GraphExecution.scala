@@ -28,10 +28,8 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.pipelines.logging.StreamListener
 import org.apache.spark.sql.streaming.Trigger
 
-abstract class GraphExecution(
-    val graphForExecution: DataflowGraph,
-    env: PipelineUpdateContext
-) extends Logging {
+abstract class GraphExecution(val graphForExecution: DataflowGraph, env: PipelineUpdateContext)
+    extends Logging {
 
   /** The `Trigger` configuration for a streaming flow. */
   def streamTrigger(flow: Flow): Trigger
@@ -56,15 +54,11 @@ abstract class GraphExecution(
   }
 
   /**
-   * Planner use to convert each logical dataflow (i.e., `Flow`) defined in the
-   * `DataflowGraph` into a concrete execution plan `FlowExecution` used by the
-   * pipeline execution.
+   * Planner use to convert each logical dataflow (i.e., `Flow`) defined in the `DataflowGraph`
+   * into a concrete execution plan `FlowExecution` used by the pipeline execution.
    */
-  private val flowPlanner = new FlowPlanner(
-    graph = graphForExecution,
-    updateContext = env,
-    triggerFor = streamTrigger
-  )
+  private val flowPlanner =
+    new FlowPlanner(graph = graphForExecution, updateContext = env, triggerFor = streamTrigger)
 
   /** Listener to process streaming events and metrics. */
   private val streamListener = new StreamListener(env, graphForExecution)
@@ -73,14 +67,13 @@ abstract class GraphExecution(
    * Plans the logical `ResolvedFlow` into a `FlowExecution` and then starts executing it.
    * Implementation note: Thread safe
    *
-   * @return None if the flow planner decided that there is no actual update required here.
-   *         Otherwise returns the corresponding physical flow.
+   * @return
+   *   None if the flow planner decided that there is no actual update required here. Otherwise
+   *   returns the corresponding physical flow.
    */
   def planAndStartFlow(flow: ResolvedFlow): Option[FlowExecution] = {
     try {
-      val flowExecution = flowPlanner.plan(
-        flow = graphForExecution.resolvedFlow(flow.identifier)
-      )
+      val flowExecution = flowPlanner.plan(flow = graphForExecution.resolvedFlow(flow.identifier))
 
       env.flowProgressEventLogger.recordStart(flowExecution)
 
@@ -99,9 +92,8 @@ abstract class GraphExecution(
             // Log as warn if flow has retries left
             logAsWarn = {
               flowToNumConsecutiveFailure(flow.identifier) <
-              1 + maxRetryAttemptsForFlow(flow.identifier)
-            }
-          )
+                1 + maxRetryAttemptsForFlow(flow.identifier)
+            })
         case Success(ExecutionResult.STOPPED) =>
         // We already recorded a STOPPED event in [[FlowExecution.stopFlow()]].
         // We don't need to log another one here.
@@ -110,8 +102,7 @@ abstract class GraphExecution(
           flowToNumConsecutiveFailure.put(flow.identifier, 0)
           flowToNumSuccess.put(
             flow.identifier,
-            flowToNumSuccess.getOrElse(flow.identifier, 0L) + 1L
-          )
+            flowToNumSuccess.getOrElse(flow.identifier, 0L) + 1L)
           env.flowProgressEventLogger.recordCompletion(flow)
         case _ => // Handled by StreamListener
       }
@@ -121,17 +112,12 @@ abstract class GraphExecution(
       case ex: Throwable =>
         logError(
           log"Unhandled exception while starting flow:${MDC(LogKeys.FLOW_NAME, flow.displayName)}",
-          ex
-        )
+          ex)
         // InterruptedException is thrown when the thread executing `startFlow` is interrupted.
         if (ex.isInstanceOf[InterruptedException]) {
           env.flowProgressEventLogger.recordStop(flow)
         } else {
-          env.flowProgressEventLogger.recordFailed(
-            flow = flow,
-            exception = ex,
-            logAsWarn = false
-          )
+          env.flowProgressEventLogger.recordFailed(flow = flow, exception = ex, logAsWarn = false)
         }
         throw ex
     }
@@ -169,8 +155,7 @@ abstract class GraphExecution(
             flow = flow,
             exception = e,
             logAsWarn = false,
-            messageOpt = Option(s"Flow '${pf.displayName}' has failed to stop.")
-          )
+            messageOpt = Option(s"Flow '${pf.displayName}' has failed to stop."))
           throw e
       }
       env.flowProgressEventLogger.recordStop(flow)
@@ -178,8 +163,7 @@ abstract class GraphExecution(
     } else {
       logWarning(
         log"Flow ${MDC(LogKeys.FLOW_NAME, pf.identifier)} was not stopped because it " +
-        log"was already completed. Exception: ${MDC(LogKeys.EXCEPTION, pf.exception)}"
-      )
+          log"was already completed. Exception: ${MDC(LogKeys.EXCEPTION, pf.exception)}")
     }
   }
 
@@ -191,9 +175,9 @@ abstract class GraphExecution(
   def awaitCompletion(): Unit
 
   /**
-   * Returns the reason why this flow execution has terminated.
-   * If the function is called before the flow has not terminated yet, the behavior is undefined,
-   * and may return `UnexpectedRunFailure`.
+   * Returns the reason why this flow execution has terminated. If the function is called before
+   * the flow has not terminated yet, the behavior is undefined, and may return
+   * `UnexpectedRunFailure`.
    */
   def getRunTerminationReason: RunTerminationReason
 
@@ -249,35 +233,38 @@ object GraphExecution extends Logging {
   private case class MaxRetryExceeded(
       cause: Throwable,
       flowDisplayName: String,
-      maxAllowedRetries: Int
-  ) extends FlowExecutionStopReason {
+      maxAllowedRetries: Int)
+      extends FlowExecutionStopReason {
     override lazy val runTerminationReason: RunTerminationReason = {
       QueryExecutionFailure(flowDisplayName, maxAllowedRetries, Option(cause))
     }
     override lazy val failureMessage: String = {
       s"Flow '$flowDisplayName' has FAILED more than $maxAllowedRetries times and will not be " +
-      s"restarted."
+        s"restarted."
     }
   }
 
   /**
-   * Analyze the exception thrown by flow execution and figure out if we should retry the execution,
-   * or we need to reanalyze the flow entirely to resolve issues like schema changes.
-   * This should be the narrow waist for all exception analysis in flow execution.
-   * TODO: currently it only handles schema change and max retries, we should aim to extend this to
-   *  include other non-retryable exception as well so we can have a single SoT for all these error
-   *  matching logic.
-   * @param ex Exception to analyze.
-   * @param flowDisplayName The user facing flow name with the error.
-   * @param currentNumTries Number of times the flow has been tried.
-   * @param maxAllowedRetries Maximum number of retries allowed for the flow.
+   * Analyze the exception thrown by flow execution and figure out if we should retry the
+   * execution, or we need to reanalyze the flow entirely to resolve issues like schema changes.
+   * This should be the narrow waist for all exception analysis in flow execution. TODO: currently
+   * it only handles schema change and max retries, we should aim to extend this to include other
+   * non-retryable exception as well so we can have a single SoT for all these error matching
+   * logic.
+   * @param ex
+   *   Exception to analyze.
+   * @param flowDisplayName
+   *   The user facing flow name with the error.
+   * @param currentNumTries
+   *   Number of times the flow has been tried.
+   * @param maxAllowedRetries
+   *   Maximum number of retries allowed for the flow.
    */
   def determineFlowExecutionActionFromError(
       ex: => Throwable,
       flowDisplayName: => String,
       currentNumTries: => Int,
-      maxAllowedRetries: => Int
-  ): FlowExecutionAction = {
+      maxAllowedRetries: => Int): FlowExecutionAction = {
     val flowExecutionNonRetryableReasonOpt = if (currentNumTries > maxAllowedRetries) {
       Some(MaxRetryExceeded(ex, flowDisplayName, maxAllowedRetries))
     } else {

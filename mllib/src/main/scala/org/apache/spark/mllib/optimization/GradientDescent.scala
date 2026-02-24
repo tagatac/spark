@@ -25,14 +25,18 @@ import org.apache.spark.internal.{Logging, LogKeys}
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
 
-
 /**
  * Class used to solve an optimization problem using Gradient Descent.
- * @param gradient Gradient function to be used.
- * @param updater Updater to be used to update weights after every iteration.
+ * @param gradient
+ *   Gradient function to be used.
+ * @param updater
+ *   Updater to be used to update weights after every iteration.
  */
-class GradientDescent private[spark] (private var gradient: Gradient, private var updater: Updater)
-  extends Optimizer with Logging {
+class GradientDescent private[spark] (
+    private var gradient: Gradient,
+    private var updater: Updater)
+    extends Optimizer
+    with Logging {
 
   private var stepSize: Double = 1.0
   private var numIterations: Int = 100
@@ -41,22 +45,22 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
   private var convergenceTol: Double = 0.001
 
   /**
-   * Set the initial step size of SGD for the first step. Default 1.0.
-   * In subsequent steps, the step size will decrease with stepSize/sqrt(t)
+   * Set the initial step size of SGD for the first step. Default 1.0. In subsequent steps, the
+   * step size will decrease with stepSize/sqrt(t)
    */
   def setStepSize(step: Double): this.type = {
-    require(step > 0,
-      s"Initial step size must be positive but got ${step}")
+    require(step > 0, s"Initial step size must be positive but got ${step}")
     this.stepSize = step
     this
   }
 
   /**
-   * Set fraction of data to be used for each SGD iteration.
-   * Default 1.0 (corresponding to deterministic/classical gradient descent)
+   * Set fraction of data to be used for each SGD iteration. Default 1.0 (corresponding to
+   * deterministic/classical gradient descent)
    */
   def setMiniBatchFraction(fraction: Double): this.type = {
-    require(fraction > 0 && fraction <= 1.0,
+    require(
+      fraction > 0 && fraction <= 1.0,
       s"Fraction for mini-batch SGD must be in range (0, 1] but got ${fraction}")
     this.miniBatchFraction = fraction
     this
@@ -66,8 +70,7 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
    * Set the number of iterations for SGD. Default 100.
    */
   def setNumIterations(iters: Int): this.type = {
-    require(iters >= 0,
-      s"Number of iterations must be nonnegative but got ${iters}")
+    require(iters >= 0, s"Number of iterations must be nonnegative but got ${iters}")
     this.numIterations = iters
     this
   }
@@ -76,46 +79,44 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
    * Set the regularization parameter. Default 0.0.
    */
   def setRegParam(regParam: Double): this.type = {
-    require(regParam >= 0,
-      s"Regularization parameter must be nonnegative but got ${regParam}")
+    require(regParam >= 0, s"Regularization parameter must be nonnegative but got ${regParam}")
     this.regParam = regParam
     this
   }
 
   /**
-   * Set the convergence tolerance. Default 0.001
-   * convergenceTol is a condition which decides iteration termination.
-   * The end of iteration is decided based on below logic.
+   * Set the convergence tolerance. Default 0.001 convergenceTol is a condition which decides
+   * iteration termination. The end of iteration is decided based on below logic.
    *
-   *  - If the norm of the new solution vector is greater than 1, the diff of solution vectors
-   *    is compared to relative tolerance which means normalizing by the norm of
-   *    the new solution vector.
-   *  - If the norm of the new solution vector is less than or equal to 1, the diff of solution
-   *    vectors is compared to absolute tolerance which is not normalizing.
+   *   - If the norm of the new solution vector is greater than 1, the diff of solution vectors is
+   *     compared to relative tolerance which means normalizing by the norm of the new solution
+   *     vector.
+   *   - If the norm of the new solution vector is less than or equal to 1, the diff of solution
+   *     vectors is compared to absolute tolerance which is not normalizing.
    *
    * Must be between 0.0 and 1.0 inclusively.
    */
   def setConvergenceTol(tolerance: Double): this.type = {
-    require(tolerance >= 0.0 && tolerance <= 1.0,
+    require(
+      tolerance >= 0.0 && tolerance <= 1.0,
       s"Convergence tolerance must be in range [0, 1] but got ${tolerance}")
     this.convergenceTol = tolerance
     this
   }
 
   /**
-   * Set the gradient function (of the loss function of one single data example)
-   * to be used for SGD.
+   * Set the gradient function (of the loss function of one single data example) to be used for
+   * SGD.
    */
   def setGradient(gradient: Gradient): this.type = {
     this.gradient = gradient
     this
   }
 
-
   /**
-   * Set the updater function to actually perform a gradient step in a given direction.
-   * The updater is responsible to perform the update from the regularization term as well,
-   * and therefore determines what kind or regularization is used, if any.
+   * Set the updater function to actually perform a gradient step in a given direction. The
+   * updater is responsible to perform the update from the regularization term as well, and
+   * therefore determines what kind or regularization is used, if any.
    */
   def setUpdater(updater: Updater): this.type = {
     this.updater = updater
@@ -124,9 +125,12 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
 
   /**
    * Runs gradient descent on the given training data.
-   * @param data training data
-   * @param initialWeights initial weights
-   * @return solution vector
+   * @param data
+   *   training data
+   * @param initialWeights
+   *   initial weights
+   * @return
+   *   solution vector
    */
   def optimize(data: RDD[(Double, Vector)], initialWeights: Vector): Vector = {
     val (weights, _) = optimizeWithLossReturned(data, initialWeights)
@@ -135,9 +139,12 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
 
   /**
    * Runs gradient descent on the given training data.
-   * @param data training data
-   * @param initialWeights initial weights
-   * @return solution vector and loss value in an array
+   * @param data
+   *   training data
+   * @param initialWeights
+   *   initial weights
+   * @return
+   *   solution vector and loss value in an array
    */
   def optimizeWithLossReturned(
       data: RDD[(Double, Vector)],
@@ -160,30 +167,38 @@ class GradientDescent private[spark] (private var gradient: Gradient, private va
  * Top-level method to run gradient descent.
  */
 object GradientDescent extends Logging {
+
   /**
-   * Run stochastic gradient descent (SGD) in parallel using mini batches.
-   * In each iteration, we sample a subset (fraction miniBatchFraction) of the total data
-   * in order to compute a gradient estimate.
-   * Sampling, and averaging the subgradients over this subset is performed using one standard
-   * spark map-reduce in each iteration.
+   * Run stochastic gradient descent (SGD) in parallel using mini batches. In each iteration, we
+   * sample a subset (fraction miniBatchFraction) of the total data in order to compute a gradient
+   * estimate. Sampling, and averaging the subgradients over this subset is performed using one
+   * standard spark map-reduce in each iteration.
    *
-   * @param data Input data for SGD. RDD of the set of data examples, each of
-   *             the form (label, [feature values]).
-   * @param gradient Gradient object (used to compute the gradient of the loss function of
-   *                 one single data example)
-   * @param updater Updater function to actually perform a gradient step in a given direction.
-   * @param stepSize initial step size for the first step
-   * @param numIterations number of iterations that SGD should be run.
-   * @param regParam regularization parameter
-   * @param miniBatchFraction fraction of the input data set that should be used for
-   *                          one iteration of SGD. Default value 1.0.
-   * @param convergenceTol Minibatch iteration will end before numIterations if the relative
-   *                       difference between the current weight and the previous weight is less
-   *                       than this value. In measuring convergence, L2 norm is calculated.
-   *                       Default value 0.001. Must be between 0.0 and 1.0 inclusively.
-   * @return A tuple containing two elements. The first element is a column matrix containing
-   *         weights for every feature, and the second element is an array containing the
-   *         stochastic loss computed for every iteration.
+   * @param data
+   *   Input data for SGD. RDD of the set of data examples, each of the form (label, [feature
+   *   values]).
+   * @param gradient
+   *   Gradient object (used to compute the gradient of the loss function of one single data
+   *   example)
+   * @param updater
+   *   Updater function to actually perform a gradient step in a given direction.
+   * @param stepSize
+   *   initial step size for the first step
+   * @param numIterations
+   *   number of iterations that SGD should be run.
+   * @param regParam
+   *   regularization parameter
+   * @param miniBatchFraction
+   *   fraction of the input data set that should be used for one iteration of SGD. Default value
+   *   1.0.
+   * @param convergenceTol
+   *   Minibatch iteration will end before numIterations if the relative difference between the
+   *   current weight and the previous weight is less than this value. In measuring convergence,
+   *   L2 norm is calculated. Default value 0.001. Must be between 0.0 and 1.0 inclusively.
+   * @return
+   *   A tuple containing two elements. The first element is a column matrix containing weights
+   *   for every feature, and the second element is an array containing the stochastic loss
+   *   computed for every iteration.
    */
   def runMiniBatchSGD(
       data: RDD[(Double, Vector)],
@@ -198,14 +213,16 @@ object GradientDescent extends Logging {
 
     // convergenceTol should be set with non minibatch settings
     if (miniBatchFraction < 1.0 && convergenceTol > 0.0) {
-      logWarning("Testing against a convergenceTol when using miniBatchFraction " +
-        "< 1.0 can be unstable because of the stochasticity in sampling.")
+      logWarning(
+        "Testing against a convergenceTol when using miniBatchFraction " +
+          "< 1.0 can be unstable because of the stochasticity in sampling.")
     }
 
     if (numIterations * miniBatchFraction < 1.0) {
-      logWarning(log"Not all examples will be used if numIterations * miniBatchFraction < 1.0: " +
-        log"numIterations=${MDC(LogKeys.NUM_ITERATIONS, numIterations)} and " +
-        log"miniBatchFraction=${MDC(LogKeys.MINI_BATCH_FRACTION, miniBatchFraction)}")
+      logWarning(
+        log"Not all examples will be used if numIterations * miniBatchFraction < 1.0: " +
+          log"numIterations=${MDC(LogKeys.NUM_ITERATIONS, numIterations)} and " +
+          log"miniBatchFraction=${MDC(LogKeys.MINI_BATCH_FRACTION, miniBatchFraction)}")
     }
 
     val stochasticLossHistory = new ArrayBuffer[Double](numIterations + 1)
@@ -231,11 +248,10 @@ object GradientDescent extends Logging {
     val n = weights.size
 
     /**
-     * For the first iteration, the regVal will be initialized as sum of weight squares
-     * if it's L2 updater; for L1 updater, the same logic is followed.
+     * For the first iteration, the regVal will be initialized as sum of weight squares if it's L2
+     * updater; for L1 updater, the same logic is followed.
      */
-    var regVal = updater.compute(
-      weights, Vectors.zeros(weights.size), 0, 1, regParam)._2
+    var regVal = updater.compute(weights, Vectors.zeros(weights.size), 0, 1, regParam)._2
 
     var converged = false // indicates whether converged based on convergenceTol
     var i = 1
@@ -243,7 +259,8 @@ object GradientDescent extends Logging {
       val bcWeights = data.context.broadcast(weights)
       // Sample a subset (fraction miniBatchFraction) of the total data
       // compute and sum up the subgradients on this subset (this is one map-reduce)
-      val (gradientSum, lossSum, miniBatchSize) = data.sample(false, miniBatchFraction, 42 + i)
+      val (gradientSum, lossSum, miniBatchSize) = data
+        .sample(false, miniBatchFraction, 42 + i)
         .treeAggregate[(BDV[Double], Double, Long)](
           zeroValue = (null.asInstanceOf[BDV[Double]], 0.0, 0L),
           seqOp = (c: (BDV[Double], Double, Long), v: (Double, Vector)) => {
@@ -275,35 +292,40 @@ object GradientDescent extends Logging {
       bcWeights.destroy()
 
       if (miniBatchSize > 0) {
+
         /**
-         * lossSum is computed using the weights from the previous iteration
-         * and regVal is the regularization value computed in the previous iteration as well.
+         * lossSum is computed using the weights from the previous iteration and regVal is the
+         * regularization value computed in the previous iteration as well.
          */
         stochasticLossHistory += lossSum / miniBatchSize + regVal
         if (i != (numIterations + 1)) {
           val update = updater.compute(
-            weights, Vectors.fromBreeze(gradientSum / miniBatchSize.toDouble),
-            stepSize, i, regParam)
+            weights,
+            Vectors.fromBreeze(gradientSum / miniBatchSize.toDouble),
+            stepSize,
+            i,
+            regParam)
           weights = update._1
           regVal = update._2
 
           previousWeights = currentWeights
           currentWeights = Some(weights)
           if (previousWeights != None && currentWeights != None) {
-            converged = isConverged(previousWeights.get,
-              currentWeights.get, convergenceTol)
+            converged = isConverged(previousWeights.get, currentWeights.get, convergenceTol)
           }
         }
       } else {
-        logWarning(log"Iteration " +
-          log"(${MDC(LogKeys.INDEX, i)}/${MDC(LogKeys.NUM_ITERATIONS, numIterations)}). " +
-          log"The size of sampled batch is zero")
+        logWarning(
+          log"Iteration " +
+            log"(${MDC(LogKeys.INDEX, i)}/${MDC(LogKeys.NUM_ITERATIONS, numIterations)}). " +
+            log"The size of sampled batch is zero")
       }
       i += 1
     }
 
-    logInfo(log"GradientDescent.runMiniBatchSGD finished. Last 10 stochastic losses " +
-      log"${MDC(LogKeys.LOSSES, stochasticLossHistory.takeRight(10).mkString(", "))}")
+    logInfo(
+      log"GradientDescent.runMiniBatchSGD finished. Last 10 stochastic losses " +
+        log"${MDC(LogKeys.LOSSES, stochasticLossHistory.takeRight(10).mkString(", "))}")
 
     (weights, stochasticLossHistory.toArray)
   }
@@ -320,9 +342,16 @@ object GradientDescent extends Logging {
       regParam: Double,
       miniBatchFraction: Double,
       initialWeights: Vector): (Vector, Array[Double]) =
-    GradientDescent.runMiniBatchSGD(data, gradient, updater, stepSize, numIterations,
-      regParam, miniBatchFraction, initialWeights, 0.001)
-
+    GradientDescent.runMiniBatchSGD(
+      data,
+      gradient,
+      updater,
+      stepSize,
+      numIterations,
+      regParam,
+      miniBatchFraction,
+      initialWeights,
+      0.001)
 
   private def isConverged(
       previousWeights: Vector,

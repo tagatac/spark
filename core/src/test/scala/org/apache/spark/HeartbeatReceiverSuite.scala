@@ -43,9 +43,9 @@ import org.apache.spark.util.{ManualClock, ThreadUtils}
  * A test suite for the heartbeating behavior between the driver and the executors.
  */
 class HeartbeatReceiverSuite
-  extends SparkFunSuite
-  with PrivateMethodTester
-  with LocalSparkContext {
+    extends SparkFunSuite
+    with PrivateMethodTester
+    with LocalSparkContext {
 
   private val executorId1 = "1"
   private val executorId2 = "2"
@@ -64,8 +64,8 @@ class HeartbeatReceiverSuite
   var conf: SparkConf = _
 
   /**
-   * Before each test, set up the SparkContext and a custom [[HeartbeatReceiver]]
-   * that uses a manual clock.
+   * Before each test, set up the SparkContext and a custom [[HeartbeatReceiver]] that uses a
+   * manual clock.
    */
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -167,7 +167,11 @@ class HeartbeatReceiverSuite
     val fakeClusterManager = new FakeClusterManager(rpcEnv, conf)
     val fakeClusterManagerRef = rpcEnv.setupEndpoint("fake-cm", fakeClusterManager)
     val fakeSchedulerBackend =
-      new FakeSchedulerBackend(scheduler, rpcEnv, fakeClusterManagerRef, sc.resourceProfileManager)
+      new FakeSchedulerBackend(
+        scheduler,
+        rpcEnv,
+        fakeClusterManagerRef,
+        sc.resourceProfileManager)
     when(sc.schedulerBackend).thenReturn(fakeSchedulerBackend)
 
     // Register fake executors with our fake scheduler backend
@@ -175,14 +179,30 @@ class HeartbeatReceiverSuite
     fakeSchedulerBackend.start()
     val dummyExecutorEndpoint1 = new FakeExecutorEndpoint(rpcEnv)
     val dummyExecutorEndpoint2 = new FakeExecutorEndpoint(rpcEnv)
-    val dummyExecutorEndpointRef1 = rpcEnv.setupEndpoint("fake-executor-1", dummyExecutorEndpoint1)
-    val dummyExecutorEndpointRef2 = rpcEnv.setupEndpoint("fake-executor-2", dummyExecutorEndpoint2)
+    val dummyExecutorEndpointRef1 =
+      rpcEnv.setupEndpoint("fake-executor-1", dummyExecutorEndpoint1)
+    val dummyExecutorEndpointRef2 =
+      rpcEnv.setupEndpoint("fake-executor-2", dummyExecutorEndpoint2)
     fakeSchedulerBackend.driverEndpoint.askSync[Boolean](
-      RegisterExecutor(executorId1, dummyExecutorEndpointRef1, "1.2.3.4", 0, Map.empty, Map.empty,
-        Map.empty, ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID))
+      RegisterExecutor(
+        executorId1,
+        dummyExecutorEndpointRef1,
+        "1.2.3.4",
+        0,
+        Map.empty,
+        Map.empty,
+        Map.empty,
+        ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID))
     fakeSchedulerBackend.driverEndpoint.askSync[Boolean](
-      RegisterExecutor(executorId2, dummyExecutorEndpointRef2, "1.2.3.5", 0, Map.empty, Map.empty,
-        Map.empty, ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID))
+      RegisterExecutor(
+        executorId2,
+        dummyExecutorEndpointRef2,
+        "1.2.3.5",
+        0,
+        Map.empty,
+        Map.empty,
+        Map.empty,
+        ResourceProfile.DEFAULT_RESOURCE_PROFILE_ID))
     heartbeatReceiverRef.askSync[Boolean](TaskSchedulerIsSet)
     addExecutorAndVerify(executorId1)
     addExecutorAndVerify(executorId2)
@@ -246,8 +266,9 @@ class HeartbeatReceiverSuite
     val m = intercept[IllegalArgumentException] {
       new SparkContext(conf)
     }.getMessage
-    assert(m.contains("spark.network.timeoutInterval should be less than or equal to " +
-      NETWORK_TIMEOUT.key))
+    assert(
+      m.contains("spark.network.timeoutInterval should be less than or equal to " +
+        NETWORK_TIMEOUT.key))
   }
 
   test("SPARK-44726: Show spark.storage.blockManagerHeartbeatTimeoutMs error message") {
@@ -259,18 +280,17 @@ class HeartbeatReceiverSuite
     val m = intercept[IllegalArgumentException] {
       new SparkContext(conf)
     }.getMessage
-    assert(m.contains("spark.network.timeoutInterval should be less than or equal to " +
-      STORAGE_BLOCKMANAGER_HEARTBEAT_TIMEOUT.key))
+    assert(
+      m.contains("spark.network.timeoutInterval should be less than or equal to " +
+        STORAGE_BLOCKMANAGER_HEARTBEAT_TIMEOUT.key))
   }
 
   /** Manually send a heartbeat and return the response. */
-  private def triggerHeartbeat(
-      executorId: String,
-      executorShouldReregister: Boolean): Unit = {
+  private def triggerHeartbeat(executorId: String, executorShouldReregister: Boolean): Unit = {
     val metrics = TaskMetrics.empty
     val blockManagerId = BlockManagerId(executorId, "localhost", 12345)
-    val executorMetrics = new ExecutorMetrics(Array(123456L, 543L, 12345L, 1234L, 123L,
-      12L, 432L, 321L, 654L, 765L))
+    val executorMetrics = new ExecutorMetrics(
+      Array(123456L, 543L, 12345L, 1234L, 123L, 12L, 432L, 321L, 654L, 765L))
     val executorUpdates = mutable.Map((0, 0) -> executorMetrics)
     val response = heartbeatReceiverRef.askSync[HeartbeatResponse](
       Heartbeat(executorId, Array(1L -> metrics.accumulators()), blockManagerId, executorUpdates))
@@ -288,24 +308,23 @@ class HeartbeatReceiverSuite
   }
 
   private def addExecutorAndVerify(executorId: String): Unit = {
-    assert(
-      heartbeatReceiver.addExecutor(executorId).map { f =>
-        ThreadUtils.awaitResult(f, 10.seconds)
-      } === Some(true))
+    assert(heartbeatReceiver.addExecutor(executorId).map { f =>
+      ThreadUtils.awaitResult(f, 10.seconds)
+    } === Some(true))
   }
 
   private def removeExecutorAndVerify(executorId: String): Unit = {
-    assert(
-      heartbeatReceiver.removeExecutor(executorId).map { f =>
-        ThreadUtils.awaitResult(f, 10.seconds)
-      } === Some(true))
+    assert(heartbeatReceiver.removeExecutor(executorId).map { f =>
+      ThreadUtils.awaitResult(f, 10.seconds)
+    } === Some(true))
   }
 
   private def getTrackedExecutors: collection.Map[String, Long] = {
     // We may receive undesired SparkListenerExecutorAdded from LocalSchedulerBackend,
     // so exclude it from the map. See SPARK-10800.
-    heartbeatReceiver.invokePrivate(_executorLastSeen()).
-      filter { case (k, _) => k != SparkContext.DRIVER_IDENTIFIER }
+    heartbeatReceiver.invokePrivate(_executorLastSeen()).filter { case (k, _) =>
+      k != SparkContext.DRIVER_IDENTIFIER
+    }
   }
 }
 
@@ -316,8 +335,7 @@ class HeartbeatReceiverSuite
  */
 private class FakeExecutorEndpoint(override val rpcEnv: RpcEnv) extends RpcEndpoint {
 
-  override def receive: PartialFunction[Any, Unit] = {
-    case _ =>
+  override def receive: PartialFunction[Any, Unit] = { case _ =>
   }
 }
 
@@ -329,16 +347,19 @@ private class FakeSchedulerBackend(
     rpcEnv: RpcEnv,
     clusterManagerEndpoint: RpcEndpointRef,
     resourceProfileManager: ResourceProfileManager)
-  extends CoarseGrainedSchedulerBackend(scheduler, rpcEnv) {
+    extends CoarseGrainedSchedulerBackend(scheduler, rpcEnv) {
 
   def this() = this(null, null, null, null)
 
   protected override def doRequestTotalExecutors(
       resourceProfileToTotalExecs: Map[ResourceProfile, Int]): Future[Boolean] = {
     clusterManagerEndpoint.ask[Boolean](
-      RequestExecutors(resourceProfileToTotalExecs, numLocalityAwareTasksPerResourceProfileId,
-        rpHostToLocalTaskCount, Set.empty))
-}
+      RequestExecutors(
+        resourceProfileToTotalExecs,
+        numLocalityAwareTasksPerResourceProfileId,
+        rpHostToLocalTaskCount,
+        Set.empty))
+  }
 
   protected override def doKillExecutors(executorIds: Seq[String]): Future[Boolean] = {
     clusterManagerEndpoint.ask[Boolean](KillExecutors(executorIds))
@@ -348,7 +369,8 @@ private class FakeSchedulerBackend(
 /**
  * Dummy cluster manager to simulate responses to executor allocation requests.
  */
-private class FakeClusterManager(override val rpcEnv: RpcEnv, conf: SparkConf) extends RpcEndpoint {
+private class FakeClusterManager(override val rpcEnv: RpcEnv, conf: SparkConf)
+    extends RpcEndpoint {
   private var targetNumExecutors = 0
   private val executorIdsToKill = new mutable.HashSet[String]
 
@@ -357,8 +379,8 @@ private class FakeClusterManager(override val rpcEnv: RpcEnv, conf: SparkConf) e
 
   override def receiveAndReply(context: RpcCallContext): PartialFunction[Any, Unit] = {
     case RequestExecutors(resourceProfileToTotalExecs, _, _, _) =>
-      targetNumExecutors =
-        resourceProfileToTotalExecs(ResourceProfile.getOrCreateDefaultProfile(conf))
+      targetNumExecutors = resourceProfileToTotalExecs(
+        ResourceProfile.getOrCreateDefaultProfile(conf))
       context.reply(true)
     case KillExecutors(executorIds) =>
       executorIdsToKill ++= executorIds

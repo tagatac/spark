@@ -100,18 +100,16 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
         Deserializer,
         fieldMatch,
         condition = "CANNOT_CONVERT_PROTOBUF_MESSAGE_TYPE_TO_SQL_TYPE",
-        params = Map(
-          "protobufType" -> "MissMatchTypeInRoot",
-          "toType" -> toSQLType(CATALYST_STRUCT)))
+        params =
+          Map("protobufType" -> "MissMatchTypeInRoot", "toType" -> toSQLType(CATALYST_STRUCT)))
 
       assertFailedConversionMessage(
         protoFile,
         Serializer,
         fieldMatch,
         condition = "UNABLE_TO_CONVERT_TO_PROTOBUF_MESSAGE_TYPE",
-        params = Map(
-          "protobufType" -> "MissMatchTypeInRoot",
-          "toType" -> toSQLType(CATALYST_STRUCT)))
+        params =
+          Map("protobufType" -> "MissMatchTypeInRoot", "toType" -> toSQLType(CATALYST_STRUCT)))
     }
   }
 
@@ -128,9 +126,8 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
       Serializer,
       BY_NAME,
       condition = "UNABLE_TO_CONVERT_TO_PROTOBUF_MESSAGE_TYPE",
-      params = Map(
-        "protobufType" -> "FieldMissingInProto",
-        "toType" -> toSQLType(CATALYST_STRUCT)))
+      params =
+        Map("protobufType" -> "FieldMissingInProto", "toType" -> toSQLType(CATALYST_STRUCT)))
 
     assertFailedConversionMessage(
       protoFile,
@@ -138,15 +135,14 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
       BY_NAME,
       nonnullCatalyst,
       condition = "UNABLE_TO_CONVERT_TO_PROTOBUF_MESSAGE_TYPE",
-      params = Map(
-        "protobufType" -> "FieldMissingInProto",
-        "toType" -> toSQLType(nonnullCatalyst)))
+      params =
+        Map("protobufType" -> "FieldMissingInProto", "toType" -> toSQLType(nonnullCatalyst)))
   }
 
   test("Fail to convert with deeply nested field type mismatch") {
-    val protoFile = ProtobufUtils.buildDescriptorFromJavaClass(
-      s"${javaClassNamePrefix}MissMatchTypeInDeepNested"
-    ).descriptor
+    val protoFile = ProtobufUtils
+      .buildDescriptorFromJavaClass(s"${javaClassNamePrefix}MissMatchTypeInDeepNested")
+      .descriptor
     val catalyst = new StructType().add("top", CATALYST_STRUCT)
 
     withFieldMatchType { fieldMatch =>
@@ -156,9 +152,8 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
         fieldMatch,
         catalyst,
         condition = "CANNOT_CONVERT_PROTOBUF_MESSAGE_TYPE_TO_SQL_TYPE",
-        params = Map(
-          "protobufType" -> "MissMatchTypeInDeepNested",
-          "toType" -> toSQLType(catalyst)))
+        params =
+          Map("protobufType" -> "MissMatchTypeInDeepNested", "toType" -> toSQLType(catalyst)))
 
       assertFailedConversionMessage(
         protoFile,
@@ -166,9 +161,8 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
         fieldMatch,
         catalyst,
         condition = "UNABLE_TO_CONVERT_TO_PROTOBUF_MESSAGE_TYPE",
-        params = Map(
-          "protobufType" -> "MissMatchTypeInDeepNested",
-          "toType" -> toSQLType(catalyst)))
+        params =
+          Map("protobufType" -> "MissMatchTypeInDeepNested", "toType" -> toSQLType(catalyst)))
     }
   }
 
@@ -184,9 +178,8 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
       BY_NAME,
       catalystSchema = foobarSQLType,
       condition = "UNABLE_TO_CONVERT_TO_PROTOBUF_MESSAGE_TYPE",
-      params = Map(
-        "protobufType" -> "FoobarWithRequiredFieldBar",
-        "toType" -> toSQLType(foobarSQLType)))
+      params =
+        Map("protobufType" -> "FoobarWithRequiredFieldBar", "toType" -> toSQLType(foobarSQLType)))
 
     /* deserializing should work regardless of whether the extra field is missing
      in SQL Schema or not */
@@ -228,17 +221,11 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
         Some(CommonProtobufUtils.readDescriptorFileContent(fileDescFile)))
     }
 
-    checkError(
-      exception = e1,
-      condition = "CANNOT_PARSE_PROTOBUF_DESCRIPTOR")
+    checkError(exception = e1, condition = "CANNOT_PARSE_PROTOBUF_DESCRIPTOR")
 
     val basicMessageDescWithoutImports = descriptorSetWithoutImports(
-      CommonProtobufUtils.readDescriptorFileContent(
-        protobufDescriptorFile("basicmessage.desc")
-      ),
-      "BasicMessage"
-    )
-
+      CommonProtobufUtils.readDescriptorFileContent(protobufDescriptorFile("basicmessage.desc")),
+      "BasicMessage")
 
     val e2 = intercept[AnalysisException] {
       ProtobufUtils.buildDescriptor("BasicMessage", Some(basicMessageDescWithoutImports))
@@ -278,10 +265,7 @@ class ProtobufSerdeSuite extends SharedSparkSession with ProtobufTestBase {
     }
 
     assert(e.getMessage === expectMsg)
-    checkError(
-      exception = e,
-      condition = condition,
-      parameters = params)
+    checkError(exception = e, condition = condition, parameters = params)
   }
 
   def withFieldMatchType(f: MatchType => Unit): Unit = {

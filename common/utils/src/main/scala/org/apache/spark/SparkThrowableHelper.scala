@@ -42,15 +42,11 @@ private[spark] object SparkThrowableHelper {
     errorReader.getMessageTemplate(errorClass)
   }
 
-  def getMessage(
-      errorClass: String,
-      messageParameters: Map[String, String]): String = {
+  def getMessage(errorClass: String, messageParameters: Map[String, String]): String = {
     getMessage(errorClass, messageParameters, "")
   }
 
-  def getMessage(
-      errorClass: String,
-      messageParameters: java.util.Map[String, String]): String = {
+  def getMessage(errorClass: String, messageParameters: java.util.Map[String, String]): String = {
     getMessage(errorClass, messageParameters.asScala.toMap, "")
   }
 
@@ -68,10 +64,8 @@ private[spark] object SparkThrowableHelper {
       sqlState: String,
       messageTemplate: String,
       messageParameters: Map[String, String]): String = {
-    val displayMessage = errorReader.getErrorMessage(
-      errorClass,
-      messageTemplate,
-      messageParameters)
+    val displayMessage =
+      errorReader.getErrorMessage(errorClass, messageTemplate, messageParameters)
     formatErrorMessage(errorClass, displayMessage, sqlState, "")
   }
 
@@ -141,8 +135,9 @@ private[spark] object SparkThrowableHelper {
             }
             errorReader.getBreakingChangeInfo(errorClass).foreach { breakingChangeInfo =>
               g.writeObjectFieldStart("breakingChangeInfo")
-              g.writeStringField("migrationMessage",
-                  breakingChangeInfo.migrationMessage.mkString("\n"))
+              g.writeStringField(
+                "migrationMessage",
+                breakingChangeInfo.migrationMessage.mkString("\n"))
               breakingChangeInfo.mitigationConfig.foreach { mitigationConfig =>
                 g.writeObjectFieldStart("mitigationConfig")
                 g.writeStringField("key", mitigationConfig.key)
@@ -158,11 +153,12 @@ private[spark] object SparkThrowableHelper {
           val messageParameters = e.getMessageParameters
           if (!messageParameters.isEmpty) {
             g.writeObjectFieldStart("messageParameters")
-            messageParameters.asScala
-              .toMap // To remove duplicates
-              .toSeq.sortBy(_._1)
+            messageParameters.asScala.toMap // To remove duplicates
+              .toSeq
+              .sortBy(_._1)
               .foreach { case (name, value) =>
-                g.writeStringField(name, value.replaceAll("#\\d+", "#x")) }
+                g.writeStringField(name, value.replaceAll("#\\d+", "#x"))
+              }
             g.writeEndObject()
           }
           val queryContext = e.getQueryContext

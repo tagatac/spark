@@ -20,13 +20,14 @@ package org.apache.spark.sql.pipelines.graph
 import org.apache.spark.sql.streaming.Trigger
 
 /**
- * Plans execution of `Flow`s in a `DataflowGraph` by converting `Flow`s into
- * 'FlowExecution's.
+ * Plans execution of `Flow`s in a `DataflowGraph` by converting `Flow`s into 'FlowExecution's.
  *
- * @param graph         `DataflowGraph` to help plan based on relationship to other elements.
- * @param updateContext `PipelineUpdateContext` for this pipeline update (shared across flows).
- * @param triggerFor    Function that returns the correct streaming Trigger for the specified
- *                      `Flow`.
+ * @param graph
+ *   `DataflowGraph` to help plan based on relationship to other elements.
+ * @param updateContext
+ *   `PipelineUpdateContext` for this pipeline update (shared across flows).
+ * @param triggerFor
+ *   Function that returns the correct streaming Trigger for the specified `Flow`.
  */
 class FlowPlanner(
     graph: DataflowGraph,
@@ -46,8 +47,7 @@ class FlowPlanner(
           identifier = cf.identifier,
           sqlConf = cf.sqlConf,
           destination = output.asInstanceOf[Table],
-          updateContext = updateContext
-        )
+          updateContext = updateContext)
       case sf: StreamingFlow =>
         val flowMetadata = FlowSystemMetadata(updateContext, sf, graph)
         output match {
@@ -60,8 +60,7 @@ class FlowPlanner(
               updateContext = updateContext,
               sqlConf = sf.sqlConf,
               trigger = triggerFor(sf),
-              checkpointPath = flowMetadata.latestCheckpointLocation
-            )
+              checkpointPath = flowMetadata.latestCheckpointLocation)
           case s: Sink =>
             new SinkWrite(
               graph = graph,
@@ -71,18 +70,15 @@ class FlowPlanner(
               updateContext = updateContext,
               sqlConf = sf.sqlConf,
               trigger = triggerFor(sf),
-              checkpointPath = flowMetadata.latestCheckpointLocation
-            )
+              checkpointPath = flowMetadata.latestCheckpointLocation)
           case _ =>
             throw new UnsupportedOperationException(
               s"Unsupported destination type: ${output.getClass.getSimpleName} for " +
-              s"streaming flow ${sf.identifier} (${flow.destinationIdentifier})"
-            )
+                s"streaming flow ${sf.identifier} (${flow.destinationIdentifier})")
         }
       case _ =>
         throw new UnsupportedOperationException(
-          s"Unable to plan flow of type ${flow.getClass.getSimpleName}"
-        )
+          s"Unable to plan flow of type ${flow.getClass.getSimpleName}")
     }
   }
 }

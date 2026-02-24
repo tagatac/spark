@@ -23,16 +23,15 @@ import io.fabric8.kubernetes.client.dsl.{FilterWatchListDeletable, MixedOperatio
 object Fabric8Aliases {
   type PODS = MixedOperation[Pod, PodList, PodResource]
   type PODS_WITH_NAMESPACE = NonNamespaceOperation[Pod, PodList, PodResource]
-  type CONFIG_MAPS = MixedOperation[
-    ConfigMap, ConfigMapList, Resource[ConfigMap]]
+  type CONFIG_MAPS = MixedOperation[ConfigMap, ConfigMapList, Resource[ConfigMap]]
   type CONFIG_MAPS_WITH_NAMESPACE =
     NonNamespaceOperation[ConfigMap, ConfigMapList, Resource[ConfigMap]]
   type CONFIG_MAPS_RESOURCE = Resource[ConfigMap]
   type LABELED_PODS = FilterWatchListDeletable[Pod, PodList, PodResource]
-  type LABELED_CONFIG_MAPS = FilterWatchListDeletable[ConfigMap, ConfigMapList, Resource[ConfigMap]]
+  type LABELED_CONFIG_MAPS =
+    FilterWatchListDeletable[ConfigMap, ConfigMapList, Resource[ConfigMap]]
   type SINGLE_POD = PodResource
-  type RESOURCE_LIST = NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable[
-    HasMetadata]
+  type RESOURCE_LIST = NamespaceListVisitFromServerGetDeleteRecreateWaitApplicable[HasMetadata]
   type STATEFUL_SET_RES = RollableScalableResource[StatefulSet]
   type STATEFUL_SETS = MixedOperation[StatefulSet, StatefulSetList, STATEFUL_SET_RES]
   type STATEFUL_SETS_NAMESPACED =
@@ -41,10 +40,16 @@ object Fabric8Aliases {
   type DEPLOYMENTS = MixedOperation[Deployment, DeploymentList, DEPLOYMENT_RES]
   type DEPLOYMENTS_NAMESPACED =
     NonNamespaceOperation[Deployment, DeploymentList, DEPLOYMENT_RES]
-  type PERSISTENT_VOLUME_CLAIMS = MixedOperation[PersistentVolumeClaim, PersistentVolumeClaimList,
+  type PERSISTENT_VOLUME_CLAIMS = MixedOperation[
+    PersistentVolumeClaim,
+    PersistentVolumeClaimList,
     Resource[PersistentVolumeClaim]]
-  type PVC_WITH_NAMESPACE = NonNamespaceOperation[PersistentVolumeClaim, PersistentVolumeClaimList,
+  type PVC_WITH_NAMESPACE = NonNamespaceOperation[
+    PersistentVolumeClaim,
+    PersistentVolumeClaimList,
     Resource[PersistentVolumeClaim]]
-  type LABELED_PERSISTENT_VOLUME_CLAIMS = FilterWatchListDeletable[PersistentVolumeClaim,
-    PersistentVolumeClaimList, Resource[PersistentVolumeClaim]]
+  type LABELED_PERSISTENT_VOLUME_CLAIMS = FilterWatchListDeletable[
+    PersistentVolumeClaim,
+    PersistentVolumeClaimList,
+    Resource[PersistentVolumeClaim]]
 }

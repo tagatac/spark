@@ -27,18 +27,17 @@ import scala.util.Random
 import org.apache.spark.benchmark.{Benchmark, BenchmarkBase}
 import org.apache.spark.util.Utils
 
-
 /**
  * Benchmark suite for the KVStore implemented based on RocksDB.
  *
- * The benchmarks are run over two different types (one with just a natural index, and one
- * with a ref index), over a set of elements, and the following tests are performed:
+ * The benchmarks are run over two different types (one with just a natural index, and one with a
+ * ref index), over a set of elements, and the following tests are performed:
  *
- * - create and close rocksdb
- * - write/update/delete elements in sequential natural key order
- * - write/update/delete elements in random natural key order
- * - iterate over natural index, ascending and descending
- * - iterate over ref index, ascending and descending
+ *   - create and close rocksdb
+ *   - write/update/delete elements in sequential natural key order
+ *   - write/update/delete elements in random natural key order
+ *   - iterate over natural index, ascending and descending
+ *   - iterate over ref index, ascending and descending
  *
  * To run this benchmark:
  * {{{
@@ -178,7 +177,6 @@ object RocksDBBenchmark extends BenchmarkBase {
 
     benchmark.run()
   }
-
 
   private def sequentialWrites(): Unit = {
     val benchmark = new Benchmark("Sequential Writes", COUNT, ITERATIONS, output = output)
@@ -366,7 +364,8 @@ object RocksDBBenchmark extends BenchmarkBase {
   }
 
   private def refIndexCreateIterator(): Unit = {
-    val benchmark = new Benchmark("Ref Index - Create Iterator", COUNT, ITERATIONS, output = output)
+    val benchmark =
+      new Benchmark("Ref Index - Create Iterator", COUNT, ITERATIONS, output = output)
 
     try {
       setupDB()

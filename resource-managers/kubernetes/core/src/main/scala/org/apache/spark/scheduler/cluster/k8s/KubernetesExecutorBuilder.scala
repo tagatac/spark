@@ -31,7 +31,8 @@ private[spark] class KubernetesExecutorBuilder {
       secMgr: SecurityManager,
       client: KubernetesClient,
       resourceProfile: ResourceProfile): KubernetesExecutorSpec = {
-    val initialPod = conf.get(Config.KUBERNETES_EXECUTOR_PODTEMPLATE_FILE)
+    val initialPod = conf
+      .get(Config.KUBERNETES_EXECUTOR_PODTEMPLATE_FILE)
       .map { file =>
         KubernetesUtils.loadPodFromTemplate(
           client,
@@ -41,7 +42,8 @@ private[spark] class KubernetesExecutorBuilder {
       }
       .getOrElse(SparkPod.initialPod())
 
-    val userFeatures = conf.get(Config.KUBERNETES_EXECUTOR_POD_FEATURE_STEPS)
+    val userFeatures = conf
+      .get(Config.KUBERNETES_EXECUTOR_POD_FEATURE_STEPS)
       .map { className =>
         val feature = Utils.classForName[Any](className).getConstructor().newInstance()
         val initializedFeature = feature match {
@@ -58,10 +60,11 @@ private[spark] class KubernetesExecutorBuilder {
           case _ => None
         }
         initializedFeature.getOrElse {
-          throw new SparkException(s"Failed to initialize feature step: $className, " +
-            s"please make sure your executor side feature steps are implemented by " +
-            s"`${classOf[KubernetesExecutorCustomFeatureConfigStep].getSimpleName}` or " +
-            s"`${classOf[KubernetesFeatureConfigStep].getSimpleName}`.")
+          throw new SparkException(
+            s"Failed to initialize feature step: $className, " +
+              s"please make sure your executor side feature steps are implemented by " +
+              s"`${classOf[KubernetesExecutorCustomFeatureConfigStep].getSimpleName}` or " +
+              s"`${classOf[KubernetesFeatureConfigStep].getSimpleName}`.")
         }
       }
 
@@ -75,20 +78,18 @@ private[spark] class KubernetesExecutorBuilder {
       new LocalDirsFeatureStep(conf)) ++ userFeatures
 
     val features = allFeatures.filterNot(f =>
-      conf.get(Config.KUBERNETES_EXECUTOR_POD_EXCLUDED_FEATURE_STEPS).contains(f.getClass.getName))
+      conf
+        .get(Config.KUBERNETES_EXECUTOR_POD_EXCLUDED_FEATURE_STEPS)
+        .contains(f.getClass.getName))
 
-    val spec = KubernetesExecutorSpec(
-      initialPod,
-      executorKubernetesResources = Seq.empty)
+    val spec = KubernetesExecutorSpec(initialPod, executorKubernetesResources = Seq.empty)
 
     // If using a template this will always get the resources from that and combine
     // them with any Spark conf or ResourceProfile resources.
     features.foldLeft(spec) { case (spec, feature) =>
       val configuredPod = feature.configurePod(spec.pod)
       val addedResources = feature.getAdditionalKubernetesResources()
-      KubernetesExecutorSpec(
-        configuredPod,
-        spec.executorKubernetesResources ++ addedResources)
+      KubernetesExecutorSpec(configuredPod, spec.executorKubernetesResources ++ addedResources)
     }
   }
 

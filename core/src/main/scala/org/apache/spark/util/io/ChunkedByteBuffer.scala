@@ -36,10 +36,10 @@ import org.apache.spark.util.Utils
  * Read-only byte buffer which is physically stored as multiple chunks rather than a single
  * contiguous array.
  *
- * @param chunks an array of [[ByteBuffer]]s. Each buffer in this array must have position == 0.
- *               Ownership of these buffers is transferred to the ChunkedByteBuffer, so if these
- *               buffers may also be used elsewhere then the caller is responsible for copying
- *               them as needed.
+ * @param chunks
+ *   an array of [[ByteBuffer]]s. Each buffer in this array must have position == 0. Ownership of
+ *   these buffers is transferred to the ChunkedByteBuffer, so if these buffers may also be used
+ *   elsewhere then the caller is responsible for copying them as needed.
  */
 private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Externalizable {
   require(chunks != null, "chunks must not be null")
@@ -48,8 +48,10 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
 
   // Chunk size in bytes
   private val bufferWriteChunkSize =
-    Option(SparkEnv.get).map(_.conf.get(config.BUFFER_WRITE_CHUNK_SIZE))
-      .getOrElse(config.BUFFER_WRITE_CHUNK_SIZE.defaultValue.get).toInt
+    Option(SparkEnv.get)
+      .map(_.conf.get(config.BUFFER_WRITE_CHUNK_SIZE))
+      .getOrElse(config.BUFFER_WRITE_CHUNK_SIZE.defaultValue.get)
+      .toInt
 
   private[this] var disposed: Boolean = false
 
@@ -131,8 +133,8 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   }
 
   /**
-   * Wrap this in a ChunkedStream which allows us to provide the data in a manner
-   * compatible with SSL encryption
+   * Wrap this in a ChunkedStream which allows us to provide the data in a manner compatible with
+   * SSL encryption
    */
   def toNettyForSsl: ChunkedStream = {
     new ChunkedStream(toInputStream(), bufferWriteChunkSize)
@@ -141,7 +143,8 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   /**
    * Copy this buffer into a new byte array.
    *
-   * @throws UnsupportedOperationException if this buffer's size exceeds the maximum array size.
+   * @throws UnsupportedOperationException
+   *   if this buffer's size exceeds the maximum array size.
    */
   def toArray: Array[Byte] = {
     if (size >= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH) {
@@ -155,13 +158,14 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   }
 
   /**
-   * Convert this buffer to a ByteBuffer. If this buffer is backed by a single chunk, its underlying
-   * data will not be copied. Instead, it will be duplicated. If this buffer is backed by multiple
-   * chunks, the data underlying this buffer will be copied into a new byte buffer. As a result, it
-   * is suggested to use this method only if the caller does not need to manage the memory
-   * underlying this buffer.
+   * Convert this buffer to a ByteBuffer. If this buffer is backed by a single chunk, its
+   * underlying data will not be copied. Instead, it will be duplicated. If this buffer is backed
+   * by multiple chunks, the data underlying this buffer will be copied into a new byte buffer. As
+   * a result, it is suggested to use this method only if the caller does not need to manage the
+   * memory underlying this buffer.
    *
-   * @throws UnsupportedOperationException if this buffer's size exceeds the max ByteBuffer size.
+   * @throws UnsupportedOperationException
+   *   if this buffer's size exceeds the max ByteBuffer size.
    */
   def toByteBuffer: ByteBuffer = {
     if (chunks.length == 1) {
@@ -174,8 +178,9 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   /**
    * Creates an input stream to read data from this ChunkedByteBuffer.
    *
-   * @param dispose if true, [[dispose()]] will be called at the end of the stream
-   *                in order to close any memory-mapped files which back this buffer.
+   * @param dispose
+   *   if true, [[dispose()]] will be called at the end of the stream in order to close any
+   *   memory-mapped files which back this buffer.
    */
   def toInputStream(dispose: Boolean = false): InputStream = {
     new ChunkedByteBufferInputStream(this, dispose)
@@ -189,10 +194,11 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   }
 
   /**
-   * Make a copy of this ChunkedByteBuffer, copying all of the backing data into new buffers.
-   * The new buffer will share no resources with the original buffer.
+   * Make a copy of this ChunkedByteBuffer, copying all of the backing data into new buffers. The
+   * new buffer will share no resources with the original buffer.
    *
-   * @param allocator a method for allocating byte buffers
+   * @param allocator
+   *   a method for allocating byte buffers
    */
   def copy(allocator: Int => ByteBuffer): ChunkedByteBuffer = {
     val copiedChunks = getChunks().map { chunk =>
@@ -205,8 +211,8 @@ private[spark] class ChunkedByteBuffer(var chunks: Array[ByteBuffer]) extends Ex
   }
 
   /**
-   * Attempt to clean up any ByteBuffer in this ChunkedByteBuffer which is direct or memory-mapped.
-   * See [[StorageUtils.dispose]] for more information.
+   * Attempt to clean up any ByteBuffer in this ChunkedByteBuffer which is direct or
+   * memory-mapped. See [[StorageUtils.dispose]] for more information.
    */
   def dispose(): Unit = {
     if (!disposed) {
@@ -236,10 +242,7 @@ private[spark] object ChunkedByteBuffer {
     fromFile(file, 0, file.length())
   }
 
-  private def fromFile(
-      file: File,
-      offset: Long,
-      length: Long): ChunkedByteBuffer = {
+  private def fromFile(file: File, offset: Long, length: Long): ChunkedByteBuffer = {
     // We do *not* memory map the file, because we may end up putting this into the memory store,
     // and spark currently is not expecting memory-mapped buffers in the memory store, it conflicts
     // with other parts that manage the lifecycle of buffers and dispose them.  See SPARK-25422.
@@ -258,8 +261,8 @@ private[spark] object ChunkedByteBuffer {
   }
 
   /**
-   * Try to estimate appropriate chunk size so that it's not too large (waste memory) or too
-   * small (too many segments)
+   * Try to estimate appropriate chunk size so that it's not too large (waste memory) or too small
+   * (too many segments)
    */
   def estimateBufferChunkSize(estimatedSize: Long = -1): Int = {
     if (estimatedSize < 0) {
@@ -273,13 +276,14 @@ private[spark] object ChunkedByteBuffer {
 /**
  * Reads data from a ChunkedByteBuffer.
  *
- * @param dispose if true, `ChunkedByteBuffer.dispose()` will be called at the end of the stream
- *                in order to close any memory-mapped files which back the buffer.
+ * @param dispose
+ *   if true, `ChunkedByteBuffer.dispose()` will be called at the end of the stream in order to
+ *   close any memory-mapped files which back the buffer.
  */
 private[spark] class ChunkedByteBufferInputStream(
     var chunkedByteBuffer: ChunkedByteBuffer,
     dispose: Boolean)
-  extends InputStream {
+    extends InputStream {
 
   // Filter out empty chunks since `read()` assumes all chunks are non-empty.
   private[this] var chunks = chunkedByteBuffer.getChunks().filter(_.hasRemaining).iterator

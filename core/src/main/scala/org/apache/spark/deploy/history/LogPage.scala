@@ -31,7 +31,8 @@ private[history] class LogPage(conf: SparkConf) extends WebUIPage("logPage") wit
     val logDir = sys.env.getOrElse("SPARK_LOG_DIR", "logs/")
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(DEFAULT_BYTES)
     val (logText, startByte, endByte, logLength) =
       getLog(conf, logDir, logType, offset, byteLength)
@@ -62,7 +63,7 @@ private[history] class LogPage(conf: SparkConf) extends WebUIPage("logPage") wit
 
     val content =
       <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script> ++
-      <div>
+        <div>
         <p><a href="/">Back to Main page</a></p>
         {range}
         <div class="log-content" style="height:80vh; overflow:auto; padding:5px;">

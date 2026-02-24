@@ -53,10 +53,14 @@ class SparkSQLEnvSuite extends SparkFunSuite {
 
         val session = SparkSession.getActiveSession
         assert(session.isDefined)
-        assert(session.get.listenerManager.listListeners()
-          .exists(_.isInstanceOf[DummyQueryExecutionListener]))
-        assert(session.get.streams.listListeners()
-          .exists(_.isInstanceOf[DummyStreamingQueryListener]))
+        assert(
+          session.get.listenerManager
+            .listListeners()
+            .exists(_.isInstanceOf[DummyQueryExecutionListener]))
+        assert(
+          session.get.streams
+            .listListeners()
+            .exists(_.isInstanceOf[DummyStreamingQueryListener]))
       } finally {
         SparkSQLEnv.stop()
         if (metastorePath.exists()) {

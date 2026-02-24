@@ -51,8 +51,9 @@ private[spark] object PythonGatewayServer extends Logging {
     // Communicate the connection information back to the python process by writing the
     // information in the requested file. This needs to match the read side in java_gateway.py.
     val connectionInfoPath = new File(sys.env("_PYSPARK_DRIVER_CONN_INFO_PATH"))
-    val tmpPath = Files.createTempFile(connectionInfoPath.getParentFile().toPath(),
-      "connection", ".info").toFile()
+    val tmpPath = Files
+      .createTempFile(connectionInfoPath.getParentFile().toPath(), "connection", ".info")
+      .toFile()
 
     val dos = new DataOutputStream(new FileOutputStream(tmpPath))
     dos.writeInt(boundPort)

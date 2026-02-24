@@ -29,9 +29,9 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.YarnContainerInfoHelper
 
 /**
- * Custom implementation of CoarseGrainedExecutorBackend for YARN resource manager.
- * This class extracts executor log URLs and executor attributes from system environment which
- * properties are available for container being set via YARN.
+ * Custom implementation of CoarseGrainedExecutorBackend for YARN resource manager. This class
+ * extracts executor log URLs and executor attributes from system environment which properties are
+ * available for container being set via YARN.
  */
 private[spark] class YarnCoarseGrainedExecutorBackend(
     rpcEnv: RpcEnv,
@@ -43,16 +43,17 @@ private[spark] class YarnCoarseGrainedExecutorBackend(
     env: SparkEnv,
     resourcesFile: Option[String],
     resourceProfile: ResourceProfile)
-  extends CoarseGrainedExecutorBackend(
-    rpcEnv,
-    driverUrl,
-    executorId,
-    bindAddress,
-    hostname,
-    cores,
-    env,
-    resourcesFile,
-    resourceProfile) with Logging {
+    extends CoarseGrainedExecutorBackend(
+      rpcEnv,
+      driverUrl,
+      executorId,
+      bindAddress,
+      hostname,
+      cores,
+      env,
+      resourcesFile,
+      resourceProfile)
+    with Logging {
 
   private lazy val hadoopConfiguration = SparkHadoopUtil.get.newConfiguration(env.conf)
 
@@ -60,12 +61,14 @@ private[spark] class YarnCoarseGrainedExecutorBackend(
     Client.getUserClasspathUrls(env.conf, useClusterPath = true).toImmutableArraySeq
 
   override def extractLogUrls: Map[String, String] = {
-    YarnContainerInfoHelper.getLogUrls(hadoopConfiguration, container = None)
+    YarnContainerInfoHelper
+      .getLogUrls(hadoopConfiguration, container = None)
       .getOrElse(Map())
   }
 
   override def extractAttributes: Map[String, String] = {
-    YarnContainerInfoHelper.getAttributes(hadoopConfiguration, container = None)
+    YarnContainerInfoHelper
+      .getAttributes(hadoopConfiguration, container = None)
       .getOrElse(Map())
   }
 }
@@ -73,13 +76,25 @@ private[spark] class YarnCoarseGrainedExecutorBackend(
 private[spark] object YarnCoarseGrainedExecutorBackend extends Logging {
 
   def main(args: Array[String]): Unit = {
-    val createFn: (RpcEnv, CoarseGrainedExecutorBackend.Arguments, SparkEnv, ResourceProfile) =>
-      CoarseGrainedExecutorBackend = { case (rpcEnv, arguments, env, resourceProfile) =>
-      new YarnCoarseGrainedExecutorBackend(rpcEnv, arguments.driverUrl, arguments.executorId,
-        arguments.bindAddress, arguments.hostname, arguments.cores,
-        env, arguments.resourcesFileOpt, resourceProfile)
+    val createFn: (
+        RpcEnv,
+        CoarseGrainedExecutorBackend.Arguments,
+        SparkEnv,
+        ResourceProfile) => CoarseGrainedExecutorBackend = {
+      case (rpcEnv, arguments, env, resourceProfile) =>
+        new YarnCoarseGrainedExecutorBackend(
+          rpcEnv,
+          arguments.driverUrl,
+          arguments.executorId,
+          arguments.bindAddress,
+          arguments.hostname,
+          arguments.cores,
+          env,
+          arguments.resourcesFileOpt,
+          resourceProfile)
     }
-    val backendArgs = CoarseGrainedExecutorBackend.parseArguments(args,
+    val backendArgs = CoarseGrainedExecutorBackend.parseArguments(
+      args,
       this.getClass.getCanonicalName.stripSuffix("$"))
     CoarseGrainedExecutorBackend.run(backendArgs, createFn)
     System.exit(0)

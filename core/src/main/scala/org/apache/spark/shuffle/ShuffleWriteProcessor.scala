@@ -29,8 +29,8 @@ import org.apache.spark.scheduler.MapStatus
 private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
 
   /**
-   * Create a [[ShuffleWriteMetricsReporter]] from the task context. As the reporter is a
-   * per-row operator, here need a careful consideration on performance.
+   * Create a [[ShuffleWriteMetricsReporter]] from the task context. As the reporter is a per-row
+   * operator, here need a careful consideration on performance.
    */
   protected def createMetricsReporter(context: TaskContext): ShuffleWriteMetricsReporter = {
     context.taskMetrics().shuffleWriteMetrics
@@ -73,10 +73,11 @@ private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
         if (!dep.shuffleMergeFinalized) {
           manager.shuffleBlockResolver match {
             case resolver: IndexShuffleBlockResolver =>
-              logInfo(log"Shuffle merge enabled with" +
-                log" ${MDC(NUM_MERGER_LOCATIONS, dep.getMergerLocs.size)} merger locations" +
-                log" for stage ${MDC(STAGE_ID, context.stageId())}" +
-                log" with shuffle ID ${MDC(SHUFFLE_ID, dep.shuffleId)}")
+              logInfo(
+                log"Shuffle merge enabled with" +
+                  log" ${MDC(NUM_MERGER_LOCATIONS, dep.getMergerLocs.size)} merger locations" +
+                  log" for stage ${MDC(STAGE_ID, context.stageId())}" +
+                  log" with shuffle ID ${MDC(SHUFFLE_ID, dep.shuffleId)}")
               logDebug(s"Starting pushing blocks for the task ${context.taskAttemptId()}")
               val dataFile = resolver.getDataFile(dep.shuffleId, mapId)
               new ShuffleBlockPusher(SparkEnv.get.conf)

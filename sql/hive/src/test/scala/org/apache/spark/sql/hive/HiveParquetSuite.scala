@@ -33,9 +33,7 @@ import org.apache.spark.sql.internal.SQLConf
 
 case class Cases(lower: String, UPPER: String)
 
-class HiveParquetSuite extends QueryTest
-  with ParquetTest
-  with TestHiveSingleton {
+class HiveParquetSuite extends QueryTest with ParquetTest with TestHiveSingleton {
 
   test("Case insensitive attribute names") {
     withParquetTable((1 to 4).map(i => Cases(i.toString, i.toString)), "cases") {
@@ -89,15 +87,17 @@ class HiveParquetSuite extends QueryTest
     }
   }
 
-  test("SPARK-25206: wrong records are returned by filter pushdown " +
-    "when Hive metastore schema and parquet schema are in different letter cases") {
+  test(
+    "SPARK-25206: wrong records are returned by filter pushdown " +
+      "when Hive metastore schema and parquet schema are in different letter cases") {
     withSQLConf(SQLConf.PARQUET_FILTER_PUSHDOWN_ENABLED.key -> true.toString) {
       withTempPath { path =>
         val data = spark.range(1, 10).toDF("id")
         data.write.parquet(path.getCanonicalPath)
         withTable("SPARK_25206") {
-          sql("CREATE TABLE SPARK_25206 (ID LONG) USING parquet LOCATION " +
-            s"'${path.getCanonicalPath}'")
+          sql(
+            "CREATE TABLE SPARK_25206 (ID LONG) USING parquet LOCATION " +
+              s"'${path.getCanonicalPath}'")
           checkAnswer(sql("select id from SPARK_25206 where id > 0"), data)
         }
       }
@@ -112,7 +112,8 @@ class HiveParquetSuite extends QueryTest
       val targetTable = "targetTable"
       withTable(targetTable) {
         sql(s"CREATE TABLE $targetTable STORED AS PARQUET AS SELECT m FROM p")
-        checkAnswer(sql(s"SELECT m FROM $targetTable"),
+        checkAnswer(
+          sql(s"SELECT m FROM $targetTable"),
           Row(Map(1 -> "a")) :: Row(Map.empty[Int, String]) :: Nil)
       }
     }
@@ -136,27 +137,27 @@ class HiveParquetSuite extends QueryTest
         exception = ex,
         condition = "UNRESOLVED_COLUMN.WITH_SUGGESTION",
         parameters = Map("objectName" -> "`c3`", "proposal" -> "`c1`, `c2`"),
-        context = ExpectedContext(
-          fragment = "c3",
-          start = 61,
-          stop = 62)
-       )
+        context = ExpectedContext(fragment = "c3", start = 61, stop = 62))
     }
   }
 
   test("SPARK-36948: Create a table with ANSI intervals using Hive external catalog") {
     val tbl = "tbl_with_ansi_intervals"
     withTable(tbl) {
-      sql(s"CREATE TABLE $tbl (ym INTERVAL YEAR TO MONTH, dt INTERVAL DAY TO SECOND) USING PARQUET")
       sql(
-        s"""INSERT INTO $tbl VALUES (
+        s"CREATE TABLE $tbl (ym INTERVAL YEAR TO MONTH, dt INTERVAL DAY TO SECOND) USING PARQUET")
+      sql(s"""INSERT INTO $tbl VALUES (
            |  INTERVAL '1-1' YEAR TO MONTH,
            |  INTERVAL '1 02:03:04.123456' DAY TO SECOND)""".stripMargin)
       checkAnswer(
         sql(s"SELECT * FROM $tbl"),
         Row(
           Period.ofYears(1).plusMonths(1),
-          Duration.ofDays(1).plusHours(2).plusMinutes(3).plusSeconds(4)
+          Duration
+            .ofDays(1)
+            .plusHours(2)
+            .plusMinutes(3)
+            .plusSeconds(4)
             .plus(123456, ChronoUnit.MICROS)))
     }
   }
@@ -199,8 +200,7 @@ class HiveParquetSuite extends QueryTest
       }
 
       withTempPath { dir =>
-        sql(
-          s"""
+        sql(s"""
              |INSERT OVERWRITE LOCAL DIRECTORY '${dir.getCanonicalPath}'
              |STORED AS parquet
              |SELECT id FROM range(10)
@@ -219,7 +219,8 @@ class HiveParquetSuite extends QueryTest
       val footer = ParquetFooterReader.readFooter(inputFile, ParquetMetadataConverter.NO_FILTER)
 
       val codec = footer.getBlocks.get(0).getColumns.get(0).getCodec.name()
-      assert(codec.equalsIgnoreCase(ParquetCompressionCodec.SNAPPY.lowerCaseName()),
+      assert(
+        codec.equalsIgnoreCase(ParquetCompressionCodec.SNAPPY.lowerCaseName()),
         s"Expected ${ParquetCompressionCodec.SNAPPY.lowerCaseName()} compression but found $codec")
     }
   }

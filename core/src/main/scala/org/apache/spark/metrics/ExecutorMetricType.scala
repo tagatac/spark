@@ -38,8 +38,7 @@ sealed trait ExecutorMetricType {
 
 sealed trait SingleValueExecutorMetricType extends ExecutorMetricType {
   override private[spark] def names = {
-    Seq(getClass().getName().
-      stripSuffix("$").split("""\.""").last)
+    Seq(getClass().getName().stripSuffix("$").split("""\.""").last)
   }
 
   override private[spark] def getMetricValues(memoryManager: MemoryManager): Array[Long] = {
@@ -51,18 +50,19 @@ sealed trait SingleValueExecutorMetricType extends ExecutorMetricType {
   private[spark] def getMetricValue(memoryManager: MemoryManager): Long
 }
 
-private[spark] abstract class MemoryManagerExecutorMetricType(
-    f: MemoryManager => Long) extends SingleValueExecutorMetricType {
+private[spark] abstract class MemoryManagerExecutorMetricType(f: MemoryManager => Long)
+    extends SingleValueExecutorMetricType {
   override private[spark] def getMetricValue(memoryManager: MemoryManager): Long = {
     f(memoryManager)
   }
 }
 
 private[spark] abstract class MBeanExecutorMetricType(mBeanName: String)
-  extends SingleValueExecutorMetricType {
+    extends SingleValueExecutorMetricType {
   private val bean = ManagementFactory.newPlatformMXBeanProxy(
     ManagementFactory.getPlatformMBeanServer,
-    new ObjectName(mBeanName).toString, classOf[BufferPoolMXBean])
+    new ObjectName(mBeanName).toString,
+    classOf[BufferPoolMXBean])
 
   override private[spark] def getMetricValue(memoryManager: MemoryManager): Long = {
     bean.getMemoryUsed
@@ -113,23 +113,14 @@ case object GarbageCollectionMetrics extends ExecutorMetricType with Logging {
     "MajorGCTime",
     "TotalGCTime",
     "ConcurrentGCCount",
-    "ConcurrentGCTime"
-  )
+    "ConcurrentGCTime")
 
   /* We builtin some common GC collectors */
-  private[spark] val YOUNG_GENERATION_BUILTIN_GARBAGE_COLLECTORS = Seq(
-    "Copy",
-    "PS Scavenge",
-    "ParNew",
-    "G1 Young Generation"
-  )
+  private[spark] val YOUNG_GENERATION_BUILTIN_GARBAGE_COLLECTORS =
+    Seq("Copy", "PS Scavenge", "ParNew", "G1 Young Generation")
 
-  private[spark] val OLD_GENERATION_BUILTIN_GARBAGE_COLLECTORS = Seq(
-    "MarkSweepCompact",
-    "PS MarkSweep",
-    "ConcurrentMarkSweep",
-    "G1 Old Generation"
-  )
+  private[spark] val OLD_GENERATION_BUILTIN_GARBAGE_COLLECTORS =
+    Seq("MarkSweepCompact", "PS MarkSweep", "ConcurrentMarkSweep", "G1 Old Generation")
 
   private[spark] val BUILTIN_CONCURRENT_GARBAGE_COLLECTOR = "G1 Concurrent GC"
 
@@ -158,13 +149,16 @@ case object GarbageCollectionMetrics extends ExecutorMetricType with Logging {
       } else if (!nonBuiltInCollectors.contains(mxBean.getName)) {
         nonBuiltInCollectors = mxBean.getName +: nonBuiltInCollectors
         // log it when first seen
-        val youngGenerationGc = MDC(YOUNG_GENERATION_GC,
+        val youngGenerationGc = MDC(
+          YOUNG_GENERATION_GC,
           config.EVENT_LOG_GC_METRICS_YOUNG_GENERATION_GARBAGE_COLLECTORS.key)
-        val oldGenerationGc = MDC(OLD_GENERATION_GC,
+        val oldGenerationGc = MDC(
+          OLD_GENERATION_GC,
           config.EVENT_LOG_GC_METRICS_OLD_GENERATION_GARBAGE_COLLECTORS.key)
-        logWarning(log"To enable non-built-in garbage collector(s) " +
-          log"${MDC(NON_BUILT_IN_CONNECTORS, nonBuiltInCollectors)}, " +
-          log"users should configure it(them) to $youngGenerationGc or $oldGenerationGc")
+        logWarning(
+          log"To enable non-built-in garbage collector(s) " +
+            log"${MDC(NON_BUILT_IN_CONNECTORS, nonBuiltInCollectors)}, " +
+            log"users should configure it(them) to $youngGenerationGc or $oldGenerationGc")
       } else {
         // do nothing
       }
@@ -173,29 +167,30 @@ case object GarbageCollectionMetrics extends ExecutorMetricType with Logging {
   }
 }
 
-case object OnHeapExecutionMemory extends MemoryManagerExecutorMetricType(
-  _.onHeapExecutionMemoryUsed)
+case object OnHeapExecutionMemory
+    extends MemoryManagerExecutorMetricType(_.onHeapExecutionMemoryUsed)
 
-case object OffHeapExecutionMemory extends MemoryManagerExecutorMetricType(
-  _.offHeapExecutionMemoryUsed)
+case object OffHeapExecutionMemory
+    extends MemoryManagerExecutorMetricType(_.offHeapExecutionMemoryUsed)
 
-case object OnHeapStorageMemory extends MemoryManagerExecutorMetricType(
-  _.onHeapStorageMemoryUsed)
+case object OnHeapStorageMemory extends MemoryManagerExecutorMetricType(_.onHeapStorageMemoryUsed)
 
-case object OffHeapStorageMemory extends MemoryManagerExecutorMetricType(
-  _.offHeapStorageMemoryUsed)
+case object OffHeapStorageMemory
+    extends MemoryManagerExecutorMetricType(_.offHeapStorageMemoryUsed)
 
-case object OnHeapUnifiedMemory extends MemoryManagerExecutorMetricType(
-  (m => m.onHeapExecutionMemoryUsed + m.onHeapStorageMemoryUsed))
+case object OnHeapUnifiedMemory
+    extends MemoryManagerExecutorMetricType((m =>
+      m.onHeapExecutionMemoryUsed + m.onHeapStorageMemoryUsed))
 
-case object OffHeapUnifiedMemory extends MemoryManagerExecutorMetricType(
-  (m => m.offHeapExecutionMemoryUsed + m.offHeapStorageMemoryUsed))
+case object OffHeapUnifiedMemory
+    extends MemoryManagerExecutorMetricType((m =>
+      m.offHeapExecutionMemoryUsed + m.offHeapStorageMemoryUsed))
 
-case object DirectPoolMemory extends MBeanExecutorMetricType(
-  "java.nio:type=BufferPool,name=direct")
+case object DirectPoolMemory
+    extends MBeanExecutorMetricType("java.nio:type=BufferPool,name=direct")
 
-case object MappedPoolMemory extends MBeanExecutorMetricType(
-  "java.nio:type=BufferPool,name=mapped")
+case object MappedPoolMemory
+    extends MBeanExecutorMetricType("java.nio:type=BufferPool,name=mapped")
 
 private[spark] object ExecutorMetricType {
 
@@ -212,8 +207,7 @@ private[spark] object ExecutorMetricType {
     DirectPoolMemory,
     MappedPoolMemory,
     ProcessTreeMetrics,
-    GarbageCollectionMetrics
-  )
+    GarbageCollectionMetrics)
 
   val (metricToOffset, numMetrics) = {
     var numberOfMetrics = 0

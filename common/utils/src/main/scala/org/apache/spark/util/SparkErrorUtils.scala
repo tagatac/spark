@@ -26,11 +26,12 @@ import org.apache.spark.internal.{Logging, LogKeys}
 import org.apache.spark.network.util.JavaUtils
 
 private[spark] trait SparkErrorUtils extends Logging {
+
   /**
-   * Execute a block of code that returns a value, re-throwing any non-fatal uncaught
-   * exceptions as IOException. This is used when implementing Externalizable and Serializable's
-   * read and write methods, since Java's serializer will not report non-IOExceptions properly;
-   * see SPARK-4080 for more context.
+   * Execute a block of code that returns a value, re-throwing any non-fatal uncaught exceptions
+   * as IOException. This is used when implementing Externalizable and Serializable's read and
+   * write methods, since Java's serializer will not report non-IOExceptions properly; see
+   * SPARK-4080 for more context.
    */
   def tryOrIOException[T](block: => T): T = {
     try {
@@ -56,8 +57,8 @@ private[spark] trait SparkErrorUtils extends Logging {
 
   /**
    * Try to initialize a resource. If an exception is throw during initialization, closes the
-   * resource before propagating the error. Otherwise, the caller is responsible for closing
-   * the resource. This means that [[T]] should provide some way to close the resource.
+   * resource before propagating the error. Otherwise, the caller is responsible for closing the
+   * resource. This means that [[T]] should provide some way to close the resource.
    */
   def tryInitializeResource[R <: Closeable, T](createResource: => R)(initialize: R => T): T = {
     val resource = createResource
@@ -71,14 +72,13 @@ private[spark] trait SparkErrorUtils extends Logging {
   }
 
   /**
-   * Execute a block of code, then a finally block, but if exceptions happen in
-   * the finally block, do not suppress the original exception.
+   * Execute a block of code, then a finally block, but if exceptions happen in the finally block,
+   * do not suppress the original exception.
    *
-   * This is primarily an issue with `finally { out.close() }` blocks, where
-   * close needs to be called to clean up `out`, but if an exception happened
-   * in `out.write`, it's likely `out` may be corrupted and `out.close` will
-   * fail as well. This would then suppress the original/likely more meaningful
-   * exception from the original `out.write` call.
+   * This is primarily an issue with `finally { out.close() }` blocks, where close needs to be
+   * called to clean up `out`, but if an exception happened in `out.write`, it's likely `out` may
+   * be corrupted and `out.close` will fail as well. This would then suppress the original/likely
+   * more meaningful exception from the original `out.write` call.
    */
   def tryWithSafeFinally[T](block: => T)(finallyBlock: => Unit): T = {
     var originalThrowable: Throwable = null
@@ -97,7 +97,8 @@ private[spark] trait SparkErrorUtils extends Logging {
         case t: Throwable if (originalThrowable != null && originalThrowable != t) =>
           originalThrowable.addSuppressed(t)
           logWarning(
-            log"Suppressing exception in finally: ${MDC(LogKeys.MESSAGE, t.getMessage)}", t)
+            log"Suppressing exception in finally: ${MDC(LogKeys.MESSAGE, t.getMessage)}",
+            t)
           throw originalThrowable
       }
     }
@@ -108,17 +109,17 @@ private[spark] trait SparkErrorUtils extends Logging {
   /**
    * Walks the [[Throwable]] to obtain its root cause.
    *
-   * This method walks through the exception chain until the last element,
-   * the root cause of the chain, using `getCause()`, and
-   * returns that exception.
+   * This method walks through the exception chain until the last element, the root cause of the
+   * chain, using `getCause()`, and returns that exception.
    *
-   * This method handles recursive cause chains that might
-   * otherwise cause infinite loops. The cause chain is processed until
-   * the end, or until the next item in the chain is already
+   * This method handles recursive cause chains that might otherwise cause infinite loops. The
+   * cause chain is processed until the end, or until the next item in the chain is already
    * processed. If we detect a loop, then return the element before the loop.
    *
-   * @param throwable the throwable to get the root cause for, may be null
-   * @return the root cause of the [[Throwable]], `null` if null throwable input
+   * @param throwable
+   *   the throwable to get the root cause for, may be null
+   * @return
+   *   the root cause of the [[Throwable]], `null` if null throwable input
    */
   def getRootCause(throwable: Throwable): Throwable = {
     @tailrec

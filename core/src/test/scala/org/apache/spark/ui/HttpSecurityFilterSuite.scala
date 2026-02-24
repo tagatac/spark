@@ -38,8 +38,7 @@ class HttpSecurityFilterSuite extends SparkFunSuite {
       "alert1" -> """>"'><script>alert(401)<%2Fscript>""",
       "alert2" -> """app-20161208133404-0002<iframe+src%3Djavascript%3Aalert(1705)>""",
       "alert3" -> """stdout'%2Balert(60)%2B'""",
-      "html" -> """stdout'"><iframe+id%3D1131+src%3Dhttp%3A%2F%2Fdemo.test.net%2Fphishing.html>"""
-    )
+      "html" -> """stdout'"><iframe+id%3D1131+src%3Dhttp%3A%2F%2Fdemo.test.net%2Fphishing.html>""")
     val badKeys = badValues.map(_.swap)
     val goodInput = Map("goodKey" -> "goodValue")
 
@@ -143,8 +142,7 @@ class HttpSecurityFilterSuite extends SparkFunSuite {
       "X-Frame-Options" -> "ALLOW-FROM example.com",
       "X-XSS-Protection" -> "xssProtection",
       "X-Content-Type-Options" -> "nosniff",
-      "Strict-Transport-Security" -> "tsec"
-    ).foreach { case (name, value) =>
+      "Strict-Transport-Security" -> "tsec").foreach { case (name, value) =>
       verify(res).setHeader(meq(name), meq(value))
     }
   }

@@ -62,8 +62,9 @@ class PodTemplateConfigMapStepSuite extends SparkFunSuite {
     assert(volume.getConfigMap.getName === generatedResourceName)
     assert(volume.getConfigMap.getItems.size() === 1)
     assert(volume.getConfigMap.getItems.get(0).getKey === Constants.POD_TEMPLATE_KEY)
-    assert(volume.getConfigMap.getItems.get(0).getPath ===
-      Constants.EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME)
+    assert(
+      volume.getConfigMap.getItems.get(0).getPath ===
+        Constants.EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME)
 
     assert(configuredPod.container.getVolumeMounts.size() === 1)
     val volumeMount = configuredPod.container.getVolumeMounts.get(0)
@@ -83,8 +84,9 @@ class PodTemplateConfigMapStepSuite extends SparkFunSuite {
     val systemProperties = step.getAdditionalPodSystemProperties()
     assert(systemProperties.size === 1)
     assert(systemProperties.contains(Config.KUBERNETES_EXECUTOR_PODTEMPLATE_FILE.key))
-    assert(systemProperties.get(Config.KUBERNETES_EXECUTOR_PODTEMPLATE_FILE.key).get ===
-      (Constants.EXECUTOR_POD_SPEC_TEMPLATE_MOUNTPATH + "/" +
-        Constants.EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME))
+    assert(
+      systemProperties.get(Config.KUBERNETES_EXECUTOR_PODTEMPLATE_FILE.key).get ===
+        (Constants.EXECUTOR_POD_SPEC_TEMPLATE_MOUNTPATH + "/" +
+          Constants.EXECUTOR_POD_SPEC_TEMPLATE_FILE_NAME))
   }
 }

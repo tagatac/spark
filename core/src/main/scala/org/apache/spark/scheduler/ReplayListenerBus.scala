@@ -41,15 +41,20 @@ private[spark] class ReplayListenerBus extends SparkListenerBus with Logging {
    * This method can be called multiple times, but the listener behavior is undefined after any
    * error is thrown by this method.
    *
-   * @param logData Stream containing event log data.
-   * @param sourceName Filename (or other source identifier) from whence @logData is being read
-   * @param maybeTruncated Indicate whether log file might be truncated (some abnormal situations
-   *        encountered, log file might not finished writing) or not
-   * @param eventsFilter Filter function to select JSON event strings in the log data stream that
-   *        should be parsed and replayed. When not specified, all event strings in the log data
-   *        are parsed and replayed.
-   * @return whether it succeeds to replay the log file entirely without error including
-   *         HaltReplayException. false otherwise.
+   * @param logData
+   *   Stream containing event log data.
+   * @param sourceName
+   *   Filename (or other source identifier) from whence @logData is being read
+   * @param maybeTruncated
+   *   Indicate whether log file might be truncated (some abnormal situations encountered, log
+   *   file might not finished writing) or not
+   * @param eventsFilter
+   *   Filter function to select JSON event strings in the log data stream that should be parsed
+   *   and replayed. When not specified, all event strings in the log data are parsed and
+   *   replayed.
+   * @return
+   *   whether it succeeds to replay the log file entirely without error including
+   *   HaltReplayException. false otherwise.
    */
   def replay(
       logData: InputStream,
@@ -75,8 +80,7 @@ private[spark] class ReplayListenerBus extends SparkListenerBus with Logging {
     val unrecognizedProperties = new scala.collection.mutable.HashSet[String]
 
     try {
-      val lineEntries = lines
-        .zipWithIndex
+      val lineEntries = lines.zipWithIndex
         .filter { case (line, _) => eventsFilter(line) }
 
       while (lineEntries.hasNext) {
@@ -111,9 +115,10 @@ private[spark] class ReplayListenerBus extends SparkListenerBus with Logging {
             if (!maybeTruncated || lineEntries.hasNext) {
               throw jpe
             } else {
-              logWarning(log"Got JsonParseException from log file ${MDC(FILE_NAME, sourceName)}" +
-                log" at line ${MDC(LINE_NUM, lineNumber)}, " +
-                log"the file might not have finished writing cleanly.")
+              logWarning(
+                log"Got JsonParseException from log file ${MDC(FILE_NAME, sourceName)}" +
+                  log" at line ${MDC(LINE_NUM, lineNumber)}, " +
+                  log"the file might not have finished writing cleanly.")
             }
         }
       }

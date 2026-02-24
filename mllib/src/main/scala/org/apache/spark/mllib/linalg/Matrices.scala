@@ -62,15 +62,15 @@ sealed trait Matrix extends Serializable {
   }
 
   /**
-   * Returns an iterator of column vectors.
-   * This operation could be expensive, depending on the underlying storage.
+   * Returns an iterator of column vectors. This operation could be expensive, depending on the
+   * underlying storage.
    */
   @Since("2.0.0")
   def colIter: Iterator[Vector]
 
   /**
-   * Returns an iterator of row vectors.
-   * This operation could be expensive, depending on the underlying storage.
+   * Returns an iterator of row vectors. This operation could be expensive, depending on the
+   * underlying storage.
    */
   @Since("2.0.0")
   def rowIter: Iterator[Vector] = this.transpose.colIter
@@ -131,29 +131,31 @@ sealed trait Matrix extends Serializable {
 
   /** A human readable representation of the matrix with maximum lines and width */
   @Since("1.4.0")
-  def toString(maxLines: Int, maxLineWidth: Int): String = asBreeze.toString(maxLines, maxLineWidth)
+  def toString(maxLines: Int, maxLineWidth: Int): String =
+    asBreeze.toString(maxLines, maxLineWidth)
 
   /**
-   * Map the values of this matrix using a function. Generates a new matrix. Performs the
-   * function on only the backing array. For example, an operation such as addition or
-   * subtraction will only be performed on the non-zero values in a `SparseMatrix`.
+   * Map the values of this matrix using a function. Generates a new matrix. Performs the function
+   * on only the backing array. For example, an operation such as addition or subtraction will
+   * only be performed on the non-zero values in a `SparseMatrix`.
    */
   private[spark] def map(f: Double => Double): Matrix
 
   /**
-   * Update all the values of this matrix using the function f. Performed in-place on the
-   * backing array. For example, an operation such as addition or subtraction will only be
-   * performed on the non-zero values in a `SparseMatrix`.
+   * Update all the values of this matrix using the function f. Performed in-place on the backing
+   * array. For example, an operation such as addition or subtraction will only be performed on
+   * the non-zero values in a `SparseMatrix`.
    */
   private[mllib] def update(f: Double => Double): Matrix
 
   /**
-   * Applies a function `f` to all the active elements of dense and sparse matrix. The ordering
-   * of the elements are not defined.
+   * Applies a function `f` to all the active elements of dense and sparse matrix. The ordering of
+   * the elements are not defined.
    *
-   * @param f the function takes three parameters where the first two parameters are the row
-   *          and column indices respectively with the type `Int`, and the final parameter is the
-   *          corresponding value in the matrix with type `Double`.
+   * @param f
+   *   the function takes three parameters where the first two parameters are the row and column
+   *   indices respectively with the type `Int`, and the final parameter is the corresponding
+   *   value in the matrix with type `Double`.
    */
   private[spark] def foreachActive(f: (Int, Int, Double) => Unit): Unit
 
@@ -170,8 +172,8 @@ sealed trait Matrix extends Serializable {
   def numActives: Int
 
   /**
-   * Convert this matrix to the new mllib-local representation.
-   * This does NOT copy the data; it copies references.
+   * Convert this matrix to the new mllib-local representation. This does NOT copy the data; it
+   * copies references.
    */
   @Since("2.0.0")
   def asML: newlinalg.Matrix
@@ -186,15 +188,15 @@ private[spark] class MatrixUDT extends UserDefinedType[Matrix] {
     // be added for which values are not needed.
     // the sparse matrix needs colPtrs and rowIndices, which are set as
     // null, while building the dense matrix.
-    StructType(Array(
-      StructField("type", ByteType, nullable = false),
-      StructField("numRows", IntegerType, nullable = false),
-      StructField("numCols", IntegerType, nullable = false),
-      StructField("colPtrs", ArrayType(IntegerType, containsNull = false), nullable = true),
-      StructField("rowIndices", ArrayType(IntegerType, containsNull = false), nullable = true),
-      StructField("values", ArrayType(DoubleType, containsNull = false), nullable = true),
-      StructField("isTransposed", BooleanType, nullable = false)
-      ))
+    StructType(
+      Array(
+        StructField("type", ByteType, nullable = false),
+        StructField("numRows", IntegerType, nullable = false),
+        StructField("numCols", IntegerType, nullable = false),
+        StructField("colPtrs", ArrayType(IntegerType, containsNull = false), nullable = true),
+        StructField("rowIndices", ArrayType(IntegerType, containsNull = false), nullable = true),
+        StructField("values", ArrayType(DoubleType, containsNull = false), nullable = true),
+        StructField("isTransposed", BooleanType, nullable = false)))
   }
 
   override def serialize(obj: Matrix): InternalRow = {
@@ -224,7 +226,8 @@ private[spark] class MatrixUDT extends UserDefinedType[Matrix] {
   override def deserialize(datum: Any): Matrix = {
     datum match {
       case row: InternalRow =>
-        require(row.numFields == 7,
+        require(
+          row.numFields == 7,
           s"MatrixUDT.deserialize given row with length ${row.numFields} but requires length == 7")
         val tpe = row.getByte(0)
         val numRows = row.getInt(1)
@@ -262,9 +265,8 @@ private[spark] class MatrixUDT extends UserDefinedType[Matrix] {
 }
 
 /**
- * Column-major dense matrix.
- * The entry values are stored in a single array of doubles with columns listed in sequence.
- * For example, the following matrix
+ * Column-major dense matrix. The entry values are stored in a single array of doubles with
+ * columns listed in sequence. For example, the following matrix
  * {{{
  *   1.0 2.0
  *   3.0 4.0
@@ -272,11 +274,14 @@ private[spark] class MatrixUDT extends UserDefinedType[Matrix] {
  * }}}
  * is stored as `[1.0, 3.0, 5.0, 2.0, 4.0, 6.0]`.
  *
- * @param numRows number of rows
- * @param numCols number of columns
- * @param values matrix entries in column major if not transposed or in row major otherwise
- * @param isTransposed whether the matrix is transposed. If true, `values` stores the matrix in
- *                     row major.
+ * @param numRows
+ *   number of rows
+ * @param numCols
+ *   number of columns
+ * @param values
+ *   matrix entries in column major if not transposed or in row major otherwise
+ * @param isTransposed
+ *   whether the matrix is transposed. If true, `values` stores the matrix in row major.
  */
 @Since("1.0.0")
 @SQLUserDefinedType(udt = classOf[MatrixUDT])
@@ -284,15 +289,17 @@ class DenseMatrix @Since("1.3.0") (
     @Since("1.0.0") val numRows: Int,
     @Since("1.0.0") val numCols: Int,
     @Since("1.0.0") val values: Array[Double],
-    @Since("1.3.0") override val isTransposed: Boolean) extends Matrix {
+    @Since("1.3.0") override val isTransposed: Boolean)
+    extends Matrix {
 
-  require(values.length == numRows * numCols, "The number of values supplied doesn't match the " +
-    s"size of the matrix! values.length: ${values.length}, numRows * numCols: ${numRows * numCols}")
+  require(
+    values.length == numRows * numCols,
+    "The number of values supplied doesn't match the " +
+      s"size of the matrix! values.length: ${values.length}, numRows * numCols: ${numRows * numCols}")
 
   /**
-   * Column-major dense matrix.
-   * The entry values are stored in a single array of doubles with columns listed in sequence.
-   * For example, the following matrix
+   * Column-major dense matrix. The entry values are stored in a single array of doubles with
+   * columns listed in sequence. For example, the following matrix
    * {{{
    *   1.0 2.0
    *   3.0 4.0
@@ -300,9 +307,12 @@ class DenseMatrix @Since("1.3.0") (
    * }}}
    * is stored as `[1.0, 3.0, 5.0, 2.0, 4.0, 6.0]`.
    *
-   * @param numRows number of rows
-   * @param numCols number of columns
-   * @param values matrix entries in column major
+   * @param numRows
+   *   number of rows
+   * @param numCols
+   *   number of columns
+   * @param values
+   *   matrix entries in column major
    */
   @Since("1.0.0")
   def this(numRows: Int, numCols: Int, values: Array[Double]) =
@@ -344,8 +354,8 @@ class DenseMatrix @Since("1.3.0") (
   @Since("1.4.0")
   override def copy: DenseMatrix = new DenseMatrix(numRows, numCols, values.clone())
 
-  private[spark] def map(f: Double => Double) = new DenseMatrix(numRows, numCols, values.map(f),
-    isTransposed)
+  private[spark] def map(f: Double => Double) =
+    new DenseMatrix(numRows, numCols, values.map(f), isTransposed)
 
   private[mllib] def update(f: Double => Double): DenseMatrix = {
     val len = values.length
@@ -451,34 +461,44 @@ object DenseMatrix {
 
   /**
    * Generate a `DenseMatrix` consisting of zeros.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @return `DenseMatrix` with size `numRows` x `numCols` and values of zeros
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @return
+   *   `DenseMatrix` with size `numRows` x `numCols` and values of zeros
    */
   @Since("1.3.0")
   def zeros(numRows: Int, numCols: Int): DenseMatrix = {
-    require(numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
-            s"$numRows x $numCols dense matrix is too large to allocate")
+    require(
+      numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
+      s"$numRows x $numCols dense matrix is too large to allocate")
     new DenseMatrix(numRows, numCols, new Array[Double](numRows * numCols))
   }
 
   /**
    * Generate a `DenseMatrix` consisting of ones.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @return `DenseMatrix` with size `numRows` x `numCols` and values of ones
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @return
+   *   `DenseMatrix` with size `numRows` x `numCols` and values of ones
    */
   @Since("1.3.0")
   def ones(numRows: Int, numCols: Int): DenseMatrix = {
-    require(numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
-            s"$numRows x $numCols dense matrix is too large to allocate")
+    require(
+      numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
+      s"$numRows x $numCols dense matrix is too large to allocate")
     new DenseMatrix(numRows, numCols, Array.fill(numRows * numCols)(1.0))
   }
 
   /**
    * Generate an Identity Matrix in `DenseMatrix` format.
-   * @param n number of rows and columns of the matrix
-   * @return `DenseMatrix` with size `n` x `n` and values of ones on the diagonal
+   * @param n
+   *   number of rows and columns of the matrix
+   * @return
+   *   `DenseMatrix` with size `n` x `n` and values of ones on the diagonal
    */
   @Since("1.3.0")
   def eye(n: Int): DenseMatrix = {
@@ -493,37 +513,49 @@ object DenseMatrix {
 
   /**
    * Generate a `DenseMatrix` consisting of `i.i.d.` uniform random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param rng a random number generator
-   * @return `DenseMatrix` with size `numRows` x `numCols` and values in U(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `DenseMatrix` with size `numRows` x `numCols` and values in U(0, 1)
    */
   @Since("1.3.0")
   def rand(numRows: Int, numCols: Int, rng: Random): DenseMatrix = {
-    require(numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
-            s"$numRows x $numCols dense matrix is too large to allocate")
+    require(
+      numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
+      s"$numRows x $numCols dense matrix is too large to allocate")
     new DenseMatrix(numRows, numCols, Array.fill(numRows * numCols)(rng.nextDouble()))
   }
 
   /**
    * Generate a `DenseMatrix` consisting of `i.i.d.` gaussian random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param rng a random number generator
-   * @return `DenseMatrix` with size `numRows` x `numCols` and values in N(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `DenseMatrix` with size `numRows` x `numCols` and values in N(0, 1)
    */
   @Since("1.3.0")
   def randn(numRows: Int, numCols: Int, rng: Random): DenseMatrix = {
-    require(numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
-            s"$numRows x $numCols dense matrix is too large to allocate")
+    require(
+      numRows.toLong * numCols <= ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
+      s"$numRows x $numCols dense matrix is too large to allocate")
     new DenseMatrix(numRows, numCols, Array.fill(numRows * numCols)(rng.nextGaussian()))
   }
 
   /**
    * Generate a diagonal matrix in `DenseMatrix` format from the supplied values.
-   * @param vector a `Vector` that will form the values on the diagonal of the matrix
-   * @return Square `DenseMatrix` with size `values.length` x `values.length` and `values`
-   *         on the diagonal
+   * @param vector
+   *   a `Vector` that will form the values on the diagonal of the matrix
+   * @return
+   *   Square `DenseMatrix` with size `values.length` x `values.length` and `values` on the
+   *   diagonal
    */
   @Since("1.3.0")
   def diag(vector: Vector): DenseMatrix = {
@@ -539,7 +571,7 @@ object DenseMatrix {
   }
 
   /**
-   * Convert new linalg type to spark.mllib type.  Light copy; only copies references
+   * Convert new linalg type to spark.mllib type. Light copy; only copies references
    */
   @Since("2.0.0")
   def fromML(m: newlinalg.DenseMatrix): DenseMatrix = {
@@ -548,26 +580,31 @@ object DenseMatrix {
 }
 
 /**
- * Column-major sparse matrix.
- * The entry values are stored in Compressed Sparse Column (CSC) format.
- * For example, the following matrix
+ * Column-major sparse matrix. The entry values are stored in Compressed Sparse Column (CSC)
+ * format. For example, the following matrix
  * {{{
  *   1.0 0.0 4.0
  *   0.0 3.0 5.0
  *   2.0 0.0 6.0
  * }}}
- * is stored as `values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]`,
- * `rowIndices=[0, 2, 1, 0, 1, 2]`, `colPointers=[0, 2, 3, 6]`.
+ * is stored as `values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]`, `rowIndices=[0, 2, 1, 0, 1, 2]`,
+ * `colPointers=[0, 2, 3, 6]`.
  *
- * @param numRows number of rows
- * @param numCols number of columns
- * @param colPtrs the index corresponding to the start of a new column (if not transposed)
- * @param rowIndices the row index of the entry (if not transposed). They must be in strictly
- *                   increasing order for each column
- * @param values nonzero matrix entries in column major (if not transposed)
- * @param isTransposed whether the matrix is transposed. If true, the matrix can be considered
- *                     Compressed Sparse Row (CSR) format, where `colPtrs` behaves as rowPtrs,
- *                     and `rowIndices` behave as colIndices, and `values` are stored in row major.
+ * @param numRows
+ *   number of rows
+ * @param numCols
+ *   number of columns
+ * @param colPtrs
+ *   the index corresponding to the start of a new column (if not transposed)
+ * @param rowIndices
+ *   the row index of the entry (if not transposed). They must be in strictly increasing order for
+ *   each column
+ * @param values
+ *   nonzero matrix entries in column major (if not transposed)
+ * @param isTransposed
+ *   whether the matrix is transposed. If true, the matrix can be considered Compressed Sparse Row
+ *   (CSR) format, where `colPtrs` behaves as rowPtrs, and `rowIndices` behave as colIndices, and
+ *   `values` are stored in row major.
  */
 @Since("1.2.0")
 @SQLUserDefinedType(udt = classOf[MatrixUDT])
@@ -577,38 +614,48 @@ class SparseMatrix @Since("1.3.0") (
     @Since("1.2.0") val colPtrs: Array[Int],
     @Since("1.2.0") val rowIndices: Array[Int],
     @Since("1.2.0") val values: Array[Double],
-    @Since("1.3.0") override val isTransposed: Boolean) extends Matrix {
+    @Since("1.3.0") override val isTransposed: Boolean)
+    extends Matrix {
 
-  require(values.length == rowIndices.length, "The number of row indices and values don't match! " +
-    s"values.length: ${values.length}, rowIndices.length: ${rowIndices.length}")
+  require(
+    values.length == rowIndices.length,
+    "The number of row indices and values don't match! " +
+      s"values.length: ${values.length}, rowIndices.length: ${rowIndices.length}")
   if (isTransposed) {
-    require(colPtrs.length == numRows + 1,
+    require(
+      colPtrs.length == numRows + 1,
       s"Expecting ${numRows + 1} colPtrs when numRows = $numRows but got ${colPtrs.length}")
   } else {
-    require(colPtrs.length == numCols + 1,
+    require(
+      colPtrs.length == numCols + 1,
       s"Expecting ${numCols + 1} colPtrs when numCols = $numCols but got ${colPtrs.length}")
   }
-  require(values.length == colPtrs.last, "The last value of colPtrs must equal the number of " +
-    s"elements. values.length: ${values.length}, colPtrs.last: ${colPtrs.last}")
+  require(
+    values.length == colPtrs.last,
+    "The last value of colPtrs must equal the number of " +
+      s"elements. values.length: ${values.length}, colPtrs.last: ${colPtrs.last}")
 
   /**
-   * Column-major sparse matrix.
-   * The entry values are stored in Compressed Sparse Column (CSC) format.
-   * For example, the following matrix
+   * Column-major sparse matrix. The entry values are stored in Compressed Sparse Column (CSC)
+   * format. For example, the following matrix
    * {{{
    *   1.0 0.0 4.0
    *   0.0 3.0 5.0
    *   2.0 0.0 6.0
    * }}}
-   * is stored as `values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]`,
-   * `rowIndices=[0, 2, 1, 0, 1, 2]`, `colPointers=[0, 2, 3, 6]`.
+   * is stored as `values: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]`, `rowIndices=[0, 2, 1, 0, 1, 2]`,
+   * `colPointers=[0, 2, 3, 6]`.
    *
-   * @param numRows number of rows
-   * @param numCols number of columns
-   * @param colPtrs the index corresponding to the start of a new column
-   * @param rowIndices the row index of the entry. They must be in strictly increasing
-   *                   order for each column
-   * @param values non-zero matrix entries in column major
+   * @param numRows
+   *   number of rows
+   * @param numCols
+   *   number of columns
+   * @param colPtrs
+   *   the index corresponding to the start of a new column
+   * @param rowIndices
+   *   the row index of the entry. They must be in strictly increasing order for each column
+   * @param values
+   *   non-zero matrix entries in column major
    */
   @Since("1.2.0")
   def this(
@@ -626,12 +673,12 @@ class SparseMatrix @Since("1.3.0") (
   override def hashCode(): Int = asBreeze.hashCode
 
   private[mllib] def asBreeze: BM[Double] = {
-     if (!isTransposed) {
-       new BSM[Double](values, numRows, numCols, colPtrs, rowIndices)
-     } else {
-       val breezeMatrix = new BSM[Double](values, numCols, numRows, colPtrs, rowIndices)
-       breezeMatrix.t
-     }
+    if (!isTransposed) {
+      new BSM[Double](values, numRows, numCols, colPtrs, rowIndices)
+    } else {
+      val breezeMatrix = new BSM[Double](values, numCols, numRows, colPtrs, rowIndices)
+      breezeMatrix.t
+    }
   }
 
   @Since("1.3.0")
@@ -653,8 +700,9 @@ class SparseMatrix @Since("1.3.0") (
   private[mllib] def update(i: Int, j: Int, v: Double): Unit = {
     val ind = index(i, j)
     if (ind < 0) {
-      throw new NoSuchElementException("The given row and column indices correspond to a zero " +
-        "value. Only non-zero elements in Sparse Matrices can be updated.")
+      throw new NoSuchElementException(
+        "The given row and column indices correspond to a zero " +
+          "value. Only non-zero elements in Sparse Matrices can be updated.")
     } else {
       values(ind) = v
     }
@@ -770,13 +818,17 @@ class SparseMatrix @Since("1.3.0") (
 object SparseMatrix {
 
   /**
-   * Generate a `SparseMatrix` from Coordinate List (COO) format. Input must be an array of
-   * (i, j, value) tuples. Entries that have duplicate values of i and j are
-   * added together. Tuples where value is equal to zero will be omitted.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param entries Array of (i, j, value) tuples
-   * @return The corresponding `SparseMatrix`
+   * Generate a `SparseMatrix` from Coordinate List (COO) format. Input must be an array of (i, j,
+   * value) tuples. Entries that have duplicate values of i and j are added together. Tuples where
+   * value is equal to zero will be omitted.
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param entries
+   *   Array of (i, j, value) tuples
+   * @return
+   *   The corresponding `SparseMatrix`
    */
   @Since("1.3.0")
   def fromCOO(numRows: Int, numCols: Int, entries: Iterable[(Int, Int, Double)]): SparseMatrix = {
@@ -804,7 +856,8 @@ object SparseMatrix {
           prevVal += v
         } else {
           if (prevVal != 0) {
-            require(prevRow >= 0 && prevRow < numRows,
+            require(
+              prevRow >= 0 && prevRow < numRows,
               s"Row index out of range [0, $numRows): $prevRow.")
             nnz += 1
             rowIndices += prevRow
@@ -824,8 +877,10 @@ object SparseMatrix {
 
   /**
    * Generate an Identity Matrix in `SparseMatrix` format.
-   * @param n number of rows and columns of the matrix
-   * @return `SparseMatrix` with size `n` x `n` and values of ones on the diagonal
+   * @param n
+   *   number of rows and columns of the matrix
+   * @return
+   *   `SparseMatrix` with size `n` x `n` and values of ones on the diagonal
    */
   @Since("1.3.0")
   def speye(n: Int): SparseMatrix = {
@@ -833,8 +888,8 @@ object SparseMatrix {
   }
 
   /**
-   * Generates the skeleton of a random `SparseMatrix` with a given random number generator.
-   * The values of the matrix returned are undefined.
+   * Generates the skeleton of a random `SparseMatrix` with a given random number generator. The
+   * values of the matrix returned are undefined.
    */
   private def genRandMatrix(
       numRows: Int,
@@ -843,11 +898,13 @@ object SparseMatrix {
       rng: Random): SparseMatrix = {
     require(numRows > 0, s"numRows must be greater than 0 but got $numRows")
     require(numCols > 0, s"numCols must be greater than 0 but got $numCols")
-    require(density >= 0.0 && density <= 1.0,
+    require(
+      density >= 0.0 && density <= 1.0,
       s"density must be a double in the range 0.0 <= d <= 1.0. Currently, density: $density")
     val size = numRows.toLong * numCols
     val expected = size * density
-    assert(expected < ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
+    assert(
+      expected < ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH,
       "The expected number of nonzeros cannot be greater than Int.MaxValue - 15.")
     val nnz = math.ceil(expected).toInt
     if (density == 0.0) {
@@ -855,7 +912,12 @@ object SparseMatrix {
     } else if (density == 1.0) {
       val colPtrs = Array.tabulate(numCols + 1)(j => j * numRows)
       val rowIndices = Array.tabulate(size.toInt)(idx => idx % numRows)
-      new SparseMatrix(numRows, numCols, colPtrs, rowIndices, new Array[Double](numRows * numCols))
+      new SparseMatrix(
+        numRows,
+        numCols,
+        colPtrs,
+        rowIndices,
+        new Array[Double](numRows * numCols))
     } else if (density < 0.34) {
       // draw-by-draw, expected number of iterations is less than 1.5 * nnz
       val entries = MHashSet[(Int, Int)]()
@@ -888,14 +950,19 @@ object SparseMatrix {
   }
 
   /**
-   * Generate a `SparseMatrix` consisting of `i.i.d`. uniform random numbers. The number of non-zero
-   * elements equal the ceiling of `numRows` x `numCols` x `density`
+   * Generate a `SparseMatrix` consisting of `i.i.d`. uniform random numbers. The number of
+   * non-zero elements equal the ceiling of `numRows` x `numCols` x `density`
    *
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param density the desired density for the matrix
-   * @param rng a random number generator
-   * @return `SparseMatrix` with size `numRows` x `numCols` and values in U(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param density
+   *   the desired density for the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `SparseMatrix` with size `numRows` x `numCols` and values in U(0, 1)
    */
   @Since("1.3.0")
   def sprand(numRows: Int, numCols: Int, density: Double, rng: Random): SparseMatrix = {
@@ -905,11 +972,16 @@ object SparseMatrix {
 
   /**
    * Generate a `SparseMatrix` consisting of `i.i.d`. gaussian random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param density the desired density for the matrix
-   * @param rng a random number generator
-   * @return `SparseMatrix` with size `numRows` x `numCols` and values in N(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param density
+   *   the desired density for the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `SparseMatrix` with size `numRows` x `numCols` and values in N(0, 1)
    */
   @Since("1.3.0")
   def sprandn(numRows: Int, numCols: Int, density: Double, rng: Random): SparseMatrix = {
@@ -919,9 +991,11 @@ object SparseMatrix {
 
   /**
    * Generate a diagonal matrix in `SparseMatrix` format from the supplied values.
-   * @param vector a `Vector` that will form the values on the diagonal of the matrix
-   * @return Square `SparseMatrix` with size `values.length` x `values.length` and non-zero
-   *         `values` on the diagonal
+   * @param vector
+   *   a `Vector` that will form the values on the diagonal of the matrix
+   * @return
+   *   Square `SparseMatrix` with size `values.length` x `values.length` and non-zero `values` on
+   *   the diagonal
    */
   @Since("1.3.0")
   def spdiag(vector: Vector): SparseMatrix = {
@@ -937,7 +1011,7 @@ object SparseMatrix {
   }
 
   /**
-   * Convert new linalg type to spark.mllib type.  Light copy; only copies references
+   * Convert new linalg type to spark.mllib type. Light copy; only copies references
    */
   @Since("2.0.0")
   def fromML(m: newlinalg.SparseMatrix): SparseMatrix = {
@@ -954,9 +1028,12 @@ object Matrices {
   /**
    * Creates a column-major dense matrix.
    *
-   * @param numRows number of rows
-   * @param numCols number of columns
-   * @param values matrix entries in column major
+   * @param numRows
+   *   number of rows
+   * @param numCols
+   *   number of columns
+   * @param values
+   *   matrix entries in column major
    */
   @Since("1.0.0")
   def dense(numRows: Int, numCols: Int, values: Array[Double]): Matrix = {
@@ -966,26 +1043,33 @@ object Matrices {
   /**
    * Creates a column-major sparse matrix in Compressed Sparse Column (CSC) format.
    *
-   * @param numRows number of rows
-   * @param numCols number of columns
-   * @param colPtrs the index corresponding to the start of a new column
-   * @param rowIndices the row index of the entry
-   * @param values non-zero matrix entries in column major
+   * @param numRows
+   *   number of rows
+   * @param numCols
+   *   number of columns
+   * @param colPtrs
+   *   the index corresponding to the start of a new column
+   * @param rowIndices
+   *   the row index of the entry
+   * @param values
+   *   non-zero matrix entries in column major
    */
   @Since("1.2.0")
   def sparse(
-     numRows: Int,
-     numCols: Int,
-     colPtrs: Array[Int],
-     rowIndices: Array[Int],
-     values: Array[Double]): Matrix = {
+      numRows: Int,
+      numCols: Int,
+      colPtrs: Array[Int],
+      rowIndices: Array[Int],
+      values: Array[Double]): Matrix = {
     new SparseMatrix(numRows, numCols, colPtrs, rowIndices, values)
   }
 
   /**
    * Creates a Matrix instance from a breeze matrix.
-   * @param breeze a breeze matrix
-   * @return a Matrix instance
+   * @param breeze
+   *   a breeze matrix
+   * @return
+   *   a Matrix instance
    */
   private[mllib] def fromBreeze(breeze: BM[Double]): Matrix = {
     breeze match {
@@ -1011,44 +1095,58 @@ object Matrices {
 
   /**
    * Generate a `Matrix` consisting of zeros.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @return `Matrix` with size `numRows` x `numCols` and values of zeros
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values of zeros
    */
   @Since("1.2.0")
   def zeros(numRows: Int, numCols: Int): Matrix = DenseMatrix.zeros(numRows, numCols)
 
   /**
    * Generate a `DenseMatrix` consisting of ones.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @return `Matrix` with size `numRows` x `numCols` and values of ones
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values of ones
    */
   @Since("1.2.0")
   def ones(numRows: Int, numCols: Int): Matrix = DenseMatrix.ones(numRows, numCols)
 
   /**
    * Generate a dense Identity Matrix in `Matrix` format.
-   * @param n number of rows and columns of the matrix
-   * @return `Matrix` with size `n` x `n` and values of ones on the diagonal
+   * @param n
+   *   number of rows and columns of the matrix
+   * @return
+   *   `Matrix` with size `n` x `n` and values of ones on the diagonal
    */
   @Since("1.2.0")
   def eye(n: Int): Matrix = DenseMatrix.eye(n)
 
   /**
    * Generate a sparse Identity Matrix in `Matrix` format.
-   * @param n number of rows and columns of the matrix
-   * @return `Matrix` with size `n` x `n` and values of ones on the diagonal
+   * @param n
+   *   number of rows and columns of the matrix
+   * @return
+   *   `Matrix` with size `n` x `n` and values of ones on the diagonal
    */
   @Since("1.3.0")
   def speye(n: Int): Matrix = SparseMatrix.speye(n)
 
   /**
    * Generate a `DenseMatrix` consisting of `i.i.d.` uniform random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param rng a random number generator
-   * @return `Matrix` with size `numRows` x `numCols` and values in U(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values in U(0, 1)
    */
   @Since("1.2.0")
   def rand(numRows: Int, numCols: Int, rng: Random): Matrix =
@@ -1056,11 +1154,16 @@ object Matrices {
 
   /**
    * Generate a `SparseMatrix` consisting of `i.i.d.` uniform random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param density the desired density for the matrix
-   * @param rng a random number generator
-   * @return `Matrix` with size `numRows` x `numCols` and values in U(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param density
+   *   the desired density for the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values in U(0, 1)
    */
   @Since("1.3.0")
   def sprand(numRows: Int, numCols: Int, density: Double, rng: Random): Matrix =
@@ -1068,10 +1171,14 @@ object Matrices {
 
   /**
    * Generate a `DenseMatrix` consisting of `i.i.d.` gaussian random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param rng a random number generator
-   * @return `Matrix` with size `numRows` x `numCols` and values in N(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values in N(0, 1)
    */
   @Since("1.2.0")
   def randn(numRows: Int, numCols: Int, rng: Random): Matrix =
@@ -1079,11 +1186,16 @@ object Matrices {
 
   /**
    * Generate a `SparseMatrix` consisting of `i.i.d.` gaussian random numbers.
-   * @param numRows number of rows of the matrix
-   * @param numCols number of columns of the matrix
-   * @param density the desired density for the matrix
-   * @param rng a random number generator
-   * @return `Matrix` with size `numRows` x `numCols` and values in N(0, 1)
+   * @param numRows
+   *   number of rows of the matrix
+   * @param numCols
+   *   number of columns of the matrix
+   * @param density
+   *   the desired density for the matrix
+   * @param rng
+   *   a random number generator
+   * @return
+   *   `Matrix` with size `numRows` x `numCols` and values in N(0, 1)
    */
   @Since("1.3.0")
   def sprandn(numRows: Int, numCols: Int, density: Double, rng: Random): Matrix =
@@ -1091,19 +1203,22 @@ object Matrices {
 
   /**
    * Generate a diagonal matrix in `Matrix` format from the supplied values.
-   * @param vector a `Vector` that will form the values on the diagonal of the matrix
-   * @return Square `Matrix` with size `values.length` x `values.length` and `values`
-   *         on the diagonal
+   * @param vector
+   *   a `Vector` that will form the values on the diagonal of the matrix
+   * @return
+   *   Square `Matrix` with size `values.length` x `values.length` and `values` on the diagonal
    */
   @Since("1.2.0")
   def diag(vector: Vector): Matrix = DenseMatrix.diag(vector)
 
   /**
    * Horizontally concatenate a sequence of matrices. The returned matrix will be in the format
-   * the matrices are supplied in. Supplying a mix of dense and sparse matrices will result in
-   * a sparse matrix. If the Array is empty, an empty `DenseMatrix` will be returned.
-   * @param matrices array of matrices
-   * @return a single `Matrix` composed of the matrices that were horizontally concatenated
+   * the matrices are supplied in. Supplying a mix of dense and sparse matrices will result in a
+   * sparse matrix. If the Array is empty, an empty `DenseMatrix` will be returned.
+   * @param matrices
+   *   array of matrices
+   * @return
+   *   a single `Matrix` composed of the matrices that were horizontally concatenated
    */
   @Since("1.3.0")
   def horzcat(matrices: Array[Matrix]): Matrix = {
@@ -1116,13 +1231,17 @@ object Matrices {
     var hasSparse = false
     var numCols = 0
     matrices.foreach { mat =>
-      require(numRows == mat.numRows, "The number of rows of the matrices in this sequence, " +
-        "don't match!")
+      require(
+        numRows == mat.numRows,
+        "The number of rows of the matrices in this sequence, " +
+          "don't match!")
       mat match {
         case sparse: SparseMatrix => hasSparse = true
         case dense: DenseMatrix => // empty on purpose
-        case _ => throw new IllegalArgumentException("Unsupported matrix format. Expected " +
-          s"SparseMatrix or DenseMatrix. Instead got: ${mat.getClass}")
+        case _ =>
+          throw new IllegalArgumentException(
+            "Unsupported matrix format. Expected " +
+              s"SparseMatrix or DenseMatrix. Instead got: ${mat.getClass}")
       }
       numCols += mat.numCols
     }
@@ -1158,11 +1277,13 @@ object Matrices {
   }
 
   /**
-   * Vertically concatenate a sequence of matrices. The returned matrix will be in the format
-   * the matrices are supplied in. Supplying a mix of dense and sparse matrices will result in
-   * a sparse matrix. If the Array is empty, an empty `DenseMatrix` will be returned.
-   * @param matrices array of matrices
-   * @return a single `Matrix` composed of the matrices that were vertically concatenated
+   * Vertically concatenate a sequence of matrices. The returned matrix will be in the format the
+   * matrices are supplied in. Supplying a mix of dense and sparse matrices will result in a
+   * sparse matrix. If the Array is empty, an empty `DenseMatrix` will be returned.
+   * @param matrices
+   *   array of matrices
+   * @return
+   *   a single `Matrix` composed of the matrices that were vertically concatenated
    */
   @Since("1.3.0")
   def vertcat(matrices: Array[Matrix]): Matrix = {
@@ -1175,13 +1296,17 @@ object Matrices {
     var hasSparse = false
     var numRows = 0
     matrices.foreach { mat =>
-      require(numCols == mat.numCols, "The number of columns of the matrices in this sequence, " +
-        "don't match!")
+      require(
+        numCols == mat.numCols,
+        "The number of columns of the matrices in this sequence, " +
+          "don't match!")
       mat match {
         case sparse: SparseMatrix => hasSparse = true
         case dense: DenseMatrix => // empty on purpose
-        case _ => throw new IllegalArgumentException("Unsupported matrix format. Expected " +
-          s"SparseMatrix or DenseMatrix. Instead got: ${mat.getClass}")
+        case _ =>
+          throw new IllegalArgumentException(
+            "Unsupported matrix format. Expected " +
+              s"SparseMatrix or DenseMatrix. Instead got: ${mat.getClass}")
       }
       numRows += mat.numRows
     }
@@ -1227,7 +1352,7 @@ object Matrices {
   }
 
   /**
-   * Convert new linalg type to spark.mllib type.  Light copy; only copies references
+   * Convert new linalg type to spark.mllib type. Light copy; only copies references
    */
   @Since("2.0.0")
   def fromML(m: newlinalg.Matrix): Matrix = m match {

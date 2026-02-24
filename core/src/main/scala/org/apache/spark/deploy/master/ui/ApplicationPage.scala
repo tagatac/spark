@@ -36,15 +36,23 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
   def render(request: HttpServletRequest): Seq[Node] = {
     val appId = request.getParameter("appId")
     val state = master.askSync[MasterStateResponse](RequestMasterState)
-    val app = state.activeApps.find(_.id == appId)
+    val app = state.activeApps
+      .find(_.id == appId)
       .getOrElse(state.completedApps.find(_.id == appId).orNull)
     if (app == null) {
       val msg = <div class="row">No running application with ID {appId}</div>
       return UIUtils.basicSparkPage(request, msg, "Not Found")
     }
 
-    val executorHeaders = Seq("ExecutorID", "Worker", "Cores", "Memory", "Resource Profile Id",
-      "Resources", "State", "Logs")
+    val executorHeaders = Seq(
+      "ExecutorID",
+      "Worker",
+      "Cores",
+      "Memory",
+      "Resource Profile Id",
+      "Resources",
+      "State",
+      "Logs")
     val allExecutors = (app.executors.values ++ app.removedExecutors).toSet.toSeq
     // This includes executors that are either still running or have exited cleanly
     val executors = allExecutors.filter { exec =>
@@ -52,7 +60,8 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
     }
     val removedExecutors = allExecutors.diff(executors)
     val executorsTable = UIUtils.listingTable(executorHeaders, executorRow, executors)
-    val removedExecutorsTable = UIUtils.listingTable(executorHeaders, executorRow, removedExecutors)
+    val removedExecutorsTable =
+      UIUtils.listingTable(executorHeaders, executorRow, removedExecutors)
 
     val content =
       <div class="row">
@@ -63,21 +72,23 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
             <li><strong>User:</strong> {app.desc.user}</li>
             <li><strong>Cores:</strong>
             {
-              if (app.desc.maxCores.isEmpty) {
-                "Unlimited (%s granted)".format(app.coresGranted)
-              } else {
-                "%s (%s granted, %s left)".format(
-                  app.desc.maxCores.get, app.coresGranted, app.coresLeft)
-              }
-            }
+        if (app.desc.maxCores.isEmpty) {
+          "Unlimited (%s granted)".format(app.coresGranted)
+        } else {
+          "%s (%s granted, %s left)".format(
+            app.desc.maxCores.get,
+            app.coresGranted,
+            app.coresLeft)
+        }
+      }
             </li>
             <li>
               <span data-toggle="tooltip" title={ToolTips.APPLICATION_EXECUTOR_LIMIT}
                     data-placement="top">
                 <strong>Executor Limit: </strong>
                 {
-                  if (app.getExecutorLimit == Int.MaxValue) "Unlimited" else app.getExecutorLimit
-                }
+        if (app.getExecutorLimit == Int.MaxValue) "Unlimited" else app.getExecutorLimit
+      }
                 ({app.executors.size} granted)
               </span>
             </li>
@@ -93,22 +104,23 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
             <li><strong>Duration:</strong> {UIUtils.formatDuration(app.duration)}</li>
             <li><strong>State:</strong> {app.state}</li>
             {
-              if (!app.isFinished) {
-                if (app.desc.appUiUrl.isBlank()) {
-                  <li><strong>Application UI:</strong> Disabled</li>
-                } else {
-                  <li><strong>
-                      <a href={UIUtils.makeHref(parent.master.reverseProxy,
-                        app.id, app.desc.appUiUrl)}>Application Detail UI</a>
+        if (!app.isFinished) {
+          if (app.desc.appUiUrl.isBlank()) {
+            <li><strong>Application UI:</strong> Disabled</li>
+          } else {
+            <li><strong>
+                      <a href={
+              UIUtils.makeHref(parent.master.reverseProxy, app.id, app.desc.appUiUrl)
+            }>Application Detail UI</a>
                   </strong></li>
-                }
-              } else if (parent.master.historyServerUrl.nonEmpty) {
-                <li><strong>
+          }
+        } else if (parent.master.historyServerUrl.nonEmpty) {
+          <li><strong>
                     <a href={s"${parent.master.historyServerUrl.get}/history/${app.id}"}>
                       Application History UI</a>
                 </strong></li>
-              }
-            }
+        }
+      }
           </ul>
         </div>
       </div>
@@ -127,8 +139,8 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
             {executorsTable}
           </div>
           {
-            if (removedExecutors.nonEmpty) {
-              <span class="collapse-aggregated-removedExecutors collapse-table"
+        if (removedExecutors.nonEmpty) {
+          <span class="collapse-aggregated-removedExecutors collapse-table"
                   data-collapse-name="collapse-aggregated-removedExecutors"
                   data-collapse-table="aggregated-removedExecutors">
                 <h4>
@@ -136,19 +148,21 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
                   <a>Removed Executors ({removedExecutors.length})</a>
                 </h4>
               </span> ++
-              <div class="aggregated-removedExecutors collapsible-table">
+            <div class="aggregated-removedExecutors collapsible-table">
                 {removedExecutorsTable}
               </div>
-            }
-          }
+        }
+      }
         </div>
       </div>;
     UIUtils.basicSparkPage(request, content, "Application: " + app.desc.name)
   }
 
   private def executorRow(executor: ExecutorDesc): Seq[Node] = {
-    val workerUrlRef = UIUtils.makeHref(parent.master.reverseProxy,
-      executor.worker.id, executor.worker.webUiAddress)
+    val workerUrlRef = UIUtils.makeHref(
+      parent.master.reverseProxy,
+      executor.worker.id,
+      executor.worker.webUiAddress)
     <tr>
       <td>{executor.id}</td>
       <td>
@@ -160,10 +174,12 @@ private[ui] class ApplicationPage(parent: MasterWebUI) extends WebUIPage("app") 
       <td>{formatResourcesAddresses(executor.resources)}</td>
       <td>{executor.state}</td>
       <td>
-        <a href={s"$workerUrlRef/logPage/?appId=${executor.application.id}&executorId=${executor.
-          id}&logType=stdout"}>stdout</a>
-        <a href={s"$workerUrlRef/logPage/?appId=${executor.application.id}&executorId=${executor.
-          id}&logType=stderr"}>stderr</a>
+        <a href={
+      s"$workerUrlRef/logPage/?appId=${executor.application.id}&executorId=${executor.id}&logType=stdout"
+    }>stdout</a>
+        <a href={
+      s"$workerUrlRef/logPage/?appId=${executor.application.id}&executorId=${executor.id}&logType=stderr"
+    }>stderr</a>
       </td>
     </tr>
   }

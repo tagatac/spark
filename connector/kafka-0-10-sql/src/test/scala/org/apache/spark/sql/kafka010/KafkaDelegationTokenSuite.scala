@@ -112,7 +112,6 @@ class KafkaDelegationTokenSuite extends StreamTest with SharedSparkSession with 
         true
       },
       CheckAnswer(2, 3, 4, 5, 6),
-      StopStream
-    )
+      StopStream)
   }
 }

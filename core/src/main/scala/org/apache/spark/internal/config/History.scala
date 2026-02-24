@@ -45,10 +45,11 @@ private[spark] object History {
     .createWithDefaultString("10s")
 
   val UPDATE_BATCHSIZE = ConfigBuilder("spark.history.fs.update.batchSize")
-    .doc("Specifies the batch size for updating new eventlog files. " +
-      "This controls each scan process to be completed within a reasonable time, and such " +
-      "prevent the initial scan from running too long and blocking new eventlog files to " +
-      "be scanned in time in large environments.")
+    .doc(
+      "Specifies the batch size for updating new eventlog files. " +
+        "This controls each scan process to be completed within a reasonable time, and such " +
+        "prevent the initial scan from running too long and blocking new eventlog files to " +
+        "be scanned in time in large environments.")
     .version("3.4.0")
     .intConf
     .checkValue(v => v > 0, "The update batchSize should be a positive integer.")
@@ -81,8 +82,9 @@ private[spark] object History {
     .createWithDefault(Int.MaxValue)
 
   val LOCAL_STORE_DIR = ConfigBuilder("spark.history.store.path")
-    .doc("Local directory where to cache application history information. By default this is " +
-      "not set, meaning all history information will be kept in memory.")
+    .doc(
+      "Local directory where to cache application history information. By default this is " +
+        "not set, meaning all history information will be kept in memory.")
     .version("2.3.0")
     .stringConf
     .createOptional
@@ -131,19 +133,21 @@ private[spark] object History {
 
   val END_EVENT_REPARSE_CHUNK_SIZE =
     ConfigBuilder("spark.history.fs.endEventReparseChunkSize")
-      .doc("How many bytes to parse at the end of log files looking for the end event. " +
-        "This is used to speed up generation of application listings by skipping unnecessary " +
-        "parts of event log files. It can be disabled by setting this config to 0.")
+      .doc(
+        "How many bytes to parse at the end of log files looking for the end event. " +
+          "This is used to speed up generation of application listings by skipping unnecessary " +
+          "parts of event log files. It can be disabled by setting this config to 0.")
       .version("2.4.0")
       .bytesConf(ByteUnit.BYTE)
       .createWithDefaultString("1m")
 
   private[spark] val EVENT_LOG_ROLLING_MAX_FILES_TO_RETAIN =
     ConfigBuilder("spark.history.fs.eventLog.rolling.maxFilesToRetain")
-      .doc("The maximum number of event log files which will be retained as non-compacted. " +
-        "By default, all event log files will be retained. Please set the configuration " +
-        s"and ${EVENT_LOG_ROLLING_MAX_FILE_SIZE.key} accordingly if you want to control " +
-        "the overall size of event log files.")
+      .doc(
+        "The maximum number of event log files which will be retained as non-compacted. " +
+          "By default, all event log files will be retained. Please set the configuration " +
+          s"and ${EVENT_LOG_ROLLING_MAX_FILE_SIZE.key} accordingly if you want to control " +
+          "the overall size of event log files.")
       .version("3.0.0")
       .intConf
       .checkValue(_ > 0, "Max event log files to retain should be higher than 0.")
@@ -151,9 +155,10 @@ private[spark] object History {
 
   private[spark] val EVENT_LOG_COMPACTION_SCORE_THRESHOLD =
     ConfigBuilder("spark.history.fs.eventLog.rolling.compaction.score.threshold")
-      .doc("The threshold score to determine whether it's good to do the compaction or not. " +
-        "The compaction score is calculated in analyzing, and being compared to this value. " +
-        "Compaction will proceed only when the score is higher than the threshold value.")
+      .doc(
+        "The threshold score to determine whether it's good to do the compaction or not. " +
+          "The compaction score is calculated in analyzing, and being compared to this value. " +
+          "Compaction will proceed only when the score is higher than the threshold value.")
       .version("3.0.0")
       .internal()
       .doubleConf
@@ -161,7 +166,8 @@ private[spark] object History {
 
   val EVENT_LOG_ROLLING_ON_DEMAND_LOAD_ENABLED =
     ConfigBuilder("spark.history.fs.eventLog.rolling.onDemandLoadEnabled")
-      .doc("Whether to look up rolling event log locations on demand manner before listing files.")
+      .doc(
+        "Whether to look up rolling event log locations on demand manner before listing files.")
       .version("4.1.0")
       .booleanConf
       .createWithDefault(true)
@@ -174,8 +180,9 @@ private[spark] object History {
 
   val MAX_DRIVER_LOG_AGE_S = ConfigBuilder("spark.history.fs.driverlog.cleaner.maxAge")
     .version("3.0.0")
-    .doc(s"When ${DRIVER_LOG_CLEANER_ENABLED.key}=true, driver log files older than this will be " +
-      s"deleted when the driver log cleaner runs.")
+    .doc(
+      s"When ${DRIVER_LOG_CLEANER_ENABLED.key}=true, driver log files older than this will be " +
+        s"deleted when the driver log cleaner runs.")
     .fallbackConf(MAX_LOG_AGE_S)
 
   val DRIVER_LOG_CLEANER_INTERVAL = ConfigBuilder("spark.history.fs.driverlog.cleaner.interval")
@@ -226,13 +233,15 @@ private[spark] object History {
     .version("2.0.0")
     .doc("Number of threads that will be used by history server to process event logs.")
     .intConf
-    .createWithDefaultFunction(() => Math.ceil(Runtime.getRuntime.availableProcessors() / 4f).toInt)
+    .createWithDefaultFunction(() =>
+      Math.ceil(Runtime.getRuntime.availableProcessors() / 4f).toInt)
 
   val NUM_COMPACT_THREADS = ConfigBuilder("spark.history.fs.numCompactThreads")
     .version("4.1.0")
     .doc("Number of threads that will be used by history server to compact event logs.")
     .intConf
-    .createWithDefaultFunction(() => Math.ceil(Runtime.getRuntime.availableProcessors() / 4f).toInt)
+    .createWithDefaultFunction(() =>
+      Math.ceil(Runtime.getRuntime.availableProcessors() / 4f).toInt)
 
   val RETAINED_APPLICATIONS = ConfigBuilder("spark.history.retainedApplications")
     .version("1.0.0")
@@ -271,21 +280,23 @@ private[spark] object History {
     .createOptional
 
   val CUSTOM_EXECUTOR_LOG_URL = ConfigBuilder("spark.history.custom.executor.log.url")
-    .doc("Specifies custom spark executor log url for supporting external log service instead of " +
-      "using cluster managers' application log urls in the history server. Spark will support " +
-      "some path variables via patterns which can vary on cluster manager. Please check the " +
-      "documentation for your cluster manager to see which patterns are supported, if any. " +
-      "This configuration has no effect on a live application, it only affects the history server.")
+    .doc(
+      "Specifies custom spark executor log url for supporting external log service instead of " +
+        "using cluster managers' application log urls in the history server. Spark will support " +
+        "some path variables via patterns which can vary on cluster manager. Please check the " +
+        "documentation for your cluster manager to see which patterns are supported, if any. " +
+        "This configuration has no effect on a live application, it only affects the history server.")
     .version("3.0.0")
     .stringConf
     .createOptional
 
   val APPLY_CUSTOM_EXECUTOR_LOG_URL_TO_INCOMPLETE_APP =
     ConfigBuilder("spark.history.custom.executor.log.url.applyIncompleteApplication")
-      .doc("Whether to apply custom executor log url, as specified by " +
-        s"${CUSTOM_EXECUTOR_LOG_URL.key}, to incomplete application as well. " +
-        "Even if this is true, this still only affects the behavior of the history server, " +
-        "not running spark applications.")
+      .doc(
+        "Whether to apply custom executor log url, as specified by " +
+          s"${CUSTOM_EXECUTOR_LOG_URL.key}, to incomplete application as well. " +
+          "Even if this is true, this still only affects the behavior of the history server, " +
+          "not running spark applications.")
       .version("3.0.0")
       .booleanConf
       .createWithDefault(true)

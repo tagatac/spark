@@ -41,9 +41,7 @@ import org.apache.spark.shuffle.sort.io.LocalDiskShuffleExecutorComponents
 import org.apache.spark.storage._
 import org.apache.spark.util.Utils
 
-class BypassMergeSortShuffleWriterSuite
-  extends SparkFunSuite
-    with ShuffleChecksumTestHelper {
+class BypassMergeSortShuffleWriterSuite extends SparkFunSuite with ShuffleChecksumTestHelper {
 
   @Mock(answer = RETURNS_SMART_NULLS) private var blockManager: BlockManager = _
   @Mock(answer = RETURNS_SMART_NULLS) private var diskBlockManager: DiskBlockManager = _
@@ -67,10 +65,8 @@ class BypassMergeSortShuffleWriterSuite
     tempDir = Utils.createTempDir()
     outputFile = File.createTempFile("shuffle", null, tempDir)
     taskMetrics = new TaskMetrics
-    shuffleHandle = new BypassMergeSortShuffleHandle[Int, Int](
-      shuffleId = 0,
-      dependency = dependency
-    )
+    shuffleHandle =
+      new BypassMergeSortShuffleHandle[Int, Int](shuffleId = 0, dependency = dependency)
     val memoryManager = new TestMemoryManager(conf)
     val taskMemoryManager = new TaskMemoryManager(memoryManager, 0)
     resetDependency(conf, rowBasedChecksumEnabled = false)
@@ -79,8 +75,13 @@ class BypassMergeSortShuffleWriterSuite
     when(blockManager.diskBlockManager).thenReturn(diskBlockManager)
     when(taskContext.taskMemoryManager()).thenReturn(taskMemoryManager)
 
-    when(blockResolver.writeMetadataFileAndCommit(
-      anyInt, anyLong, any(classOf[Array[Long]]), any(classOf[Array[Long]]), any(classOf[File])))
+    when(
+      blockResolver.writeMetadataFileAndCommit(
+        anyInt,
+        anyLong,
+        any(classOf[Array[Long]]),
+        any(classOf[Array[Long]]),
+        any(classOf[File])))
       .thenAnswer { invocationOnMock =>
         val tmp = invocationOnMock.getArguments()(4).asInstanceOf[File]
         if (tmp != null) {
@@ -90,12 +91,13 @@ class BypassMergeSortShuffleWriterSuite
         null
       }
 
-    when(blockManager.getDiskWriter(
-      any[BlockId],
-      any[File],
-      any[SerializerInstance],
-      anyInt(),
-      any[ShuffleWriteMetrics]))
+    when(
+      blockManager.getDiskWriter(
+        any[BlockId],
+        any[File],
+        any[SerializerInstance],
+        anyInt(),
+        any[ShuffleWriteMetrics]))
       .thenAnswer { invocation =>
         val args = invocation.getArguments
         val manager = new SerializerManager(new JavaSerializer(conf), conf)
@@ -128,8 +130,8 @@ class BypassMergeSortShuffleWriterSuite
       blockIdToFileMap(invocation.getArguments.head.asInstanceOf[BlockId])
     }
 
-    shuffleExecutorComponents = new LocalDiskShuffleExecutorComponents(
-      conf, blockManager, blockResolver)
+    shuffleExecutorComponents =
+      new LocalDiskShuffleExecutorComponents(conf, blockManager, blockResolver)
   }
 
   override def afterEach(): Unit = {
@@ -237,7 +239,9 @@ class BypassMergeSortShuffleWriterSuite
     assert(temporaryFilesCreated.count(_.exists()) === 3)
 
     writer.stop( /* success = */ false)
-    assert(temporaryFilesCreated.count(_.exists()) === 0) // check that temporary files were deleted
+    assert(
+      temporaryFilesCreated.count(_.exists()) === 0
+    ) // check that temporary files were deleted
   }
 
   test("cleanup of intermediate files after errors") {
@@ -269,8 +273,8 @@ class BypassMergeSortShuffleWriterSuite
     val dataBlockId = ShuffleDataBlockId(shuffleId, mapId, 0)
     val indexBlockId = ShuffleIndexBlockId(shuffleId, mapId, 0)
     val checksumAlgorithm = conf.get(config.SHUFFLE_CHECKSUM_ALGORITHM)
-    val checksumFileName = ShuffleChecksumHelper.getChecksumFileName(
-      checksumBlockId.name, checksumAlgorithm)
+    val checksumFileName =
+      ShuffleChecksumHelper.getChecksumFileName(checksumBlockId.name, checksumAlgorithm)
     val checksumFile = new File(tempDir, checksumFileName)
     val dataFile = new File(tempDir, dataBlockId.name)
     val indexFile = new File(tempDir, indexBlockId.name)
@@ -309,15 +313,43 @@ class BypassMergeSortShuffleWriterSuite
 
   test("Row-based checksums are independent of input row order") {
     val records: List[(Int, Int)] = List(
-      (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
-      (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-      (3, 3), (3, 4), (3, 5), (3, 6), (3, 7),
-      (4, 4), (4, 5), (4, 6), (4, 7), (4, 8),
-      (5, 5), (5, 6), (5, 7), (5, 8), (5, 9),
-      (6, 6), (6, 7), (6, 8), (6, 9), (6, 10),
-      (7, 7), (7, 8), (7, 9), (7, 10), (7, 11))
+      (1, 1),
+      (1, 2),
+      (1, 3),
+      (1, 4),
+      (1, 5),
+      (2, 2),
+      (2, 3),
+      (2, 4),
+      (2, 5),
+      (2, 6),
+      (3, 3),
+      (3, 4),
+      (3, 5),
+      (3, 6),
+      (3, 7),
+      (4, 4),
+      (4, 5),
+      (4, 6),
+      (4, 7),
+      (4, 8),
+      (5, 5),
+      (5, 6),
+      (5, 7),
+      (5, 8),
+      (5, 9),
+      (6, 6),
+      (6, 7),
+      (6, 8),
+      (6, 9),
+      (6, 10),
+      (7, 7),
+      (7, 8),
+      (7, 9),
+      (7, 10),
+      (7, 11))
 
-    var checksumValues : Array[Long] = Array[Long]()
+    var checksumValues: Array[Long] = Array[Long]()
     var aggregatedChecksumValue = 0L
     for (i <- 1 to 100) {
       resetDependency(conf, rowBasedChecksumEnabled = true)
@@ -330,9 +362,9 @@ class BypassMergeSortShuffleWriterSuite
         shuffleExecutorComponents)
 
       writer.write(Random.shuffle(records).iterator)
-      writer.stop(/* success = */ true)
+      writer.stop( /* success = */ true)
 
-      if(i == 1) {
+      if (i == 1) {
         checksumValues = getRowBasedChecksumValues(writer.getRowBasedChecksums)
         assert(checksumValues.length > 0)
         assert(checksumValues.forall(_ > 0))
@@ -340,8 +372,8 @@ class BypassMergeSortShuffleWriterSuite
         aggregatedChecksumValue = writer.getAggregatedChecksumValue()
         assert(aggregatedChecksumValue != 0)
       } else {
-        assert(checksumValues.sameElements(
-          getRowBasedChecksumValues(writer.getRowBasedChecksums)))
+        assert(
+          checksumValues.sameElements(getRowBasedChecksumValues(writer.getRowBasedChecksums)))
         assert(aggregatedChecksumValue == writer.getAggregatedChecksumValue())
       }
     }

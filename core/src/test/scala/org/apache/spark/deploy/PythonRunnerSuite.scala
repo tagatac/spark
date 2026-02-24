@@ -31,12 +31,15 @@ class PythonRunnerSuite extends SparkFunSuite {
     assert(PythonRunner.formatPath("local:/spark.py") === "/spark.py")
     assert(PythonRunner.formatPath("local:///spark.py") === "/spark.py")
     if (Utils.isWindows) {
-      assert(PythonRunner.formatPath("file:/C:/a/b/spark.py", testWindows = true) ===
-        "C:/a/b/spark.py")
-      assert(PythonRunner.formatPath("C:\\a\\b\\spark.py", testWindows = true) ===
-        "C:/a/b/spark.py")
-      assert(PythonRunner.formatPath("C:\\a b\\spark.py", testWindows = true) ===
-        "C:/a b/spark.py")
+      assert(
+        PythonRunner.formatPath("file:/C:/a/b/spark.py", testWindows = true) ===
+          "C:/a/b/spark.py")
+      assert(
+        PythonRunner.formatPath("C:\\a\\b\\spark.py", testWindows = true) ===
+          "C:/a/b/spark.py")
+      assert(
+        PythonRunner.formatPath("C:\\a b\\spark.py", testWindows = true) ===
+          "C:/a b/spark.py")
     }
     intercept[IllegalArgumentException] { PythonRunner.formatPath("one:two") }
     intercept[IllegalArgumentException] { PythonRunner.formatPath("hdfs:s3:xtremeFS") }
@@ -47,18 +50,22 @@ class PythonRunnerSuite extends SparkFunSuite {
   test("format paths") {
     assert(PythonRunner.formatPaths("spark.py") === Array("spark.py"))
     assert(PythonRunner.formatPaths("file:/spark.py") === Array("/spark.py"))
-    assert(PythonRunner.formatPaths("file:/app.py,local:/spark.py") ===
-      Array("/app.py", "/spark.py"))
-    assert(PythonRunner.formatPaths("me.py,file:/you.py,local:/we.py") ===
-      Array("me.py", "/you.py", "/we.py"))
+    assert(
+      PythonRunner.formatPaths("file:/app.py,local:/spark.py") ===
+        Array("/app.py", "/spark.py"))
+    assert(
+      PythonRunner.formatPaths("me.py,file:/you.py,local:/we.py") ===
+        Array("me.py", "/you.py", "/we.py"))
     if (Utils.isWindows) {
-      assert(PythonRunner.formatPaths("C:\\a\\b\\spark.py", testWindows = true) ===
-        Array("C:/a/b/spark.py"))
-      assert(PythonRunner.formatPaths("C:\\free.py,pie.py", testWindows = true) ===
-        Array("C:/free.py", "pie.py"))
-      assert(PythonRunner.formatPaths("lovely.py,C:\\free.py,file:/d:/fry.py",
-        testWindows = true) ===
-        Array("lovely.py", "C:/free.py", "d:/fry.py"))
+      assert(
+        PythonRunner.formatPaths("C:\\a\\b\\spark.py", testWindows = true) ===
+          Array("C:/a/b/spark.py"))
+      assert(
+        PythonRunner.formatPaths("C:\\free.py,pie.py", testWindows = true) ===
+          Array("C:/free.py", "pie.py"))
+      assert(
+        PythonRunner.formatPaths("lovely.py,C:\\free.py,file:/d:/fry.py", testWindows = true) ===
+          Array("lovely.py", "C:/free.py", "d:/fry.py"))
     }
     intercept[IllegalArgumentException] { PythonRunner.formatPaths("one:two,three") }
     intercept[IllegalArgumentException] { PythonRunner.formatPaths("two,three,four:five:six") }
@@ -68,15 +75,13 @@ class PythonRunnerSuite extends SparkFunSuite {
 
   test("SPARK-54052: PythonErrorUtils should have corresponding methods in SparkThrowable") {
     // Find default methods in SparkThrowable
-    val defaultMethods = classOf[SparkThrowable]
-      .getMethods
+    val defaultMethods = classOf[SparkThrowable].getMethods
       .filter(m => m.getDeclaringClass == classOf[SparkThrowable])
       .map(_.getName)
       .toSet
 
     // Find methods defined in PythonErrorUtils object
-    val utilsMethods = PythonErrorUtils.getClass
-      .getDeclaredMethods
+    val utilsMethods = PythonErrorUtils.getClass.getDeclaredMethods
       .filterNot(_.isSynthetic)
       .map(_.getName)
       .filterNot(_.contains("$"))
@@ -89,7 +94,6 @@ class PythonRunnerSuite extends SparkFunSuite {
          |PythonErrorUtils methods and SparkThrowable default methods differ!
          |Missing in PythonErrorUtils: ${defaultMethods.diff(utilsMethods).mkString(", ")}
          |Extra in PythonErrorUtils: ${utilsMethods.diff(defaultMethods).mkString(", ")}
-         |""".stripMargin
-    )
+         |""".stripMargin)
   }
 }

@@ -79,24 +79,21 @@ private[spark] object KVUtils extends Logging {
 
     // SPARK-49872: Remove jackson JSON string length limitation.
     mapper.getFactory.setStreamReadConstraints(
-      StreamReadConstraints.builder().maxStringLength(Int.MaxValue).build()
-    )
+      StreamReadConstraints.builder().maxStringLength(Int.MaxValue).build())
   }
 
   /**
    * Open or create a disk-based KVStore.
    *
-   * @param path Location of the store.
-   * @param metadata Metadata value to compare to the data in the store. If the store does not
-   *                 contain any metadata (e.g. it's a new store), this value is written as
-   *                 the store's metadata.
-   * @param conf SparkConf use to get `HYBRID_STORE_DISK_BACKEND`
+   * @param path
+   *   Location of the store.
+   * @param metadata
+   *   Metadata value to compare to the data in the store. If the store does not contain any
+   *   metadata (e.g. it's a new store), this value is written as the store's metadata.
+   * @param conf
+   *   SparkConf use to get `HYBRID_STORE_DISK_BACKEND`
    */
-  def open[M: ClassTag](
-      path: File,
-      metadata: M,
-      conf: SparkConf,
-      live: Boolean): KVStore = {
+  def open[M: ClassTag](path: File, metadata: M, conf: SparkConf, live: Boolean): KVStore = {
     require(metadata != null, "Metadata is required.")
 
     val kvSerializer = serializer(conf, live)
@@ -128,50 +125,46 @@ private[spark] object KVUtils extends Logging {
     }
   }
 
-  def createKVStore(
-      storePath: Option[File],
-      live: Boolean,
-      conf: SparkConf): KVStore = {
-    storePath.map { path =>
-      val diskBackend = backend(conf, live)
+  def createKVStore(storePath: Option[File], live: Boolean, conf: SparkConf): KVStore = {
+    storePath
+      .map { path =>
+        val diskBackend = backend(conf, live)
 
-      val dir = diskBackend match {
-        case LEVELDB => "listing.ldb"
-        case ROCKSDB => "listing.rdb"
-      }
+        val dir = diskBackend match {
+          case LEVELDB => "listing.ldb"
+          case ROCKSDB => "listing.rdb"
+        }
 
-      val dbPath = Files.createDirectories(new File(path, dir).toPath()).toFile()
-      Utils.chmod700(dbPath)
+        val dbPath = Files.createDirectories(new File(path, dir).toPath()).toFile()
+        Utils.chmod700(dbPath)
 
-      val metadata = FsHistoryProviderMetadata(
-        FsHistoryProvider.CURRENT_LISTING_VERSION,
-        AppStatusStore.CURRENT_VERSION,
-        conf.get(History.HISTORY_LOG_DIR))
+        val metadata = FsHistoryProviderMetadata(
+          FsHistoryProvider.CURRENT_LISTING_VERSION,
+          AppStatusStore.CURRENT_VERSION,
+          conf.get(History.HISTORY_LOG_DIR))
 
-      try {
-        open(dbPath, metadata, conf, live)
-      } catch {
-        // If there's an error, remove the listing database and any existing UI database
-        // from the store directory, since it's extremely likely that they'll all contain
-        // incompatible information.
-        case _: UnsupportedStoreVersionException | _: MetadataMismatchException =>
-          logInfo("Detected incompatible DB versions, deleting...")
-          path.listFiles().foreach(Utils.deleteRecursively)
+        try {
           open(dbPath, metadata, conf, live)
-        case dbExc @ (_: NativeDB.DBException | _: RocksDBException) =>
-          // Get rid of the corrupted data and re-create it.
-          logWarning(log"Failed to load disk store ${MDC(PATH, dbPath)} :", dbExc)
-          Utils.deleteRecursively(dbPath)
-          open(dbPath, metadata, conf, live)
+        } catch {
+          // If there's an error, remove the listing database and any existing UI database
+          // from the store directory, since it's extremely likely that they'll all contain
+          // incompatible information.
+          case _: UnsupportedStoreVersionException | _: MetadataMismatchException =>
+            logInfo("Detected incompatible DB versions, deleting...")
+            path.listFiles().foreach(Utils.deleteRecursively)
+            open(dbPath, metadata, conf, live)
+          case dbExc @ (_: NativeDB.DBException | _: RocksDBException) =>
+            // Get rid of the corrupted data and re-create it.
+            logWarning(log"Failed to load disk store ${MDC(PATH, dbPath)} :", dbExc)
+            Utils.deleteRecursively(dbPath)
+            open(dbPath, metadata, conf, live)
+        }
       }
-    }.getOrElse(new InMemoryStore())
+      .getOrElse(new InMemoryStore())
   }
 
   /** Turns a KVStoreView into a Scala sequence, applying a filter. */
-  def viewToSeq[T](
-      view: KVStoreView[T],
-      max: Int)
-      (filter: T => Boolean): Seq[T] = {
+  def viewToSeq[T](view: KVStoreView[T], max: Int)(filter: T => Boolean): Seq[T] = {
     val iter = view.closeableIterator()
     try {
       iter.asScala.filter(filter).take(max).toList
@@ -181,10 +174,7 @@ private[spark] object KVUtils extends Logging {
   }
 
   /** Turns an interval of KVStoreView into a Scala sequence, applying a filter. */
-  def viewToSeq[T](
-      view: KVStoreView[T],
-      from: Int,
-      until: Int)(filter: T => Boolean): Seq[T] = {
+  def viewToSeq[T](view: KVStoreView[T], from: Int, until: Int)(filter: T => Boolean): Seq[T] = {
     Utils.tryWithResource(view.closeableIterator()) { iter =>
       iter.asScala.filter(filter).slice(from, until).toList
     }
@@ -219,14 +209,11 @@ private[spark] object KVUtils extends Logging {
   }
 
   /**
-   * Maps all values of KVStoreView to new values using a transformation function
-   * and filtered by a filter function.
+   * Maps all values of KVStoreView to new values using a transformation function and filtered by
+   * a filter function.
    */
-  def mapToSeqWithFilter[T, B](
-      view: KVStoreView[T],
-      max: Int)
-      (mapFunc: T => B)
-      (filterFunc: B => Boolean): Seq[B] = {
+  def mapToSeqWithFilter[T, B](view: KVStoreView[T], max: Int)(mapFunc: T => B)(
+      filterFunc: B => Boolean): Seq[B] = {
     Utils.tryWithResource(view.closeableIterator()) { iter =>
       iter.asScala.map(mapFunc).filter(filterFunc).take(max).toList
     }

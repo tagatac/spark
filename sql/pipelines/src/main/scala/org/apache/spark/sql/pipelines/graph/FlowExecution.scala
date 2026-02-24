@@ -33,11 +33,11 @@ import org.apache.spark.util.ThreadUtils
 
 /**
  * A flow's execution may complete for two reasons:
- * 1. it may finish performing all of its necessary work, or
- * 2. it may be interrupted by a request from a user to stop it.
+ *   1. it may finish performing all of its necessary work, or
+ *   2. it may be interrupted by a request from a user to stop it.
  *
- * We use this result to disambiguate these two cases, using 'ExecutionResult.FINISHED'
- * for the former and 'ExecutionResult.STOPPED' for the latter.
+ * We use this result to disambiguate these two cases, using 'ExecutionResult.FINISHED' for the
+ * former and 'ExecutionResult.STOPPED' for the latter.
  */
 sealed trait ExecutionResult
 object ExecutionResult {
@@ -63,7 +63,8 @@ trait FlowExecution {
    * dataframe is resolved using the pipeline's spark session, and a new session will be started
    * implicitly by the streaming query.
    *
-   * The default value for batch flows is a cloned spark session from the pipeline's spark session.
+   * The default value for batch flows is a cloned spark session from the pipeline's spark
+   * session.
    *
    * Please make sure that the execution thread runs in a different spark session than the
    * pipeline's spark session.
@@ -76,8 +77,8 @@ trait FlowExecution {
   def getOrigin: QueryOrigin
 
   /**
-   * Returns true if and only if this `FlowExecution` has been completed with
-   * either success or an exception.
+   * Returns true if and only if this `FlowExecution` has been completed with either success or an
+   * exception.
    */
   def isCompleted: Boolean = _future.exists(_.isCompleted)
 
@@ -87,8 +88,7 @@ trait FlowExecution {
   /** Retrieves the future that can be used to track execution status. */
   def getFuture: Future[ExecutionResult] = {
     _future.getOrElse(
-      throw new IllegalStateException(s"FlowExecution $identifier has not been executed.")
-    )
+      throw new IllegalStateException(s"FlowExecution $identifier has not been executed."))
   }
 
   /** Tracks the currently running future. */
@@ -103,9 +103,9 @@ trait FlowExecution {
   }
 
   /**
-   * Stops execution of this `FlowExecution`. If you override this, please be sure to
-   * call `super.stop()` at the beginning of your method, so we can properly handle errors
-   * when a user tries to stop a flow.
+   * Stops execution of this `FlowExecution`. If you override this, please be sure to call
+   * `super.stop()` at the beginning of your method, so we can properly handle errors when a user
+   * tries to stop a flow.
    */
   def stop(): Unit = {
     stopped.set(true)
@@ -115,40 +115,40 @@ trait FlowExecution {
   def exception: Option[Throwable] = _future.flatMap(_.value).flatMap(_.failed.toOption)
 
   /**
-   * Executes this FlowExecution synchronously to perform its intended update.
-   * This method should be overridden by subclasses to provide the actual execution logic.
+   * Executes this FlowExecution synchronously to perform its intended update. This method should
+   * be overridden by subclasses to provide the actual execution logic.
    *
-   * @return a Future that completes when the execution is finished or stopped.
+   * @return
+   *   a Future that completes when the execution is finished or stopped.
    */
   def executeInternal(): Future[Unit]
 
   /**
-   * Executes this FlowExecution asynchronously to perform its intended update. A future that can be
-   * used to track execution status is saved, and can be retrieved with `getFuture`.
+   * Executes this FlowExecution asynchronously to perform its intended update. A future that can
+   * be used to track execution status is saved, and can be retrieved with `getFuture`.
    */
   final def executeAsync(): Unit = {
     if (_future.isDefined) {
       throw new IllegalStateException(
-        s"FlowExecution ${identifier.unquotedString} has already been executed."
-      )
+        s"FlowExecution ${identifier.unquotedString} has already been executed.")
     }
 
     val queryOrigin = QueryOrigin(filePath = getOrigin.filePath)
 
-    _future = try {
-      Option(
-        executeInternal()
-          .map(_ => ExecutionResult.FINISHED)
-          .recover {
-            case _: Throwable if stopped.get() =>
-              ExecutionResult.STOPPED
-          }
-      )
-    } catch {
-      case NonFatal(e) =>
-        // Add query origin to exceptions raised while starting a flow
-        throw e.addOrigin(queryOrigin)
-    }
+    _future =
+      try {
+        Option(
+          executeInternal()
+            .map(_ => ExecutionResult.FINISHED)
+            .recover {
+              case _: Throwable if stopped.get() =>
+                ExecutionResult.STOPPED
+            })
+      } catch {
+        case NonFatal(e) =>
+          // Add query origin to exceptions raised while starting a flow
+          throw e.addOrigin(queryOrigin)
+      }
   }
 
   /** The destination that this `FlowExecution` is writing to. */
@@ -191,18 +191,16 @@ trait StreamingFlowExecution extends FlowExecution with Logging {
   /** Visible for testing */
   def getStreamingQuery: StreamingQuery =
     _streamingQuery.getOrElse(
-      throw new IllegalStateException("StreamingPhysicalFlow has not been started")
-    )
+      throw new IllegalStateException("StreamingPhysicalFlow has not been started"))
 
   /**
-   * Executes this `StreamingFlowExecution` by starting its stream with the correct scheduling pool
-   * and confs.
+   * Executes this `StreamingFlowExecution` by starting its stream with the correct scheduling
+   * pool and confs.
    */
   override final def executeInternal(): Future[Unit] = {
     logInfo(
       log"Starting ${MDC(LogKeys.TABLE_NAME, identifier)} with " +
-      log"checkpoint location ${MDC(LogKeys.CHECKPOINT_PATH, checkpointPath)}"
-    )
+        log"checkpoint location ${MDC(LogKeys.CHECKPOINT_PATH, checkpointPath)}")
     val streamingQuery = SparkSessionUtils.withSqlConf(spark, sqlConf.toList: _*)(startStream())
     _streamingQuery = Option(streamingQuery)
     Future(streamingQuery.awaitTermination())
@@ -218,15 +216,14 @@ class StreamingTableWrite(
     val checkpointPath: String,
     val trigger: Trigger,
     val destination: Table,
-    val sqlConf: Map[String, String]
-) extends StreamingFlowExecution {
+    val sqlConf: Map[String, String])
+    extends StreamingFlowExecution {
 
   override def getOrigin: QueryOrigin = flow.origin
 
   def startStream(): StreamingQuery = {
     val data = graph.reanalyzeFlow(flow).df
-    val dataStreamWriter = data
-      .writeStream
+    val dataStreamWriter = data.writeStream
       .queryName(displayName)
       .option("checkpointLocation", checkpointPath)
       .trigger(trigger)
@@ -243,8 +240,8 @@ class BatchTableWrite(
     val graph: DataflowGraph,
     val destination: Table,
     val updateContext: PipelineUpdateContext,
-    val sqlConf: Map[String, String]
-) extends FlowExecution {
+    val sqlConf: Map[String, String])
+    extends FlowExecution {
 
   override final def isStreaming: Boolean = false
   override def getOrigin: QueryOrigin = flow.origin
@@ -277,15 +274,15 @@ class BatchTableWrite(
 
 /** A `StreamingFlowExecution` that writes a streaming `DataFrame` to a `Sink`. */
 class SinkWrite(
-  val identifier: TableIdentifier,
-  val flow: ResolvedFlow,
-  val graph: DataflowGraph,
-  val updateContext: PipelineUpdateContext,
-  val checkpointPath: String,
-  val trigger: Trigger,
-  val destination: Sink,
-  val sqlConf: Map[String, String]
-) extends StreamingFlowExecution {
+    val identifier: TableIdentifier,
+    val flow: ResolvedFlow,
+    val graph: DataflowGraph,
+    val updateContext: PipelineUpdateContext,
+    val checkpointPath: String,
+    val trigger: Trigger,
+    val destination: Sink,
+    val sqlConf: Map[String, String])
+    extends StreamingFlowExecution {
 
   override def getOrigin: QueryOrigin = flow.origin
 

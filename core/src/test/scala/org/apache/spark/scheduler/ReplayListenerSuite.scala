@@ -37,8 +37,8 @@ import org.apache.spark.util.{JsonProtocol, JsonProtocolSuite, Utils}
  * Test whether ReplayListenerBus replays events from logs correctly.
  */
 class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSparkContext {
-  private val fileSystem = Utils.getHadoopFileSystem("/",
-    SparkHadoopUtil.get.newConfiguration(new SparkConf()))
+  private val fileSystem =
+    Utils.getHadoopFileSystem("/", SparkHadoopUtil.get.newConfiguration(new SparkConf()))
   private var testDir: File = _
 
   before {
@@ -53,8 +53,8 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     val logFilePath = getFilePath(testDir, "events.txt")
     val fstream = fileSystem.create(logFilePath)
     val fwriter = new OutputStreamWriter(fstream, StandardCharsets.UTF_8)
-    val applicationStart = SparkListenerApplicationStart("Greatest App (N)ever", None,
-      125L, "Mickey", None)
+    val applicationStart =
+      SparkListenerApplicationStart("Greatest App (N)ever", None, 125L, "Mickey", None)
     val applicationEnd = SparkListenerApplicationEnd(1000L)
     Utils.tryWithResource(new PrintWriter(fwriter)) { writer =>
       // scalastyle:off println
@@ -79,11 +79,11 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
   }
 
   /**
-   * Test replaying compressed spark history file that internally throws an EOFException.  To
-   * avoid sensitivity to the compression specifics the test forces an EOFException to occur
-   * while reading bytes from the underlying stream (such as observed in actual history files
-   * in some cases) and forces specific failure handling.  This validates correctness in both
-   * cases when maybeTruncated is true or false.
+   * Test replaying compressed spark history file that internally throws an EOFException. To avoid
+   * sensitivity to the compression specifics the test forces an EOFException to occur while
+   * reading bytes from the underlying stream (such as observed in actual history files in some
+   * cases) and forces specific failure handling. This validates correctness in both cases when
+   * maybeTruncated is true or false.
    */
   test("Replay compressed inprogress log file succeeding on partial read") {
     val buffered = new ByteArrayOutputStream
@@ -91,9 +91,8 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     val compstream = codec.compressedContinuousOutputStream(buffered)
     val cwriter = new OutputStreamWriter(compstream, StandardCharsets.UTF_8)
     Utils.tryWithResource(new PrintWriter(cwriter)) { writer =>
-
-      val applicationStart = SparkListenerApplicationStart("AppStarts", None,
-        125L, "Mickey", None)
+      val applicationStart =
+        SparkListenerApplicationStart("AppStarts", None, 125L, "Mickey", None)
       val applicationEnd = SparkListenerApplicationEnd(1000L)
 
       // scalastyle:off println
@@ -126,10 +125,11 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
 
     // Verify the replay throws the EOF exception since the input may not be truncated.
     val logData2 = EventLogFileReader.openEventLog(logFilePath, fileSystem)
-    Utils.tryWithResource(new EarlyEOFInputStream(logData2, buffered.size - 10)) { failingStream2 =>
-      intercept[EOFException] {
-        replayer.replay(failingStream2, logFilePath.toString, false)
-      }
+    Utils.tryWithResource(new EarlyEOFInputStream(logData2, buffered.size - 10)) {
+      failingStream2 =>
+        intercept[EOFException] {
+          replayer.replay(failingStream2, logFilePath.toString, false)
+        }
     }
   }
 
@@ -137,8 +137,12 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     val logFilePath = getFilePath(testDir, "incompatible.txt")
     val fstream = fileSystem.create(logFilePath)
     val fwriter = new OutputStreamWriter(fstream, StandardCharsets.UTF_8)
-    val applicationStart = SparkListenerApplicationStart("Incompatible App", None,
-      125L, "UserUsingIncompatibleVersion", None)
+    val applicationStart = SparkListenerApplicationStart(
+      "Incompatible App",
+      None,
+      125L,
+      "UserUsingIncompatibleVersion",
+      None)
     val applicationEnd = SparkListenerApplicationEnd(1000L)
     Utils.tryWithResource(new PrintWriter(fwriter)) { writer =>
       // scalastyle:off println
@@ -175,7 +179,6 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
     }
   }
 
-
   /* ----------------- *
    * Actual test logic *
    * ----------------- */
@@ -183,9 +186,9 @@ class ReplayListenerSuite extends SparkFunSuite with BeforeAndAfter with LocalSp
   /**
    * Test end-to-end replaying of events.
    *
-   * This test runs a few simple jobs with event logging enabled, and compares each emitted
-   * event to the corresponding event replayed from the event logs. This test makes the
-   * assumption that the event logging behavior is correct (tested in a separate suite).
+   * This test runs a few simple jobs with event logging enabled, and compares each emitted event
+   * to the corresponding event replayed from the event logs. This test makes the assumption that
+   * the event logging behavior is correct (tested in a separate suite).
    */
   private def testApplicationReplay(codecName: Option[String] = None): Unit = {
     val logDir = new File(testDir.getAbsolutePath, "test-replay")

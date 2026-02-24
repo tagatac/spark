@@ -30,7 +30,8 @@ private[ui] class LogPage(parent: MasterWebUI) extends WebUIPage("logPage") with
     val logDir = sys.env.getOrElse("SPARK_LOG_DIR", "logs/")
     val logType = request.getParameter("logType")
     val offset = Option(request.getParameter("offset")).map(_.toLong)
-    val byteLength = Option(request.getParameter("byteLength")).map(_.toInt)
+    val byteLength = Option(request.getParameter("byteLength"))
+      .map(_.toInt)
       .getOrElse(DEFAULT_BYTES)
     val (logText, startByte, endByte, logLength) =
       getLog(parent.master.conf, logDir, logType, offset, byteLength)
@@ -61,7 +62,7 @@ private[ui] class LogPage(parent: MasterWebUI) extends WebUIPage("logPage") with
 
     val content =
       <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script> ++
-      <div>
+        <div>
         <p><a href="/">Back to Master</a></p>
         {range}
         <div class="log-content" style="height:80vh; overflow:auto; padding:5px;">

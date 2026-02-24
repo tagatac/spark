@@ -62,15 +62,15 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     }
   private val DRIVER_POD = new PodBuilder()
     .withNewMetadata()
-      .withName(DRIVER_POD_NAME)
-      .withUid(DRIVER_POD_UID)
-      .endMetadata()
+    .withName(DRIVER_POD_NAME)
+    .withUid(DRIVER_POD_UID)
+    .endMetadata()
     .withNewSpec()
-      .withNodeName("some-node")
-      .endSpec()
+    .withNodeName("some-node")
+    .endSpec()
     .withNewStatus()
-      .withHostIP("192.168.99.100")
-      .endStatus()
+    .withHostIP("192.168.99.100")
+    .endStatus()
     .build()
   private var baseConf: SparkConf = _
 
@@ -105,7 +105,9 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set(EXECUTOR_GPU_ID.amountConf, "2")
     val error = intercept[SparkException] {
       initDefaultProfile(baseConf)
-      val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+      val step = new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
         defaultProfile)
       val executor = step.configurePod(SparkPod.initialPod())
     }.getMessage()
@@ -116,8 +118,10 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set(EXECUTOR_GPU_ID.vendorConf, "nvidia.com")
     val error = intercept[SparkException] {
       initDefaultProfile(baseConf)
-      val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
-      defaultProfile)
+      val step = new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
+        defaultProfile)
       val executor = step.configurePod(SparkPod.initialPod())
     }.getMessage()
     assert(error.contains("You must specify an amount for gpu"))
@@ -128,7 +132,9 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set(KUBERNETES_EXECUTOR_LIMIT_CORES, "1")
     val error = intercept[IllegalArgumentException] {
       initDefaultProfile(baseConf)
-      val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+      val step = new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
         defaultProfile)
       val executor = step.configurePod(SparkPod.initialPod())
     }.getMessage()
@@ -137,7 +143,9 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
 
   test("SPARK-53096: Check the default value of terminationGracePeriodSeconds") {
     initDefaultProfile(baseConf)
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
     assert(executor.pod.getSpec.getTerminationGracePeriodSeconds === 30)
@@ -147,14 +155,18 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val m = intercept[SparkIllegalArgumentException] {
       baseConf.set(KUBERNETES_EXECUTOR_TERMINATION_GRACE_PERIOD_SECONDS, -1L)
       initDefaultProfile(baseConf)
-      new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+      new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
         defaultProfile).configurePod(SparkPod.initialPod())
     }.getMessage
     assert(m.contains("terminationGracePeriodSeconds must be non-negative"))
 
     baseConf.set(KUBERNETES_EXECUTOR_TERMINATION_GRACE_PERIOD_SECONDS, 0L)
     initDefaultProfile(baseConf)
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
     assert(executor.pod.getSpec.getTerminationGracePeriodSeconds === 0L)
@@ -164,30 +176,32 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val fpgaResourceID = new ResourceID(SPARK_EXECUTOR_PREFIX, FPGA)
     val gpuExecutorResourceID = new ResourceID(SPARK_EXECUTOR_PREFIX, GPU)
     val gpuResources =
-      Map(("nvidia.com/gpu" -> TestResourceInformation(gpuExecutorResourceID, "2", "nvidia.com")),
-      ("foo.com/fpga" -> TestResourceInformation(fpgaResourceID, "1", "foo.com")))
+      Map(
+        ("nvidia.com/gpu" -> TestResourceInformation(gpuExecutorResourceID, "2", "nvidia.com")),
+        ("foo.com/fpga" -> TestResourceInformation(fpgaResourceID, "1", "foo.com")))
     gpuResources.foreach { case (_, testRInfo) =>
       baseConf.set(testRInfo.rId.amountConf, testRInfo.count)
       baseConf.set(testRInfo.rId.vendorConf, testRInfo.vendor)
     }
     initDefaultProfile(baseConf)
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
     assert(executor.container.getResources.getLimits.size() === 3)
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "1408Mi")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "1408Mi")
     gpuResources.foreach { case (k8sName, testRInfo) =>
-      assert(amountAndFormat(
-        executor.container.getResources.getLimits.get(k8sName)) === testRInfo.count)
+      assert(
+        amountAndFormat(
+          executor.container.getResources.getLimits.get(k8sName)) === testRInfo.count)
     }
   }
 
   test("basic executor pod has reasonable defaults") {
     val conf = newExecutorConf()
-    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf),
-      defaultProfile)
+    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf), defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
     // The executor pod name and default labels.
@@ -206,8 +220,7 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     assert(executor.container.getImage === EXECUTOR_IMAGE)
     assert(executor.container.getVolumeMounts.size() == 1)
     assert(executor.container.getResources.getLimits.size() === 1)
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "1408Mi")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "1408Mi")
 
     // The pod has no node selector, and 1 volume.
     assert(executor.pod.getSpec.getNodeSelector.isEmpty)
@@ -228,14 +241,18 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
 
   test("executor pod hostnames get truncated to 63 characters") {
     withPodNamePrefix {
-      val longPodNamePrefix = "loremipsumdolorsitametvimatelitrefficiendisuscipianturvixlegeresple"
+      val longPodNamePrefix =
+        "loremipsumdolorsitametvimatelitrefficiendisuscipianturvixlegeresple"
       baseConf.remove(KUBERNETES_EXECUTOR_POD_NAME_PREFIX)
       baseConf.set("spark.app.name", longPodNamePrefix)
       initDefaultProfile(baseConf)
-      val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+      val step = new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
         defaultProfile)
-      assert(step.configurePod(SparkPod.initialPod()).pod.getSpec.getHostname.length ===
-        KUBERNETES_DNS_LABEL_NAME_MAX_LENGTH)
+      assert(
+        step.configurePod(SparkPod.initialPod()).pod.getSpec.getHostname.length ===
+          KUBERNETES_DNS_LABEL_NAME_MAX_LENGTH)
     }
   }
 
@@ -247,10 +264,10 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
           exception = intercept[SparkIllegalArgumentException](newExecutorConf()),
           condition = "INVALID_CONF_VALUE.REQUIREMENT",
           parameters = Map(
-              "confName" -> KUBERNETES_EXECUTOR_POD_NAME_PREFIX.key,
-              "confValue" -> invalid,
-              "confRequirement" -> ("must conform https://kubernetes.io/docs/concepts/overview/" +
-                "working-with-objects/names/#dns-subdomain-names and the value length <= 237")))
+            "confName" -> KUBERNETES_EXECUTOR_POD_NAME_PREFIX.key,
+            "confValue" -> invalid,
+            "confRequirement" -> ("must conform https://kubernetes.io/docs/concepts/overview/" +
+              "working-with-objects/names/#dns-subdomain-names and the value length <= 237")))
       }
     }
   }
@@ -261,7 +278,9 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       baseConf.remove(KUBERNETES_EXECUTOR_POD_NAME_PREFIX)
       baseConf.set("spark.app.name", invalidPrefix)
       initDefaultProfile(baseConf)
-      val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+      val step = new BasicExecutorFeatureStep(
+        newExecutorConf(),
+        new SecurityManager(baseConf),
         defaultProfile)
       val hostname = step.configurePod(SparkPod.initialPod()).pod.getSpec().getHostname()
       assert(hostname.length <= KUBERNETES_DNS_LABEL_NAME_MAX_LENGTH)
@@ -277,8 +296,8 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       executorId = "EXECID",
       appId = KubernetesTestConf.APP_ID,
       driverPod = Some(DRIVER_POD))
-    val step = new BasicExecutorFeatureStep(executorConf, new SecurityManager(baseConf),
-      defaultProfile)
+    val step =
+      new BasicExecutorFeatureStep(executorConf, new SecurityManager(baseConf), defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
     val hostname = executor.pod.getSpec.getHostname
@@ -292,51 +311,61 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set(config.EXECUTOR_CLASS_PATH, "bar=baz")
     initDefaultProfile(baseConf)
     val kconf = newExecutorConf(environment = Map("qux" -> "quux"))
-    val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(baseConf),
-      defaultProfile)
+    val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(baseConf), defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
-    checkEnv(executor, baseConf,
-      Map("SPARK_JAVA_OPT_0" -> "foo=bar",
-        ENV_CLASSPATH -> "bar=baz",
-        "qux" -> "quux"))
+    checkEnv(
+      executor,
+      baseConf,
+      Map("SPARK_JAVA_OPT_0" -> "foo=bar", ENV_CLASSPATH -> "bar=baz", "qux" -> "quux"))
     checkOwnerReferences(executor.pod, DRIVER_POD_UID)
   }
 
   test("SPARK-32655 Support appId/execId placeholder in SPARK_EXECUTOR_DIRS") {
-    val kconf = newExecutorConf(environment = Map(ENV_EXECUTOR_DIRS ->
-      "/p1/SPARK_APPLICATION_ID/SPARK_EXECUTOR_ID,/p2/SPARK_APPLICATION_ID/SPARK_EXECUTOR_ID"))
-    val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(baseConf),
-      defaultProfile)
+    val kconf = newExecutorConf(environment = Map(
+      ENV_EXECUTOR_DIRS ->
+        "/p1/SPARK_APPLICATION_ID/SPARK_EXECUTOR_ID,/p2/SPARK_APPLICATION_ID/SPARK_EXECUTOR_ID"))
+    val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(baseConf), defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
-    checkEnv(executor, baseConf, Map(ENV_EXECUTOR_DIRS ->
-      s"/p1/${KubernetesTestConf.APP_ID}/1,/p2/${KubernetesTestConf.APP_ID}/1"))
+    checkEnv(
+      executor,
+      baseConf,
+      Map(
+        ENV_EXECUTOR_DIRS ->
+          s"/p1/${KubernetesTestConf.APP_ID}/1,/p2/${KubernetesTestConf.APP_ID}/1"))
   }
 
-  test("SPARK-49190: Add SPARK_EXECUTOR_ATTRIBUTE_(APP|EXECUTOR)_ID if CUSTOM_EXECUTOR_LOG_URL" +
+  test(
+    "SPARK-49190: Add SPARK_EXECUTOR_ATTRIBUTE_(APP|EXECUTOR)_ID if CUSTOM_EXECUTOR_LOG_URL" +
       " is defined") {
-    val conf = baseConf.clone()
+    val conf = baseConf
+      .clone()
       .set(UI.CUSTOM_EXECUTOR_LOG_URL, "https://custom-executor-log-server/")
     val kconf = KubernetesTestConf.createExecutorConf(sparkConf = conf)
     val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(conf), defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
-    checkEnv(executor, conf, Map(
-      ENV_EXECUTOR_ATTRIBUTE_APP_ID -> KubernetesTestConf.APP_ID,
-      ENV_EXECUTOR_ATTRIBUTE_EXECUTOR_ID -> KubernetesTestConf.EXECUTOR_ID))
+    checkEnv(
+      executor,
+      conf,
+      Map(
+        ENV_EXECUTOR_ATTRIBUTE_APP_ID -> KubernetesTestConf.APP_ID,
+        ENV_EXECUTOR_ATTRIBUTE_EXECUTOR_ID -> KubernetesTestConf.EXECUTOR_ID))
   }
 
   test("SPARK-53944: Support spark.kubernetes.executor.useDriverPodIP") {
-    Seq((false, "localhost"), (true, "bindAddress")).foreach {
-      case (flag, address) =>
-        val conf = baseConf.clone()
-          .set(DRIVER_BIND_ADDRESS, "bindAddress")
-          .set(KUBERNETES_EXECUTOR_USE_DRIVER_POD_IP, flag)
-        val kconf = KubernetesTestConf.createExecutorConf(sparkConf = conf)
-        val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(conf), defaultProfile)
-        val executor = step.configurePod(SparkPod.initialPod())
-        checkEnv(executor, conf, Map(
-          ENV_DRIVER_URL -> s"spark://CoarseGrainedScheduler@$address:7098"))
+    Seq((false, "localhost"), (true, "bindAddress")).foreach { case (flag, address) =>
+      val conf = baseConf
+        .clone()
+        .set(DRIVER_BIND_ADDRESS, "bindAddress")
+        .set(KUBERNETES_EXECUTOR_USE_DRIVER_POD_IP, flag)
+      val kconf = KubernetesTestConf.createExecutorConf(sparkConf = conf)
+      val step = new BasicExecutorFeatureStep(kconf, new SecurityManager(conf), defaultProfile)
+      val executor = step.configurePod(SparkPod.initialPod())
+      checkEnv(
+        executor,
+        conf,
+        Map(ENV_DRIVER_URL -> s"spark://CoarseGrainedScheduler@$address:7098"))
     }
   }
 
@@ -344,23 +373,29 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set("spark.kubernetes.resource.type", "python")
     baseConf.set(PYSPARK_EXECUTOR_MEMORY, 42L)
     initDefaultProfile(baseConf)
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
     // This is checking that basic executor + executorMemory = 1408 + 42 = 1450
-    assert(amountAndFormat(executor.container.getResources.getRequests.get("memory")) === "1450Mi")
+    assert(
+      amountAndFormat(executor.container.getResources.getRequests.get("memory")) === "1450Mi")
   }
 
   test("auth secret propagation") {
-    val conf = baseConf.clone()
+    val conf = baseConf
+      .clone()
       .set(config.NETWORK_AUTH_ENABLED, true)
       .set("spark.master", "k8s://127.0.0.1")
 
     val secMgr = new SecurityManager(conf)
     secMgr.initializeAuth()
 
-    val step = new BasicExecutorFeatureStep(KubernetesTestConf.createExecutorConf(sparkConf = conf),
-      secMgr, defaultProfile)
+    val step = new BasicExecutorFeatureStep(
+      KubernetesTestConf.createExecutorConf(sparkConf = conf),
+      secMgr,
+      defaultProfile)
 
     val executor = step.configurePod(SparkPod.initialPod())
     checkEnv(executor, conf, Map(SecurityManager.ENV_AUTH_SECRET -> secMgr.getSecretKey()))
@@ -368,18 +403,22 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
 
   test("Auth secret shouldn't propagate if files are loaded.") {
     withSecretFile("some-secret") { secretFile =>
-      val conf = baseConf.clone()
+      val conf = baseConf
+        .clone()
         .set(config.NETWORK_AUTH_ENABLED, true)
         .set(config.AUTH_SECRET_FILE, secretFile.getAbsolutePath)
         .set("spark.master", "k8s://127.0.0.1")
       val secMgr = new SecurityManager(conf)
       secMgr.initializeAuth()
       val step = new BasicExecutorFeatureStep(
-        KubernetesTestConf.createExecutorConf(sparkConf = conf), secMgr, defaultProfile)
+        KubernetesTestConf.createExecutorConf(sparkConf = conf),
+        secMgr,
+        defaultProfile)
 
       val executor = step.configurePod(SparkPod.initialPod())
-      assert(!KubernetesFeaturesTestUtils.containerHasEnvVar(
-        executor.container, SecurityManager.ENV_AUTH_SECRET))
+      assert(
+        !KubernetesFeaturesTestUtils
+          .containerHasEnvVar(executor.container, SecurityManager.ENV_AUTH_SECRET))
     }
   }
 
@@ -388,11 +427,14 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.set("spark.memory.offHeap.size", "42m")
     initDefaultProfile(baseConf)
 
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
     // This is checking that basic executor + executorMemory = 1408 + 42 = 1450
-    assert(amountAndFormat(executor.container.getResources.getRequests.get("memory")) === "1450Mi")
+    assert(
+      amountAndFormat(executor.container.getResources.getRequests.get("memory")) === "1450Mi")
   }
 
   test("basic resourceprofile") {
@@ -408,10 +450,8 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf), rp)
     val executor = step.configurePod(SparkPod.initialPod())
 
-    assert(amountAndFormat(executor.container.getResources
-      .getRequests.get("cpu")) === "4")
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "6144Mi")
+    assert(amountAndFormat(executor.container.getResources.getRequests.get("cpu")) === "4")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "6144Mi")
   }
 
   test("resourceprofile with gpus") {
@@ -425,33 +465,42 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf), rp)
     val executor = step.configurePod(SparkPod.initialPod())
 
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "1408Mi")
-    assert(amountAndFormat(executor.container.getResources
-      .getRequests.get("cpu")) === "2")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "1408Mi")
+    assert(amountAndFormat(executor.container.getResources.getRequests.get("cpu")) === "2")
 
     assert(executor.container.getResources.getLimits.size() === 2)
-    assert(amountAndFormat(executor.container.getResources.getLimits.get("nvidia.com/gpu")) === "2")
+    assert(
+      amountAndFormat(executor.container.getResources.getLimits.get("nvidia.com/gpu")) === "2")
   }
 
   test("Verify spark conf dir is mounted as configmap volume on executor pod's container.") {
     val baseDriverPod = SparkPod.initialPod()
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val podConfigured = step.configurePod(baseDriverPod)
-    assert(SecretVolumeUtils.containerHasVolume(podConfigured.container,
-      SPARK_CONF_VOLUME_EXEC, SPARK_CONF_DIR_INTERNAL))
+    assert(
+      SecretVolumeUtils.containerHasVolume(
+        podConfigured.container,
+        SPARK_CONF_VOLUME_EXEC,
+        SPARK_CONF_DIR_INTERNAL))
     assert(SecretVolumeUtils.podHasVolume(podConfigured.pod, SPARK_CONF_VOLUME_EXEC))
   }
 
   test("SPARK-34316 Disable configmap volume on executor pod's container") {
     baseConf.set(KUBERNETES_EXECUTOR_DISABLE_CONFIGMAP, true)
     val baseDriverPod = SparkPod.initialPod()
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val podConfigured = step.configurePod(baseDriverPod)
-    assert(!SecretVolumeUtils.containerHasVolume(podConfigured.container,
-      SPARK_CONF_VOLUME_EXEC, SPARK_CONF_DIR_INTERNAL))
+    assert(
+      !SecretVolumeUtils.containerHasVolume(
+        podConfigured.container,
+        SPARK_CONF_VOLUME_EXEC,
+        SPARK_CONF_DIR_INTERNAL))
     assert(!SecretVolumeUtils.podHasVolume(podConfigured.pod, SPARK_CONF_VOLUME_EXEC))
   }
 
@@ -460,8 +509,11 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val rp = new ResourceProfileBuilder().build()
     val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf), rp)
     val podConfigured = step.configurePod(baseDriverPod)
-    assert(SecretVolumeUtils.containerHasVolume(podConfigured.container,
-      SPARK_CONF_VOLUME_EXEC, SPARK_CONF_DIR_INTERNAL))
+    assert(
+      SecretVolumeUtils.containerHasVolume(
+        podConfigured.container,
+        SPARK_CONF_VOLUME_EXEC,
+        SPARK_CONF_DIR_INTERNAL))
     assert(SecretVolumeUtils.podHasVolume(podConfigured.pod, SPARK_CONF_VOLUME_EXEC))
   }
 
@@ -471,8 +523,11 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val rp = new ResourceProfileBuilder().build()
     val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf), rp)
     val podConfigured = step.configurePod(baseDriverPod)
-    assert(!SecretVolumeUtils.containerHasVolume(podConfigured.container,
-      SPARK_CONF_VOLUME_EXEC, SPARK_CONF_DIR_INTERNAL))
+    assert(
+      !SecretVolumeUtils.containerHasVolume(
+        podConfigured.container,
+        SPARK_CONF_VOLUME_EXEC,
+        SPARK_CONF_DIR_INTERNAL))
     assert(!SecretVolumeUtils.podHasVolume(podConfigured.pod, SPARK_CONF_VOLUME_EXEC))
   }
 
@@ -483,7 +538,8 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       val step1 =
         new BasicExecutorFeatureStep(newExecutorConf(), sm, defaultProfile)
       val containerPort1 = step1.configurePod(initPod).container.getPorts.get(0)
-      assert(containerPort1.getContainerPort === DEFAULT_BLOCKMANAGER_PORT,
+      assert(
+        containerPort1.getContainerPort === DEFAULT_BLOCKMANAGER_PORT,
         s"should use port no. $DEFAULT_BLOCKMANAGER_PORT as default")
 
       baseConf.set(BLOCK_MANAGER_PORT, 12345)
@@ -509,22 +565,28 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     baseConf.remove(KUBERNETES_EXECUTOR_POD_NAME_PREFIX)
     baseConf.set("spark.app.name", "xyz.abc _i_am_a_app_name_w/_some_abbrs")
     val baseDriverPod = SparkPod.initialPod()
-    val step1 = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step1 = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val podConfigured1 = step1.configurePod(baseDriverPod)
-    assert(podConfigured1.pod.getMetadata.getName
-      .startsWith("xyz-abc-i-am-a-app-name-w-some-abbrs"))
+    assert(
+      podConfigured1.pod.getMetadata.getName
+        .startsWith("xyz-abc-i-am-a-app-name-w-some-abbrs"))
 
     // scalastyle:off nonascii
     baseConf.set("spark.app.name", "time.is the#most￥valuable_—thing。it's&about?time.")
     // scalastyle:on
 
-    val step2 = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step2 = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
 
     val podConfigured2 = step2.configurePod(baseDriverPod)
-    assert(podConfigured2.pod.getMetadata.getName
-      .startsWith("time-is-the-most-valuable-thing-it-s-about-time-"))
+    assert(
+      podConfigured2.pod.getMetadata.getName
+        .startsWith("time-is-the-most-valuable-thing-it-s-about-time-"))
 
   }
 
@@ -537,12 +599,13 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       .set(s"${KUBERNETES_DRIVER_NODE_SELECTOR_PREFIX}driverNodeLabelKey", "driverNodeLabelValue")
 
     val executorConf = KubernetesTestConf.createExecutorConf(sparkConf)
-    val executor = new BasicExecutorFeatureStep(executorConf, new SecurityManager(baseConf),
-      defaultProfile).configurePod(initPod)
-    assert(executor.pod.getSpec.getNodeSelector.asScala === Map(
-      "nodeLabelKey" -> "nodeLabelValue",
-      "execNodeLabelKey" -> "execNodeLabelValue"
-    ))
+    val executor =
+      new BasicExecutorFeatureStep(executorConf, new SecurityManager(baseConf), defaultProfile)
+        .configurePod(initPod)
+    assert(
+      executor.pod.getSpec.getNodeSelector.asScala === Map(
+        "nodeLabelKey" -> "nodeLabelValue",
+        "execNodeLabelKey" -> "execNodeLabelValue"))
   }
 
   test(s"SPARK-38194: memory overhead factor precendence") {
@@ -560,12 +623,10 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     sparkConf.set(EXECUTOR_MEMORY_OVERHEAD_FACTOR, expectedFactor)
     sparkConf.set(MEMORY_OVERHEAD_FACTOR, 0.3)
 
-    val conf = KubernetesTestConf.createExecutorConf(
-      sparkConf = sparkConf)
+    val conf = KubernetesTestConf.createExecutorConf(sparkConf = sparkConf)
     ResourceProfile.clearDefaultProfile()
     val resourceProfile = ResourceProfile.getOrCreateDefaultProfile(sparkConf)
-    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf),
-      resourceProfile)
+    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf), resourceProfile)
     val pod = step.configurePod(SparkPod.initialPod())
     val mem = amountAndFormat(pod.container.getResources.getRequests.get("memory"))
     val expected = (executorMem + executorMem * expectedFactor).toInt
@@ -586,12 +647,10 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
     val expectedFactor = 0.3
     sparkConf.set(MEMORY_OVERHEAD_FACTOR, expectedFactor)
 
-    val conf = KubernetesTestConf.createExecutorConf(
-      sparkConf = sparkConf)
+    val conf = KubernetesTestConf.createExecutorConf(sparkConf = sparkConf)
     ResourceProfile.clearDefaultProfile()
     val resourceProfile = ResourceProfile.getOrCreateDefaultProfile(sparkConf)
-    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf),
-      resourceProfile)
+    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf), resourceProfile)
     val pod = step.configurePod(SparkPod.initialPod())
     val mem = amountAndFormat(pod.container.getResources.getRequests.get("memory"))
     val expected = (executorMem + executorMem * expectedFactor).toInt
@@ -605,7 +664,9 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       .withContainerPort(1000)
       .build()
     baseDriverPod.container.setPorts(Seq(ports).asJava)
-    val step1 = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step1 = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val podConfigured1 = step1.configurePod(baseDriverPod)
     // port-from-template should exist after step1
@@ -618,17 +679,14 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       .set(CONTAINER_IMAGE, "spark-driver:latest")
       .set(EXECUTOR_MIN_MEMORY_OVERHEAD, 500L)
 
-    val conf = KubernetesTestConf.createExecutorConf(
-      sparkConf = sparkConf)
+    val conf = KubernetesTestConf.createExecutorConf(sparkConf = sparkConf)
     ResourceProfile.clearDefaultProfile()
     val resourceProfile = ResourceProfile.getOrCreateDefaultProfile(sparkConf)
-    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf),
-      resourceProfile)
+    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf), resourceProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
     // memory = 1024M (default) + 500B (minimum overhead got overridden from the 384Mib)
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "1524Mi")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "1524Mi")
   }
 
   test("SPARK-47208: Explicit overhead takes precedence over minimum overhead") {
@@ -638,21 +696,20 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       .set(EXECUTOR_MEMORY_OVERHEAD, 150L)
       .set(EXECUTOR_MIN_MEMORY_OVERHEAD, 500L)
 
-    val conf = KubernetesTestConf.createExecutorConf(
-      sparkConf = sparkConf)
+    val conf = KubernetesTestConf.createExecutorConf(sparkConf = sparkConf)
     ResourceProfile.clearDefaultProfile()
     val resourceProfile = ResourceProfile.getOrCreateDefaultProfile(sparkConf)
-    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf),
-      resourceProfile)
+    val step = new BasicExecutorFeatureStep(conf, new SecurityManager(baseConf), resourceProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
     // memory = 1024M  + 150MB (overrides any other overhead calculation)
-    assert(amountAndFormat(executor.container.getResources
-      .getLimits.get("memory")) === "1174Mi")
+    assert(amountAndFormat(executor.container.getResources.getLimits.get("memory")) === "1174Mi")
   }
 
   test("SPARK-55431: executor pod sets resizePolicy to NotRequired for cpu and memory") {
-    val step = new BasicExecutorFeatureStep(newExecutorConf(), new SecurityManager(baseConf),
+    val step = new BasicExecutorFeatureStep(
+      newExecutorConf(),
+      new SecurityManager(baseConf),
       defaultProfile)
     val executor = step.configurePod(SparkPod.initialPod())
 
@@ -699,13 +756,14 @@ class BasicExecutorFeatureStepSuite extends SparkFunSuite with BeforeAndAfter {
       s"$ENV_JAVA_OPT_PREFIX${ind + extraJavaOptsStart}" -> opt
     }.toMap
 
-    val containerEnvs = executorPod.container.getEnv.asScala.map {
-      x => (x.getName, x.getValue)
+    val containerEnvs = executorPod.container.getEnv.asScala.map { x =>
+      (x.getName, x.getValue)
     }.toMap
 
     val expectedEnvs = defaultEnvs ++ additionalEnvVars ++ extraJavaOptsEnvs
     assert(containerEnvs === expectedEnvs)
   }
 
-  private def amountAndFormat(quantity: Quantity): String = quantity.getAmount + quantity.getFormat
+  private def amountAndFormat(quantity: Quantity): String =
+    quantity.getAmount + quantity.getFormat
 }

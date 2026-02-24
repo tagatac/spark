@@ -28,7 +28,8 @@ import org.apache.spark.util.Utils
 
 /** Page for Spark Web UI that shows statistics of jobs running in the thrift server */
 private[ui] class ThriftServerSessionPage(parent: ThriftServerTab)
-  extends WebUIPage("session") with Logging {
+    extends WebUIPage("session")
+    with Logging {
   val store = parent.store
   private val startTime = parent.startTime
 
@@ -38,10 +39,10 @@ private[ui] class ThriftServerSessionPage(parent: ThriftServerTab)
     require(parameterId != null && parameterId.nonEmpty, "Missing id parameter")
 
     val content = store.synchronized { // make sure all parts in this page are consistent
-        val sessionStat = store.getSession(parameterId).orNull
-        require(sessionStat != null, "Invalid sessionID[" + parameterId + "]")
+      val sessionStat = store.getSession(parameterId).orNull
+      require(sessionStat != null, "Invalid sessionID[" + parameterId + "]")
 
-        generateBasicStats() ++
+      generateBasicStats() ++
         <br/> ++
         <h4>
         User {sessionStat.userName},
@@ -50,7 +51,7 @@ private[ui] class ThriftServerSessionPage(parent: ThriftServerTab)
         Total run {sessionStat.totalExecution} SQL
         </h4> ++
         generateSQLStatsTable(request, sessionStat.sessionId)
-      }
+    }
     UIUtils.headerSparkPage(request, "JDBC/ODBC Session", content, parent)
   }
 
@@ -80,16 +81,16 @@ private[ui] class ThriftServerSessionPage(parent: ThriftServerTab)
         Option(request.getParameter(s"$sqlTableTag.page")).map(_.toInt).getOrElse(1)
 
       try {
-        Some(new SqlStatsPagedTable(
-          request,
-          parent,
-          executionList,
-          "sqlserver/session",
-          UIUtils.prependBaseUri(request, parent.basePath),
-          sqlTableTag
-        ).table(sqlTablePage))
+        Some(
+          new SqlStatsPagedTable(
+            request,
+            parent,
+            executionList,
+            "sqlserver/session",
+            UIUtils.prependBaseUri(request, parent.basePath),
+            sqlTableTag).table(sqlTablePage))
       } catch {
-        case e@(_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
+        case e @ (_: IllegalArgumentException | _: IndexOutOfBoundsException) =>
           Some(<div class="alert alert-error">
             <p>Error while rendering job table:</p>
             <pre>

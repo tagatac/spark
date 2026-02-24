@@ -187,10 +187,14 @@ class PluginContainerSuite extends SparkFunSuite with LocalSparkContext {
 
   test("plugin initialization in non-local mode with resources") {
     withTempDir { dir =>
-      val scriptPath = createTempScriptWithExpectedOutput(dir, "gpuDiscoveryScript",
+      val scriptPath = createTempScriptWithExpectedOutput(
+        dir,
+        "gpuDiscoveryScript",
         """{"name": "gpu","addresses":["5", "6"]}""")
 
-      val workerScript = createTempScriptWithExpectedOutput(dir, "resourceDiscoveryScript",
+      val workerScript = createTempScriptWithExpectedOutput(
+        dir,
+        "resourceDiscoveryScript",
         """{"name": "gpu","addresses":["3", "4"]}""")
 
       val conf = new SparkConf()
@@ -248,12 +252,18 @@ class PluginContainerSuite extends SparkFunSuite with LocalSparkContext {
       assert(memoryManager.maxOffHeapStorageMemory == MemoryOverridePlugin.offHeapMemory)
 
       val defaultResourceProfile = sc.resourceProfileManager.defaultResourceProfile
-      assert(512L ==
-        defaultResourceProfile.executorResources
-          .get(ResourceProfile.MEMORY).map(_.amount).getOrElse(-1L))
-      assert(512L ==
-        defaultResourceProfile.executorResources
-          .get(ResourceProfile.OFFHEAP_MEM).map(_.amount).getOrElse(-1L))
+      assert(
+        512L ==
+          defaultResourceProfile.executorResources
+            .get(ResourceProfile.MEMORY)
+            .map(_.amount)
+            .getOrElse(-1L))
+      assert(
+        512L ==
+          defaultResourceProfile.executorResources
+            .get(ResourceProfile.OFFHEAP_MEM)
+            .map(_.amount)
+            .getOrElse(-1L))
 
       // Ensure all executors has started
       TestUtils.waitUntilExecutorsUp(sc, 1, 60000)
@@ -350,7 +360,9 @@ class NonLocalModeSparkPlugin extends SparkPlugin {
   override def driverPlugin(): DriverPlugin = {
     new DriverPlugin() {
       override def init(sc: SparkContext, ctx: PluginContext): JMap[String, String] = {
-        NonLocalModeSparkPlugin.writeDriverFile(NonLocalModeSparkPlugin.driverFileStr, ctx.conf(),
+        NonLocalModeSparkPlugin.writeDriverFile(
+          NonLocalModeSparkPlugin.driverFileStr,
+          ctx.conf(),
           ctx.executorID())
         NonLocalModeSparkPlugin.driverContext = ctx
         Map.empty[String, String].asJava
@@ -361,8 +373,11 @@ class NonLocalModeSparkPlugin extends SparkPlugin {
   override def executorPlugin(): ExecutorPlugin = {
     new ExecutorPlugin() {
       override def init(ctx: PluginContext, extraConf: JMap[String, String]): Unit = {
-        NonLocalModeSparkPlugin.writeFile(NonLocalModeSparkPlugin.executorFileStr, ctx.conf(),
-          ctx.executorID(), ctx.resources().asScala.toMap)
+        NonLocalModeSparkPlugin.writeFile(
+          NonLocalModeSparkPlugin.executorFileStr,
+          ctx.conf(),
+          ctx.executorID(),
+          ctx.resources().asScala.toMap)
       }
     }
   }
@@ -379,10 +394,12 @@ object NonLocalModeSparkPlugin {
       resources: Map[String, ResourceInformation]): String = {
     // try to keep this simple and only write the gpus addresses, if we add more resources need to
     // make more complex
-    val resourcesString = resources.filter { case (k, _) => k.equals(GPU) }.map {
-      case (_, ri) =>
+    val resourcesString = resources
+      .filter { case (k, _) => k.equals(GPU) }
+      .map { case (_, ri) =>
         s"${ri.addresses.mkString(",")}"
-    }.mkString(",")
+      }
+      .mkString(",")
     s"$id&$resourcesString"
   }
 
@@ -395,10 +412,7 @@ object NonLocalModeSparkPlugin {
     }
   }
 
-  def writeDriverFile(
-      filePrefix: String,
-      conf: SparkConf,
-      id: String): Unit = {
+  def writeDriverFile(filePrefix: String, conf: SparkConf, id: String): Unit = {
     writeFile(filePrefix, conf, id, Map.empty)
   }
 
@@ -463,9 +477,13 @@ private class TestDriverPlugin extends DriverPlugin {
   }
 
   override def registerMetrics(appId: String, ctx: PluginContext): Unit = {
-    ctx.metricRegistry().register("driverMetric", new Gauge[Int] {
-      override def getValue(): Int = 42
-    })
+    ctx
+      .metricRegistry()
+      .register(
+        "driverMetric",
+        new Gauge[Int] {
+          override def getValue(): Int = 42
+        })
   }
 
   override def receive(msg: AnyRef): AnyRef = msg match {
@@ -489,9 +507,13 @@ private class TestExecutorPlugin extends ExecutorPlugin {
   val numOnTaskFailed = new AtomicInteger(0)
 
   override def init(ctx: PluginContext, extraConf: JMap[String, String]): Unit = {
-    ctx.metricRegistry().register("executorMetric", new Gauge[Int] {
-      override def getValue(): Int = 84
-    })
+    ctx
+      .metricRegistry()
+      .register(
+        "executorMetric",
+        new Gauge[Int] {
+          override def getValue(): Int = 84
+        })
     TestSparkPlugin.executorContext = ctx
   }
 

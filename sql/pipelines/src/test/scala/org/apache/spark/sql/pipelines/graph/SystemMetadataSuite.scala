@@ -29,78 +29,71 @@ class SystemMetadataSuite
     with SystemMetadataTestHelpers
     with SharedSparkSession {
 
-    gridTest(
-      "flow checkpoint for ST wrote to the expected location when fullRefresh ="
-    ) (Seq(false, true))
-    { fullRefresh =>
-      val session = spark
-      import session.implicits._
+  gridTest("flow checkpoint for ST wrote to the expected location when fullRefresh =")(
+    Seq(false, true)) { fullRefresh =>
+    val session = spark
+    import session.implicits._
 
-      // create a pipeline with only a single ST
-      val graph = new TestGraphRegistrationContext(spark) {
-        val mem: MemoryStream[Int] = MemoryStream[Int]
-        mem.addData(1, 2, 3)
-        registerView("a", query = dfFlowFunc(mem.toDF()))
-        registerTable("st")
-        registerFlow("st", "st", query = readStreamFlowFunc("a"))
-      }.toDataflowGraph
+    // create a pipeline with only a single ST
+    val graph = new TestGraphRegistrationContext(spark) {
+      val mem: MemoryStream[Int] = MemoryStream[Int]
+      mem.addData(1, 2, 3)
+      registerView("a", query = dfFlowFunc(mem.toDF()))
+      registerTable("st")
+      registerFlow("st", "st", query = readStreamFlowFunc("a"))
+    }.toDataflowGraph
 
-      val updateContext1 = TestPipelineUpdateContext(
-        unresolvedGraph = graph,
-        spark = spark,
-        storageRoot = storageRoot,
-        failOnErrorEvent = true
-      )
+    val updateContext1 = TestPipelineUpdateContext(
+      unresolvedGraph = graph,
+      spark = spark,
+      storageRoot = storageRoot,
+      failOnErrorEvent = true)
 
-      // run first update
-      updateContext1.pipelineExecution.startPipeline()
-      updateContext1.pipelineExecution.awaitCompletion()
+    // run first update
+    updateContext1.pipelineExecution.startPipeline()
+    updateContext1.pipelineExecution.awaitCompletion()
 
-      val graphExecution1 = updateContext1.pipelineExecution.graphExecution.get
-      val executionGraph1 = graphExecution1.graphForExecution
+    val graphExecution1 = updateContext1.pipelineExecution.graphExecution.get
+    val executionGraph1 = graphExecution1.graphForExecution
 
-      val stIdentifier = fullyQualifiedIdentifier("st")
+    val stIdentifier = fullyQualifiedIdentifier("st")
 
-      // assert checkpoint v0
-      assertFlowCheckpointDirExists(
-        tableOrSinkElement = executionGraph1.table(stIdentifier),
-        flowElement = executionGraph1.flow(stIdentifier),
-        expectedCheckpointVersion = 0,
-        graphExecution = graphExecution1,
-        updateContext = updateContext1
-      )
+    // assert checkpoint v0
+    assertFlowCheckpointDirExists(
+      tableOrSinkElement = executionGraph1.table(stIdentifier),
+      flowElement = executionGraph1.flow(stIdentifier),
+      expectedCheckpointVersion = 0,
+      graphExecution = graphExecution1,
+      updateContext = updateContext1)
 
-      // run second update, either refresh (reuse) or full refresh (increment)
-      val updateContext2 = TestPipelineUpdateContext(
-        unresolvedGraph = graph,
-        spark = spark,
-        storageRoot = storageRoot,
-        refreshTables = if (!fullRefresh) AllTables else NoTables,
-        fullRefreshTables = if (fullRefresh) AllTables else NoTables,
-        failOnErrorEvent = true
-      )
+    // run second update, either refresh (reuse) or full refresh (increment)
+    val updateContext2 = TestPipelineUpdateContext(
+      unresolvedGraph = graph,
+      spark = spark,
+      storageRoot = storageRoot,
+      refreshTables = if (!fullRefresh) AllTables else NoTables,
+      fullRefreshTables = if (fullRefresh) AllTables else NoTables,
+      failOnErrorEvent = true)
 
-      updateContext2.pipelineExecution.startPipeline()
-      updateContext2.pipelineExecution.awaitCompletion()
+    updateContext2.pipelineExecution.startPipeline()
+    updateContext2.pipelineExecution.awaitCompletion()
 
-      val graphExecution2 = updateContext2.pipelineExecution.graphExecution.get
-      val executionGraph2 = graphExecution2.graphForExecution
+    val graphExecution2 = updateContext2.pipelineExecution.graphExecution.get
+    val executionGraph2 = graphExecution2.graphForExecution
 
-      // checkpoint reused in refresh, incremented in full refresh
-      val expectedVersion = if (fullRefresh) 1 else 0
-      assertFlowCheckpointDirExists(
-        tableOrSinkElement = executionGraph2.table(stIdentifier),
-        flowElement = executionGraph1.flow(stIdentifier),
-        expectedCheckpointVersion = expectedVersion,
-        graphExecution = graphExecution2,
-        updateContext2
-      )
-    }
+    // checkpoint reused in refresh, incremented in full refresh
+    val expectedVersion = if (fullRefresh) 1 else 0
+    assertFlowCheckpointDirExists(
+      tableOrSinkElement = executionGraph2.table(stIdentifier),
+      flowElement = executionGraph1.flow(stIdentifier),
+      expectedCheckpointVersion = expectedVersion,
+      graphExecution = graphExecution2,
+      updateContext2)
+  }
 
   test(
     "flow checkpoint for ST (with flow name different from table name) wrote to the expected " +
-    "location"
-  ) {
+      "location") {
     val session = spark
     import session.implicits._
 
@@ -112,11 +105,8 @@ class SystemMetadataSuite
       registerFlow("st", "st_flow", query = readStreamFlowFunc("a"))
     }.toDataflowGraph
 
-    val updateContext1 = TestPipelineUpdateContext(
-      unresolvedGraph = graph,
-      spark = spark,
-      storageRoot = storageRoot
-    )
+    val updateContext1 =
+      TestPipelineUpdateContext(unresolvedGraph = graph, spark = spark, storageRoot = storageRoot)
 
     // start an update in continuous mode, checkpoints are only created to streaming query
     updateContext1.pipelineExecution.startPipeline()
@@ -135,8 +125,7 @@ class SystemMetadataSuite
       // the default checkpoint version is 0
       expectedCheckpointVersion = 0,
       graphExecution = graphExecution1,
-      updateContext = updateContext1
-    )
+      updateContext = updateContext1)
 
     // start another update in full refresh, expected a new checkpoint dir to be created
     // with version number incremented to 1
@@ -144,8 +133,7 @@ class SystemMetadataSuite
       unresolvedGraph = graph,
       spark = spark,
       storageRoot = storageRoot,
-      fullRefreshTables = AllTables
-    )
+      fullRefreshTables = AllTables)
 
     updateContext2.pipelineExecution.startPipeline()
     updateContext2.pipelineExecution.awaitCompletion()
@@ -160,8 +148,7 @@ class SystemMetadataSuite
       // new checkpoint directory is created
       expectedCheckpointVersion = 1,
       graphExecution = graphExecution2,
-      updateContext2
-    )
+      updateContext2)
   }
 
   test("flow checkpoint for sink wrote to the expected location for full refresh") {
@@ -177,11 +164,8 @@ class SystemMetadataSuite
     }.toDataflowGraph
     val sinkIdentifier = TableIdentifier("sink")
 
-    val updateContext1 = TestPipelineUpdateContext(
-      unresolvedGraph = graph,
-      spark = spark,
-      storageRoot = storageRoot
-    )
+    val updateContext1 =
+      TestPipelineUpdateContext(unresolvedGraph = graph, spark = spark, storageRoot = storageRoot)
 
     updateContext1.pipelineExecution.startPipeline()
     updateContext1.pipelineExecution.awaitCompletion()
@@ -195,8 +179,7 @@ class SystemMetadataSuite
       // the default checkpoint version is 0
       expectedCheckpointVersion = 0,
       graphExecution = graphExecution1,
-      updateContext = updateContext1
-    )
+      updateContext = updateContext1)
 
     // start another update in full refresh, expected a new checkpoint dir to be created
     // with version number incremented to 1
@@ -204,8 +187,7 @@ class SystemMetadataSuite
       unresolvedGraph = graph,
       spark = spark,
       storageRoot = storageRoot,
-      fullRefreshTables = AllTables
-    )
+      fullRefreshTables = AllTables)
 
     updateContext2.pipelineExecution.startPipeline()
     updateContext2.pipelineExecution.awaitCompletion()
@@ -220,8 +202,7 @@ class SystemMetadataSuite
       // new checkpoint directory is created with version number incremented to 1
       expectedCheckpointVersion = 1,
       graphExecution = graphExecution2,
-      updateContext2
-    )
+      updateContext2)
   }
 
   test("checkpoint dirs for tables with same name but different schema don't collide") {
@@ -243,54 +224,52 @@ class SystemMetadataSuite
       unresolvedGraph = graph,
       spark = spark,
       storageRoot = storageRoot,
-      failOnErrorEvent = true
-    )
+      failOnErrorEvent = true)
 
     val stFlow = graph.flow(fullyQualifiedIdentifier("st"))
     val schema2StFlow = graph.flow(fullyQualifiedIdentifier("st", database = Option("schema2")))
     val stSystemMetadata = FlowSystemMetadata(updateContext, stFlow, graph)
     val schema2StSystemMetadata = FlowSystemMetadata(updateContext, schema2StFlow, graph)
     assert(
-      stSystemMetadata.flowCheckpointsDirOpt() != schema2StSystemMetadata.flowCheckpointsDirOpt()
-    )
+      stSystemMetadata.flowCheckpointsDirOpt() != schema2StSystemMetadata.flowCheckpointsDirOpt())
   }
 }
 
 trait SystemMetadataTestHelpers {
   this: ExecutionTest =>
 
-  /** Return the expected checkpoint directory location for a table or sink.
-   *  These directories have "<expectedStorageName>/<expectedCheckpointVersion>" as their suffix. */
+  /**
+   * Return the expected checkpoint directory location for a table or sink. These directories have
+   * "<expectedStorageName>/<expectedCheckpointVersion>" as their suffix.
+   */
   private def getExpectedFlowCheckpointDirForTableOrSink(
       tableOrSinkElement: GraphElement,
       flowElement: Flow,
       expectedCheckpointVersion: Int,
-      updateContext: PipelineUpdateContext
-  ): Path = {
+      updateContext: PipelineUpdateContext): Path = {
     val expectedRawCheckPointDir = tableOrSinkElement match {
       case t if t.isInstanceOf[Table] || t.isInstanceOf[Sink] =>
         val tableId = t.identifier.nameParts.mkString(Path.SEPARATOR)
         new Path(updateContext.storageRoot)
-        .suffix(s"/_checkpoints/$tableId/${flowElement.identifier.table}")
-        .toString
+          .suffix(s"/_checkpoints/$tableId/${flowElement.identifier.table}")
+          .toString
       case _ =>
         fail(
           s"unexpected table element type for assertFlowCheckpointDirForTableOrSink: " +
-          tableOrSinkElement.getClass.getSimpleName
-        )
+            tableOrSinkElement.getClass.getSimpleName)
     }
 
     new Path("file://", expectedRawCheckPointDir).suffix(s"/$expectedCheckpointVersion")
   }
 
-  /** Return the actual checkpoint directory location used by the table or sink.
-   * We use a Flow object as input since the checkpoints for a table or sink are associated with
-   * each of their incoming flows.
+  /**
+   * Return the actual checkpoint directory location used by the table or sink. We use a Flow
+   * object as input since the checkpoints for a table or sink are associated with each of their
+   * incoming flows.
    */
   private def getActualFlowCheckpointDirForTableOrSink(
       flowElement: Flow,
-      graphExecution: GraphExecution
-  ): Path = {
+      graphExecution: GraphExecution): Path = {
     // spark flow stream takes a while to be created, so we need to poll for it
     val flowStream = graphExecution
       .flowExecutions(flowElement.identifier)
@@ -299,9 +278,7 @@ trait SystemMetadataTestHelpers {
 
     // we grab the checkpoint location from the actual spark stream query executed in the update
     // execution, which is the best source of truth.
-    new Path(
-      flowStream.asInstanceOf[StreamingQueryWrapper].streamingQuery.resolvedCheckpointRoot
-    )
+    new Path(flowStream.asInstanceOf[StreamingQueryWrapper].streamingQuery.resolvedCheckpointRoot)
   }
 
   /** Assert the flow checkpoint directory exists in the filesystem. */
@@ -310,18 +287,15 @@ trait SystemMetadataTestHelpers {
       flowElement: Flow,
       expectedCheckpointVersion: Int,
       graphExecution: GraphExecution,
-      updateContext: PipelineUpdateContext
-  ): Path = {
+      updateContext: PipelineUpdateContext): Path = {
     val expectedCheckPointDir = getExpectedFlowCheckpointDirForTableOrSink(
       tableOrSinkElement = tableOrSinkElement,
       flowElement = flowElement,
       expectedCheckpointVersion = expectedCheckpointVersion,
-      updateContext
-    )
+      updateContext)
     val actualCheckpointDir = getActualFlowCheckpointDirForTableOrSink(
       flowElement = flowElement,
-      graphExecution = graphExecution
-    )
+      graphExecution = graphExecution)
     val fs = expectedCheckPointDir.getFileSystem(spark.sessionState.newHadoopConf())
     assert(actualCheckpointDir == expectedCheckPointDir)
     assert(fs.exists(actualCheckpointDir))
@@ -334,18 +308,15 @@ trait SystemMetadataTestHelpers {
       flowElement: Flow,
       expectedCheckpointVersion: Int,
       graphExecution: GraphExecution,
-      updateContext: PipelineUpdateContext
-  ): Path = {
+      updateContext: PipelineUpdateContext): Path = {
     val expectedCheckPointDir = getExpectedFlowCheckpointDirForTableOrSink(
       tableOrSinkElement = tableOrSinkElement,
       flowElement = flowElement,
       expectedCheckpointVersion = expectedCheckpointVersion,
-      updateContext
-    )
+      updateContext)
     val actualCheckpointDir = getActualFlowCheckpointDirForTableOrSink(
       flowElement = flowElement,
-      graphExecution = graphExecution
-    )
+      graphExecution = graphExecution)
     val fs = expectedCheckPointDir.getFileSystem(spark.sessionState.newHadoopConf())
     assert(actualCheckpointDir != expectedCheckPointDir)
     assert(!fs.exists(expectedCheckPointDir))

@@ -35,22 +35,24 @@ import org.apache.spark.util.{Clock, SystemClock, ThreadUtils, Utils}
 /**
  * Provides object pool for [[FetchedData]] which is grouped by [[CacheKey]].
  *
- * Along with CacheKey, it receives desired start offset to find cached FetchedData which
- * may be stored from previous batch. If it can't find one to match, it will create
- * a new FetchedData. As "desired start offset" plays as second level of key which can be
- * modified in same instance, this class cannot be replaced with general pool implementations
- * including Apache Commons Pool which pools KafkaConsumer.
+ * Along with CacheKey, it receives desired start offset to find cached FetchedData which may be
+ * stored from previous batch. If it can't find one to match, it will create a new FetchedData. As
+ * "desired start offset" plays as second level of key which can be modified in same instance,
+ * this class cannot be replaced with general pool implementations including Apache Commons Pool
+ * which pools KafkaConsumer.
  */
 private[consumer] class FetchedDataPool(
     executorService: ScheduledExecutorService,
     clock: Clock,
-    conf: SparkConf) extends Logging {
+    conf: SparkConf)
+    extends Logging {
   import FetchedDataPool._
 
   def this(sparkConf: SparkConf) = {
     this(
-      ThreadUtils.newDaemonSingleThreadScheduledExecutor(
-      "kafka-fetched-data-cache-evictor"), new SystemClock, sparkConf)
+      ThreadUtils.newDaemonSingleThreadScheduledExecutor("kafka-fetched-data-cache-evictor"),
+      new SystemClock,
+      sparkConf)
   }
 
   private val cache: mutable.Map[CacheKey, CachedFetchedDataList] = mutable.HashMap.empty
@@ -61,9 +63,13 @@ private[consumer] class FetchedDataPool(
 
   private def startEvictorThread(): Option[ScheduledFuture[_]] = {
     if (evictorThreadRunIntervalMillis > 0) {
-      val future = executorService.scheduleAtFixedRate(() => {
-        Utils.tryLogNonFatalError(removeIdleFetchedData())
-      }, 0, evictorThreadRunIntervalMillis, TimeUnit.MILLISECONDS)
+      val future = executorService.scheduleAtFixedRate(
+        () => {
+          Utils.tryLogNonFatalError(removeIdleFetchedData())
+        },
+        0,
+        evictorThreadRunIntervalMillis,
+        TimeUnit.MILLISECONDS)
       Some(future)
     } else {
       None
@@ -111,8 +117,9 @@ private[consumer] class FetchedDataPool(
 
   def release(key: CacheKey, fetchedData: FetchedData): Unit = synchronized {
     def warnReleasedDataNotInPool(key: CacheKey, fetchedData: FetchedData): Unit = {
-      logWarning(log"No matching data in pool for ${MDC(DATA, fetchedData)} in key " +
-        log"${MDC(KEY, key)}. It might be released before, or it was not a part of pool.")
+      logWarning(
+        log"No matching data in pool for ${MDC(DATA, fetchedData)} in key " +
+          log"${MDC(KEY, key)}. It might be released before, or it was not a part of pool.")
     }
 
     cache.get(key) match {

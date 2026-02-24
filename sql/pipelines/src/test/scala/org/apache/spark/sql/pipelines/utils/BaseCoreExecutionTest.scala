@@ -22,17 +22,18 @@ import org.apache.spark.sql.pipelines.graph.{DataflowGraph, DatasetManager, Pipe
 trait BaseCoreExecutionTest extends ExecutionTest {
 
   /**
-   * Materializes the given graph using the provided context.
-   * If no context is provided, a default context is created.
+   * Materializes the given graph using the provided context. If no context is provided, a default
+   * context is created.
    */
   protected def materializeGraph(
       graph: DataflowGraph,
       contextOpt: Option[PipelineUpdateContext] = None,
-      storageRoot: String
-  ): DataflowGraph = {
+      storageRoot: String): DataflowGraph = {
     val contextToUse = contextOpt.getOrElse(
-      TestPipelineUpdateContext(spark = spark, unresolvedGraph = graph, storageRoot = storageRoot)
-    )
+      TestPipelineUpdateContext(
+        spark = spark,
+        unresolvedGraph = graph,
+        storageRoot = storageRoot))
     DatasetManager.materializeDatasets(graph, contextToUse)
   }
 }

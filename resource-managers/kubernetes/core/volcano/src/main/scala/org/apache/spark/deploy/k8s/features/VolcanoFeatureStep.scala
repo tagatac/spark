@@ -25,8 +25,10 @@ import io.fabric8.volcano.client.DefaultVolcanoClient
 import org.apache.spark.deploy.k8s.{KubernetesConf, KubernetesDriverConf, KubernetesExecutorConf, SparkPod}
 import org.apache.spark.internal.Logging
 
-private[spark] class VolcanoFeatureStep extends KubernetesDriverCustomFeatureConfigStep
-  with KubernetesExecutorCustomFeatureConfigStep with Logging {
+private[spark] class VolcanoFeatureStep
+    extends KubernetesDriverCustomFeatureConfigStep
+    with KubernetesExecutorCustomFeatureConfigStep
+    with Logging {
   import VolcanoFeatureStep._
 
   private var kubernetesConf: KubernetesConf = _
@@ -44,8 +46,9 @@ private[spark] class VolcanoFeatureStep extends KubernetesDriverCustomFeatureCon
 
   override def getAdditionalPreKubernetesResources(): Seq[HasMetadata] = {
     if (kubernetesConf.isInstanceOf[KubernetesExecutorConf]) {
-      logWarning("VolcanoFeatureStep#getAdditionalPreKubernetesResources() is not supported " +
-        "for executor.")
+      logWarning(
+        "VolcanoFeatureStep#getAdditionalPreKubernetesResources() is not supported " +
+          "for executor.")
       return Seq.empty
     }
     lazy val client = new DefaultVolcanoClient
@@ -84,7 +87,7 @@ private[spark] class VolcanoFeatureStep extends KubernetesDriverCustomFeatureCon
   override def configurePod(pod: SparkPod): SparkPod = {
     val k8sPodBuilder = new PodBuilder(pod.pod)
       .editMetadata()
-        .addToAnnotations(POD_GROUP_ANNOTATION, podGroupName)
+      .addToAnnotations(POD_GROUP_ANNOTATION, podGroupName)
       .endMetadata()
     val k8sPod = k8sPodBuilder.build()
     SparkPod(k8sPod, pod.container)

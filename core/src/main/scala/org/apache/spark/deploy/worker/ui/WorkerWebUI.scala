@@ -29,14 +29,14 @@ import org.apache.spark.ui.JettyUtils._
 /**
  * Web UI server for the standalone worker.
  */
-private[worker]
-class WorkerWebUI(
-    val worker: Worker,
-    val workDir: File,
-    requestedPort: Int)
-  extends WebUI(worker.securityMgr, worker.securityMgr.getSSLOptions("standalone"),
-    requestedPort, worker.conf, name = "WorkerUI")
-  with Logging {
+private[worker] class WorkerWebUI(val worker: Worker, val workDir: File, requestedPort: Int)
+    extends WebUI(
+      worker.securityMgr,
+      worker.securityMgr.getSSLOptions("standalone"),
+      requestedPort,
+      worker.conf,
+      name = "WorkerUI")
+    with Logging {
 
   initialize()
 
@@ -46,9 +46,11 @@ class WorkerWebUI(
     attachPage(logPage)
     attachPage(new WorkerPage(this))
     addStaticHandler(WorkerWebUI.STATIC_RESOURCE_BASE)
-    attachHandler(createServletHandler("/log",
-      (request: HttpServletRequest) => logPage.renderLog(request),
-      worker.conf))
+    attachHandler(
+      createServletHandler(
+        "/log",
+        (request: HttpServletRequest) => logPage.renderLog(request),
+        worker.conf))
   }
 }
 

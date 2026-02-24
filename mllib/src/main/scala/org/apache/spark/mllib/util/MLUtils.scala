@@ -52,22 +52,25 @@ object MLUtils extends Logging {
   }
 
   /**
-   * Loads labeled data in the LIBSVM format into an RDD[LabeledPoint].
-   * The LIBSVM format is a text-based format used by LIBSVM and LIBLINEAR.
-   * Each line represents a labeled sparse feature vector using the following format:
-   * {{{label index1:value1 index2:value2 ...}}}
-   * where the indices are one-based and in ascending order.
-   * This method parses each line into a [[org.apache.spark.mllib.regression.LabeledPoint]],
-   * where the feature indices are converted to zero-based.
-   * @param sc Spark context
-   * @param path file or directory path in any Hadoop-supported file system URI
-   * @param numFeatures number of features, which will be determined from the input data if a
-   *                    nonpositive value is given. This is useful when the dataset is already split
-   *                    into multiple files and you want to load them separately, because some
-   *                    features may not present in certain files, which leads to inconsistent
-   *                    feature dimensions.
-   * @param minPartitions min number of partitions
-   * @return labeled data stored as an RDD[LabeledPoint]
+   * Loads labeled data in the LIBSVM format into an RDD[LabeledPoint]. The LIBSVM format is a
+   * text-based format used by LIBSVM and LIBLINEAR. Each line represents a labeled sparse feature
+   * vector using the following format: {{{label index1:value1 index2:value2 ...}}} where the
+   * indices are one-based and in ascending order. This method parses each line into a
+   * [[org.apache.spark.mllib.regression.LabeledPoint]], where the feature indices are converted
+   * to zero-based.
+   * @param sc
+   *   Spark context
+   * @param path
+   *   file or directory path in any Hadoop-supported file system URI
+   * @param numFeatures
+   *   number of features, which will be determined from the input data if a nonpositive value is
+   *   given. This is useful when the dataset is already split into multiple files and you want to
+   *   load them separately, because some features may not present in certain files, which leads
+   *   to inconsistent feature dimensions.
+   * @param minPartitions
+   *   min number of partitions
+   * @return
+   *   labeled data stored as an RDD[LabeledPoint]
    */
   @Since("1.0.0")
   def loadLibSVMFile(
@@ -91,9 +94,11 @@ object MLUtils extends Logging {
   }
 
   private[spark] def computeNumFeatures(rdd: RDD[(Double, Array[Int], Array[Double])]): Int = {
-    rdd.map { case (label, indices, values) =>
-      indices.lastOption.getOrElse(0)
-    }.reduce(math.max) + 1
+    rdd
+      .map { case (label, indices, values) =>
+        indices.lastOption.getOrElse(0)
+      }
+      .reduce(math.max) + 1
   }
 
   private[spark] def parseLibSVMFile(
@@ -110,18 +115,21 @@ object MLUtils extends Logging {
       sparkSession: SparkSession,
       paths: Seq[String],
       options: Map[String, String]): RDD[(Double, Array[Int], Array[Double])] = {
-    val lines = sparkSession.baseRelationToDataFrame(
-      DataSource.apply(
-        sparkSession,
-        paths = paths,
-        className = classOf[TextFileFormat].getName,
-        options = options ++ Map(DataSource.GLOB_PATHS_KEY -> "false")
-      ).resolveRelation(checkFilesExist = false))
+    val lines = sparkSession
+      .baseRelationToDataFrame(
+        DataSource
+          .apply(
+            sparkSession,
+            paths = paths,
+            className = classOf[TextFileFormat].getName,
+            options = options ++ Map(DataSource.GLOB_PATHS_KEY -> "false"))
+          .resolveRelation(checkFilesExist = false))
       .select("value")
 
     import lines.sparkSession.implicits._
 
-    lines.select(trim($"value").as("line"))
+    lines
+      .select(trim($"value").as("line"))
       .filter(not((length($"line") === 0).or($"line".startsWith("#"))))
       .as[String]
       .rdd
@@ -131,12 +139,15 @@ object MLUtils extends Logging {
   private[spark] def parseLibSVMRecord(line: String): (Double, Array[Int], Array[Double]) = {
     val items = line.split(' ')
     val label = items.head.toDouble
-    val (indices, values) = items.tail.filter(_.nonEmpty).map { item =>
-      val indexAndValue = item.split(':')
-      val index = indexAndValue(0).toInt - 1 // Convert 1-based indices to 0-based.
-      val value = indexAndValue(1).toDouble
-      (index, value)
-    }.unzip
+    val (indices, values) = items.tail
+      .filter(_.nonEmpty)
+      .map { item =>
+        val indexAndValue = item.split(':')
+        val index = indexAndValue(0).toInt - 1 // Convert 1-based indices to 0-based.
+        val value = indexAndValue(1).toDouble
+        (index, value)
+      }
+      .unzip
 
     // check if indices are one-based and in ascending order
     var previous = -1
@@ -144,8 +155,10 @@ object MLUtils extends Logging {
     val indicesLength = indices.length
     while (i < indicesLength) {
       val current = indices(i)
-      require(current > previous, s"indices should be one-based and in ascending order;"
-        + s""" found current=$current, previous=$previous; line="$line"""")
+      require(
+        current > previous,
+        s"indices should be one-based and in ascending order;"
+          + s""" found current=$current, previous=$previous; line="$line"""")
       previous = current
       i += 1
     }
@@ -157,10 +170,7 @@ object MLUtils extends Logging {
    * partitions.
    */
   @Since("1.0.0")
-  def loadLibSVMFile(
-      sc: SparkContext,
-      path: String,
-      numFeatures: Int): RDD[LabeledPoint] =
+  def loadLibSVMFile(sc: SparkContext, path: String, numFeatures: Int): RDD[LabeledPoint] =
     loadLibSVMFile(sc, path, numFeatures, sc.defaultMinPartitions)
 
   /**
@@ -173,9 +183,12 @@ object MLUtils extends Logging {
 
   /**
    * Save labeled data in LIBSVM format.
-   * @param data an RDD of LabeledPoint to be saved
-   * @param dir directory to save the data
-   * @see `org.apache.spark.mllib.util.MLUtils.loadLibSVMFile`
+   * @param data
+   *   an RDD of LabeledPoint to be saved
+   * @param dir
+   *   directory to save the data
+   * @see
+   *   `org.apache.spark.mllib.util.MLUtils.loadLibSVMFile`
    */
   @Since("1.0.0")
   def saveAsLibSVMFile(data: RDD[LabeledPoint], dir: String): Unit = {
@@ -193,10 +206,14 @@ object MLUtils extends Logging {
 
   /**
    * Loads vectors saved using `RDD[Vector].saveAsTextFile`.
-   * @param sc Spark context
-   * @param path file or directory path in any Hadoop-supported file system URI
-   * @param minPartitions min number of partitions
-   * @return vectors stored as an RDD[Vector]
+   * @param sc
+   *   Spark context
+   * @param path
+   *   file or directory path in any Hadoop-supported file system URI
+   * @param minPartitions
+   *   min number of partitions
+   * @return
+   *   vectors stored as an RDD[Vector]
    */
   @Since("1.1.0")
   def loadVectors(sc: SparkContext, path: String, minPartitions: Int): RDD[Vector] =
@@ -211,27 +228,31 @@ object MLUtils extends Logging {
 
   /**
    * Loads labeled points saved using `RDD[LabeledPoint].saveAsTextFile`.
-   * @param sc Spark context
-   * @param path file or directory path in any Hadoop-supported file system URI
-   * @param minPartitions min number of partitions
-   * @return labeled points stored as an RDD[LabeledPoint]
+   * @param sc
+   *   Spark context
+   * @param path
+   *   file or directory path in any Hadoop-supported file system URI
+   * @param minPartitions
+   *   min number of partitions
+   * @return
+   *   labeled points stored as an RDD[LabeledPoint]
    */
   @Since("1.1.0")
   def loadLabeledPoints(sc: SparkContext, path: String, minPartitions: Int): RDD[LabeledPoint] =
     sc.textFile(path, minPartitions).map(LabeledPoint.parse)
 
   /**
-   * Loads labeled points saved using `RDD[LabeledPoint].saveAsTextFile` with the default number of
-   * partitions.
+   * Loads labeled points saved using `RDD[LabeledPoint].saveAsTextFile` with the default number
+   * of partitions.
    */
   @Since("1.1.0")
   def loadLabeledPoints(sc: SparkContext, dir: String): RDD[LabeledPoint] =
     loadLabeledPoints(sc, dir, sc.defaultMinPartitions)
 
   /**
-   * Return a k element array of pairs of RDDs with the first element of each pair
-   * containing the training data, a complement of the validation data and the second
-   * element, the validation data, containing a unique 1/kth of the data. Where k=numFolds.
+   * Return a k element array of pairs of RDDs with the first element of each pair containing the
+   * training data, a complement of the validation data and the second element, the validation
+   * data, containing a unique 1/kth of the data. Where k=numFolds.
    */
   @Since("1.0.0")
   def kFold[T: ClassTag](rdd: RDD[T], numFolds: Int, seed: Int): Array[(RDD[T], RDD[T])] = {
@@ -245,8 +266,8 @@ object MLUtils extends Logging {
   def kFold[T: ClassTag](rdd: RDD[T], numFolds: Int, seed: Long): Array[(RDD[T], RDD[T])] = {
     val numFoldsF = numFolds.toFloat
     (1 to numFolds).map { fold =>
-      val sampler = new BernoulliCellSampler[T]((fold - 1) / numFoldsF, fold / numFoldsF,
-        complement = false)
+      val sampler =
+        new BernoulliCellSampler[T]((fold - 1) / numFoldsF, fold / numFoldsF, complement = false)
       val validation = new PartitionwiseSampledRDD(rdd, sampler, true, seed)
       val training = new PartitionwiseSampledRDD(rdd, sampler.cloneComplement(), true, seed)
       (training, validation)
@@ -264,18 +285,18 @@ object MLUtils extends Logging {
         .otherwise(
           raise_error(
             printf(
-              lit(s"Fold number must be in range [0, $numFolds), but got %s."), col(foldColName))
-          )
-        )
-    )
+              lit(s"Fold number must be in range [0, $numFolds), but got %s."),
+              col(foldColName)))))
 
     (0 until numFolds).map { fold =>
       val training = checked
         .filter(col(foldColName) =!= fold)
-        .drop(foldColName).rdd
+        .drop(foldColName)
+        .rdd
       val validation = checked
         .filter(col(foldColName) === fold)
-        .drop(foldColName).rdd
+        .drop(foldColName)
+        .rdd
       if (training.isEmpty()) {
         throw new SparkException(s"The training data at fold $fold is empty.")
       }
@@ -311,17 +332,21 @@ object MLUtils extends Logging {
         outputValues(inputValuesLength) = 1.0
         outputIndices(inputValuesLength) = dim
         Vectors.sparse(dim + 1, outputIndices, outputValues)
-      case _ => throw new IllegalArgumentException(s"Do not support vector type ${vector.getClass}")
+      case _ =>
+        throw new IllegalArgumentException(s"Do not support vector type ${vector.getClass}")
     }
   }
 
   /**
    * Converts vector columns in an input Dataset from the [[org.apache.spark.mllib.linalg.Vector]]
    * type to the new [[org.apache.spark.ml.linalg.Vector]] type under the `spark.ml` package.
-   * @param dataset input dataset
-   * @param cols a list of vector columns to be converted. New vector columns will be ignored. If
-   *             unspecified, all old vector columns will be converted except nested ones.
-   * @return the input `DataFrame` with old vector columns converted to the new vector type
+   * @param dataset
+   *   input dataset
+   * @param cols
+   *   a list of vector columns to be converted. New vector columns will be ignored. If
+   *   unspecified, all old vector columns will be converted except nested ones.
+   * @return
+   *   the input `DataFrame` with old vector columns converted to the new vector type
    */
   @Since("2.0.0")
   @varargs
@@ -334,7 +359,8 @@ object MLUtils extends Logging {
           Some(c)
         } else {
           // ignore new vector columns and raise an exception on other column types
-          require(dataType.getClass == classOf[MLVectorUDT],
+          require(
+            dataType.getClass == classOf[MLVectorUDT],
             s"Column $c must be old Vector type to be converted to new type but got $dataType.")
           None
         }
@@ -350,8 +376,9 @@ object MLUtils extends Logging {
       return dataset.toDF()
     }
 
-    logWarning("Vector column conversion has serialization overhead. " +
-      "Please migrate your datasets and workflows to use the spark.ml package.")
+    logWarning(
+      "Vector column conversion has serialization overhead. " +
+        "Please migrate your datasets and workflows to use the spark.ml package.")
 
     // TODO: This implementation has performance issues due to unnecessary serialization.
     // TODO: It is better (but trickier) if we can cast the old vector type to new type directly.
@@ -371,10 +398,13 @@ object MLUtils extends Logging {
   /**
    * Converts vector columns in an input Dataset to the [[org.apache.spark.mllib.linalg.Vector]]
    * type from the new [[org.apache.spark.ml.linalg.Vector]] type under the `spark.ml` package.
-   * @param dataset input dataset
-   * @param cols a list of vector columns to be converted. Old vector columns will be ignored. If
-   *             unspecified, all new vector columns will be converted except nested ones.
-   * @return the input `DataFrame` with new vector columns converted to the old vector type
+   * @param dataset
+   *   input dataset
+   * @param cols
+   *   a list of vector columns to be converted. Old vector columns will be ignored. If
+   *   unspecified, all new vector columns will be converted except nested ones.
+   * @return
+   *   the input `DataFrame` with new vector columns converted to the old vector type
    */
   @Since("2.0.0")
   @varargs
@@ -387,7 +417,8 @@ object MLUtils extends Logging {
           Some(c)
         } else {
           // ignore old vector columns and raise an exception on other column types
-          require(dataType.getClass == classOf[VectorUDT],
+          require(
+            dataType.getClass == classOf[VectorUDT],
             s"Column $c must be new Vector type to be converted to old type but got $dataType.")
           None
         }
@@ -403,8 +434,9 @@ object MLUtils extends Logging {
       return dataset.toDF()
     }
 
-    logWarning("Vector column conversion has serialization overhead. " +
-      "Please migrate your datasets and workflows to use the spark.ml package.")
+    logWarning(
+      "Vector column conversion has serialization overhead. " +
+        "Please migrate your datasets and workflows to use the spark.ml package.")
 
     // TODO: This implementation has performance issues due to unnecessary serialization.
     // TODO: It is better (but trickier) if we can cast the new vector type to old type directly.
@@ -424,10 +456,13 @@ object MLUtils extends Logging {
   /**
    * Converts Matrix columns in an input Dataset from the [[org.apache.spark.mllib.linalg.Matrix]]
    * type to the new [[org.apache.spark.ml.linalg.Matrix]] type under the `spark.ml` package.
-   * @param dataset input dataset
-   * @param cols a list of matrix columns to be converted. New matrix columns will be ignored. If
-   *             unspecified, all old matrix columns will be converted except nested ones.
-   * @return the input `DataFrame` with old matrix columns converted to the new matrix type
+   * @param dataset
+   *   input dataset
+   * @param cols
+   *   a list of matrix columns to be converted. New matrix columns will be ignored. If
+   *   unspecified, all old matrix columns will be converted except nested ones.
+   * @return
+   *   the input `DataFrame` with old matrix columns converted to the new matrix type
    */
   @Since("2.0.0")
   @varargs
@@ -440,7 +475,8 @@ object MLUtils extends Logging {
           Some(c)
         } else {
           // ignore new matrix columns and raise an exception on other column types
-          require(dataType.getClass == classOf[MLMatrixUDT],
+          require(
+            dataType.getClass == classOf[MLMatrixUDT],
             s"Column $c must be old Matrix type to be converted to new type but got $dataType.")
           None
         }
@@ -456,8 +492,9 @@ object MLUtils extends Logging {
       return dataset.toDF()
     }
 
-    logWarning("Matrix column conversion has serialization overhead. " +
-      "Please migrate your datasets and workflows to use the spark.ml package.")
+    logWarning(
+      "Matrix column conversion has serialization overhead. " +
+        "Please migrate your datasets and workflows to use the spark.ml package.")
 
     val convertToML = udf { v: Matrix => v.asML }
     val exprs = schema.fields.map { field =>
@@ -475,10 +512,13 @@ object MLUtils extends Logging {
   /**
    * Converts matrix columns in an input Dataset to the [[org.apache.spark.mllib.linalg.Matrix]]
    * type from the new [[org.apache.spark.ml.linalg.Matrix]] type under the `spark.ml` package.
-   * @param dataset input dataset
-   * @param cols a list of matrix columns to be converted. Old matrix columns will be ignored. If
-   *             unspecified, all new matrix columns will be converted except nested ones.
-   * @return the input `DataFrame` with new matrix columns converted to the old matrix type
+   * @param dataset
+   *   input dataset
+   * @param cols
+   *   a list of matrix columns to be converted. Old matrix columns will be ignored. If
+   *   unspecified, all new matrix columns will be converted except nested ones.
+   * @return
+   *   the input `DataFrame` with new matrix columns converted to the old matrix type
    */
   @Since("2.0.0")
   @varargs
@@ -491,7 +531,8 @@ object MLUtils extends Logging {
           Some(c)
         } else {
           // ignore old matrix columns and raise an exception on other column types
-          require(dataType.getClass == classOf[MatrixUDT],
+          require(
+            dataType.getClass == classOf[MatrixUDT],
             s"Column $c must be new Matrix type to be converted to old type but got $dataType.")
           None
         }
@@ -507,8 +548,9 @@ object MLUtils extends Logging {
       return dataset.toDF()
     }
 
-    logWarning("Matrix column conversion has serialization overhead. " +
-      "Please migrate your datasets and workflows to use the spark.ml package.")
+    logWarning(
+      "Matrix column conversion has serialization overhead. " +
+        "Please migrate your datasets and workflows to use the spark.ml package.")
 
     val convertFromML = udf { Matrices.fromML _ }
     val exprs = schema.fields.map { field =>
@@ -523,21 +565,23 @@ object MLUtils extends Logging {
     dataset.select(exprs.toImmutableArraySeq: _*)
   }
 
-
   /**
-   * Returns the squared Euclidean distance between two vectors. The following formula will be used
-   * if it does not introduce too much numerical error:
-   * <pre>
-   *   \|a - b\|_2^2 = \|a\|_2^2 + \|b\|_2^2 - 2 a^T b.
-   * </pre>
-   * When both vector norms are given, this is faster than computing the squared distance directly,
-   * especially when one of the vectors is a sparse vector.
-   * @param v1 the first vector
-   * @param norm1 the norm of the first vector, non-negative
-   * @param v2 the second vector
-   * @param norm2 the norm of the second vector, non-negative
-   * @param precision desired relative precision for the squared distance
-   * @return squared distance between v1 and v2 within the specified precision
+   * Returns the squared Euclidean distance between two vectors. The following formula will be
+   * used if it does not introduce too much numerical error: <pre> \|a - b\|_2^2 = \|a\|_2^2 +
+   * \|b\|_2^2 - 2 a^T b. </pre> When both vector norms are given, this is faster than computing
+   * the squared distance directly, especially when one of the vectors is a sparse vector.
+   * @param v1
+   *   the first vector
+   * @param norm1
+   *   the norm of the first vector, non-negative
+   * @param v2
+   *   the second vector
+   * @param norm2
+   *   the norm of the second vector, non-negative
+   * @param precision
+   *   desired relative precision for the squared distance
+   * @return
+   *   squared distance between v1 and v2 within the specified precision
    */
   private[mllib] def fastSquaredDistance(
       v1: Vector,
@@ -546,9 +590,11 @@ object MLUtils extends Logging {
       norm2: Double,
       precision: Double = 1e-6): Double = {
     val n = v1.size
-    require(v2.size == n,
+    require(
+      v2.size == n,
       s"Both vectors should have same length, found v1 is $n while v2 is ${v2.size}")
-    require(norm1 >= 0.0 && norm2 >= 0.0,
+    require(
+      norm1 >= 0.0 && norm2 >= 0.0,
       s"Both norms should be greater or equal to 0.0, found norm1=$norm1, norm2=$norm2")
     var sqDist = 0.0
     /*
@@ -586,10 +632,12 @@ object MLUtils extends Logging {
 
   /**
    * When `x` is positive and large, computing `math.log(1 + math.exp(x))` will lead to arithmetic
-   * overflow. This will happen when `x > 709.78` which is not a very large number.
-   * It can be addressed by rewriting the formula into `x + math.log1p(math.exp(-x))` when `x > 0`.
-   * @param x a floating-point value as input.
-   * @return the result of `math.log(1 + math.exp(x))`.
+   * overflow. This will happen when `x > 709.78` which is not a very large number. It can be
+   * addressed by rewriting the formula into `x + math.log1p(math.exp(-x))` when `x > 0`.
+   * @param x
+   *   a floating-point value as input.
+   * @return
+   *   the result of `math.log(1 + math.exp(x))`.
    */
   private[spark] def log1pExp(x: Double): Double = {
     if (x > 0) {

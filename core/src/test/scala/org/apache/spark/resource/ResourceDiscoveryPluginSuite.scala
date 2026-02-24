@@ -43,8 +43,11 @@ class ResourceDiscoveryPluginSuite extends SparkFunSuite with LocalSparkContext 
       val conf = new SparkConf()
         .setAppName(getClass().getName())
         .set(SparkLauncher.SPARK_MASTER, "local-cluster[2,1,1024]")
-        .set(RESOURCES_DISCOVERY_PLUGIN, Seq(classOf[TestResourceDiscoveryPluginGPU].getName(),
-          classOf[TestResourceDiscoveryPluginFPGA].getName()))
+        .set(
+          RESOURCES_DISCOVERY_PLUGIN,
+          Seq(
+            classOf[TestResourceDiscoveryPluginGPU].getName(),
+            classOf[TestResourceDiscoveryPluginFPGA].getName()))
         .set(TestResourceDiscoveryPlugin.TEST_PATH_CONF, dir.getAbsolutePath())
         .set(WORKER_GPU_ID.amountConf, "2")
         .set(TASK_GPU_ID.amountConf, "1")
@@ -99,8 +102,11 @@ class ResourceDiscoveryPluginSuite extends SparkFunSuite with LocalSparkContext 
       val conf = new SparkConf()
         .setAppName(getClass().getName())
         .set(SparkLauncher.SPARK_MASTER, "local-cluster[2,1,1024]")
-        .set(RESOURCES_DISCOVERY_PLUGIN, Seq(classOf[TestResourceDiscoveryPluginEmpty].getName(),
-          classOf[TestResourceDiscoveryPluginGPU].getName()))
+        .set(
+          RESOURCES_DISCOVERY_PLUGIN,
+          Seq(
+            classOf[TestResourceDiscoveryPluginEmpty].getName(),
+            classOf[TestResourceDiscoveryPluginGPU].getName()))
         .set(TestResourceDiscoveryPlugin.TEST_PATH_CONF, dir.getAbsolutePath())
         .set(WORKER_GPU_ID.amountConf, "2")
         .set(TASK_GPU_ID.amountConf, "1")
@@ -122,7 +128,9 @@ class ResourceDiscoveryPluginSuite extends SparkFunSuite with LocalSparkContext 
   test("empty plugin fallback to discovery script") {
     assume(!(Utils.isWindows))
     withTempDir { dir =>
-      val scriptPath = createTempScriptWithExpectedOutput(dir, "gpuDiscoveryScript",
+      val scriptPath = createTempScriptWithExpectedOutput(
+        dir,
+        "gpuDiscoveryScript",
         """{"name": "gpu","addresses":["5", "6"]}""")
       val conf = new SparkConf()
         .setAppName(getClass().getName())

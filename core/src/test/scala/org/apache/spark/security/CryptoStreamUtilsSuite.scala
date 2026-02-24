@@ -79,8 +79,8 @@ class CryptoStreamUtilsSuite extends SparkFunSuite {
     val plainStr = "hello world"
     val blockId = new TempShuffleBlockId(UUID.randomUUID())
     val key = Some(CryptoStreamUtils.createKey(conf))
-    val serializerManager = new SerializerManager(new JavaSerializer(conf), conf,
-      encryptionKey = key)
+    val serializerManager =
+      new SerializerManager(new JavaSerializer(conf), conf, encryptionKey = key)
 
     val outputStream = new ByteArrayOutputStream()
     val wrappedOutputStream = serializerManager.wrapStream(blockId, outputStream)
@@ -103,20 +103,26 @@ class CryptoStreamUtilsSuite extends SparkFunSuite {
     val sc = new SparkContext(conf)
     try {
       val content = "This is the content to be encrypted."
-      val encrypted = sc.parallelize(Seq(1))
+      val encrypted = sc
+        .parallelize(Seq(1))
         .map { str =>
           val bytes = new ByteArrayOutputStream()
-          val out = CryptoStreamUtils.createCryptoOutputStream(bytes, SparkEnv.get.conf,
+          val out = CryptoStreamUtils.createCryptoOutputStream(
+            bytes,
+            SparkEnv.get.conf,
             SparkEnv.get.securityManager.getIOEncryptionKey().get)
           out.write(content.getBytes(UTF_8))
           out.close()
           bytes.toByteArray()
-        }.collect()(0)
+        }
+        .collect()(0)
 
       assert(!content.getBytes(UTF_8).sameElements(encrypted))
 
-      val in = CryptoStreamUtils.createCryptoInputStream(new ByteArrayInputStream(encrypted),
-        sc.conf, SparkEnv.get.securityManager.getIOEncryptionKey().get)
+      val in = CryptoStreamUtils.createCryptoInputStream(
+        new ByteArrayInputStream(encrypted),
+        sc.conf,
+        SparkEnv.get.securityManager.getIOEncryptionKey().get)
       assert(content === Utils.toString(in))
     } finally {
       sc.stop()

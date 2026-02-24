@@ -42,7 +42,8 @@ import org.apache.spark.util.Utils.getHadoopFileSystem
 /**
  * :: DeveloperApi ::
  *
- * A utility class used for K8s operations internally and for implementing ExternalClusterManagers.
+ * A utility class used for K8s operations internally and for implementing
+ * ExternalClusterManagers.
  */
 @Unstable
 @DeveloperApi
@@ -52,17 +53,18 @@ object KubernetesUtils extends Logging {
   private lazy val RNG = new SecureRandom()
 
   /**
-   * Extract and parse Spark configuration properties with a given name prefix and
-   * return the result as a Map. Keys must not have more than one value.
+   * Extract and parse Spark configuration properties with a given name prefix and return the
+   * result as a Map. Keys must not have more than one value.
    *
-   * @param sparkConf Spark configuration
-   * @param prefix the given property name prefix
-   * @return a Map storing the configuration property keys and values
+   * @param sparkConf
+   *   Spark configuration
+   * @param prefix
+   *   the given property name prefix
+   * @return
+   *   a Map storing the configuration property keys and values
    */
   @Since("2.3.0")
-  def parsePrefixedKeyValuePairs(
-      sparkConf: SparkConf,
-      prefix: String): Map[String, String] = {
+  def parsePrefixedKeyValuePairs(sparkConf: SparkConf, prefix: String): Map[String, String] = {
     sparkConf.getAllWithPrefix(prefix).toMap
   }
 
@@ -106,8 +108,7 @@ object KubernetesUtils extends Logging {
       selectSparkContainer(pod, containerName)
     } catch {
       case e: Exception =>
-        logError(
-          s"Encountered exception while attempting to load initial pod spec from file", e)
+        logError(s"Encountered exception while attempting to load initial pod spec from file", e)
         throw new SparkException("Could not load pod from template file.", e)
     }
   }
@@ -115,7 +116,8 @@ object KubernetesUtils extends Logging {
   @Since("3.0.0")
   def selectSparkContainer(pod: Pod, containerName: Option[String]): SparkPod = {
     def selectNamedContainer(
-      containers: List[Container], name: String): Option[(Container, List[Container])] =
+        containers: List[Container],
+        name: String): Option[(Container, List[Container])] =
       containers.partition(_.getName == name) match {
         case (sparkContainer :: Nil, rest) => Some((sparkContainer, rest))
         case _ =>
@@ -128,34 +130,39 @@ object KubernetesUtils extends Logging {
     containerName
       .flatMap(selectNamedContainer(containers, _))
       .orElse(containers.headOption.map((_, containers.tail)))
-      .map {
-        case (sparkContainer: Container, rest: List[Container]) => SparkPod(
+      .map { case (sparkContainer: Container, rest: List[Container]) =>
+        SparkPod(
           new PodBuilder(pod)
             .editSpec()
             .withContainers(rest.asJava)
             .endSpec()
             .build(),
           sparkContainer)
-      }.getOrElse(SparkPod(pod, new ContainerBuilder().build()))
+      }
+      .getOrElse(SparkPod(pod, new ContainerBuilder().build()))
   }
 
   @Since("2.4.0")
   def parseMasterUrl(url: String): String = url.substring("k8s://".length)
 
   @Since("3.0.0")
-  def formatPairsBundle(pairs: Seq[(String, String)], indent: Int = 1) : String = {
+  def formatPairsBundle(pairs: Seq[(String, String)], indent: Int = 1): String = {
     // Use more loggable format if value is null or empty
     val indentStr = "\t".repeat(indent)
-    pairs.map {
-      case (k, v) => s"\n$indentStr $k: ${Option(v).filter(_.nonEmpty).getOrElse("N/A")}"
-    }.mkString("")
+    pairs
+      .map { case (k, v) =>
+        s"\n$indentStr $k: ${Option(v).filter(_.nonEmpty).getOrElse("N/A")}"
+      }
+      .mkString("")
   }
 
   /**
    * Given a pod, output a human readable representation of its state
    *
-   * @param pod Pod
-   * @return Human readable pod state
+   * @param pod
+   *   Pod
+   * @return
+   *   Human readable pod state
    */
   @Since("3.0.0")
   def formatPodState(pod: Pod): String = {
@@ -175,25 +182,24 @@ object KubernetesUtils extends Logging {
       // status
       ("start time", formatTime(pod.getStatus.getStartTime)),
       ("phase", pod.getStatus.getPhase),
-      ("container status", containersDescription(pod, 2))
-    )
+      ("container status", containersDescription(pod, 2)))
 
     formatPairsBundle(details)
   }
 
   @Since("3.0.0")
   def containersDescription(p: Pod, indent: Int = 1): String = {
-    p.getStatus.getContainerStatuses.asScala.map { status =>
-      Seq(
-        ("container name", status.getName),
-        ("container image", status.getImage)) ++
-        containerStatusDescription(status)
-    }.map(p => formatPairsBundle(p, indent)).mkString("\n\n")
+    p.getStatus.getContainerStatuses.asScala
+      .map { status =>
+        Seq(("container name", status.getName), ("container image", status.getImage)) ++
+          containerStatusDescription(status)
+      }
+      .map(p => formatPairsBundle(p, indent))
+      .mkString("\n\n")
   }
 
   @Since("3.0.0")
-  def containerStatusDescription(containerStatus: ContainerStatus)
-    : Seq[(String, String)] = {
+  def containerStatusDescription(containerStatus: ContainerStatus): Seq[(String, String)] = {
     val state = containerStatus.getState
     Option(state.getRunning)
       .orElse(Option(state.getTerminated))
@@ -204,9 +210,7 @@ object KubernetesUtils extends Logging {
             ("container state", "running"),
             ("container started at", formatTime(running.getStartedAt)))
         case waiting: ContainerStateWaiting =>
-          Seq(
-            ("container state", "waiting"),
-            ("pending reason", waiting.getReason))
+          Seq(("container state", "waiting"), ("pending reason", waiting.getReason))
         case terminated: ContainerStateTerminated =>
           Seq(
             ("container state", "terminated"),
@@ -216,7 +220,8 @@ object KubernetesUtils extends Logging {
             ("termination reason", terminated.getReason))
         case unknown =>
           throw new SparkException(s"Unexpected container status type ${unknown.getClass}.")
-      }.getOrElse(Seq(("container state", "N/A")))
+      }
+      .getOrElse(Seq(("container state", "N/A")))
   }
 
   @Since("3.0.0")
@@ -225,8 +230,8 @@ object KubernetesUtils extends Logging {
   }
 
   /**
-   * Generates a unique ID to be used as part of identifiers. The returned ID is a hex string
-   * of a 64-bit value containing the 40 LSBs from the current time + 24 random bits from a
+   * Generates a unique ID to be used as part of identifiers. The returned ID is a hex string of a
+   * 64-bit value containing the 40 LSBs from the current time + 24 random bits from a
    * cryptographically strong RNG. (40 bits gives about 30 years worth of "unique" timestamps.)
    *
    * This avoids using a UUID for uniqueness (too long), and relying solely on the current time
@@ -239,15 +244,15 @@ object KubernetesUtils extends Logging {
       RNG.nextBytes(random)
     }
 
-    val time = java.lang.Long.toHexString(clock.getTimeMillis() & 0xFFFFFFFFFFL)
+    val time = java.lang.Long.toHexString(clock.getTimeMillis() & 0xffffffffffL)
     HexFormat.of().formatHex(random) + time
   }
 
   /**
-   * This function builds the Quantity objects for each resource in the Spark resource
-   * configs based on the component name(spark.driver.resource or spark.executor.resource).
-   * It assumes we can use the Kubernetes device plugin format: vendor-domain/resource.
-   * It returns a set with a tuple of vendor-domain/resource and Quantity for each resource.
+   * This function builds the Quantity objects for each resource in the Spark resource configs
+   * based on the component name(spark.driver.resource or spark.executor.resource). It assumes we
+   * can use the Kubernetes device plugin format: vendor-domain/resource. It returns a set with a
+   * tuple of vendor-domain/resource and Quantity for each resource.
    */
   @Since("3.0.0")
   def buildResourcesQuantities(
@@ -258,11 +263,14 @@ object KubernetesUtils extends Logging {
       val vendorDomain = if (request.vendor.isPresent()) {
         request.vendor.get()
       } else {
-        throw new SparkException(s"Resource: ${request.id.resourceName} was requested, " +
-          "but vendor was not specified.")
+        throw new SparkException(
+          s"Resource: ${request.id.resourceName} was requested, " +
+            "but vendor was not specified.")
       }
       val quantity = new Quantity(request.amount.toString)
-      (KubernetesConf.buildKubernetesResourceName(vendorDomain, request.id.resourceName), quantity)
+      (
+        KubernetesConf.buildKubernetesResourceName(vendorDomain, request.id.resourceName),
+        quantity)
     }.toMap
   }
 
@@ -270,8 +278,9 @@ object KubernetesUtils extends Logging {
    * Upload files and modify their uris
    */
   @Since("3.0.0")
-  def uploadAndTransformFileUris(fileUris: Iterable[String], conf: Option[SparkConf] = None)
-    : Iterable[String] = {
+  def uploadAndTransformFileUris(
+      fileUris: Iterable[String],
+      conf: Option[SparkConf] = None): Iterable[String] = {
     fileUris.map { uri =>
       uploadFileUri(uri, conf)
     }
@@ -287,7 +296,7 @@ object KubernetesUtils extends Logging {
   @Since("3.0.0")
   def isLocalAndResolvable(resource: String): Boolean = {
     resource != SparkLauncher.NO_RESOURCE &&
-      isLocalDependency(Utils.resolveURI(resource))
+    isLocalDependency(Utils.resolveURI(resource))
   }
 
   @Since("3.1.1")
@@ -327,8 +336,9 @@ object KubernetesUtils extends Logging {
               throw new SparkException(s"Uploading file ${fileUri.getPath} failed...", e)
           }
         } else {
-          throw new SparkException("Please specify " +
-            "spark.kubernetes.file.upload.path property.")
+          throw new SparkException(
+            "Please specify " +
+              "spark.kubernetes.file.upload.path property.")
         }
       case _ => throw new SparkException("Spark configuration is missing...")
     }
@@ -341,7 +351,7 @@ object KubernetesUtils extends Logging {
       src: Path,
       dest: Path,
       fs: FileSystem,
-      delSrc : Boolean = false,
+      delSrc: Boolean = false,
       overwrite: Boolean = true): Unit = {
     try {
       fs.copyFromLocalFile(delSrc, overwrite, src, dest)
@@ -356,8 +366,8 @@ object KubernetesUtils extends Logging {
     serviceAccount.map { account =>
       new PodBuilder(pod.pod)
         .editOrNewSpec()
-          .withServiceAccount(account)
-          .withServiceAccountName(account)
+        .withServiceAccount(account)
+        .withServiceAccountName(account)
         .endSpec()
         .build()
     }
@@ -383,12 +393,13 @@ object KubernetesUtils extends Logging {
   }
 
   /**
-   * This function builds the EnvVar objects for each key-value env with non-null value.
-   * If value is an empty string, define a key-only environment variable.
+   * This function builds the EnvVar objects for each key-value env with non-null value. If value
+   * is an empty string, define a key-only environment variable.
    */
   @Since("3.4.0")
   def buildEnvVars(env: Seq[(String, String)]): Seq[EnvVar] = {
-    env.filterNot(_._2 == null)
+    env
+      .filterNot(_._2 == null)
       .map { case (k, v) =>
         new EnvVarBuilder()
           .withName(k)
@@ -398,19 +409,21 @@ object KubernetesUtils extends Logging {
   }
 
   /**
-   * This function builds the EnvVar objects for each field ref env
-   * with non-null apiVersion and fieldPath.
+   * This function builds the EnvVar objects for each field ref env with non-null apiVersion and
+   * fieldPath.
    */
   @Since("3.4.0")
   def buildEnvVarsWithFieldRef(env: Seq[(String, String, String)]): Seq[EnvVar] = {
-    env.filterNot(_._2 == null)
+    env
+      .filterNot(_._2 == null)
       .filterNot(_._3 == null)
       .map { case (key, apiVersion, fieldPath) =>
         new EnvVarBuilder()
           .withName(key)
-          .withValueFrom(new EnvVarSourceBuilder()
-            .withNewFieldRef(apiVersion, fieldPath)
-            .build())
+          .withValueFrom(
+            new EnvVarSourceBuilder()
+              .withNewFieldRef(apiVersion, fieldPath)
+              .build())
           .build()
       }
   }

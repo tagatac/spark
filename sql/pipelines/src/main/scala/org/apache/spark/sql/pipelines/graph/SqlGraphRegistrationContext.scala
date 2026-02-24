@@ -32,9 +32,12 @@ import org.apache.spark.sql.types.StructType
  * Data class for all state that is accumulated while processing a particular
  * [[SqlGraphRegistrationContext]].
  *
- * @param initialCatalogOpt The initial catalog to assume.
- * @param initialDatabaseOpt The initial database to assume.
- * @param initialSqlConf The initial sql confs to assume.
+ * @param initialCatalogOpt
+ *   The initial catalog to assume.
+ * @param initialDatabaseOpt
+ *   The initial database to assume.
+ * @param initialSqlConf
+ *   The initial sql confs to assume.
  */
 class SqlGraphRegistrationContextState(
     initialCatalogOpt: Option[String],
@@ -60,16 +63,14 @@ class SqlGraphRegistrationContextState(
   }
 }
 
-case class SqlGraphElementRegistrationException(
-    msg: String,
-    queryOrigin: QueryOrigin) extends AnalysisException(
-  errorClass = "PIPELINE_SQL_GRAPH_ELEMENT_REGISTRATION_ERROR",
-  messageParameters = Map(
-    "message" -> msg,
-    "offendingQuery" -> SqlGraphElementRegistrationException.offendingQueryString(queryOrigin),
-    "codeLocation" -> SqlGraphElementRegistrationException.codeLocationStr(queryOrigin)
-  )
-)
+case class SqlGraphElementRegistrationException(msg: String, queryOrigin: QueryOrigin)
+    extends AnalysisException(
+      errorClass = "PIPELINE_SQL_GRAPH_ELEMENT_REGISTRATION_ERROR",
+      messageParameters = Map(
+        "message" -> msg,
+        "offendingQuery" -> SqlGraphElementRegistrationException.offendingQueryString(
+          queryOrigin),
+        "codeLocation" -> SqlGraphElementRegistrationException.codeLocationStr(queryOrigin)))
 
 object SqlGraphElementRegistrationException {
   private def codeLocationStr(queryOrigin: QueryOrigin): String = queryOrigin.filePath match {
@@ -98,8 +99,7 @@ object SqlGraphElementRegistrationException {
  * catalog/schema in use within this SQL statement processing context, and tables/views/flows that
  * have been registered from SQL statements within this context.
  */
-class SqlGraphRegistrationContext(
-    graphRegistrationContext: GraphRegistrationContext) {
+class SqlGraphRegistrationContext(graphRegistrationContext: GraphRegistrationContext) {
   import SqlGraphRegistrationContext._
 
   private val defaultDatabase = graphRegistrationContext.defaultDatabase
@@ -108,17 +108,13 @@ class SqlGraphRegistrationContext(
   private val context = new SqlGraphRegistrationContextState(
     initialCatalogOpt = Option(defaultCatalog),
     initialDatabaseOpt = Option(defaultDatabase),
-    initialSqlConf = graphRegistrationContext.defaultSqlConf
-  )
+    initialSqlConf = graphRegistrationContext.defaultSqlConf)
 
   def processSqlFile(sqlText: String, sqlFilePath: String, spark: SparkSession): Unit = {
-    splitSqlFileIntoQueries(
-      spark = spark,
-      sqlFileText = sqlText,
-      sqlFilePath = sqlFilePath
-    ).foreach { case SqlQueryPlanWithOrigin(logicalPlan, queryOrigin) =>
-      processSqlQuery(logicalPlan, queryOrigin, spark)
-    }
+    splitSqlFileIntoQueries(spark = spark, sqlFileText = sqlText, sqlFilePath = sqlFilePath)
+      .foreach { case SqlQueryPlanWithOrigin(logicalPlan, queryOrigin) =>
+        processSqlQuery(logicalPlan, queryOrigin, spark)
+      }
   }
 
   private def processSqlQuery(
@@ -154,11 +150,12 @@ class SqlGraphRegistrationContext(
         // CREATE MATERIALIZED VIEW [ materialized_view_name ] [ options ] AS [ query ]
         CreateMaterializedViewAsSelectHandler.handle(
           createMaterializedViewAsSelectCommand,
-          queryOrigin
-        )
+          queryOrigin)
       case createStreamingTableAsSelectCommand: CreateStreamingTableAsSelect =>
         // CREATE STREAMING TABLE [ streaming_table_name ] [ options ] AS [ query ]
-        CreateStreamingTableAsSelectHandler.handle(createStreamingTableAsSelectCommand, queryOrigin)
+        CreateStreamingTableAsSelectHandler.handle(
+          createStreamingTableAsSelectCommand,
+          queryOrigin)
       case createStreamingTableCommand: CreateStreamingTable =>
         // CREATE STREAMING TABLE [ streaming_table_name ] [ options ]
         CreateStreamingTableHandler.handle(createStreamingTableCommand, queryOrigin)
@@ -168,8 +165,7 @@ class SqlGraphRegistrationContext(
       case unsupportedLogicalPlan: LogicalPlan =>
         throw SqlGraphElementRegistrationException(
           msg = s"Unsupported plan ${unsupportedLogicalPlan.nodeName} parsed from SQL query",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
     }
   }
 
@@ -179,8 +175,7 @@ class SqlGraphRegistrationContext(
         .parseAndQualifyTableIdentifier(
           rawTableIdentifier = IdentifierHelper.toTableIdentifier(cst.name),
           currentCatalog = context.getCurrentCatalogOpt,
-          currentDatabase = context.getCurrentDatabaseOpt
-        )
+          currentDatabase = context.getCurrentDatabaseOpt)
         .identifier
 
       // Register streaming table as a table.
@@ -190,18 +185,16 @@ class SqlGraphRegistrationContext(
           comment = cst.tableSpec.comment,
           specifiedSchema =
             Option.when(cst.columns.nonEmpty)(StructType(cst.columns.map(_.toV1Column))),
-          partitionCols = Option(PartitionHelper.applyPartitioning(cst.partitioning, queryOrigin)),
+          partitionCols =
+            Option(PartitionHelper.applyPartitioning(cst.partitioning, queryOrigin)),
           clusterCols = None,
           properties = cst.tableSpec.properties,
           origin = queryOrigin.copy(
             objectName = Option(stIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Table.toString)
-          ),
+            objectType = Option(QueryOriginType.Table.toString)),
           format = cst.tableSpec.provider,
           normalizedPath = None,
-          isStreamingTable = true
-        )
-      )
+          isStreamingTable = true))
     }
   }
 
@@ -211,8 +204,7 @@ class SqlGraphRegistrationContext(
         .parseAndQualifyTableIdentifier(
           rawTableIdentifier = IdentifierHelper.toTableIdentifier(cst.name),
           currentCatalog = context.getCurrentCatalogOpt,
-          currentDatabase = context.getCurrentDatabaseOpt
-        )
+          currentDatabase = context.getCurrentDatabaseOpt)
         .identifier
 
       // Register streaming table as a table.
@@ -222,18 +214,16 @@ class SqlGraphRegistrationContext(
           comment = cst.tableSpec.comment,
           specifiedSchema =
             Option.when(cst.columns.nonEmpty)(StructType(cst.columns.map(_.toV1Column))),
-          partitionCols = Option(PartitionHelper.applyPartitioning(cst.partitioning, queryOrigin)),
+          partitionCols =
+            Option(PartitionHelper.applyPartitioning(cst.partitioning, queryOrigin)),
           clusterCols = None,
           properties = cst.tableSpec.properties,
           origin = queryOrigin.copy(
             objectName = Option(stIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Table.toString)
-          ),
+            objectType = Option(QueryOriginType.Table.toString)),
           format = cst.tableSpec.provider,
           normalizedPath = None,
-          isStreamingTable = true
-        )
-      )
+          isStreamingTable = true))
 
       // Register flow that backs this streaming table.
       graphRegistrationContext.registerFlow(
@@ -245,14 +235,10 @@ class SqlGraphRegistrationContext(
           once = false,
           queryContext = QueryContext(
             currentCatalog = context.getCurrentCatalogOpt,
-            currentDatabase = context.getCurrentDatabaseOpt
-          ),
+            currentDatabase = context.getCurrentDatabaseOpt),
           origin = queryOrigin.copy(
             objectName = Option(stIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Flow.toString)
-          )
-        )
-      )
+            objectType = Option(QueryOriginType.Flow.toString))))
     }
   }
 
@@ -262,8 +248,7 @@ class SqlGraphRegistrationContext(
         .parseAndQualifyTableIdentifier(
           rawTableIdentifier = IdentifierHelper.toTableIdentifier(cmv.name),
           currentCatalog = context.getCurrentCatalogOpt,
-          currentDatabase = context.getCurrentDatabaseOpt
-        )
+          currentDatabase = context.getCurrentDatabaseOpt)
         .identifier
 
       // Register materialized view as a table.
@@ -273,18 +258,16 @@ class SqlGraphRegistrationContext(
           comment = cmv.tableSpec.comment,
           specifiedSchema =
             Option.when(cmv.columns.nonEmpty)(StructType(cmv.columns.map(_.toV1Column))),
-          partitionCols = Option(PartitionHelper.applyPartitioning(cmv.partitioning, queryOrigin)),
+          partitionCols =
+            Option(PartitionHelper.applyPartitioning(cmv.partitioning, queryOrigin)),
           clusterCols = None,
           properties = cmv.tableSpec.properties,
           origin = queryOrigin.copy(
             objectName = Option(mvIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Table.toString)
-          ),
+            objectType = Option(QueryOriginType.Table.toString)),
           format = cmv.tableSpec.provider,
           normalizedPath = None,
-          isStreamingTable = false
-        )
-      )
+          isStreamingTable = false))
 
       // Register flow that backs this materialized view.
       graphRegistrationContext.registerFlow(
@@ -296,14 +279,10 @@ class SqlGraphRegistrationContext(
           once = false,
           queryContext = QueryContext(
             currentCatalog = context.getCurrentCatalogOpt,
-            currentDatabase = context.getCurrentDatabaseOpt
-          ),
+            currentDatabase = context.getCurrentDatabaseOpt),
           origin = queryOrigin.copy(
             objectName = Option(mvIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Flow.toString)
-          )
-        )
-      )
+            objectType = Option(QueryOriginType.Flow.toString))))
     }
   }
 
@@ -312,8 +291,7 @@ class SqlGraphRegistrationContext(
       val viewIdentifier = GraphIdentifierManager.parseAndValidatePersistedViewIdentifier(
         rawViewIdentifier = IdentifierHelper.toTableIdentifier(cv.child),
         currentCatalog = context.getCurrentCatalogOpt,
-        currentDatabase = context.getCurrentDatabaseOpt
-      )
+        currentDatabase = context.getCurrentDatabaseOpt)
 
       // Register persisted view definition.
       graphRegistrationContext.registerView(
@@ -322,12 +300,9 @@ class SqlGraphRegistrationContext(
           comment = cv.comment,
           origin = queryOrigin.copy(
             objectName = Option(viewIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.View.toString)
-          ),
+            objectType = Option(QueryOriginType.View.toString)),
           properties = cv.properties,
-          sqlText = cv.originalText
-        )
-      )
+          sqlText = cv.originalText))
 
       // Register flow that backs this persisted view.
       graphRegistrationContext.registerFlow(
@@ -339,14 +314,10 @@ class SqlGraphRegistrationContext(
           once = false,
           queryContext = QueryContext(
             currentCatalog = context.getCurrentCatalogOpt,
-            currentDatabase = context.getCurrentDatabaseOpt
-          ),
+            currentDatabase = context.getCurrentDatabaseOpt),
           origin = queryOrigin.copy(
             objectName = Option(viewIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Flow.toString)
-          )
-        )
-      )
+            objectType = Option(QueryOriginType.Flow.toString))))
     }
   }
 
@@ -355,9 +326,7 @@ class SqlGraphRegistrationContext(
       // Validate the temporary view is not fully qualified, and then qualify it with the pipeline
       // catalog/database.
       val viewIdentifier = GraphIdentifierManager
-        .parseAndValidateTemporaryViewIdentifier(
-          rawViewIdentifier = cvc.name
-        )
+        .parseAndValidateTemporaryViewIdentifier(rawViewIdentifier = cvc.name)
 
       // Register temporary view definition.
       graphRegistrationContext.registerView(
@@ -366,12 +335,9 @@ class SqlGraphRegistrationContext(
           comment = cvc.comment,
           origin = queryOrigin.copy(
             objectName = Option(viewIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.View.toString)
-          ),
+            objectType = Option(QueryOriginType.View.toString)),
           properties = Map.empty,
-          sqlText = cvc.originalText
-        )
-      )
+          sqlText = cvc.originalText))
 
       // Register flow definition that backs this temporary view.
       graphRegistrationContext.registerFlow(
@@ -383,14 +349,10 @@ class SqlGraphRegistrationContext(
           once = false,
           queryContext = QueryContext(
             currentCatalog = context.getCurrentCatalogOpt,
-            currentDatabase = context.getCurrentDatabaseOpt
-          ),
+            currentDatabase = context.getCurrentDatabaseOpt),
           origin = queryOrigin.copy(
             objectName = Option(viewIdentifier.unquotedString),
-            objectType = Option(QueryOriginType.Flow.toString)
-          )
-        )
-      )
+            objectType = Option(QueryOriginType.Flow.toString))))
     }
   }
 
@@ -398,21 +360,17 @@ class SqlGraphRegistrationContext(
     def handle(cf: CreateFlowCommand, queryOrigin: QueryOrigin): Unit = {
       val rawFlowIdentifier =
         IdentifierHelper.toTableIdentifier(cf.name)
-      if (!IdentifierHelper.isSinglePartIdentifier(
-        rawFlowIdentifier
-      )) {
+      if (!IdentifierHelper.isSinglePartIdentifier(rawFlowIdentifier)) {
         throw new AnalysisException(
           "MULTIPART_FLOW_NAME_NOT_SUPPORTED",
-          Map("flowName" -> rawFlowIdentifier.unquotedString)
-        )
+          Map("flowName" -> rawFlowIdentifier.unquotedString))
       }
 
       val flowIdentifier = GraphIdentifierManager
         .parseAndQualifyFlowIdentifier(
           rawFlowIdentifier = rawFlowIdentifier,
           currentCatalog = context.getCurrentCatalogOpt,
-          currentDatabase = context.getCurrentDatabaseOpt
-        )
+          currentDatabase = context.getCurrentDatabaseOpt)
         .identifier
 
       val (flowTargetDatasetIdentifier, flowQueryLogicalPlan) = cf.flowOperation match {
@@ -424,30 +382,26 @@ class SqlGraphRegistrationContext(
             case _ =>
               throw SqlGraphElementRegistrationException(
                 msg = "Unable to resolve target dataset name for INSERT INTO flow",
-                queryOrigin = queryOrigin
-              )
+                queryOrigin = queryOrigin)
           }
           val qualifiedFlowTargetDatasetName = GraphIdentifierManager
             .parseAndQualifyTableIdentifier(
               rawTableIdentifier = flowTargetDatasetName,
               currentCatalog = context.getCurrentCatalogOpt,
-              currentDatabase = context.getCurrentDatabaseOpt
-            )
+              currentDatabase = context.getCurrentDatabaseOpt)
             .identifier
           (qualifiedFlowTargetDatasetName, i.query)
         case _ =>
           throw SqlGraphElementRegistrationException(
             msg = "Unable flow type. Only INSERT INTO flows are supported.",
-            queryOrigin = queryOrigin
-          )
+            queryOrigin = queryOrigin)
       }
 
       val qualifiedDestinationIdentifier = GraphIdentifierManager
         .parseAndQualifyFlowIdentifier(
           rawFlowIdentifier = flowTargetDatasetIdentifier,
           currentCatalog = context.getCurrentCatalogOpt,
-          currentDatabase = context.getCurrentDatabaseOpt
-        )
+          currentDatabase = context.getCurrentDatabaseOpt)
         .identifier
 
       graphRegistrationContext.registerFlow(
@@ -459,46 +413,37 @@ class SqlGraphRegistrationContext(
           once = false,
           queryContext = QueryContext(
             currentCatalog = context.getCurrentCatalogOpt,
-            currentDatabase = context.getCurrentDatabaseOpt
-          ),
-          origin = queryOrigin
-        )
-      )
+            currentDatabase = context.getCurrentDatabaseOpt),
+          origin = queryOrigin))
     }
 
     private def validateInsertIntoFlow(
         insertIntoStatement: InsertIntoStatement,
-        queryOrigin: QueryOrigin
-    ): Unit = {
+        queryOrigin: QueryOrigin): Unit = {
       if (insertIntoStatement.partitionSpec.nonEmpty) {
         throw SqlGraphElementRegistrationException(
           msg = "Partition spec may not be specified for flow target.",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
       }
       if (insertIntoStatement.userSpecifiedCols.nonEmpty) {
         throw SqlGraphElementRegistrationException(
           msg = "Column schema may not be specified for flow target.",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
       }
       if (insertIntoStatement.overwrite) {
         throw SqlGraphElementRegistrationException(
           msg = "INSERT OVERWRITE flows not supported.",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
       }
       if (insertIntoStatement.ifPartitionNotExists) {
         throw SqlGraphElementRegistrationException(
           msg = "IF NOT EXISTS not supported for flows.",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
       }
       if (!insertIntoStatement.byName) {
         throw SqlGraphElementRegistrationException(
           msg = "Only INSERT INTO by name flows supported.",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
       }
     }
   }
@@ -506,11 +451,9 @@ class SqlGraphRegistrationContext(
   private object SetCommandHandler {
     def handle(setCommand: SetCommand): Unit = {
       val (sqlConfKey, valueOpt) = setCommand.kv.getOrElse(
-        throw new RuntimeException("Invalid SET command without key-value pair")
-      )
-      val sqlConfValue = valueOpt.getOrElse(
-        throw new RuntimeException("Invalid SET command without value")
-      )
+        throw new RuntimeException("Invalid SET command without key-value pair"))
+      val sqlConfValue =
+        valueOpt.getOrElse(throw new RuntimeException("Invalid SET command without value"))
       context.setSqlConf(sqlConfKey, sqlConfValue)
     }
   }
@@ -526,8 +469,7 @@ class SqlGraphRegistrationContext(
         case invalidSchemaIdentifier =>
           throw new SparkException(
             "Invalid schema identifier provided on USE command: " +
-              s"$invalidSchemaIdentifier"
-          )
+              s"$invalidSchemaIdentifier")
       }
     }
   }
@@ -539,17 +481,15 @@ class SqlGraphRegistrationContext(
         spark: SparkSession): Unit = {
       try {
         // Analyze unresolved references before handling the command.
-        val analyzed = spark.sessionState.analyzer.executeAndCheck(
-          setCatalogCommand,
-          new QueryPlanningTracker
-        ).asInstanceOf[SetCatalogCommand]
+        val analyzed = spark.sessionState.analyzer
+          .executeAndCheck(setCatalogCommand, new QueryPlanningTracker)
+          .asInstanceOf[SetCatalogCommand]
         context.setCurrentCatalog(analyzed.getCatalogName())
       } catch {
         case e: AnalysisException =>
           throw SqlGraphElementRegistrationException(
             msg = s"Failed to resolve catalog expression: ${e.getMessage}",
-            queryOrigin = queryOrigin
-          )
+            queryOrigin = queryOrigin)
       }
       context.clearCurrentDatabase()
     }
@@ -565,43 +505,34 @@ object PartitionHelper {
       case other =>
         throw SqlGraphElementRegistrationException(
           msg = s"Invalid partitioning transform ($other)",
-          queryOrigin = queryOrigin
-        )
+          queryOrigin = queryOrigin)
     }
-    partitioning.collect {
-      case t: IdentityTransform =>
-        if (t.references.length != 1) {
-          throw SqlGraphElementRegistrationException(
-            msg = "Only single column based partitioning is supported.",
-            queryOrigin = queryOrigin
-          )
-        }
-        if (t.ref.fieldNames().length != 1) {
-          throw SqlGraphElementRegistrationException(
-            msg = "Multipart partition identifier not allowed.",
-            queryOrigin = queryOrigin
-          )
-        }
-        t.ref.fieldNames().head
+    partitioning.collect { case t: IdentityTransform =>
+      if (t.references.length != 1) {
+        throw SqlGraphElementRegistrationException(
+          msg = "Only single column based partitioning is supported.",
+          queryOrigin = queryOrigin)
+      }
+      if (t.ref.fieldNames().length != 1) {
+        throw SqlGraphElementRegistrationException(
+          msg = "Multipart partition identifier not allowed.",
+          queryOrigin = queryOrigin)
+      }
+      t.ref.fieldNames().head
     }
   }
 }
 
 object SqlGraphRegistrationContext {
+
   /**
    * Split SQL statements by semicolon.
    *
-   * Note that an input SQL text/blob like:
-   * "-- comment 1
-   * SELECT 1;
+   * Note that an input SQL text/blob like: "-- comment 1 SELECT 1;
    *
    * SELECT 2 ; -- comment 2"
    *
-   * Will be split into the two following strings:
-   * "-- comment 1
-   * SELECT 1",
-   * "
-   * SELECT 2 "
+   * Will be split into the two following strings: "-- comment 1 SELECT 1", " SELECT 2 "
    *
    * The semicolon that terminates a statement is not included in the returned string for that
    * statement, any white space/comments surrounding a statement is included in the returned
@@ -622,17 +553,20 @@ object SqlGraphRegistrationContext {
    * type will only be determined and populate when the logical plan is inspected during SQL
    * element registration.
    *
-   * @param spark the spark session to use to parse SQL statements.
-   * @param sqlFileText the raw text content of the SQL file.
-   * @param sqlFilePath the file path to the SQL file. Only used to populate the query origin.
-   * @return a [[SqlQueryPlanWithOrigin]] object per SQL statement, in the same order the SQL
-   *         statements were defined in the file contents.
+   * @param spark
+   *   the spark session to use to parse SQL statements.
+   * @param sqlFileText
+   *   the raw text content of the SQL file.
+   * @param sqlFilePath
+   *   the file path to the SQL file. Only used to populate the query origin.
+   * @return
+   *   a [[SqlQueryPlanWithOrigin]] object per SQL statement, in the same order the SQL statements
+   *   were defined in the file contents.
    */
   def splitSqlFileIntoQueries(
       spark: SparkSession,
       sqlFileText: String,
-      sqlFilePath: String
-  ): Seq[SqlQueryPlanWithOrigin] = {
+      sqlFilePath: String): Seq[SqlQueryPlanWithOrigin] = {
     // The index in the file we've processed up to at this point
     var currentCharIndexInFile = 0
 
@@ -650,21 +584,19 @@ object SqlGraphRegistrationContext {
       val sqlStatementStartIdxInString = logicalPlanFromSqlQuery.origin.startIndex.getOrElse(
         throw new SparkRuntimeException(
           errorClass = "INTERNAL_ERROR",
-          messageParameters = Map(
-            "message" ->
-              s"""Unable to retrieve start index of logical plan parsed by the following
+          messageParameters = Map("message" ->
+            s"""Unable to retrieve start index of logical plan parsed by the following
                  |SQL text:
                  |
-                 |$rawSqlStatementText""".stripMargin)
-        )
-      )
+                 |$rawSqlStatementText""".stripMargin)))
 
       // The actual start position of the SQL query in the entire file.
       val sqlStatementStartIndexInFile = currentCharIndexInFile + sqlStatementStartIdxInString
 
       // The line number is the number of new lines characters found prior to the start of this sql
       // statement, plus 1 for 1-indexing. Ex. "SELECT 1;" should be on line 1, not line 0.
-      val sqlStatementLineNumber = 1 + sqlFileText.substring(0, sqlStatementStartIndexInFile)
+      val sqlStatementLineNumber = 1 + sqlFileText
+        .substring(0, sqlStatementStartIndexInFile)
         .count(_ == '\n')
 
       // Move the current char index/ptr by the length of the raw SQL text we just processed, plus
@@ -680,9 +612,7 @@ object SqlGraphRegistrationContext {
           // Raw SQL text, after stripping away preceding whitespace
           sqlText = Option(rawSqlStatementText.substring(sqlStatementStartIdxInString)),
           line = Option(sqlStatementLineNumber),
-          startPosition = Option(sqlStatementStartIndexInFile)
-        )
-      )
+          startPosition = Option(sqlStatementStartIndexInFile)))
     }
   }
 }

@@ -21,11 +21,11 @@ import org.apache.spark.SparkException
 import org.apache.spark.annotation.Since
 import org.apache.spark.sql.DataFrame
 
-
 /**
  * Trait for models that provides Training summary.
  *
- * @tparam T Summary instance type
+ * @tparam T
+ *   Summary instance type
  */
 @Since("3.0.0")
 private[spark] trait HasTrainingSummary[T] {
@@ -37,8 +37,7 @@ private[spark] trait HasTrainingSummary[T] {
   def hasSummary: Boolean = trainingSummary.isDefined
 
   /**
-   * Gets summary of model on training set. An exception is
-   * thrown if if `hasSummary` is false.
+   * Gets summary of model on training set. An exception is thrown if if `hasSummary` is false.
    */
   @Since("3.0.0")
   def summary: T = trainingSummary.getOrElse {

@@ -45,9 +45,9 @@ private[spark] class StandaloneSchedulerBackend(
     scheduler: TaskSchedulerImpl,
     sc: SparkContext,
     masters: Array[String])
-  extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv)
-  with StandaloneAppClientListener
-  with Logging {
+    extends CoarseGrainedSchedulerBackend(scheduler, sc.env.rpcEnv)
+    with StandaloneAppClientListener
+    with Logging {
 
   private[spark] var client: StandaloneAppClient = null
   private val stopping = new AtomicBoolean(false)
@@ -85,19 +85,32 @@ private[spark] class StandaloneSchedulerBackend(
       sc.conf.get(config.DRIVER_PORT),
       CoarseGrainedSchedulerBackend.ENDPOINT_NAME).toString
     val args = Seq(
-      "--driver-url", driverUrl,
-      "--executor-id", "{{EXECUTOR_ID}}",
-      "--hostname", "{{HOSTNAME}}",
-      "--cores", "{{CORES}}",
-      "--app-id", "{{APP_ID}}",
-      "--worker-url", "{{WORKER_URL}}",
-      "--resourceProfileId", "{{RESOURCE_PROFILE_ID}}")
-    val extraJavaOpts = sc.conf.get(config.EXECUTOR_JAVA_OPTIONS)
-      .map(Utils.splitCommandString).getOrElse(Seq.empty)
-    val classPathEntries = sc.conf.get(config.EXECUTOR_CLASS_PATH)
-      .map(_.split(java.io.File.pathSeparator).toImmutableArraySeq).getOrElse(Nil)
-    val libraryPathEntries = sc.conf.get(config.EXECUTOR_LIBRARY_PATH)
-      .map(_.split(java.io.File.pathSeparator).toImmutableArraySeq).getOrElse(Nil)
+      "--driver-url",
+      driverUrl,
+      "--executor-id",
+      "{{EXECUTOR_ID}}",
+      "--hostname",
+      "{{HOSTNAME}}",
+      "--cores",
+      "{{CORES}}",
+      "--app-id",
+      "{{APP_ID}}",
+      "--worker-url",
+      "{{WORKER_URL}}",
+      "--resourceProfileId",
+      "{{RESOURCE_PROFILE_ID}}")
+    val extraJavaOpts = sc.conf
+      .get(config.EXECUTOR_JAVA_OPTIONS)
+      .map(Utils.splitCommandString)
+      .getOrElse(Seq.empty)
+    val classPathEntries = sc.conf
+      .get(config.EXECUTOR_CLASS_PATH)
+      .map(_.split(java.io.File.pathSeparator).toImmutableArraySeq)
+      .getOrElse(Nil)
+    val libraryPathEntries = sc.conf
+      .get(config.EXECUTOR_LIBRARY_PATH)
+      .map(_.split(java.io.File.pathSeparator).toImmutableArraySeq)
+      .getOrElse(Nil)
 
     // When testing, expose the parent class path to the child. This is processed by
     // compute-classpath.{cmd,sh} and makes all needed jars available to child processes
@@ -112,8 +125,13 @@ private[spark] class StandaloneSchedulerBackend(
     // Start executors with a few necessary configs for registering with the scheduler
     val sparkJavaOpts = Utils.sparkJavaOpts(conf, SparkConf.isExecutorStartupConf)
     val javaOpts = sparkJavaOpts ++ extraJavaOpts
-    val command = Command("org.apache.spark.executor.CoarseGrainedExecutorBackend",
-      args, sc.executorEnvs, classPathEntries ++ testingClassPath, libraryPathEntries, javaOpts)
+    val command = Command(
+      "org.apache.spark.executor.CoarseGrainedExecutorBackend",
+      args,
+      sc.executorEnvs,
+      classPathEntries ++ testingClassPath,
+      libraryPathEntries,
+      javaOpts)
     val webUrl = sc.ui.map(_.webUrl).getOrElse("")
     val coresPerExecutor = conf.getOption(config.EXECUTOR_CORES.key).map(_.toInt)
     // If we're using dynamic allocation, set our initial executor limit to 0 for now.
@@ -121,17 +139,25 @@ private[spark] class StandaloneSchedulerBackend(
     val initialExecutorLimit =
       if (Utils.isDynamicAllocationEnabled(conf)) {
         if (coresPerExecutor.isEmpty) {
-          logWarning("Dynamic allocation enabled without spark.executor.cores explicitly " +
-            "set, you may get more executors allocated than expected. It's recommended to " +
-            "set spark.executor.cores explicitly. Please check SPARK-30299 for more details.")
+          logWarning(
+            "Dynamic allocation enabled without spark.executor.cores explicitly " +
+              "set, you may get more executors allocated than expected. It's recommended to " +
+              "set spark.executor.cores explicitly. Please check SPARK-30299 for more details.")
         }
 
         Some(0)
       } else {
         None
       }
-    val appDesc = ApplicationDescription(sc.appName, maxCores, command,
-      webUrl, defaultProfile = defaultProf, sc.eventLogDir, sc.eventLogCodec, initialExecutorLimit)
+    val appDesc = ApplicationDescription(
+      sc.appName,
+      maxCores,
+      command,
+      webUrl,
+      defaultProfile = defaultProf,
+      sc.eventLogDir,
+      sc.eventLogCodec,
+      initialExecutorLimit)
     client = new StandaloneAppClient(sc.env.rpcEnv, masters, appDesc, this, conf)
     client.start()
     launcherBackend.setState(SparkAppHandle.State.SUBMITTED)
@@ -171,11 +197,16 @@ private[spark] class StandaloneSchedulerBackend(
     }
   }
 
-  override def executorAdded(fullId: String, workerId: String, hostPort: String, cores: Int,
-    memory: Int): Unit = {
-    logInfo(log"Granted executor ID ${MDC(LogKeys.EXECUTOR_ID, fullId)} on hostPort " +
-      log"${MDC(LogKeys.HOST_PORT, hostPort)} with ${MDC(LogKeys.NUM_CORES, cores)} core(s), " +
-      log"${MDC(LogKeys.MEMORY_SIZE, Utils.megabytesToString(memory))} RAM")
+  override def executorAdded(
+      fullId: String,
+      workerId: String,
+      hostPort: String,
+      cores: Int,
+      memory: Int): Unit = {
+    logInfo(
+      log"Granted executor ID ${MDC(LogKeys.EXECUTOR_ID, fullId)} on hostPort " +
+        log"${MDC(LogKeys.HOST_PORT, hostPort)} with ${MDC(LogKeys.NUM_CORES, cores)} core(s), " +
+        log"${MDC(LogKeys.MEMORY_SIZE, Utils.megabytesToString(memory))} RAM")
   }
 
   override def executorRemoved(
@@ -187,11 +218,15 @@ private[spark] class StandaloneSchedulerBackend(
       case Some(ExecutorExitCode.HEARTBEAT_FAILURE) =>
         ExecutorExited(ExecutorExitCode.HEARTBEAT_FAILURE, exitCausedByApp = false, message)
       case Some(ExecutorExitCode.BLOCK_MANAGER_REREGISTRATION_FAILED) =>
-        ExecutorExited(ExecutorExitCode.BLOCK_MANAGER_REREGISTRATION_FAILED,
-          exitCausedByApp = false, message)
+        ExecutorExited(
+          ExecutorExitCode.BLOCK_MANAGER_REREGISTRATION_FAILED,
+          exitCausedByApp = false,
+          message)
       case Some(ExecutorExitCode.DISK_STORE_FAILED_TO_CREATE_DIR) =>
-        ExecutorExited(ExecutorExitCode.DISK_STORE_FAILED_TO_CREATE_DIR,
-          exitCausedByApp = false, message)
+        ExecutorExited(
+          ExecutorExitCode.DISK_STORE_FAILED_TO_CREATE_DIR,
+          exitCausedByApp = false,
+          message)
       case Some(code) => ExecutorExited(code, exitCausedByApp = true, message)
       case None => ExecutorProcessLost(message, workerHost, causedByApp = workerHost.isEmpty)
     }
@@ -200,7 +235,8 @@ private[spark] class StandaloneSchedulerBackend(
     removeExecutor(fullId.split("/")(1), reason)
   }
 
-  override def executorDecommissioned(fullId: String,
+  override def executorDecommissioned(
+      fullId: String,
       decommissionInfo: ExecutorDecommissionInfo): Unit = {
     logInfo(log"Asked to decommission executor ${MDC(LogKeys.EXECUTOR_ID, fullId)}")
     val execId = fullId.split("/")(1)
@@ -210,13 +246,13 @@ private[spark] class StandaloneSchedulerBackend(
       triggeredByExecutor = false)
     logInfo(
       log"Executor ${MDC(LogKeys.EXECUTOR_ID, fullId)} " +
-        log"decommissioned: ${MDC(LogKeys.DESCRIPTION, decommissionInfo)}"
-      )
+        log"decommissioned: ${MDC(LogKeys.DESCRIPTION, decommissionInfo)}")
   }
 
   override def workerRemoved(workerId: String, host: String, message: String): Unit = {
-    logInfo(log"Worker ${MDC(LogKeys.WORKER_ID, workerId)} removed: " +
-      log"${MDC(LogKeys.MESSAGE, message)}")
+    logInfo(
+      log"Worker ${MDC(LogKeys.WORKER_ID, workerId)} removed: " +
+        log"${MDC(LogKeys.MESSAGE, message)}")
     removeWorker(workerId, host, message)
   }
 
@@ -231,10 +267,11 @@ private[spark] class StandaloneSchedulerBackend(
     }
 
   /**
-   * Request executors from the Master by specifying the total number desired,
-   * including existing pending and running executors.
+   * Request executors from the Master by specifying the total number desired, including existing
+   * pending and running executors.
    *
-   * @return whether the request is acknowledged.
+   * @return
+   *   whether the request is acknowledged.
    */
   protected override def doRequestTotalExecutors(
       resourceProfileToTotalExecs: Map[ResourceProfile, Int]): Future[Boolean] = {
@@ -250,7 +287,8 @@ private[spark] class StandaloneSchedulerBackend(
 
   /**
    * Kill the given list of executors through the Master.
-   * @return whether the kill request is acknowledged.
+   * @return
+   *   whether the kill request is acknowledged.
    */
   protected override def doKillExecutors(executorIds: Seq[String]): Future[Boolean] = {
     Option(client) match {
@@ -263,7 +301,8 @@ private[spark] class StandaloneSchedulerBackend(
 
   override def getDriverLogUrls: Option[Map[String, String]] = {
     val prefix = "SPARK_DRIVER_LOG_URL_"
-    val driverLogUrls = sys.env.filter { case (k, _) => k.startsWith(prefix) }
+    val driverLogUrls = sys.env
+      .filter { case (k, _) => k.startsWith(prefix) }
       .map(e => (e._1.substring(prefix.length).toLowerCase(Locale.ROOT), e._2))
     if (driverLogUrls.nonEmpty) Some(driverLogUrls) else None
   }
@@ -328,9 +367,10 @@ private[spark] class StandaloneSchedulerBackend(
         // we added the executor to `executorsPendingLossReason`. Hence, the executor will be
         // filtered out from `activeExecutors` in the function `getWorkerOffers`.
         executorsPendingLossReason += executorId
-        val lossReason = ExecutorProcessLost("Remote RPC client disassociated. Likely due to " +
-          "containers exceeding thresholds, or network issues. Check driver logs for WARN " +
-          "messages.")
+        val lossReason = ExecutorProcessLost(
+          "Remote RPC client disassociated. Likely due to " +
+            "containers exceeding thresholds, or network issues. Check driver logs for WARN " +
+            "messages.")
         val removeExecutorTask = new Runnable() {
           override def run(): Unit = Utils.tryLogNonFatalError {
             // If the executor is not removed by slow path, fast path will send a `RemoveExecutor`
@@ -353,12 +393,15 @@ private[spark] class StandaloneSchedulerBackend(
           }
         }
         try {
-          executorDelayRemoveThread.schedule(removeExecutorTask,
-            _executorRemoveDelay, TimeUnit.MILLISECONDS)
+          executorDelayRemoveThread.schedule(
+            removeExecutorTask,
+            _executorRemoveDelay,
+            TimeUnit.MILLISECONDS)
         } catch {
           case _: RejectedExecutionException if stopping.get() =>
-            logWarning("Skipping onDisconnected RemoveExecutor call " +
-              "because the scheduler is stopping")
+            logWarning(
+              "Skipping onDisconnected RemoveExecutor call " +
+                "because the scheduler is stopping")
         }
       }
     }

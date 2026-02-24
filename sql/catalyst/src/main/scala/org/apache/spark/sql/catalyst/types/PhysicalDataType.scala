@@ -295,10 +295,7 @@ case class PhysicalMapType(keyType: DataType, valueType: DataType, valueContains
       } else if (isNullRight) {
         1
       } else {
-        ordering.compare(
-          arrayLeft.get(position, dataType),
-          arrayRight.get(position, dataType)
-        )
+        ordering.compare(arrayLeft.get(position, dataType), arrayRight.get(position, dataType))
       }
     }
   }
@@ -327,15 +324,16 @@ case class PhysicalStringType(collationId: Int) extends PhysicalDataType {
   // this type. Otherwise, the companion object would be of type "StringType$" in byte code.
   // Defined with a private constructor so the companion object is the only possible instantiation.
   private[sql] type InternalType = UTF8String
-  private[sql] val ordering = CollationFactory.fetchCollation(collationId).comparator.compare(_, _)
+  private[sql] val ordering =
+    CollationFactory.fetchCollation(collationId).comparator.compare(_, _)
   @transient private[sql] lazy val tag = typeTag[InternalType]
 }
 object PhysicalStringType {
   def apply(collationId: Int): PhysicalStringType = new PhysicalStringType(collationId)
 }
 
-case class PhysicalArrayType(
-    elementType: DataType, containsNull: Boolean) extends PhysicalDataType {
+case class PhysicalArrayType(elementType: DataType, containsNull: Boolean)
+    extends PhysicalDataType {
   override private[sql] type InternalType = ArrayData
   override private[sql] def ordering = interpretedOrdering
   @transient private[sql] lazy val tag = typeTag[InternalType]
@@ -361,9 +359,7 @@ case class PhysicalArrayType(
           return 1
         } else {
           val comp =
-            elementOrdering.compare(
-              leftArray.get(i, elementType),
-              rightArray.get(i, elementType))
+            elementOrdering.compare(leftArray.get(i, elementType), rightArray.get(i, elementType))
           if (comp != 0) {
             return comp
           }
@@ -384,12 +380,13 @@ case class PhysicalArrayType(
 case class PhysicalStructType(fields: Array[StructField]) extends PhysicalDataType {
   override private[sql] type InternalType = Any
   override private[sql] def ordering =
-    forSchema(this.fields.map(_.dataType).toImmutableArraySeq).asInstanceOf[Ordering[InternalType]]
+    forSchema(this.fields.map(_.dataType).toImmutableArraySeq)
+      .asInstanceOf[Ordering[InternalType]]
   @transient private[sql] lazy val tag = typeTag[InternalType]
 
   private[sql] def forSchema(dataTypes: Seq[DataType]): InterpretedOrdering = {
-    new InterpretedOrdering(dataTypes.zipWithIndex.map {
-      case (dt, index) => SortOrder(BoundReference(index, dt, nullable = true), Ascending)
+    new InterpretedOrdering(dataTypes.zipWithIndex.map { case (dt, index) =>
+      SortOrder(BoundReference(index, dt, nullable = true), Ascending)
     })
   }
 }
@@ -400,8 +397,7 @@ class PhysicalVariantType extends PhysicalDataType {
 
   // TODO(SPARK-45891): Support comparison for the Variant type.
   override private[sql] def ordering =
-    throw QueryExecutionErrors.orderedOperationUnsupportedByDataTypeError(
-      "PhysicalVariantType")
+    throw QueryExecutionErrors.orderedOperationUnsupportedByDataTypeError("PhysicalVariantType")
 }
 
 object PhysicalVariantType extends PhysicalVariantType

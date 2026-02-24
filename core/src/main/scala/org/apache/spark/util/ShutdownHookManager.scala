@@ -30,7 +30,6 @@ import org.apache.spark.internal.{Logging, LogKeys}
 import org.apache.spark.internal.LogKeys.PATH
 import org.apache.spark.internal.config.SPARK_SHUTDOWN_TIMEOUT_MS
 
-
 /**
  * Various utility methods used by Spark.
  */
@@ -38,15 +37,15 @@ private[spark] object ShutdownHookManager extends Logging {
   val DEFAULT_SHUTDOWN_PRIORITY = 100
 
   /**
-   * The shutdown priority of the SparkContext instance. This is lower than the default
-   * priority, so that by default hooks are run before the context is shut down.
+   * The shutdown priority of the SparkContext instance. This is lower than the default priority,
+   * so that by default hooks are run before the context is shut down.
    */
   val SPARK_CONTEXT_SHUTDOWN_PRIORITY = 50
 
   /**
    * The shutdown priority of temp directory must be lower than the SparkContext shutdown
-   * priority. Otherwise cleaning the temp directories while Spark jobs are running can
-   * throw undesirable errors at the time of shutdown.
+   * priority. Otherwise cleaning the temp directories while Spark jobs are running can throw
+   * undesirable errors at the time of shutdown.
    */
   val TEMP_DIR_SHUTDOWN_PRIORITY = 25
 
@@ -116,9 +115,9 @@ private[spark] object ShutdownHookManager extends Logging {
   }
 
   /**
-   * Detect whether this thread might be executing a shutdown hook. Will always return true if
-   * the current thread is a running a shutdown hook but may spuriously return true otherwise (e.g.
-   * if System.exit was just called by a concurrent thread).
+   * Detect whether this thread might be executing a shutdown hook. Will always return true if the
+   * current thread is a running a shutdown hook but may spuriously return true otherwise (e.g. if
+   * System.exit was just called by a concurrent thread).
    *
    * Currently, this detects whether the JVM is shutting down by Runtime#addShutdownHook throwing
    * an IllegalStateException.
@@ -141,19 +140,22 @@ private[spark] object ShutdownHookManager extends Logging {
   /**
    * Adds a shutdown hook with default priority.
    *
-   * @param hook The code to run during shutdown.
-   * @return A handle that can be used to unregister the shutdown hook.
+   * @param hook
+   *   The code to run during shutdown.
+   * @return
+   *   A handle that can be used to unregister the shutdown hook.
    */
   def addShutdownHook(hook: () => Unit): AnyRef = {
     addShutdownHook(DEFAULT_SHUTDOWN_PRIORITY)(hook)
   }
 
   /**
-   * Adds a shutdown hook with the given priority. Hooks with higher priority values run
-   * first.
+   * Adds a shutdown hook with the given priority. Hooks with higher priority values run first.
    *
-   * @param hook The code to run during shutdown.
-   * @return A handle that can be used to unregister the shutdown hook.
+   * @param hook
+   *   The code to run during shutdown.
+   * @return
+   *   A handle that can be used to unregister the shutdown hook.
    */
   def addShutdownHook(priority: Int)(hook: () => Unit): AnyRef = {
     shutdownHooks.add(priority, hook)
@@ -162,8 +164,10 @@ private[spark] object ShutdownHookManager extends Logging {
   /**
    * Remove a previously installed shutdown hook.
    *
-   * @param ref A handle returned by `addShutdownHook`.
-   * @return Whether the hook was removed.
+   * @param ref
+   *   A handle returned by `addShutdownHook`.
+   * @return
+   *   Whether the hook was removed.
    */
   def removeShutdownHook(ref: AnyRef): Boolean = {
     shutdownHooks.remove(ref)
@@ -171,7 +175,7 @@ private[spark] object ShutdownHookManager extends Logging {
 
 }
 
-private [util] class SparkShutdownHookManager {
+private[util] class SparkShutdownHookManager {
 
   private val hooks = new PriorityQueue[SparkShutdownHook]()
   @volatile private var shuttingDown = false
@@ -190,11 +194,11 @@ private [util] class SparkShutdownHookManager {
     val timeout = new SparkConf().get(SPARK_SHUTDOWN_TIMEOUT_MS)
 
     timeout.fold {
-      org.apache.hadoop.util.ShutdownHookManager.get().addShutdownHook(
-        hookTask, priority)
+      org.apache.hadoop.util.ShutdownHookManager.get().addShutdownHook(hookTask, priority)
     } { t =>
-      org.apache.hadoop.util.ShutdownHookManager.get().addShutdownHook(
-        hookTask, priority, t, TimeUnit.MILLISECONDS)
+      org.apache.hadoop.util.ShutdownHookManager
+        .get()
+        .addShutdownHook(hookTask, priority, t, TimeUnit.MILLISECONDS)
     }
   }
 
@@ -224,7 +228,7 @@ private [util] class SparkShutdownHookManager {
 }
 
 private class SparkShutdownHook(private val priority: Int, hook: () => Unit)
-  extends Comparable[SparkShutdownHook] {
+    extends Comparable[SparkShutdownHook] {
 
   override def compareTo(other: SparkShutdownHook): Int = other.priority.compareTo(priority)
 

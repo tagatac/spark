@@ -67,9 +67,11 @@ private[jdbc] object JdbcTypeUtils {
 
   def isSigned(field: StructField): Boolean = field.dataType match {
     case ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType |
-         _: DecimalType => true
+        _: DecimalType =>
+      true
     case NullType | BooleanType | StringType | DateType | BinaryType | _: TimeType |
-         TimestampType | TimestampNTZType => false
+        TimestampType | TimestampNTZType =>
+      false
     case other =>
       throw new SQLFeatureNotSupportedException(s"DataType $other is not supported yet.")
   }
@@ -104,7 +106,8 @@ private[jdbc] object JdbcTypeUtils {
     case TimestampType => 6
     case TimestampNTZType => 6
     case NullType | BooleanType | ByteType | ShortType | IntegerType | LongType | StringType |
-         DateType | BinaryType | _: TimeType => 0
+        DateType | BinaryType | _: TimeType =>
+      0
     case DecimalType.Fixed(_, s) => s
     case other =>
       throw new SQLFeatureNotSupportedException(s"DataType $other is not supported yet.")

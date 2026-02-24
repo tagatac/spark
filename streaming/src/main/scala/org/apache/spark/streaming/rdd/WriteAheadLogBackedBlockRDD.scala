@@ -33,56 +33,62 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.io.ChunkedByteBuffer
 
 /**
- * Partition class for [[org.apache.spark.streaming.rdd.WriteAheadLogBackedBlockRDD]].
- * It contains information about the id of the blocks having this partition's data and
- * the corresponding record handle in the write ahead log that backs the partition.
+ * Partition class for [[org.apache.spark.streaming.rdd.WriteAheadLogBackedBlockRDD]]. It contains
+ * information about the id of the blocks having this partition's data and the corresponding
+ * record handle in the write ahead log that backs the partition.
  *
- * @param index index of the partition
- * @param blockId id of the block having the partition data
- * @param isBlockIdValid Whether the block Ids are valid (i.e., the blocks are present in the Spark
- *                         executors). If not, then block lookups by the block ids will be skipped.
- *                         By default, this is an empty array signifying true for all the blocks.
- * @param walRecordHandle Handle of the record in a write ahead log having the partition data
+ * @param index
+ *   index of the partition
+ * @param blockId
+ *   id of the block having the partition data
+ * @param isBlockIdValid
+ *   Whether the block Ids are valid (i.e., the blocks are present in the Spark executors). If
+ *   not, then block lookups by the block ids will be skipped. By default, this is an empty array
+ *   signifying true for all the blocks.
+ * @param walRecordHandle
+ *   Handle of the record in a write ahead log having the partition data
  */
-private[streaming]
-class WriteAheadLogBackedBlockRDDPartition(
+private[streaming] class WriteAheadLogBackedBlockRDDPartition(
     val index: Int,
     val blockId: BlockId,
     val isBlockIdValid: Boolean,
-    val walRecordHandle: WriteAheadLogRecordHandle
-  ) extends Partition
-
+    val walRecordHandle: WriteAheadLogRecordHandle)
+    extends Partition
 
 /**
- * This class represents a special case of the BlockRDD where the data blocks in
- * the block manager are also backed by data in write ahead logs. For reading
- * the data, this RDD first looks up the blocks by their ids in the block manager.
- * If it does not find them, it looks up the WAL using the corresponding record handle.
- * The lookup of the blocks from the block manager can be skipped by setting the corresponding
- * element in isBlockIdValid to false. This is a performance optimization which does not affect
- * correctness, and it can be used in situations where it is known that the block
- * does not exist in the Spark executors (e.g. after a failed driver is restarted).
+ * This class represents a special case of the BlockRDD where the data blocks in the block manager
+ * are also backed by data in write ahead logs. For reading the data, this RDD first looks up the
+ * blocks by their ids in the block manager. If it does not find them, it looks up the WAL using
+ * the corresponding record handle. The lookup of the blocks from the block manager can be skipped
+ * by setting the corresponding element in isBlockIdValid to false. This is a performance
+ * optimization which does not affect correctness, and it can be used in situations where it is
+ * known that the block does not exist in the Spark executors (e.g. after a failed driver is
+ * restarted).
  *
- * @param sc SparkContext
- * @param _blockIds Ids of the blocks that contains this RDD's data
- * @param walRecordHandles Record handles in write ahead logs that contain this RDD's data
- * @param isBlockIdValid Whether the block Ids are valid (i.e., the blocks are present in the Spark
- *                         executors). If not, then block lookups by the block ids will be skipped.
- *                         By default, this is an empty array signifying true for all the blocks.
- * @param storeInBlockManager Whether to store a block in the block manager
- *                            after reading it from the WAL
- * @param storageLevel storage level to store when storing in block manager
- *                     (applicable when storeInBlockManager = true)
+ * @param sc
+ *   SparkContext
+ * @param _blockIds
+ *   Ids of the blocks that contains this RDD's data
+ * @param walRecordHandles
+ *   Record handles in write ahead logs that contain this RDD's data
+ * @param isBlockIdValid
+ *   Whether the block Ids are valid (i.e., the blocks are present in the Spark executors). If
+ *   not, then block lookups by the block ids will be skipped. By default, this is an empty array
+ *   signifying true for all the blocks.
+ * @param storeInBlockManager
+ *   Whether to store a block in the block manager after reading it from the WAL
+ * @param storageLevel
+ *   storage level to store when storing in block manager (applicable when storeInBlockManager =
+ *   true)
  */
-private[streaming]
-class WriteAheadLogBackedBlockRDD[T: ClassTag](
+private[streaming] class WriteAheadLogBackedBlockRDD[T: ClassTag](
     sc: SparkContext,
     @transient private val _blockIds: Array[BlockId],
     @transient val walRecordHandles: Array[WriteAheadLogRecordHandle],
     @transient private val isBlockIdValid: Array[Boolean] = Array.empty,
     storeInBlockManager: Boolean = false,
     storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY_SER)
-  extends BlockRDD[T](sc, _blockIds) {
+    extends BlockRDD[T](sc, _blockIds) {
 
   require(
     _blockIds.length == walRecordHandles.length,
@@ -109,9 +115,9 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
   }
 
   /**
-   * Gets the partition data by getting the corresponding block from the block manager.
-   * If the block does not exist, then the data is read from the corresponding record
-   * in write ahead log files.
+   * Gets the partition data by getting the corresponding block from the block manager. If the
+   * block does not exist, then the data is read from the corresponding record in write ahead log
+   * files.
    */
   override def compute(split: Partition, context: TaskContext): Iterator[T] = {
     assertValid()
@@ -138,14 +144,18 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
         // this dummy directory should not already exist otherwise the WAL will try to recover
         // past events from the directory and throw errors.
         val nonExistentDirectory = new File(
-          System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString).toURI.toString
+          System.getProperty("java.io.tmpdir"),
+          UUID.randomUUID().toString).toURI.toString
         writeAheadLog = WriteAheadLogUtils.createLogForReceiver(
-          SparkEnv.get.conf, nonExistentDirectory, hadoopConf)
+          SparkEnv.get.conf,
+          nonExistentDirectory,
+          hadoopConf)
         dataRead = writeAheadLog.read(partition.walRecordHandle)
       } catch {
         case NonFatal(e) =>
           throw new SparkException(
-            s"Could not read data from write ahead log record ${partition.walRecordHandle}", e)
+            s"Could not read data from write ahead log record ${partition.walRecordHandle}",
+            e)
       } finally {
         if (writeAheadLog != null) {
           writeAheadLog.close()
@@ -165,9 +175,8 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
         dataRead.rewind()
       }
       serializerManager
-        .dataDeserializeStream(
-          blockId,
-          new ChunkedByteBuffer(dataRead).toInputStream())(elementClassTag)
+        .dataDeserializeStream(blockId, new ChunkedByteBuffer(dataRead).toInputStream())(
+          elementClassTag)
         .asInstanceOf[Iterator[T]]
     }
 
@@ -179,9 +188,9 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
   }
 
   /**
-   * Get the preferred location of the partition. This returns the locations of the block
-   * if it is present in the block manager, else if FileBasedWriteAheadLogSegment is used,
-   * it returns the location of the corresponding file segment in HDFS .
+   * Get the preferred location of the partition. This returns the locations of the block if it is
+   * present in the block manager, else if FileBasedWriteAheadLogSegment is used, it returns the
+   * location of the corresponding file segment in HDFS .
    */
   override def getPreferredLocations(split: Partition): Seq[String] = {
     val partition = split.asInstanceOf[WriteAheadLogBackedBlockRDDPartition]
@@ -195,8 +204,12 @@ class WriteAheadLogBackedBlockRDD[T: ClassTag](
       partition.walRecordHandle match {
         case fileSegment: FileBasedWriteAheadLogSegment =>
           try {
-            HdfsUtils.getFileSegmentLocations(
-              fileSegment.path, fileSegment.offset, fileSegment.length, hadoopConfig)
+            HdfsUtils
+              .getFileSegmentLocations(
+                fileSegment.path,
+                fileSegment.offset,
+                fileSegment.length,
+                hadoopConfig)
               .toImmutableArraySeq
           } catch {
             case NonFatal(e) =>

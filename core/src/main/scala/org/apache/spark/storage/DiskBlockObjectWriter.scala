@@ -33,14 +33,14 @@ import org.apache.spark.util.Utils
 import org.apache.spark.util.collection.PairsWriter
 
 /**
- * A class for writing JVM objects directly to a file on disk. This class allows data to be appended
- * to an existing block. For efficiency, it retains the underlying file channel across
- * multiple commits. This channel is kept open until close() is called. In case of faults,
- * callers should instead close with revertPartialWritesAndClose() to atomically revert the
- * uncommitted partial writes.
+ * A class for writing JVM objects directly to a file on disk. This class allows data to be
+ * appended to an existing block. For efficiency, it retains the underlying file channel across
+ * multiple commits. This channel is kept open until close() is called. In case of faults, callers
+ * should instead close with revertPartialWritesAndClose() to atomically revert the uncommitted
+ * partial writes.
  *
- * This class does not support concurrent writes. Also, once the writer has been opened it cannot be
- * reopened again.
+ * This class does not support concurrent writes. Also, once the writer has been opened it cannot
+ * be reopened again.
  */
 private[spark] class DiskBlockObjectWriter(
     val file: File,
@@ -52,15 +52,14 @@ private[spark] class DiskBlockObjectWriter(
     // are themselves performing writes. All updates must be relative.
     writeMetrics: ShuffleWriteMetricsReporter,
     val blockId: BlockId = null)
-  extends OutputStream
-  with Logging
-  with PairsWriter {
+    extends OutputStream
+    with Logging
+    with PairsWriter {
 
   /**
-   * Guards against close calls, e.g. from a wrapping stream.
-   * Call manualClose to close the stream that was extended by this trait.
-   * Commit uses this trait to close object streams without paying the
-   * cost of closing and opening the underlying file.
+   * Guards against close calls, e.g. from a wrapping stream. Call manualClose to close the stream
+   * that was extended by this trait. Commit uses this trait to close object streams without
+   * paying the cost of closing and opening the underlying file.
    */
   private trait ManualCloseOutputStream extends OutputStream {
     abstract override def close(): Unit = {
@@ -75,8 +74,9 @@ private[spark] class DiskBlockObjectWriter(
         // get IOException when flushing the buffered data. We should catch and log the exception
         // to ensure the revertPartialWritesAndClose() function doesn't throw an exception.
         case e: IOException =>
-          logError(log"Exception occurred while manually close the output stream to file "
-            + log"${MDC(PATH, file)}, ${MDC(ERROR, e.getMessage)}")
+          logError(
+            log"Exception occurred while manually close the output stream to file "
+              + log"${MDC(PATH, file)}, ${MDC(ERROR, e.getMessage)}")
       }
     }
   }
@@ -115,9 +115,9 @@ private[spark] class DiskBlockObjectWriter(
   private var reportedPosition = committedPosition
 
   /**
-   * Keep track of number of records written and also use this to periodically
-   * output bytes written since the latter is expensive to do for each record.
-   * And we reset it after every commitAndGet called.
+   * Keep track of number of records written and also use this to periodically output bytes
+   * written since the latter is expensive to do for each record. And we reset it after every
+   * commitAndGet called.
    */
   private var numRecordsWritten = 0
 
@@ -154,7 +154,9 @@ private[spark] class DiskBlockObjectWriter(
       checksumOutputStream.setChecksum(checksum)
     }
     class ManualCloseBufferedOutputStream
-      extends BufferedOutputStream(if (checksumEnabled) checksumOutputStream else ts, bufferSize)
+        extends BufferedOutputStream(
+          if (checksumEnabled) checksumOutputStream else ts,
+          bufferSize)
         with ManualCloseOutputStream
     mcs = new ManualCloseBufferedOutputStream
   }
@@ -162,7 +164,8 @@ private[spark] class DiskBlockObjectWriter(
   def open(): DiskBlockObjectWriter = {
     if (hasBeenClosed) {
       throw SparkException.internalError(
-        "Writer already closed. Cannot be reopened.", category = "STORAGE")
+        "Writer already closed. Cannot be reopened.",
+        category = "STORAGE")
     }
     if (!initialized) {
       initialize()
@@ -176,8 +179,7 @@ private[spark] class DiskBlockObjectWriter(
   }
 
   /**
-   * Close and cleanup all resources.
-   * Should call after committing or reverting partial writes.
+   * Close and cleanup all resources. Should call after committing or reverting partial writes.
    */
   private def closeResources(): Unit = {
     try {
@@ -193,8 +195,9 @@ private[spark] class DiskBlockObjectWriter(
       }
     } catch {
       case e: IOException =>
-        logInfo(log"Exception occurred while closing the output stream" +
-          log"${MDC(ERROR, e.getMessage)}")
+        logInfo(
+          log"Exception occurred while closing the output stream" +
+            log"${MDC(ERROR, e.getMessage)}")
     } finally {
       if (initialized) {
         Utils.tryWithSafeFinally {
@@ -228,10 +231,11 @@ private[spark] class DiskBlockObjectWriter(
   }
 
   /**
-   * Flush the partial writes and commit them as a single atomic block.
-   * A commit may write additional bytes to frame the atomic block.
+   * Flush the partial writes and commit them as a single atomic block. A commit may write
+   * additional bytes to frame the atomic block.
    *
-   * @return file segment with previous offset and length committed on this call.
+   * @return
+   *   file segment with previous offset and length committed on this call.
    */
   def commitAndGet(): FileSegment = {
     if (streamOpen) {
@@ -263,13 +267,13 @@ private[spark] class DiskBlockObjectWriter(
     }
   }
 
-
   /**
-   * Reverts writes that haven't been committed yet. Callers should invoke this function
-   * when there are runtime exceptions. This method will not throw, though it may be
-   * unsuccessful in truncating written data.
+   * Reverts writes that haven't been committed yet. Callers should invoke this function when
+   * there are runtime exceptions. This method will not throw, though it may be unsuccessful in
+   * truncating written data.
    *
-   * @return the file that this DiskBlockObjectWriter wrote to.
+   * @return
+   *   the file that this DiskBlockObjectWriter wrote to.
    */
   def revertPartialWritesAndClose(): File = {
     // Discard current writes. We do this by flushing the outstanding writes and then
@@ -291,11 +295,13 @@ private[spark] class DiskBlockObjectWriter(
         // don't log the exception stack trace to avoid confusing users.
         // See: SPARK-28340
         case ce: ClosedByInterruptException =>
-          logError(log"Exception occurred while reverting partial writes to file "
-            + log"${MDC(PATH, file)}, ${MDC(ERROR, ce.getMessage)}")
+          logError(
+            log"Exception occurred while reverting partial writes to file "
+              + log"${MDC(PATH, file)}, ${MDC(ERROR, ce.getMessage)}")
         case e: Exception =>
           logError(
-            log"Uncaught exception while reverting partial writes to file ${MDC(PATH, file)}", e)
+            log"Uncaught exception while reverting partial writes to file ${MDC(PATH, file)}",
+            e)
       } finally {
         if (truncateStream != null) {
           truncateStream.close()
@@ -307,9 +313,9 @@ private[spark] class DiskBlockObjectWriter(
   }
 
   /**
-   * Reverts write metrics and delete the file held by current `DiskBlockObjectWriter`.
-   * Callers should invoke this function when there are runtime exceptions in file
-   * writing process and the file is no longer needed.
+   * Reverts write metrics and delete the file held by current `DiskBlockObjectWriter`. Callers
+   * should invoke this function when there are runtime exceptions in file writing process and the
+   * file is no longer needed.
    */
   def closeAndDelete(): Unit = {
     Utils.tryWithSafeFinally {
@@ -361,8 +367,8 @@ private[spark] class DiskBlockObjectWriter(
   }
 
   /**
-   * Report the number of bytes written in this writer's shuffle write metrics.
-   * Note that this is only valid before the underlying streams are closed.
+   * Report the number of bytes written in this writer's shuffle write metrics. Note that this is
+   * only valid before the underlying streams are closed.
    */
   private def updateBytesWritten(): Unit = {
     val pos = channel.position()

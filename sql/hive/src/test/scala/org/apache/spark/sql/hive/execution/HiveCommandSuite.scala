@@ -48,13 +48,10 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
         storage = CatalogStorageFormat.empty,
         schema = new StructType().add("c1", "int").add("c2", "string"),
         provider = Some("parquet"),
-        properties = Map("my_key1" -> "v1")
-      ),
-      ignoreIfExists = false
-    )
+        properties = Map("my_key1" -> "v1")),
+      ignoreIfExists = false)
 
-    sql(
-      """
+    sql("""
         |CREATE TABLE parquet_tab2 (c1 INT, c2 STRING)
         |STORED AS PARQUET
         |TBLPROPERTIES('prop1Key'="prop1Val", '`prop2Key`'="prop2Val")
@@ -114,9 +111,7 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
         sql("SHOW VIEWS LIKE 'show1*|show2*'"),
         Row("default", "show1a", false) ::
           Row("default", "show2b", false) :: Nil)
-      checkAnswer(
-        sql("SHOW VIEWS IN default 'show1*'"),
-        Row("default", "show1a", false) :: Nil)
+      checkAnswer(sql("SHOW VIEWS IN default 'show1*'"), Row("default", "show1a", false) :: Nil)
       checkAnswer(
         sql("SHOW VIEWS IN default LIKE 'show1*|show2*'"),
         Row("default", "show1a", false) ::
@@ -140,8 +135,8 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
 
     /**
      * Run a function with a copy of the input data file when running with non-local input. The
-     * semantics in this mode are that the input file is moved to the destination, so we have
-     * to make a copy so that subsequent tests have access to the original file.
+     * semantics in this mode are that the input file is moved to the destination, so we have to
+     * make a copy so that subsequent tests have access to the original file.
      */
     def withInputFile(fn: File => Unit): Unit = {
       if (local) {
@@ -158,8 +153,7 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
     }
 
     withTable("non_part_table", "part_table") {
-      sql(
-        """
+      sql("""
           |CREATE TABLE non_part_table (employeeID INT, employeeName STRING)
           |ROW FORMAT DELIMITED
           |FIELDS TERMINATED BY '|'
@@ -214,8 +208,7 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
         sql("SELECT * FROM non_part_table WHERE employeeID = 16"),
         Row(16, "john") :: Nil)
 
-      sql(
-        """
+      sql("""
           |CREATE TABLE part_table (employeeID INT, employeeName STRING)
           |PARTITIONED BY (c STRING, d STRING)
           |ROW FORMAT DELIMITED
@@ -283,8 +276,8 @@ class HiveCommandSuite extends QueryTest with SQLTestUtils with TestHiveSingleto
   test("SPARK-25918: LOAD DATA LOCAL INPATH should handle a relative path") {
     val localFS = FileContext.getLocalFSFileContext()
     val workingDir = localFS.getWorkingDirectory
-    val r = LoadDataCommand.makeQualified(
-      FsConstants.LOCAL_FS_URI, workingDir, new Path("kv1.txt"))
+    val r =
+      LoadDataCommand.makeQualified(FsConstants.LOCAL_FS_URI, workingDir, new Path("kv1.txt"))
     assert(r === new Path(s"$workingDir/kv1.txt"))
   }
 }

@@ -47,13 +47,15 @@ class HiveSQLInsertTestSuite extends SQLInsertTestSuite with TestHiveSingleton {
       v2ErrorClass: String,
       v1Parameters: Map[String, String],
       v2Parameters: Map[String, String]): Unit = {
-    checkError(exception = exception, sqlState = None, condition = v1ErrorClass,
+    checkError(
+      exception = exception,
+      sqlState = None,
+      condition = v1ErrorClass,
       parameters = v1Parameters)
   }
 
   test("SPARK-54853: SET hive.exec.max.dynamic.partitions takes effect in session conf") {
-    withSQLConf(
-      HiveUtils.CONVERT_INSERTING_PARTITIONED_TABLE.key -> "false") {
+    withSQLConf(HiveUtils.CONVERT_INSERTING_PARTITIONED_TABLE.key -> "false") {
       val cols = Seq("c1", "p1")
       val df = sql("SELECT 1, * FROM range(3)")
       Seq(true, false).foreach { overwrite =>

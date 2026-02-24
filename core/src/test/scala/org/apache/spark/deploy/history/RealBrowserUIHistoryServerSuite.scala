@@ -37,7 +37,10 @@ import org.apache.spark.util.{ResetSystemProperties, Utils}
  * Tests for HistoryServer with real web browsers.
  */
 abstract class RealBrowserUIHistoryServerSuite(val driverProp: String)
-  extends SparkFunSuite with WebBrowser with Matchers with ResetSystemProperties {
+    extends SparkFunSuite
+    with WebBrowser
+    with Matchers
+    with ResetSystemProperties {
 
   implicit var webDriver: WebDriver
 
@@ -144,7 +147,8 @@ abstract class RealBrowserUIHistoryServerSuite(val driverProp: String)
         .map(_.attribute("href"))
         .filter(_.isDefined)
         .map(_.get)
-        .filter(_.startsWith(url)).toList
+        .filter(_.startsWith(url))
+        .toList
 
       // there are at least some URL links that were generated via javascript,
       // and they all contain the spark.ui.proxyBase (uiRoot)

@@ -41,12 +41,7 @@ class KafkaRealTimeModeE2ESuite extends KafkaSourceTest with StreamRealTimeModeE
   override protected val defaultTrigger: RealTimeTrigger = RealTimeTrigger.apply("5 seconds")
 
   override protected def createSparkSession =
-    new TestSparkSession(
-      new SparkContext(
-        "local[15]",
-        "streaming-key-cuj"
-      )
-    )
+    new TestSparkSession(new SparkContext("local[15]", "streaming-key-cuj"))
 
   override def beforeEach(): Unit = {
     super[KafkaSourceTest].beforeEach()
@@ -105,18 +100,14 @@ class KafkaRealTimeModeE2ESuite extends KafkaSourceTest with StreamRealTimeModeE
               new ProducerRecord[String, String](
                 topic1,
                 java.lang.Long.toString(i),
-                s"input1-${batch}-${i}"
-              )
-            )
+                s"input1-${batch}-${i}"))
             .get()
           producer2
             .send(
               new ProducerRecord[String, String](
                 topic2,
                 java.lang.Long.toString(i),
-                s"input2-${batch}-${i}"
-              )
-            )
+                s"input2-${batch}-${i}"))
             .get()
         })
         producer1.flush()
@@ -124,10 +115,7 @@ class KafkaRealTimeModeE2ESuite extends KafkaSourceTest with StreamRealTimeModeE
 
         expectedResults ++= (1 to 100)
           .flatMap(v => {
-            Seq(
-              s"${v},input1-${batch}-${v}",
-              s"${v},input2-${batch}-${v}"
-            )
+            Seq(s"${v},input1-${batch}-${v}", s"${v},input2-${batch}-${v}")
           })
           .toList
 
@@ -147,14 +135,12 @@ class KafkaRealTimeModeE2ESuite extends KafkaSourceTest with StreamRealTimeModeE
   }
 }
 
-
 /**
- * Kafka Real-Time Integration test suite.
- * Tests with a distributed spark cluster with
- * separate executors processes deployed.
+ * Kafka Real-Time Integration test suite. Tests with a distributed spark cluster with separate
+ * executors processes deployed.
  */
 class KafkaRealTimeIntegrationSuite
-  extends KafkaSourceTest
+    extends KafkaSourceTest
     with StreamRealTimeModeSuiteBase
     with ThreadAudit
     with BeforeAndAfterEach
@@ -168,9 +154,7 @@ class KafkaRealTimeIntegrationSuite
         sparkConf
           .set("spark.sql.testkey", "true")
           .set("spark.scheduler.mode", "FAIR")
-          .set("spark.executor.extraJavaOptions", "-Dio.netty.leakDetection.level=paranoid")
-      )
-    )
+          .set("spark.executor.extraJavaOptions", "-Dio.netty.leakDetection.level=paranoid")))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -216,13 +200,9 @@ class KafkaRealTimeIntegrationSuite
         .withColumn("value", base64(col("value")))
         .withColumn(
           "headers",
-          array(
-            struct(
-              lit("source-timestamp") as "key",
-              unix_millis(col("timestamp")).cast("STRING").cast("BINARY") as "value"
-            )
-          )
-        )
+          array(struct(
+            lit("source-timestamp") as "key",
+            unix_millis(col("timestamp")).cast("STRING").cast("BINARY") as "value")))
         .drop(col("timestamp"))
         .writeStream
         .format("kafka")
@@ -244,9 +224,7 @@ class KafkaRealTimeIntegrationSuite
               new ProducerRecord[String, String](
                 inputTopic,
                 java.lang.Long.toString(i),
-                s"payload-${i}"
-              )
-            )
+                s"payload-${i}"))
             .get()
         })
 
@@ -269,8 +247,7 @@ class KafkaRealTimeIntegrationSuite
           .map(v => {
             new GenericRowWithSchema(
               Array(s"payload-${v}"),
-              schema = new StructType().add(StructField("value", StringType))
-            )
+              schema = new StructType().add(StructField("value", StringType)))
           })
           .toList
 

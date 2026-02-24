@@ -52,9 +52,7 @@ private[storage] class FallbackStorage(conf: SparkConf) extends Logging {
   private val appId = conf.getAppId
 
   // Visible for testing
-  def copy(
-      shuffleBlockInfo: ShuffleBlockInfo,
-      bm: BlockManager): Unit = {
+  def copy(shuffleBlockInfo: ShuffleBlockInfo, bm: BlockManager): Unit = {
     val shuffleId = shuffleBlockInfo.shuffleId
     val mapId = shuffleBlockInfo.mapId
 
@@ -110,11 +108,12 @@ private[storage] class FallbackStorageRpcEndpointRef(conf: SparkConf, hadoopConf
         FallbackStorage.cleanUp(conf, hadoopConf, Some(shuffleId))
       case _ => // no-op
     }
-    Future{true.asInstanceOf[T]}
+    Future { true.asInstanceOf[T] }
   }
 }
 
 private[spark] object FallbackStorage extends Logging {
+
   /** We use one block manager id as a place holder. */
   val FALLBACK_BLOCK_MANAGER_ID: BlockManagerId = BlockManagerId("fallback", "remote", 7337)
 
@@ -133,7 +132,10 @@ private[spark] object FallbackStorage extends Logging {
       hadoopConf: Configuration): Unit = {
     if (conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined) {
       master.registerBlockManager(
-        FALLBACK_BLOCK_MANAGER_ID, Array.empty[String], 0, 0,
+        FALLBACK_BLOCK_MANAGER_ID,
+        Array.empty[String],
+        0,
+        0,
         new FallbackStorageRpcEndpointRef(conf, hadoopConf))
     }
   }
@@ -141,11 +143,12 @@ private[spark] object FallbackStorage extends Logging {
   /** Clean up the generated fallback location for this app (and shuffle id if given). */
   def cleanUp(conf: SparkConf, hadoopConf: Configuration, shuffleId: Option[Int] = None): Unit = {
     if (conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).isDefined &&
-        conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP) &&
-        conf.contains("spark.app.id")) {
+      conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_CLEANUP) &&
+      conf.contains("spark.app.id")) {
       val fallbackPath = shuffleId.foldLeft(
-        new Path(conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).get, conf.getAppId)
-      ) { case (path, shuffleId) => new Path(path, shuffleId.toString) }
+        new Path(conf.get(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH).get, conf.getAppId)) {
+        case (path, shuffleId) => new Path(path, shuffleId.toString)
+      }
       val fallbackUri = fallbackPath.toUri
       val fallbackFileSystem = FileSystem.get(fallbackUri, hadoopConf)
       // The fallback directory for this app may not be created yet.
@@ -161,10 +164,17 @@ private[spark] object FallbackStorage extends Logging {
   }
 
   /** Report block status to block manager master and map output tracker master. */
-  private def reportBlockStatus(blockManager: BlockManager, blockId: BlockId, dataLength: Long) = {
+  private def reportBlockStatus(
+      blockManager: BlockManager,
+      blockId: BlockId,
+      dataLength: Long) = {
     assert(blockManager.master != null)
     blockManager.master.updateBlockInfo(
-      FALLBACK_BLOCK_MANAGER_ID, blockId, StorageLevel.DISK_ONLY, memSize = 0, dataLength)
+      FALLBACK_BLOCK_MANAGER_ID,
+      blockId,
+      StorageLevel.DISK_ONLY,
+      memSize = 0,
+      dataLength)
   }
 
   /**
@@ -184,7 +194,8 @@ private[spark] object FallbackStorage extends Logging {
         (batchId.shuffleId, batchId.mapId, batchId.startReduceId, batchId.endReduceId)
       case _ =>
         throw SparkException.internalError(
-          s"unexpected shuffle block id format: $blockId", category = "STORAGE")
+          s"unexpected shuffle block id format: $blockId",
+          category = "STORAGE")
     }
 
     val name = ShuffleIndexBlockId(shuffleId, mapId, NOOP_REDUCE_ID).name

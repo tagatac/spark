@@ -76,8 +76,10 @@ class HiveUtilsSuite extends QueryTest with SQLTestUtils with TestHiveSingleton 
 
   test("SPARK-42539: User-provided JARs should not take precedence over builtin Hive JARs") {
     withTempDir { tmpDir =>
-        val classFile = TestUtils.createCompiledClass(
-          "Hive", tmpDir, packageName = Some("org.apache.hadoop.hive.ql.metadata"))
+      val classFile = TestUtils.createCompiledClass(
+        "Hive",
+        tmpDir,
+        packageName = Some("org.apache.hadoop.hive.ql.metadata"))
 
       val jarFile = new File(tmpDir, "hive-fake.jar")
       TestUtils.createJar(Seq(classFile), jarFile, Some("org/apache/hadoop/hive/ql/metadata"))
@@ -92,7 +94,11 @@ class HiveUtilsSuite extends QueryTest with SQLTestUtils with TestHiveSingleton 
           SparkHadoopUtil.newConfiguration(conf),
           HiveUtils.newTemporaryConfiguration(useInMemoryDerby = true))
         client.createDatabase(
-          CatalogDatabase("foo", "", URI.create(s"file://${tmpDir.getAbsolutePath}/foo.db"), Map()),
+          CatalogDatabase(
+            "foo",
+            "",
+            URI.create(s"file://${tmpDir.getAbsolutePath}/foo.db"),
+            Map()),
           ignoreIfExists = true)
       } finally {
         Thread.currentThread().setContextClassLoader(contextClassLoader)

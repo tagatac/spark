@@ -24,9 +24,7 @@ class PostgresDatabaseOnDocker extends DatabaseOnDocker with Logging {
     sys.env.getOrElse("POSTGRES_DOCKER_IMAGE_NAME", "postgres:18.2-alpine")
   private val postgres_user = "postgres"
   private val postgres_password = "rootpass"
-  override val env: Map[String, String] = Map(
-    "POSTGRES_PASSWORD" -> postgres_password
-  )
+  override val env: Map[String, String] = Map("POSTGRES_PASSWORD" -> postgres_password)
   override val usesIpc = false
   override val jdbcPort: Int = 5432
 

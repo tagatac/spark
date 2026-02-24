@@ -38,28 +38,28 @@ import org.apache.spark.util.{Clock, Utils}
 private[streaming] sealed trait ReceivedBlockTrackerLogEvent
 
 private[streaming] case class BlockAdditionEvent(receivedBlockInfo: ReceivedBlockInfo)
-  extends ReceivedBlockTrackerLogEvent
+    extends ReceivedBlockTrackerLogEvent
 private[streaming] case class BatchAllocationEvent(time: Time, allocatedBlocks: AllocatedBlocks)
-  extends ReceivedBlockTrackerLogEvent
+    extends ReceivedBlockTrackerLogEvent
 private[streaming] case class BatchCleanupEvent(times: Seq[Time])
-  extends ReceivedBlockTrackerLogEvent
+    extends ReceivedBlockTrackerLogEvent
 
 /** Class representing the blocks of all the streams allocated to a batch */
-private[streaming]
-case class AllocatedBlocks(streamIdToAllocatedBlocks: Map[Int, Seq[ReceivedBlockInfo]]) {
+private[streaming] case class AllocatedBlocks(
+    streamIdToAllocatedBlocks: Map[Int, Seq[ReceivedBlockInfo]]) {
   def getBlocksOfStream(streamId: Int): Seq[ReceivedBlockInfo] = {
     streamIdToAllocatedBlocks.getOrElse(streamId, Seq.empty)
   }
 }
 
 /**
- * Class that keep track of all the received blocks, and allocate them to batches
- * when required. All actions taken by this class can be saved to a write ahead log
- * (if a checkpoint directory has been provided), so that the state of the tracker
- * (received blocks and block-to-batch allocations) can be recovered after driver failure.
+ * Class that keep track of all the received blocks, and allocate them to batches when required.
+ * All actions taken by this class can be saved to a write ahead log (if a checkpoint directory
+ * has been provided), so that the state of the tracker (received blocks and block-to-batch
+ * allocations) can be recovered after driver failure.
  *
- * Note that when any instance of this class is created with a checkpoint directory,
- * it will try reading events from logs in the directory.
+ * Note that when any instance of this class is created with a checkpoint directory, it will try
+ * reading events from logs in the directory.
  */
 private[streaming] class ReceivedBlockTracker(
     conf: SparkConf,
@@ -68,7 +68,7 @@ private[streaming] class ReceivedBlockTracker(
     clock: Clock,
     recoverFromWriteAheadLog: Boolean,
     checkpointDirOption: Option[String])
-  extends Logging {
+    extends Logging {
 
   private type ReceivedBlockQueue = mutable.Queue[ReceivedBlockInfo]
 
@@ -91,24 +91,25 @@ private[streaming] class ReceivedBlockTracker(
         synchronized {
           getReceivedBlockQueue(receivedBlockInfo.streamId) += receivedBlockInfo
         }
-        logDebug(s"Stream ${receivedBlockInfo.streamId} received " +
-          s"block ${receivedBlockInfo.blockStoreResult.blockId}")
+        logDebug(
+          s"Stream ${receivedBlockInfo.streamId} received " +
+            s"block ${receivedBlockInfo.blockStoreResult.blockId}")
       } else {
-        logDebug(s"Failed to acknowledge stream ${receivedBlockInfo.streamId} receiving " +
-          s"block ${receivedBlockInfo.blockStoreResult.blockId} in the Write Ahead Log.")
+        logDebug(
+          s"Failed to acknowledge stream ${receivedBlockInfo.streamId} receiving " +
+            s"block ${receivedBlockInfo.blockStoreResult.blockId} in the Write Ahead Log.")
       }
       writeResult
     } catch {
       case NonFatal(e) =>
-        logError(
-          log"Error adding block ${MDC(RECEIVED_BLOCK_INFO, receivedBlockInfo)}", e)
+        logError(log"Error adding block ${MDC(RECEIVED_BLOCK_INFO, receivedBlockInfo)}", e)
         false
     }
   }
 
   /**
-   * Allocate all unallocated blocks to the given batch.
-   * This event will get written to the write ahead log (if enabled).
+   * Allocate all unallocated blocks to the given batch. This event will get written to the write
+   * ahead log (if enabled).
    */
   def allocateBlocksToBatch(batchTime: Time): Unit = synchronized {
     if (lastAllocatedBatchTime == null || batchTime > lastAllocatedBatchTime) {
@@ -127,9 +128,9 @@ private[streaming] class ReceivedBlockTracker(
         timeToAllocatedBlocks.put(batchTime, allocatedBlocks)
         lastAllocatedBatchTime = batchTime
       } else {
-        logInfo(log"Possibly processed batch ${MDC(LogKeys.BATCH_TIMESTAMP,
-          batchTime)} needs to be " +
-          log"processed again in WAL recovery")
+        logInfo(
+          log"Possibly processed batch ${MDC(LogKeys.BATCH_TIMESTAMP, batchTime)} needs to be " +
+            log"processed again in WAL recovery")
       }
     } else {
       // This situation occurs when:
@@ -139,9 +140,9 @@ private[streaming] class ReceivedBlockTracker(
       // 2. Slow checkpointing makes recovered batch time older than WAL recovered
       // lastAllocatedBatchTime.
       // This situation will only occurs in recovery time.
-      logInfo(log"Possibly processed batch ${MDC(LogKeys.BATCH_TIMESTAMP,
-        batchTime)} needs to be processed " +
-        log"again in WAL recovery")
+      logInfo(
+        log"Possibly processed batch ${MDC(LogKeys.BATCH_TIMESTAMP, batchTime)} needs to be processed " +
+          log"again in WAL recovery")
     }
   }
 
@@ -153,9 +154,12 @@ private[streaming] class ReceivedBlockTracker(
   /** Get the blocks allocated to the given batch and stream. */
   def getBlocksOfBatchAndStream(batchTime: Time, streamId: Int): Seq[ReceivedBlockInfo] = {
     synchronized {
-      timeToAllocatedBlocks.get(batchTime).map {
-        _.getBlocksOfStream(streamId)
-      }.getOrElse(Seq.empty)
+      timeToAllocatedBlocks
+        .get(batchTime)
+        .map {
+          _.getBlocksOfStream(streamId)
+        }
+        .getOrElse(Seq.empty)
     }
   }
 
@@ -165,28 +169,29 @@ private[streaming] class ReceivedBlockTracker(
   }
 
   /**
-   * Get blocks that have been added but not yet allocated to any batch. This method
-   * is primarily used for testing.
+   * Get blocks that have been added but not yet allocated to any batch. This method is primarily
+   * used for testing.
    */
   def getUnallocatedBlocks(streamId: Int): Seq[ReceivedBlockInfo] = synchronized {
     getReceivedBlockQueue(streamId).toSeq
   }
 
   /**
-   * Clean up block information of old batches. If waitForCompletion is true, this method
-   * returns only after the files are cleaned up.
+   * Clean up block information of old batches. If waitForCompletion is true, this method returns
+   * only after the files are cleaned up.
    */
-  def cleanupOldBatches(cleanupThreshTime: Time, waitForCompletion: Boolean): Unit = synchronized {
-    require(cleanupThreshTime.milliseconds < clock.getTimeMillis())
-    val timesToCleanup = timeToAllocatedBlocks.keys.filter { _ < cleanupThreshTime }.toSeq
-    logInfo(log"Deleting batches: ${MDC(LogKeys.DURATION, timesToCleanup.mkString(" "))}")
-    if (writeToLog(BatchCleanupEvent(timesToCleanup))) {
-      timeToAllocatedBlocks --= timesToCleanup
-      writeAheadLogOption.foreach(_.clean(cleanupThreshTime.milliseconds, waitForCompletion))
-    } else {
-      logWarning("Failed to acknowledge batch clean up in the Write Ahead Log.")
+  def cleanupOldBatches(cleanupThreshTime: Time, waitForCompletion: Boolean): Unit =
+    synchronized {
+      require(cleanupThreshTime.milliseconds < clock.getTimeMillis())
+      val timesToCleanup = timeToAllocatedBlocks.keys.filter { _ < cleanupThreshTime }.toSeq
+      logInfo(log"Deleting batches: ${MDC(LogKeys.DURATION, timesToCleanup.mkString(" "))}")
+      if (writeToLog(BatchCleanupEvent(timesToCleanup))) {
+        timeToAllocatedBlocks --= timesToCleanup
+        writeAheadLogOption.foreach(_.clean(cleanupThreshTime.milliseconds, waitForCompletion))
+      } else {
+        logWarning("Failed to acknowledge batch clean up in the Write Ahead Log.")
+      }
     }
-  }
 
   /** Stop the block tracker. */
   def stop(): Unit = {
@@ -208,8 +213,9 @@ private[streaming] class ReceivedBlockTracker(
     // Insert the recovered block-to-batch allocations and removes them from queue of
     // received blocks.
     def insertAllocatedBatch(batchTime: Time, allocatedBlocks: AllocatedBlocks): Unit = {
-      logTrace(s"Recovery: Inserting allocated batch for time $batchTime to " +
-        s"${allocatedBlocks.streamIdToAllocatedBlocks}")
+      logTrace(
+        s"Recovery: Inserting allocated batch for time $batchTime to " +
+          s"${allocatedBlocks.streamIdToAllocatedBlocks}")
       allocatedBlocks.streamIdToAllocatedBlocks.foreach {
         case (streamId, allocatedBlocksInStream) =>
           getReceivedBlockQueue(streamId).dequeueAll(allocatedBlocksInStream.toSet)
@@ -225,12 +231,14 @@ private[streaming] class ReceivedBlockTracker(
     }
 
     writeAheadLogOption.foreach { writeAheadLog =>
-      logInfo(log"Recovering from write ahead logs in " +
-        log"${MDC(LogKeys.PATH, checkpointDirOption.get)}")
+      logInfo(
+        log"Recovering from write ahead logs in " +
+          log"${MDC(LogKeys.PATH, checkpointDirOption.get)}")
       writeAheadLog.readAll().asScala.foreach { byteBuffer =>
         logInfo(log"Recovering record ${MDC(LogKeys.BYTE_BUFFER, byteBuffer)}")
         Utils.deserialize[ReceivedBlockTrackerLogEvent](
-          JavaUtils.bufferToArray(byteBuffer), Thread.currentThread().getContextClassLoader) match {
+          JavaUtils.bufferToArray(byteBuffer),
+          Thread.currentThread().getContextClassLoader) match {
           case BlockAdditionEvent(receivedBlockInfo) =>
             insertAddedBlock(receivedBlockInfo)
           case BatchAllocationEvent(time, allocatedBlocks) =>
@@ -247,13 +255,16 @@ private[streaming] class ReceivedBlockTracker(
     if (isWriteAheadLogEnabled) {
       logTrace(s"Writing record: $record")
       try {
-        writeAheadLogOption.get.write(ByteBuffer.wrap(Utils.serialize(record)),
+        writeAheadLogOption.get.write(
+          ByteBuffer.wrap(Utils.serialize(record)),
           clock.getTimeMillis())
         true
       } catch {
         case NonFatal(e) =>
-          logWarning(log"Exception thrown while writing record: " +
-            log"${MDC(RECEIVED_BLOCK_TRACKER_LOG_EVENT, record)} to the WriteAheadLog.", e)
+          logWarning(
+            log"Exception thrown while writing record: " +
+              log"${MDC(RECEIVED_BLOCK_TRACKER_LOG_EVENT, record)} to the WriteAheadLog.",
+            e)
           false
       }
     } else {

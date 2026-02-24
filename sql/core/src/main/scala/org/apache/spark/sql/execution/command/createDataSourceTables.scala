@@ -46,7 +46,7 @@ import org.apache.spark.util.ArrayImplicits._
  * }}}
  */
 case class CreateDataSourceTableCommand(table: CatalogTable, ignoreIfExists: Boolean)
-  extends LeafRunnableCommand {
+    extends LeafRunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
     assert(table.tableType != CatalogTableType.VIEW)
@@ -66,9 +66,8 @@ case class CreateDataSourceTableCommand(table: CatalogTable, ignoreIfExists: Boo
     val pathOption = table.storage.locationUri.map("path" -> CatalogUtils.URIToString(_))
     // Fill in some default table options from the session conf
     val tableWithDefaultOptions = table.copy(
-      identifier = table.identifier.copy(
-        database = Some(
-          table.identifier.database.getOrElse(sessionState.catalog.getCurrentDatabase))),
+      identifier = table.identifier.copy(database =
+        Some(table.identifier.database.getOrElse(sessionState.catalog.getCurrentDatabase))),
       tracksPartitionsInCatalog = sessionState.conf.manageFilesourcePartitions)
     val dataSource: BaseRelation =
       DataSource(
@@ -142,7 +141,8 @@ case class CreateDataSourceTableAsSelectCommand(
     mode: SaveMode,
     query: LogicalPlan,
     outputColumnNames: Seq[String])
-  extends LeafRunnableCommand with CTEInChildren {
+    extends LeafRunnableCommand
+    with CTEInChildren {
   assert(query.resolved)
   override def innerChildren: Seq[LogicalPlan] = query :: Nil
 
@@ -156,7 +156,8 @@ case class CreateDataSourceTableAsSelectCommand(
     val tableName = tableIdentWithDB.unquotedString
 
     if (sessionState.catalog.tableExists(tableIdentWithDB)) {
-      assert(mode != SaveMode.Overwrite,
+      assert(
+        mode != SaveMode.Overwrite,
         s"Expect the table $tableName has been dropped when the save mode is Overwrite")
 
       if (mode == SaveMode.ErrorIfExists) {
@@ -168,7 +169,11 @@ case class CreateDataSourceTableAsSelectCommand(
       }
 
       saveDataIntoTable(
-        sparkSession, table, table.storage.locationUri, SaveMode.Append, tableExists = true)
+        sparkSession,
+        table,
+        table.storage.locationUri,
+        SaveMode.Append,
+        tableExists = true)
     } else {
       table.storage.locationUri.foreach { p =>
         DataWritingCommand.assertEmptyRootPath(p, mode, sparkSession.sessionState.newHadoopConf())
@@ -181,9 +186,13 @@ case class CreateDataSourceTableAsSelectCommand(
         table.storage.locationUri
       }
       val result = saveDataIntoTable(
-        sparkSession, table, tableLocation, SaveMode.Overwrite, tableExists = false)
-      val tableSchema = CharVarcharUtils.getRawSchema(
-        removeInternalMetadata(result.schema), sessionState.conf)
+        sparkSession,
+        table,
+        tableLocation,
+        SaveMode.Overwrite,
+        tableExists = false)
+      val tableSchema =
+        CharVarcharUtils.getRawSchema(removeInternalMetadata(result.schema), sessionState.conf)
       val newTable = table.copy(
         storage = table.storage.copy(locationUri = tableLocation),
         // We will use the schema of resolved.relation as the schema of the table (instead of
@@ -194,13 +203,18 @@ case class CreateDataSourceTableAsSelectCommand(
       sessionState.catalog.createTable(newTable, ignoreIfExists = false, validateLocation = false)
 
       result match {
-        case fs: HadoopFsRelation if table.partitionColumnNames.nonEmpty &&
-            sparkSession.sessionState.conf.manageFilesourcePartitions =>
+        case fs: HadoopFsRelation
+            if table.partitionColumnNames.nonEmpty &&
+              sparkSession.sessionState.conf.manageFilesourcePartitions =>
           // Need to recover partitions into the metastore so our saved data is visible.
-          sessionState.executePlan(RepairTableCommand(
-            table.identifier,
-            enableAddPartitions = true,
-            enableDropPartitions = false), CommandExecutionMode.SKIP).toRdd
+          sessionState
+            .executePlan(
+              RepairTableCommand(
+                table.identifier,
+                enableAddPartitions = true,
+                enableDropPartitions = false),
+              CommandExecutionMode.SKIP)
+            .toRdd
         case _ =>
       }
     }
@@ -230,8 +244,10 @@ case class CreateDataSourceTableAsSelectCommand(
       dataSource.writeAndRead(mode, query, outputColumnNames)
     } catch {
       case ex: AnalysisException =>
-        logError(log"Failed to write to table " +
-          log"${MDC(TABLE_NAME, table.identifier.unquotedString)}", ex)
+        logError(
+          log"Failed to write to table " +
+            log"${MDC(TABLE_NAME, table.identifier.unquotedString)}",
+          ex)
         throw ex
     }
   }

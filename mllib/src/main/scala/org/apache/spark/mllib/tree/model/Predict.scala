@@ -23,13 +23,16 @@ import org.apache.spark.annotation.Since
 
 /**
  * Predicted value for a node
- * @param predict predicted value
- * @param prob probability of the label (classification only)
+ * @param predict
+ *   predicted value
+ * @param prob
+ *   probability of the label (classification only)
  */
 @Since("1.2.0")
 class Predict @Since("1.2.0") (
     @Since("1.2.0") val predict: Double,
-    @Since("1.2.0") val prob: Double = 0.0) extends Serializable {
+    @Since("1.2.0") val prob: Double = 0.0)
+    extends Serializable {
 
   override def toString: String = s"$predict (prob = $prob)"
 

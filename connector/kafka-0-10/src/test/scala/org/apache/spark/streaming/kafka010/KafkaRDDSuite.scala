@@ -17,7 +17,7 @@
 
 package org.apache.spark.streaming.kafka010
 
-import java.{ util => ju }
+import java.{util => ju}
 import java.io.File
 
 import scala.concurrent.duration._
@@ -44,7 +44,8 @@ class KafkaRDDSuite extends SparkFunSuite {
 
   private var kafkaTestUtils: KafkaTestUtils = _
 
-  private val sparkConf = new SparkConf().setMaster("local[4]")
+  private val sparkConf = new SparkConf()
+    .setMaster("local[4]")
     .setAppName(this.getClass.getSimpleName)
     // Set a timeout of 10 seconds that's going to be used to fetch topics/partitions from kafka.
     // Otherwise the poll timeout defaults to 2 minutes and causes test cases to run longer.
@@ -81,12 +82,13 @@ class KafkaRDDSuite extends SparkFunSuite {
     "bootstrap.servers" -> kafkaTestUtils.brokerAddress,
     "key.deserializer" -> classOf[StringDeserializer],
     "value.deserializer" -> classOf[StringDeserializer],
-    "group.id" -> s"test-consumer-${Random.nextInt()}-${System.currentTimeMillis}"
-  ).asJava
+    "group.id" -> s"test-consumer-${Random.nextInt()}-${System.currentTimeMillis}").asJava
 
   private val preferredHosts = LocationStrategies.PreferConsistent
 
-  private def compactLogs(topic: String, partition: Int,
+  private def compactLogs(
+      topic: String,
+      partition: Int,
       messages: Array[(String, String)]): Unit = {
     val mockTime = new MockTime()
     val logs = new Pool[TopicPartition, UnifiedLog]()
@@ -115,8 +117,7 @@ class KafkaRDDSuite extends SparkFunSuite {
       logDirFailureChannel,
       lastShutdownClean = false,
       topicId = None,
-      keepPartitionMetadataFile = false
-    )
+      keepPartitionMetadataFile = false)
     messages.foreach { case (k, v) =>
       val record = new SimpleRecord(k.getBytes, v.getBytes)
       log.appendAsLeader(MemoryRecords.withRecords(Compression.NONE, record), 0);
@@ -132,7 +133,6 @@ class KafkaRDDSuite extends SparkFunSuite {
     mockTime.scheduler.shutdown()
   }
 
-
   test("basic usage") {
     val topic = s"topicbasic-${Random.nextInt()}-${System.currentTimeMillis}"
     kafkaTestUtils.createTopic(topic)
@@ -143,7 +143,8 @@ class KafkaRDDSuite extends SparkFunSuite {
 
     val offsetRanges = Array(OffsetRange(topic, 0, 0, messages.length))
 
-    val rdd = KafkaUtils.createRDD[String, String](sc, kafkaParams, offsetRanges, preferredHosts)
+    val rdd = KafkaUtils
+      .createRDD[String, String](sc, kafkaParams, offsetRanges, preferredHosts)
       .map(_.value)
 
     val received = rdd.collect().toSet
@@ -158,14 +159,18 @@ class KafkaRDDSuite extends SparkFunSuite {
     assert(rdd.take(messages.size + 10).length === messages.length)
 
     val emptyRdd = KafkaUtils.createRDD[String, String](
-      sc, kafkaParams, Array(OffsetRange(topic, 0, 0, 0)), preferredHosts)
+      sc,
+      kafkaParams,
+      Array(OffsetRange(topic, 0, 0, 0)),
+      preferredHosts)
 
     assert(emptyRdd.isEmpty())
 
     // invalid offset ranges throw exceptions
     val badRanges = Array(OffsetRange(topic, 0, 0, messages.length + 1))
     intercept[SparkException] {
-      val result = KafkaUtils.createRDD[String, String](sc, kafkaParams, badRanges, preferredHosts)
+      val result = KafkaUtils
+        .createRDD[String, String](sc, kafkaParams, badRanges, preferredHosts)
         .map(_.value)
         .collect()
     }
@@ -178,20 +183,9 @@ class KafkaRDDSuite extends SparkFunSuite {
     sc = new SparkContext(compactConf)
     val topic = s"topiccompacted-${Random.nextInt()}-${System.currentTimeMillis}"
 
-    val messages = Array(
-      ("a", "1"),
-      ("a", "2"),
-      ("b", "1"),
-      ("c", "1"),
-      ("c", "2"),
-      ("b", "2"),
-      ("b", "3")
-    )
-    val compactedMessages = Array(
-      ("a", "2"),
-      ("b", "3"),
-      ("c", "2")
-    )
+    val messages =
+      Array(("a", "1"), ("a", "2"), ("b", "1"), ("c", "1"), ("c", "2"), ("b", "2"), ("b", "3"))
+    val compactedMessages = Array(("a", "2"), ("b", "3"), ("c", "2"))
 
     compactLogs(topic, 0, messages)
 
@@ -202,14 +196,13 @@ class KafkaRDDSuite extends SparkFunSuite {
     props.put("segment.bytes", "256")
     kafkaTestUtils.createTopic(topic, 1, props)
 
-
     val kafkaParams = getKafkaParams()
 
     val offsetRanges = Array(OffsetRange(topic, 0, 0, messages.length))
 
-    val rdd = KafkaUtils.createRDD[String, String](
-      sc, kafkaParams, offsetRanges, preferredHosts
-    ).map(m => m.key -> m.value)
+    val rdd = KafkaUtils
+      .createRDD[String, String](sc, kafkaParams, offsetRanges, preferredHosts)
+      .map(m => m.key -> m.value)
 
     // To make it sure that the compaction happens
     eventually(timeout(20.second), interval(1.seconds)) {
@@ -228,14 +221,18 @@ class KafkaRDDSuite extends SparkFunSuite {
     assert(rdd.take(messages.size + 10).length === compactedMessages.length)
 
     val emptyRdd = KafkaUtils.createRDD[String, String](
-      sc, kafkaParams, Array(OffsetRange(topic, 0, 0, 0)), preferredHosts)
+      sc,
+      kafkaParams,
+      Array(OffsetRange(topic, 0, 0, 0)),
+      preferredHosts)
 
     assert(emptyRdd.isEmpty())
 
     // invalid offset ranges throw exceptions
     val badRanges = Array(OffsetRange(topic, 0, 0, messages.length + 1))
     intercept[SparkException] {
-      val result = KafkaUtils.createRDD[String, String](sc, kafkaParams, badRanges, preferredHosts)
+      val result = KafkaUtils
+        .createRDD[String, String](sc, kafkaParams, badRanges, preferredHosts)
         .map(_.value)
         .collect()
     }
@@ -253,19 +250,26 @@ class KafkaRDDSuite extends SparkFunSuite {
     kafkaTestUtils.sendMessages(topic, sent)
     val sentCount = sent.values.sum
 
-    val rdd = KafkaUtils.createRDD[String, String](sc, kafkaParams,
-      Array(OffsetRange(topic, 0, 0, sentCount)), preferredHosts)
+    val rdd = KafkaUtils.createRDD[String, String](
+      sc,
+      kafkaParams,
+      Array(OffsetRange(topic, 0, 0, sentCount)),
+      preferredHosts)
 
     val ranges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
     val rangeCount = ranges.map(o => o.untilOffset - o.fromOffset).sum
 
     assert(rangeCount === sentCount, "offset range didn't include all sent messages")
-    assert(rdd.map(_.offset).collect().sorted === (0 until sentCount).toArray,
+    assert(
+      rdd.map(_.offset).collect().sorted === (0 until sentCount).toArray,
       "didn't get all sent messages")
 
     // this is the "0 messages" case
-    val rdd2 = KafkaUtils.createRDD[String, String](sc, kafkaParams,
-      Array(OffsetRange(topic, 0, sentCount, sentCount)), preferredHosts)
+    val rdd2 = KafkaUtils.createRDD[String, String](
+      sc,
+      kafkaParams,
+      Array(OffsetRange(topic, 0, sentCount, sentCount)),
+      preferredHosts)
 
     // shouldn't get anything, since message is sent after rdd was defined
     val sentOnlyOne = Map("d" -> 1)
@@ -275,13 +279,17 @@ class KafkaRDDSuite extends SparkFunSuite {
     assert(rdd2.map(_.value).collect().length === 0, "got messages when there shouldn't be any")
 
     // this is the "exactly 1 message" case, namely the single message from sentOnlyOne above
-    val rdd3 = KafkaUtils.createRDD[String, String](sc, kafkaParams,
-      Array(OffsetRange(topic, 0, sentCount, sentCount + 1)), preferredHosts)
+    val rdd3 = KafkaUtils.createRDD[String, String](
+      sc,
+      kafkaParams,
+      Array(OffsetRange(topic, 0, sentCount, sentCount + 1)),
+      preferredHosts)
 
     // send lots of messages after rdd was defined, they shouldn't show up
     kafkaTestUtils.sendMessages(topic, Map("extra" -> 22))
 
-    assert(rdd3.map(_.value).collect().head === sentOnlyOne.keys.head,
+    assert(
+      rdd3.map(_.value).collect().head === sentOnlyOne.keys.head,
       "didn't get exactly one message")
   }
 

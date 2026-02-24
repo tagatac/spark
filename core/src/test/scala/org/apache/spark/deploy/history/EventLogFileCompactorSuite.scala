@@ -40,10 +40,17 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
   test("No event log files") {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
 
-      assertNoCompaction(fs, Seq.empty, compactor.compact(Seq.empty),
+      assertNoCompaction(
+        fs,
+        Seq.empty,
+        compactor.compact(Seq.empty),
         CompactionResultCode.NOT_ENOUGH_FILES)
     }
   }
@@ -52,11 +59,23 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         (1 to 2).map(_ => testEvent): _*)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertNoCompaction(fs, fileStatuses, compactor.compact(fileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertNoCompaction(
+        fs,
+        fileStatuses,
+        compactor.compact(fileStatuses),
         CompactionResultCode.NOT_ENOUGH_FILES)
     }
   }
@@ -65,11 +84,23 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         (1 to 5).map(_ => testEvent): _*)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertCompaction(fs, fileStatuses, compactor.compact(fileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertCompaction(
+        fs,
+        fileStatuses,
+        compactor.compact(fileStatuses),
         expectedNumOfFilesCompacted = 2)
     }
   }
@@ -78,18 +109,30 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         (1 to 2).map(_ => testEvent): _*)
 
       val fileToCompact = fileStatuses.head.getPath
-      val compactedPath = new Path(fileToCompact.getParent,
-        fileToCompact.getName + EventLogFileWriter.COMPACTED)
+      val compactedPath =
+        new Path(fileToCompact.getParent, fileToCompact.getName + EventLogFileWriter.COMPACTED)
       assert(fs.rename(fileToCompact, compactedPath))
 
       val newFileStatuses = Seq(fs.getFileStatus(compactedPath)) ++ fileStatuses.drop(1)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertNoCompaction(fs, newFileStatuses, compactor.compact(newFileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertNoCompaction(
+        fs,
+        newFileStatuses,
+        compactor.compact(newFileStatuses),
         CompactionResultCode.NOT_ENOUGH_FILES)
     }
   }
@@ -98,18 +141,30 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         (1 to 4).map(_ => testEvent): _*)
 
       val fileToCompact = fileStatuses.head.getPath
-      val compactedPath = new Path(fileToCompact.getParent,
-        fileToCompact.getName + EventLogFileWriter.COMPACTED)
+      val compactedPath =
+        new Path(fileToCompact.getParent, fileToCompact.getName + EventLogFileWriter.COMPACTED)
       assert(fs.rename(fileToCompact, compactedPath))
 
       val newFileStatuses = Seq(fs.getFileStatus(compactedPath)) ++ fileStatuses.drop(1)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertNoCompaction(fs, newFileStatuses, compactor.compact(newFileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertNoCompaction(
+        fs,
+        newFileStatuses,
+        compactor.compact(newFileStatuses),
         CompactionResultCode.NOT_ENOUGH_FILES)
     }
   }
@@ -118,18 +173,30 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     withTempDir { dir =>
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         (1 to 10).map(_ => testEvent): _*)
 
       val fileToCompact = fileStatuses.head.getPath
-      val compactedPath = new Path(fileToCompact.getParent,
-        fileToCompact.getName + EventLogFileWriter.COMPACTED)
+      val compactedPath =
+        new Path(fileToCompact.getParent, fileToCompact.getName + EventLogFileWriter.COMPACTED)
       assert(fs.rename(fileToCompact, compactedPath))
 
       val newFileStatuses = Seq(fs.getFileStatus(compactedPath)) ++ fileStatuses.drop(1)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertCompaction(fs, newFileStatuses, compactor.compact(newFileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertCompaction(
+        fs,
+        newFileStatuses,
+        compactor.compact(newFileStatuses),
         expectedNumOfFilesCompacted = 7)
     }
   }
@@ -139,7 +206,12 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
       val fs = new Path(dir.getAbsolutePath).getFileSystem(hadoopConf)
 
       // 1, 2 will be compacted into one file, 3~5 are dummies to ensure max files to retain
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         Seq(
           SparkListenerExecutorAdded(0, "exec1", new ExecutorInfo("host1", 1, Map.empty)),
           SparkListenerJobStart(1, 0, Seq.empty)),
@@ -150,9 +222,16 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
         testEvent,
         testEvent)
 
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
-      assertCompaction(fs, fileStatuses, compactor.compact(fileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
+      assertCompaction(
+        fs,
+        fileStatuses,
+        compactor.compact(fileStatuses),
         expectedNumOfFilesCompacted = 2)
 
       val expectCompactFileBasePath = fileStatuses.take(2).last.getPath
@@ -162,8 +241,9 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
         assert(lines.length === 2, "Compacted file should have only two events being accepted")
         lines.foreach { line =>
           val event = JsonProtocol.sparkEventFromJson(line)
-          assert(!event.isInstanceOf[SparkListenerJobStart] &&
-            !event.isInstanceOf[SparkListenerJobEnd])
+          assert(
+            !event.isInstanceOf[SparkListenerJobStart] &&
+              !event.isInstanceOf[SparkListenerJobEnd])
         }
       }
     }
@@ -185,7 +265,12 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
 
       // here job 1 is finished and job 2 is still live, hence half of total tasks are considered
       // as live
-      val fileStatuses = writeEventsToRollingWriter(fs, "app", dir, sparkConf, hadoopConf,
+      val fileStatuses = writeEventsToRollingWriter(
+        fs,
+        "app",
+        dir,
+        sparkConf,
+        hadoopConf,
         Seq(SparkListenerJobStart(1, 0, Seq(stage1)), SparkListenerStageSubmitted(stage1)),
         tasks,
         Seq(SparkListenerJobStart(2, 0, Seq(stage2)), SparkListenerStageSubmitted(stage2)),
@@ -195,9 +280,16 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
         testEvent,
         testEvent)
 
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, 0.7d)
-      assertNoCompaction(fs, fileStatuses, compactor.compact(fileStatuses),
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        0.7d)
+      assertNoCompaction(
+        fs,
+        fileStatuses,
+        compactor.compact(fileStatuses),
         CompactionResultCode.LOW_SCORE_FOR_COMPACTION)
     }
   }
@@ -246,8 +338,9 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
       expectedLines += writeEventToWriter(writer, SparkListenerApplicationEnd(0))
 
       // filterBlockManagerAdded: Some(true) & Some(false) => filter in
-      expectedLines += writeEventToWriter(writer, SparkListenerBlockManagerAdded(
-        0, BlockManagerId("1", "host1", 1), 10))
+      expectedLines += writeEventToWriter(
+        writer,
+        SparkListenerBlockManagerAdded(0, BlockManagerId("1", "host1", 1), 10))
 
       // filterApplicationStart: Some(false) & Some(false) => filter out
       writeEventToWriter(writer, SparkListenerApplicationStart("app", None, 0, "user", None))
@@ -266,8 +359,12 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
       val filters = Seq(new TestEventFilter1, new TestEventFilter2)
 
       val logPath = new Path(writer.logPath)
-      val compactor = new EventLogFileCompactor(sparkConf, hadoopConf, fs,
-        TEST_ROLLING_MAX_FILES_TO_RETAIN, TEST_COMPACTION_SCORE_THRESHOLD)
+      val compactor = new EventLogFileCompactor(
+        sparkConf,
+        hadoopConf,
+        fs,
+        TEST_ROLLING_MAX_FILES_TO_RETAIN,
+        TEST_COMPACTION_SCORE_THRESHOLD)
       val newPath = compactor.rewrite(filters, Seq(fs.getFileStatus(logPath)))
       assert(new Path(newPath).getName === logPath.getName + EventLogFileWriter.COMPACTED)
 
@@ -297,8 +394,8 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
     expectRemovedFiles.foreach { status => assert(!fs.exists(status.getPath)) }
 
     val expectCompactFileBasePath = originalFiles.take(expectedNumOfFilesCompacted).last.getPath
-    val expectCompactFileIndex = RollingEventLogFilesWriter.getEventLogFileIndex(
-      expectCompactFileBasePath.getName)
+    val expectCompactFileIndex =
+      RollingEventLogFilesWriter.getEventLogFileIndex(expectCompactFileBasePath.getName)
     assert(Some(expectCompactFileIndex) === compactRet.compactIndex)
 
     val expectCompactFilePath = getCompactFilePath(expectCompactFileBasePath)
@@ -306,7 +403,8 @@ class EventLogFileCompactorSuite extends SparkFunSuite {
   }
 
   private def getCompactFilePath(expectCompactFileBasePath: Path): Path = {
-    new Path(expectCompactFileBasePath.getParent,
+    new Path(
+      expectCompactFileBasePath.getParent,
       expectCompactFileBasePath.getName + EventLogFileWriter.COMPACTED)
   }
 

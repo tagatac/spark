@@ -21,12 +21,12 @@ import org.apache.spark.sql.execution.command.v1
 import org.apache.spark.sql.internal.SQLConf
 
 /**
- * The class contains tests for the `ALTER TABLE .. DROP PARTITION` command to check
- * V1 Hive external table catalog.
+ * The class contains tests for the `ALTER TABLE .. DROP PARTITION` command to check V1 Hive
+ * external table catalog.
  */
 class AlterTableDropPartitionSuite
-  extends v1.AlterTableDropPartitionSuiteBase
-  with CommandSuiteBase {
+    extends v1.AlterTableDropPartitionSuiteBase
+    with CommandSuiteBase {
 
   test("hive client calls") {
     Seq(false, true).foreach { statsOn =>

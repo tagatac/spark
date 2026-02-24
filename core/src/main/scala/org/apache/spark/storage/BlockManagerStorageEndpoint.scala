@@ -27,15 +27,15 @@ import org.apache.spark.storage.BlockManagerMessages._
 import org.apache.spark.util.{ThreadUtils, Utils}
 
 /**
- * An RpcEndpoint to take commands from the master to execute options. For example,
- * this is used to remove blocks from the storage endpoint's BlockManager.
+ * An RpcEndpoint to take commands from the master to execute options. For example, this is used
+ * to remove blocks from the storage endpoint's BlockManager.
  */
-private[storage]
-class BlockManagerStorageEndpoint(
+private[storage] class BlockManagerStorageEndpoint(
     override val rpcEnv: RpcEnv,
     blockManager: BlockManager,
     mapOutputTracker: MapOutputTracker)
-  extends IsolatedThreadSafeRpcEndpoint with Logging {
+    extends IsolatedThreadSafeRpcEndpoint
+    with Logging {
 
   private val asyncThreadPool =
     ThreadUtils.newDaemonCachedThreadPool("block-manager-storage-async-thread-pool", 100)
@@ -103,9 +103,8 @@ class BlockManagerStorageEndpoint(
       context.reply(blockManager.blockInfoManager.tryMarkBlockAsVisible(blockId))
   }
 
-  private def doAsync[T](
-      actionMessage: MessageWithContext,
-      context: RpcCallContext)(body: => T): Unit = {
+  private def doAsync[T](actionMessage: MessageWithContext, context: RpcCallContext)(
+      body: => T): Unit = {
     val future = Future {
       logDebug(actionMessage.message)
       body

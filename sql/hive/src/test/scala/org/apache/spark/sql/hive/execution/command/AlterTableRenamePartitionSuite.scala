@@ -20,12 +20,12 @@ package org.apache.spark.sql.hive.execution.command
 import org.apache.spark.sql.execution.command.v1
 
 /**
- * The class contains tests for the `ALTER TABLE .. RENAME PARTITION` command to check
- * V1 Hive external table catalog.
+ * The class contains tests for the `ALTER TABLE .. RENAME PARTITION` command to check V1 Hive
+ * external table catalog.
  */
 class AlterTableRenamePartitionSuite
-  extends v1.AlterTableRenamePartitionSuiteBase
-  with CommandSuiteBase {
+    extends v1.AlterTableRenamePartitionSuiteBase
+    with CommandSuiteBase {
 
   test("hive client calls") {
     withNamespaceAndTable("ns", "tbl") { t =>

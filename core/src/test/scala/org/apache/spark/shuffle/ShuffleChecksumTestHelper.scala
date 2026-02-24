@@ -36,7 +36,8 @@ trait ShuffleChecksumTestHelper {
     assert(data.exists(), "Data file doesn't exist")
     assert(index.exists(), "Index file doesn't exist")
 
-    assert(ShuffleChecksumUtils.compareChecksums(numPartition, algorithm, checksum, data, index),
+    assert(
+      ShuffleChecksumUtils.compareChecksums(numPartition, algorithm, checksum, data, index),
       "checksum must be consistent at both write and read sides")
   }
 

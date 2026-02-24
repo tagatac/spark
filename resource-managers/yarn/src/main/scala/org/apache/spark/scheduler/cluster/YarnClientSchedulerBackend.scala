@@ -32,18 +32,16 @@ import org.apache.spark.launcher.SparkAppHandle
 import org.apache.spark.scheduler.TaskSchedulerImpl
 import org.apache.spark.scheduler.cluster.CoarseGrainedClusterMessages._
 
-private[spark] class YarnClientSchedulerBackend(
-    scheduler: TaskSchedulerImpl,
-    sc: SparkContext)
-  extends YarnSchedulerBackend(scheduler, sc)
-  with Logging {
+private[spark] class YarnClientSchedulerBackend(scheduler: TaskSchedulerImpl, sc: SparkContext)
+    extends YarnSchedulerBackend(scheduler, sc)
+    with Logging {
 
   private var client: Client = null
   private var monitorThread: MonitorThread = null
 
   /**
-   * Create a Yarn client to submit an application to the ResourceManager.
-   * This waits until the application is running.
+   * Create a Yarn client to submit an application to the ResourceManager. This waits until the
+   * application is running.
    */
   override def start(): Unit = {
     super.start()
@@ -72,9 +70,9 @@ private[spark] class YarnClientSchedulerBackend(
   }
 
   /**
-   * Report the state of the application until it is running.
-   * If the application has finished, failed or been killed in the process, throw an exception.
-   * This assumes both `client` and `appId` have already been set.
+   * Report the state of the application until it is running. If the application has finished,
+   * failed or been killed in the process, throw an exception. This assumes both `client` and
+   * `appId` have already been set.
    */
   private def waitForApplication(): Unit = {
     val monitorInterval = conf.get(CLIENT_LAUNCH_MONITOR_INTERVAL)
@@ -83,8 +81,8 @@ private[spark] class YarnClientSchedulerBackend(
     val YarnAppReport(state, _, diags) =
       client.monitorApplication(returnOnRunning = true, interval = monitorInterval)
     if (state == YarnApplicationState.FINISHED ||
-        state == YarnApplicationState.FAILED ||
-        state == YarnApplicationState.KILLED) {
+      state == YarnApplicationState.FAILED ||
+      state == YarnApplicationState.KILLED) {
       val genericMessage = "The YARN application has already ended! " +
         "It might have been killed or the Application Master may have failed to start. " +
         "Check the YARN application logs for more details."
@@ -106,9 +104,9 @@ private[spark] class YarnClientSchedulerBackend(
   /**
    * We create this class for SPARK-9519. Basically when we interrupt the monitor thread it's
    * because the SparkContext is being shut down(sc.stop() called by user code), but if
-   * monitorApplication return, it means the Yarn application finished before sc.stop() was called,
-   * which means we should call sc.stop() here, and we don't allow the monitor to be interrupted
-   * before SparkContext stops successfully.
+   * monitorApplication return, it means the Yarn application finished before sc.stop() was
+   * called, which means we should call sc.stop() here, and we don't allow the monitor to be
+   * interrupted before SparkContext stops successfully.
    */
   private class MonitorThread extends Thread {
     private var allowInterrupt = true
@@ -117,8 +115,9 @@ private[spark] class YarnClientSchedulerBackend(
       try {
         val YarnAppReport(_, state, diags) =
           client.monitorApplication(logApplicationReport = false)
-        logError(log"YARN application has exited unexpectedly with state " +
-          log"${MDC(APP_STATE, state)}! Check the YARN application logs for more details.")
+        logError(
+          log"YARN application has exited unexpectedly with state " +
+            log"${MDC(APP_STATE, state)}! Check the YARN application logs for more details.")
         diags.foreach { err =>
           logError(log"Diagnostics message: ${MDC(LogKeys.ERROR, err)}")
         }
@@ -126,9 +125,10 @@ private[spark] class YarnClientSchedulerBackend(
         sc.stop()
         state match {
           case FinalApplicationStatus.FAILED | FinalApplicationStatus.KILLED
-            if conf.get(AM_CLIENT_MODE_EXIT_ON_ERROR) =>
-            logWarning(log"ApplicationMaster finished with status ${MDC(APP_STATE, state)}, " +
-              log"SparkContext should exit with code 1.")
+              if conf.get(AM_CLIENT_MODE_EXIT_ON_ERROR) =>
+            logWarning(
+              log"ApplicationMaster finished with status ${MDC(APP_STATE, state)}, " +
+                log"SparkContext should exit with code 1.")
             System.exit(1)
           case _ =>
         }
@@ -146,9 +146,8 @@ private[spark] class YarnClientSchedulerBackend(
   }
 
   /**
-   * Monitor the application state in a separate thread.
-   * If the application has exited for any reason, stop the SparkContext.
-   * This assumes both `client` and `appId` have already been set.
+   * Monitor the application state in a separate thread. If the application has exited for any
+   * reason, stop the SparkContext. This assumes both `client` and `appId` have already been set.
    */
   private def asyncMonitorApplication(): MonitorThread = {
     assert(client != null && appId.isDefined, "Application has not been submitted yet!")

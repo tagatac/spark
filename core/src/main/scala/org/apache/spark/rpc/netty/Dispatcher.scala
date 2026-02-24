@@ -33,8 +33,9 @@ import org.apache.spark.rpc._
 /**
  * A message dispatcher, responsible for routing RPC messages to the appropriate endpoint(s).
  *
- * @param numUsableCores Number of CPU cores allocated to the process, for sizing the thread pool.
- *                       If 0, will consider the available CPUs on the host.
+ * @param numUsableCores
+ *   Number of CPU cores allocated to the process, for sizing the thread pool. If 0, will consider
+ *   the available CPUs on the host.
  */
 private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) extends Logging {
 
@@ -116,18 +117,26 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
   /**
    * Send a message to all registered [[RpcEndpoint]]s in this process.
    *
-   * This can be used to make network events known to all end points (e.g. "a new node connected").
+   * This can be used to make network events known to all end points (e.g. "a new node
+   * connected").
    */
   def postToAll(message: InboxMessage): Unit = {
     val iter = endpoints.keySet().iterator()
     while (iter.hasNext) {
       val name = iter.next
-        postMessage(name, message, (e) => { e match {
-          case e: RpcEnvStoppedException => logDebug(s"Message $message dropped. ${e.getMessage}")
-          case e: Throwable =>
-            logWarning(log"Message ${MDC(MESSAGE, message)} dropped. ${MDC(ERROR, e.getMessage)}")
-        }}
-      )}
+      postMessage(
+        name,
+        message,
+        (e) => {
+          e match {
+            case e: RpcEnvStoppedException =>
+              logDebug(s"Message $message dropped. ${e.getMessage}")
+            case e: Throwable =>
+              logWarning(
+                log"Message ${MDC(MESSAGE, message)} dropped. ${MDC(ERROR, e.getMessage)}")
+          }
+        })
+    }
   }
 
   /** Posts a message sent by a remote endpoint. */
@@ -148,7 +157,9 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
 
   /** Posts a one-way message. */
   def postOneWayMessage(message: RequestMessage): Unit = {
-    postMessage(message.receiver.name, OneWayMessage(message.senderAddress, message.content),
+    postMessage(
+      message.receiver.name,
+      OneWayMessage(message.senderAddress, message.content),
       {
         // SPARK-31922: in local cluster mode, there's always a RpcEnvStoppedException when
         // stop is called due to some asynchronous message handling. We catch the exception
@@ -156,8 +167,9 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
         // cluster in spark shell.
         case re: RpcEnvStoppedException => logDebug(s"Message $message dropped. ${re.getMessage}")
         case e if SparkEnv.get.isStopped =>
-          logWarning(log"Message ${MDC(MESSAGE, message)} dropped due to sparkEnv " +
-            log"is stopped. ${MDC(ERROR, e.getMessage)}")
+          logWarning(
+            log"Message ${MDC(MESSAGE, message)} dropped due to sparkEnv " +
+              log"is stopped. ${MDC(ERROR, e.getMessage)}")
         case e => throw e
       })
   }
@@ -165,9 +177,12 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
   /**
    * Posts a message to a specific endpoint.
    *
-   * @param endpointName name of the endpoint.
-   * @param message the message to post
-   * @param callbackIfStopped callback function if the endpoint is stopped.
+   * @param endpointName
+   *   name of the endpoint.
+   * @param message
+   *   the message to post
+   * @param callbackIfStopped
+   *   callback function if the endpoint is stopped.
    */
   private def postMessage(
       endpointName: String,

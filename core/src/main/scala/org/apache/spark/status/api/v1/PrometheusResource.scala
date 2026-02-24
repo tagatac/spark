@@ -27,10 +27,9 @@ import org.apache.spark.annotation.Experimental
 import org.apache.spark.ui.SparkUI
 
 /**
- * :: Experimental ::
- * This aims to expose Executor metrics like REST API which is documented in
+ * :: Experimental :: This aims to expose Executor metrics like REST API which is documented in
  *
- *    https://spark.apache.org/docs/latest/monitoring.html#executor-metrics
+ * https://spark.apache.org/docs/latest/monitoring.html#executor-metrics
  *
  * Note that this is based on ExecutorSummary which is different from ExecutorSource.
  */
@@ -49,8 +48,9 @@ private[v1] class PrometheusResource extends ApiRequestContext {
       val labels = Seq(
         "application_id" -> store.applicationInfo().id,
         "application_name" -> store.applicationInfo().name,
-        "executor_id" -> executor.id
-      ).map { case (k, v) => s"""$k="$v"""" }.mkString("{", ", ", "}")
+        "executor_id" -> executor.id)
+        .map { case (k, v) => s"""$k="$v"""" }
+        .mkString("{", ", ", "}")
       sb.append(s"${prefix}rddBlocks$labels ${executor.rddBlocks}\n")
       sb.append(s"${prefix}memoryUsed_bytes$labels ${executor.memoryUsed}\n")
       sb.append(s"${prefix}diskUsed_bytes$labels ${executor.diskUsed}\n")
@@ -60,7 +60,8 @@ private[v1] class PrometheusResource extends ApiRequestContext {
       sb.append(s"${prefix}failedTasks_total$labels ${executor.failedTasks}\n")
       sb.append(s"${prefix}completedTasks_total$labels ${executor.completedTasks}\n")
       sb.append(s"${prefix}totalTasks_total$labels ${executor.totalTasks}\n")
-      sb.append(s"${prefix}totalDuration_seconds_total$labels ${executor.totalDuration * 0.001}\n")
+      sb.append(
+        s"${prefix}totalDuration_seconds_total$labels ${executor.totalDuration * 0.001}\n")
       sb.append(s"${prefix}totalGCTime_seconds_total$labels ${executor.totalGCTime * 0.001}\n")
       sb.append(s"${prefix}totalInputBytes_bytes_total$labels ${executor.totalInputBytes}\n")
       sb.append(s"${prefix}totalShuffleRead_bytes_total$labels ${executor.totalShuffleRead}\n")
@@ -69,10 +70,13 @@ private[v1] class PrometheusResource extends ApiRequestContext {
       executor.executorLogs.foreach { case (k, v) => }
       executor.memoryMetrics.foreach { m =>
         sb.append(s"${prefix}usedOnHeapStorageMemory_bytes$labels ${m.usedOnHeapStorageMemory}\n")
-        sb.append(s"${prefix}usedOffHeapStorageMemory_bytes$labels ${m.usedOffHeapStorageMemory}\n")
-        sb.append(s"${prefix}totalOnHeapStorageMemory_bytes$labels ${m.totalOnHeapStorageMemory}\n")
-        sb.append(s"${prefix}totalOffHeapStorageMemory_bytes$labels " +
-          s"${m.totalOffHeapStorageMemory}\n")
+        sb.append(
+          s"${prefix}usedOffHeapStorageMemory_bytes$labels ${m.usedOffHeapStorageMemory}\n")
+        sb.append(
+          s"${prefix}totalOnHeapStorageMemory_bytes$labels ${m.totalOnHeapStorageMemory}\n")
+        sb.append(
+          s"${prefix}totalOffHeapStorageMemory_bytes$labels " +
+            s"${m.totalOffHeapStorageMemory}\n")
       }
       executor.peakMemoryMetrics.foreach { m =>
         val names = Array(
@@ -91,8 +95,7 @@ private[v1] class PrometheusResource extends ApiRequestContext {
           "ProcessTreePythonVMemory",
           "ProcessTreePythonRSSMemory",
           "ProcessTreeOtherVMemory",
-          "ProcessTreeOtherRSSMemory"
-        )
+          "ProcessTreeOtherRSSMemory")
         names.foreach { name =>
           sb.append(s"$prefix${name}_bytes$labels ${m.getMetricValue(name)}\n")
         }

@@ -37,13 +37,16 @@ import org.apache.spark.util.ArrayImplicits._
 import org.apache.spark.util.Utils
 
 class KubernetesLocalDiskShuffleExecutorComponents(sparkConf: SparkConf)
-  extends ShuffleExecutorComponents with Logging {
+    extends ShuffleExecutorComponents
+    with Logging {
 
   private val delegate = new LocalDiskShuffleExecutorComponents(sparkConf)
   private var blockManager: BlockManager = _
 
   override def initializeExecutor(
-      appId: String, execId: String, extraConfigs: java.util.Map[String, String]): Unit = {
+      appId: String,
+      execId: String,
+      extraConfigs: java.util.Map[String, String]): Unit = {
     delegate.initializeExecutor(appId, execId, extraConfigs)
     blockManager = SparkEnv.get.blockManager
     if (sparkConf.getBoolean(KUBERNETES_DRIVER_REUSE_PVC.key, false)) {
@@ -54,31 +57,37 @@ class KubernetesLocalDiskShuffleExecutorComponents(sparkConf: SparkConf)
         KubernetesLocalDiskShuffleExecutorComponents.recoverDiskStore(sparkConf, blockManager)
       }
     } else {
-      logInfo(log"Skip recovery because ${MDC(LogKeys.CONFIG, KUBERNETES_DRIVER_REUSE_PVC.key)} " +
-        log"is disabled.")
+      logInfo(
+        log"Skip recovery because ${MDC(LogKeys.CONFIG, KUBERNETES_DRIVER_REUSE_PVC.key)} " +
+          log"is disabled.")
     }
   }
 
-  override def createMapOutputWriter(shuffleId: Int, mapTaskId: Long, numPartitions: Int)
-    : ShuffleMapOutputWriter = {
+  override def createMapOutputWriter(
+      shuffleId: Int,
+      mapTaskId: Long,
+      numPartitions: Int): ShuffleMapOutputWriter = {
     delegate.createMapOutputWriter(shuffleId, mapTaskId, numPartitions)
   }
 
-  override def createSingleFileMapOutputWriter(shuffleId: Int, mapId: Long)
-    : Optional[SingleSpillShuffleMapOutputWriter] = {
+  override def createSingleFileMapOutputWriter(
+      shuffleId: Int,
+      mapId: Long): Optional[SingleSpillShuffleMapOutputWriter] = {
     delegate.createSingleFileMapOutputWriter(shuffleId, mapId)
   }
 }
 
 object KubernetesLocalDiskShuffleExecutorComponents extends Logging {
+
   /**
-   * This tries to recover shuffle data of dead executors' local dirs if exists.
-   * Since the executors are already dead, we cannot use `getHostLocalDirs`.
-   * This is enabled only when spark.kubernetes.driver.reusePersistentVolumeClaim is true.
+   * This tries to recover shuffle data of dead executors' local dirs if exists. Since the
+   * executors are already dead, we cannot use `getHostLocalDirs`. This is enabled only when
+   * spark.kubernetes.driver.reusePersistentVolumeClaim is true.
    */
   def recoverDiskStore(conf: SparkConf, bm: BlockManager): Unit = {
     // Find All files
-    val (checksumFiles, files) = Utils.getConfiguredLocalDirs(conf)
+    val (checksumFiles, files) = Utils
+      .getConfiguredLocalDirs(conf)
       .filter(_ != null)
       .map(s => new File(new File(new File(s).getParent).getParent))
       .flatMap { dir =>
@@ -86,32 +95,38 @@ object KubernetesLocalDiskShuffleExecutorComponents extends Logging {
           f.isDirectory && f.getName.startsWith("spark-")
         }
         val files = oldDirs
-          .flatMap(_.listFiles).filter(_.isDirectory) // executor-xxx
-          .flatMap(_.listFiles).filter(_.isDirectory) // blockmgr-xxx
-          .flatMap(_.listFiles).filter(_.isDirectory) // 00
+          .flatMap(_.listFiles)
+          .filter(_.isDirectory) // executor-xxx
+          .flatMap(_.listFiles)
+          .filter(_.isDirectory) // blockmgr-xxx
+          .flatMap(_.listFiles)
+          .filter(_.isDirectory) // 00
           .flatMap(_.listFiles)
         if (files != null) files.toImmutableArraySeq else Seq.empty
       }
       .partition(_.getName.contains(".checksum"))
     val (indexFiles, dataFiles) = files.partition(_.getName.endsWith(".index"))
 
-    logInfo(log"Found ${MDC(LogKeys.NUM_DATA_FILE, dataFiles.length)} data files, " +
-      log"${MDC(LogKeys.NUM_INDEX_FILE, indexFiles.length)} index files, " +
-      log"and ${MDC(LogKeys.NUM_CHECKSUM_FILE, checksumFiles.length)} checksum files.")
+    logInfo(
+      log"Found ${MDC(LogKeys.NUM_DATA_FILE, dataFiles.length)} data files, " +
+        log"${MDC(LogKeys.NUM_INDEX_FILE, indexFiles.length)} index files, " +
+        log"and ${MDC(LogKeys.NUM_CHECKSUM_FILE, checksumFiles.length)} checksum files.")
 
     // Build a hashmap with checksum file name as a key
     val checksumFileMap = new mutable.HashMap[String, File]()
     val algorithm = conf.get(SHUFFLE_CHECKSUM_ALGORITHM)
     checksumFiles.foreach { f =>
-      logInfo(log"${MDC(LogKeys.FILE_NAME, f.getName)} -> " +
-        log"${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)}")
+      logInfo(
+        log"${MDC(LogKeys.FILE_NAME, f.getName)} -> " +
+          log"${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)}")
       checksumFileMap.put(f.getName, f)
     }
     // Build a hashmap with shuffle data file name as a key
     val indexFileMap = new mutable.HashMap[String, File]()
     indexFiles.foreach { f =>
-      logInfo(log"${MDC(LogKeys.FILE_NAME, f.getName.replace(".index", ".data"))} -> " +
-        log"${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)}")
+      logInfo(
+        log"${MDC(LogKeys.FILE_NAME, f.getName.replace(".index", ".data"))} -> " +
+          log"${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)}")
       indexFileMap.put(f.getName.replace(".index", ".data"), f)
     }
 
@@ -133,8 +148,9 @@ object KubernetesLocalDiskShuffleExecutorComponents extends Logging {
             val decryptedSize = f.length()
             bm.TempFileBasedBlockStoreUpdater(id, level, classTag, f, decryptedSize).save()
           } else {
-            logInfo(log"Ignore ${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)} " +
-              log"due to the verification failure.")
+            logInfo(
+              log"Ignore ${MDC(LogKeys.FILE_ABSOLUTE_PATH, f.getAbsolutePath)} " +
+                log"due to the verification failure.")
           }
         } else {
           logInfo("Ignore a non-shuffle block file.")
@@ -176,4 +192,3 @@ object KubernetesLocalDiskShuffleExecutorComponents extends Logging {
     }
   }
 }
-

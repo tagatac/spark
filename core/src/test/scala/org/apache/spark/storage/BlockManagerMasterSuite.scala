@@ -54,8 +54,8 @@ class BlockManagerMasterSuite extends SparkFunSuite {
 
     // Mock the askSync to return the Future
     when(
-      mockDriverEndpoint.askSync[Future[Seq[Int]]](any[RemoveRdd])(any[ClassTag[Future[Seq[Int]]]])
-    ).thenReturn(future)
+      mockDriverEndpoint.askSync[Future[Seq[Int]]](any[RemoveRdd])(
+        any[ClassTag[Future[Seq[Int]]]])).thenReturn(future)
 
     val bmm = new BlockManagerMaster(mockDriverEndpoint, mockHeartbeatEndpoint, conf, true)
 
@@ -80,8 +80,8 @@ class BlockManagerMasterSuite extends SparkFunSuite {
 
     // Mock the askSync to return the Future
     when(
-      mockDriverEndpoint.askSync[Future[Seq[Int]]](any[RemoveRdd])(any[ClassTag[Future[Seq[Int]]]])
-    ).thenReturn(future)
+      mockDriverEndpoint.askSync[Future[Seq[Int]]](any[RemoveRdd])(
+        any[ClassTag[Future[Seq[Int]]]])).thenReturn(future)
 
     val bmm = new BlockManagerMaster(mockDriverEndpoint, mockHeartbeatEndpoint, conf, true)
 

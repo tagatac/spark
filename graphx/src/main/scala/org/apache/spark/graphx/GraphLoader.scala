@@ -31,31 +31,36 @@ import org.apache.spark.storage.StorageLevel
 object GraphLoader extends Logging {
 
   /**
-   * Loads a graph from an edge list formatted file where each line contains two integers: a source
-   * id and a target id. Skips lines that begin with `#`.
+   * Loads a graph from an edge list formatted file where each line contains two integers: a
+   * source id and a target id. Skips lines that begin with `#`.
    *
-   * If desired the edges can be automatically oriented in the positive
-   * direction (source Id is less than target Id) by setting `canonicalOrientation` to
-   * true.
+   * If desired the edges can be automatically oriented in the positive direction (source Id is
+   * less than target Id) by setting `canonicalOrientation` to true.
    *
-   * @example Loads a file in the following format:
-   * {{{
+   * @example
+   *   Loads a file in the following format:
+   *   {{{
    * # Comment Line
    * # Source Id <\t> Target Id
    * 1   -5
    * 1    2
    * 2    7
    * 1    8
-   * }}}
+   *   }}}
    *
-   * @param sc SparkContext
-   * @param path the path to the file (e.g., /home/data/file or hdfs://file)
-   * @param canonicalOrientation whether to orient edges in the positive
-   *        direction
-   * @param numEdgePartitions the number of partitions for the edge RDD
-   * Setting this value to -1 will use the default parallelism.
-   * @param edgeStorageLevel the desired storage level for the edge partitions
-   * @param vertexStorageLevel the desired storage level for the vertex partitions
+   * @param sc
+   *   SparkContext
+   * @param path
+   *   the path to the file (e.g., /home/data/file or hdfs://file)
+   * @param canonicalOrientation
+   *   whether to orient edges in the positive direction
+   * @param numEdgePartitions
+   *   the number of partitions for the edge RDD Setting this value to -1 will use the default
+   *   parallelism.
+   * @param edgeStorageLevel
+   *   the desired storage level for the edge partitions
+   * @param vertexStorageLevel
+   *   the desired storage level for the vertex partitions
    */
   def edgeListFile(
       sc: SparkContext,
@@ -63,9 +68,7 @@ object GraphLoader extends Logging {
       canonicalOrientation: Boolean = false,
       numEdgePartitions: Int = -1,
       edgeStorageLevel: StorageLevel = StorageLevel.MEMORY_ONLY,
-      vertexStorageLevel: StorageLevel = StorageLevel.MEMORY_ONLY)
-    : Graph[Int, Int] =
-  {
+      vertexStorageLevel: StorageLevel = StorageLevel.MEMORY_ONLY): Graph[Int, Int] = {
     val startTimeNs = System.nanoTime()
 
     // Parse the edge data table directly into edge partitions
@@ -75,32 +78,38 @@ object GraphLoader extends Logging {
       } else {
         sc.textFile(path)
       }
-    val edges = lines.mapPartitionsWithIndex { (pid, iter) =>
-      val builder = new EdgePartitionBuilder[Int, Int]
-      iter.foreach { line =>
-        if (!line.isEmpty && line(0) != '#') {
-          val lineArray = line.split("\\s+")
-          if (lineArray.length < 2) {
-            throw new IllegalArgumentException("Invalid line: " + line)
-          }
-          val srcId = lineArray(0).toLong
-          val dstId = lineArray(1).toLong
-          if (canonicalOrientation && srcId > dstId) {
-            builder.add(dstId, srcId, 1)
-          } else {
-            builder.add(srcId, dstId, 1)
+    val edges = lines
+      .mapPartitionsWithIndex { (pid, iter) =>
+        val builder = new EdgePartitionBuilder[Int, Int]
+        iter.foreach { line =>
+          if (!line.isEmpty && line(0) != '#') {
+            val lineArray = line.split("\\s+")
+            if (lineArray.length < 2) {
+              throw new IllegalArgumentException("Invalid line: " + line)
+            }
+            val srcId = lineArray(0).toLong
+            val dstId = lineArray(1).toLong
+            if (canonicalOrientation && srcId > dstId) {
+              builder.add(dstId, srcId, 1)
+            } else {
+              builder.add(srcId, dstId, 1)
+            }
           }
         }
+        Iterator((pid, builder.toEdgePartition))
       }
-      Iterator((pid, builder.toEdgePartition))
-    }.persist(edgeStorageLevel).setName("GraphLoader.edgeListFile - edges (%s)".format(path))
+      .persist(edgeStorageLevel)
+      .setName("GraphLoader.edgeListFile - edges (%s)".format(path))
     edges.count()
 
     logInfo(log"It took " +
       log"${MDC(TOTAL_TIME, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNs))} ms " +
       log"to load the edges")
 
-    GraphImpl.fromEdgePartitions(edges, defaultVertexAttr = 1, edgeStorageLevel = edgeStorageLevel,
+    GraphImpl.fromEdgePartitions(
+      edges,
+      defaultVertexAttr = 1,
+      edgeStorageLevel = edgeStorageLevel,
       vertexStorageLevel = vertexStorageLevel)
   } // end of edgeListFile
 

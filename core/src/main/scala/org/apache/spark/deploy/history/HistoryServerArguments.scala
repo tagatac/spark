@@ -28,7 +28,7 @@ import org.apache.spark.util.Utils
  * Command-line parser for the [[HistoryServer]].
  */
 private[history] class HistoryServerArguments(conf: SparkConf, args: Array[String])
-  extends Logging {
+    extends Logging {
   private var propertiesFile: String = null
 
   parse(args.toList)
@@ -66,12 +66,13 @@ private[history] class HistoryServerArguments(conf: SparkConf, args: Array[Strin
         f.get(History).asInstanceOf[ConfigEntry[_]]
       }
     val maxConfigLength = configs.map(_.key.length).max
-    val sb = new StringBuilder(
-      s"""
+    val sb = new StringBuilder(s"""
          |${error}Usage: HistoryServer [options]
          |
          |Options:
-         |  ${"--properties-file FILE".padTo(maxConfigLength, ' ')} Path to a custom Spark properties file.
+         |  ${"--properties-file FILE".padTo(
+                                   maxConfigLength,
+                                   ' ')} Path to a custom Spark properties file.
          |  ${"".padTo(maxConfigLength, ' ')} Default is conf/spark-defaults.conf.
          |
          |Configuration options can be set by setting the corresponding JVM system property.
@@ -106,4 +107,3 @@ private[history] class HistoryServerArguments(conf: SparkConf, args: Array[Strin
     System.exit(exitCode)
   }
 }
-

@@ -44,26 +44,26 @@ private[spark] class ShuffleMapStage(
     val shuffleDep: ShuffleDependency[_, _, _],
     mapOutputTrackerMaster: MapOutputTrackerMaster,
     resourceProfileId: Int)
-  extends Stage(id, rdd, numTasks, parents, firstJobId, callSite, resourceProfileId) {
+    extends Stage(id, rdd, numTasks, parents, firstJobId, callSite, resourceProfileId) {
 
   private[this] var _mapStageJobs: List[ActiveJob] = Nil
 
   /**
-   * Partitions that either haven't yet been computed, or that were computed on an executor
-   * that has since been lost, so should be re-computed.  This variable is used by the
-   * DAGScheduler to determine when a stage has completed. Task successes in both the active
-   * attempt for the stage or in earlier attempts for this stage can cause partition ids to get
-   * removed from pendingPartitions. As a result, this variable may be inconsistent with the pending
-   * tasks in the TaskSetManager for the active attempt for the stage (the partitions stored here
-   * will always be a subset of the partitions that the TaskSetManager thinks are pending).
+   * Partitions that either haven't yet been computed, or that were computed on an executor that
+   * has since been lost, so should be re-computed. This variable is used by the DAGScheduler to
+   * determine when a stage has completed. Task successes in both the active attempt for the stage
+   * or in earlier attempts for this stage can cause partition ids to get removed from
+   * pendingPartitions. As a result, this variable may be inconsistent with the pending tasks in
+   * the TaskSetManager for the active attempt for the stage (the partitions stored here will
+   * always be a subset of the partitions that the TaskSetManager thinks are pending).
    */
   val pendingPartitions = new HashSet[Int]
 
   override def toString: String = "ShuffleMapStage " + id
 
   /**
-   * Returns the list of active jobs,
-   * i.e. map-stage jobs that were submitted to execute this stage independently (if any).
+   * Returns the list of active jobs, i.e. map-stage jobs that were submitted to execute this
+   * stage independently (if any).
    */
   def mapStageJobs: Seq[ActiveJob] = _mapStageJobs
 
@@ -78,10 +78,11 @@ private[spark] class ShuffleMapStage(
   }
 
   /**
-   * Number of partitions that have shuffle outputs.
-   * When this reaches [[numPartitions]], this map stage is ready.
+   * Number of partitions that have shuffle outputs. When this reaches [[numPartitions]], this map
+   * stage is ready.
    */
-  def numAvailableOutputs: Int = mapOutputTrackerMaster.getNumAvailableOutputs(shuffleDep.shuffleId)
+  def numAvailableOutputs: Int =
+    mapOutputTrackerMaster.getNumAvailableOutputs(shuffleDep.shuffleId)
 
   /**
    * Returns true if the map stage is ready, i.e. all partitions have shuffle outputs.
@@ -104,8 +105,8 @@ private[spark] class ShuffleMapStage(
   }
 
   /**
-   * Whether the stage has been detected as indeterminate at runtime via checksum mismatch.
-   * This means different stage attempts have produced different data for the same partition.
+   * Whether the stage has been detected as indeterminate at runtime via checksum mismatch. This
+   * means different stage attempts have produced different data for the same partition.
    */
   def isRuntimeIndeterminate: Boolean = {
     !rdd.isReliablyCheckpointed && isChecksumMismatched

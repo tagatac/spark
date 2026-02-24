@@ -23,7 +23,7 @@ import org.apache.spark.sql.types._
 
 /**
  * A parent class for mutable container objects that are reused when the values are changed,
- * resulting in less garbage.  These values are held by a [[SpecificInternalRow]].
+ * resulting in less garbage. These values are held by a [[SpecificInternalRow]].
  *
  * The following code was roughly used to generate these objects:
  * {{{
@@ -189,7 +189,7 @@ final class MutableAny extends MutableValue {
 
 /**
  * A row type that holds an array specialized container objects, of type [[MutableValue]], chosen
- * based on the dataTypes of each column.  The intent is to decrease garbage when modifying the
+ * based on the dataTypes of each column. The intent is to decrease garbage when modifying the
  * values of primitive columns.
  */
 final class SpecificInternalRow(val values: Array[MutableValue]) extends BaseGenericInternalRow {

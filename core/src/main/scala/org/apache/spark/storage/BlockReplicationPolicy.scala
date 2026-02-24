@@ -25,10 +25,9 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.internal.LogKeys._
 
 /**
- * ::DeveloperApi::
- * BlockReplicationPrioritization provides logic for prioritizing a sequence of peers for
- * replicating blocks. BlockManager will replicate to each peer returned in order until the
- * desired replication order is reached. If a replication fails, prioritize() will be called
+ * ::DeveloperApi:: BlockReplicationPrioritization provides logic for prioritizing a sequence of
+ * peers for replicating blocks. BlockManager will replicate to each peer returned in order until
+ * the desired replication order is reached. If a replication fails, prioritize() will be called
  * again to get a fresh prioritization.
  */
 @DeveloperApi
@@ -37,14 +36,20 @@ trait BlockReplicationPolicy {
   /**
    * Method to prioritize a bunch of candidate peers of a block
    *
-   * @param blockManagerId Id of the current BlockManager for self identification
-   * @param peers A list of peers of a BlockManager
-   * @param peersReplicatedTo Set of peers already replicated to
-   * @param blockId BlockId of the block being replicated. This can be used as a source of
-   *                randomness if needed.
-   * @param numReplicas Number of peers we need to replicate to
-   * @return A prioritized list of peers. Lower the index of a peer, higher its priority.
-   *         This returns a list of size at most `numPeersToReplicateTo`.
+   * @param blockManagerId
+   *   Id of the current BlockManager for self identification
+   * @param peers
+   *   A list of peers of a BlockManager
+   * @param peersReplicatedTo
+   *   Set of peers already replicated to
+   * @param blockId
+   *   BlockId of the block being replicated. This can be used as a source of randomness if
+   *   needed.
+   * @param numReplicas
+   *   Number of peers we need to replicate to
+   * @return
+   *   A prioritized list of peers. Lower the index of a peer, higher its priority. This returns a
+   *   list of size at most `numPeersToReplicateTo`.
    */
   def prioritize(
       blockManagerId: BlockManagerId,
@@ -55,18 +60,22 @@ trait BlockReplicationPolicy {
 }
 
 object BlockReplicationUtils {
+
   /**
-   * Uses sampling algorithm by Robert Floyd. Finds a random sample in O(n) while
-   * minimizing space usage. Please see <a href="https://math.stackexchange.com/q/178690">
-   * here</a>.
+   * Uses sampling algorithm by Robert Floyd. Finds a random sample in O(n) while minimizing space
+   * usage. Please see <a href="https://math.stackexchange.com/q/178690"> here</a>.
    *
-   * @param n total number of indices
-   * @param m number of samples needed
-   * @param r random number generator
-   * @return list of m random unique indices
+   * @param n
+   *   total number of indices
+   * @param m
+   *   number of samples needed
+   * @param r
+   *   random number generator
+   * @return
+   *   list of m random unique indices
    */
   private def getSampleIds(n: Int, m: Int, r: Random): List[Int] = {
-    val indices = (n - m + 1 to n).foldLeft(mutable.LinkedHashSet.empty[Int]) {case (set, i) =>
+    val indices = (n - m + 1 to n).foldLeft(mutable.LinkedHashSet.empty[Int]) { case (set, i) =>
       val t = r.nextInt(i) + 1
       if (set.contains(t)) set.union(Set(i)) else set.union(Set(t))
     }
@@ -77,11 +86,14 @@ object BlockReplicationUtils {
    * Get a random sample of size m from the elems
    *
    * @param elems
-   * @param m number of samples needed
-   * @param r random number generator
+   * @param m
+   *   number of samples needed
+   * @param r
+   *   random number generator
    * @tparam T
-   * @return a random list of size m. If there are fewer than m elements in elems, we just
-   *         randomly shuffle elems
+   * @return
+   *   a random list of size m. If there are fewer than m elements in elems, we just randomly
+   *   shuffle elems
    */
   def getRandomSample[T](elems: Seq[T], m: Int, r: Random): List[T] = {
     if (elems.size > m) {
@@ -93,21 +105,25 @@ object BlockReplicationUtils {
 }
 
 @DeveloperApi
-class RandomBlockReplicationPolicy
-  extends BlockReplicationPolicy
-  with Logging {
+class RandomBlockReplicationPolicy extends BlockReplicationPolicy with Logging {
 
   /**
    * Method to prioritize a bunch of candidate peers of a block. This is a basic implementation,
    * that just makes sure we put blocks on different hosts, if possible
    *
-   * @param blockManagerId Id of the current BlockManager for self identification
-   * @param peers A list of peers of a BlockManager
-   * @param peersReplicatedTo Set of peers already replicated to
-   * @param blockId BlockId of the block being replicated. This can be used as a source of
-   *                randomness if needed.
-   * @param numReplicas Number of peers we need to replicate to
-   * @return A prioritized list of peers. Lower the index of a peer, higher its priority
+   * @param blockManagerId
+   *   Id of the current BlockManager for self identification
+   * @param peers
+   *   A list of peers of a BlockManager
+   * @param peersReplicatedTo
+   *   Set of peers already replicated to
+   * @param blockId
+   *   BlockId of the block being replicated. This can be used as a source of randomness if
+   *   needed.
+   * @param numReplicas
+   *   Number of peers we need to replicate to
+   * @return
+   *   A prioritized list of peers. Lower the index of a peer, higher its priority
    */
   override def prioritize(
       blockManagerId: BlockManagerId,
@@ -121,8 +137,9 @@ class RandomBlockReplicationPolicy
       BlockReplicationUtils.getRandomSample(peers, numReplicas, random)
     } else {
       if (peers.size < numReplicas) {
-        logWarning(log"Expecting ${MDC(NUM_REPLICAS, numReplicas)} " +
-          log"replicas with only ${MDC(NUM_PEERS, peers.size)} peer/s.")
+        logWarning(
+          log"Expecting ${MDC(NUM_REPLICAS, numReplicas)} " +
+            log"replicas with only ${MDC(NUM_PEERS, peers.size)} peer/s.")
       }
       random.shuffle(peers).toList
     }
@@ -132,24 +149,28 @@ class RandomBlockReplicationPolicy
 }
 
 @DeveloperApi
-class BasicBlockReplicationPolicy
-  extends BlockReplicationPolicy
-    with Logging {
+class BasicBlockReplicationPolicy extends BlockReplicationPolicy with Logging {
 
   /**
    * Method to prioritize a bunch of candidate peers of a block manager. This implementation
    * replicates the behavior of block replication in HDFS. For a given number of replicas needed,
    * we choose a peer within the rack, one outside and remaining blockmanagers are chosen at
-   * random, in that order till we meet the number of replicas needed.
-   * This works best with a total replication factor of 3, like HDFS.
+   * random, in that order till we meet the number of replicas needed. This works best with a
+   * total replication factor of 3, like HDFS.
    *
-   * @param blockManagerId    Id of the current BlockManager for self identification
-   * @param peers             A list of peers of a BlockManager
-   * @param peersReplicatedTo Set of peers already replicated to
-   * @param blockId           BlockId of the block being replicated. This can be used as a source of
-   *                          randomness if needed.
-   * @param numReplicas Number of peers we need to replicate to
-   * @return A prioritized list of peers. Lower the index of a peer, higher its priority
+   * @param blockManagerId
+   *   Id of the current BlockManager for self identification
+   * @param peers
+   *   A list of peers of a BlockManager
+   * @param peersReplicatedTo
+   *   Set of peers already replicated to
+   * @param blockId
+   *   BlockId of the block being replicated. This can be used as a source of randomness if
+   *   needed.
+   * @param numReplicas
+   *   Number of peers we need to replicate to
+   * @return
+   *   A prioritized list of peers. Lower the index of a peer, higher its priority
    */
   override def prioritize(
       blockManagerId: BlockManagerId,
@@ -182,8 +203,8 @@ class BasicBlockReplicationPolicy
       } else {
         // we separate peers within and outside rack
         val (inRackPeers, outOfRackPeers) = peers
-            .filter(_.host != blockManagerId.host)
-            .partition(_.topologyInfo == blockManagerId.topologyInfo)
+          .filter(_.host != blockManagerId.host)
+          .partition(_.topologyInfo == blockManagerId.topologyInfo)
 
         val peerWithinRack = if (doneWithinRack) {
           // we are done with in-rack replication, so don't need anymore peers

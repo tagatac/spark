@@ -38,8 +38,10 @@ import org.apache.spark.sql.streaming.StreamTest
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
-class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
-  with PrivateMethodTester {
+class SymmetricHashJoinStateManagerSuite
+    extends StreamTest
+    with BeforeAndAfter
+    with PrivateMethodTester {
 
   before {
     SparkSession.setActiveSession(spark) // set this before force initializing 'joinExec'
@@ -65,7 +67,8 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
   }
 
   SymmetricHashJoinStateManager.supportedVersions.foreach { version =>
-    test(s"SPARK-35689: StreamingJoinStateManager V${version} - " +
+    test(
+      s"SPARK-35689: StreamingJoinStateManager V${version} - " +
         "printable key of keyWithIndexToValue") {
 
       val keyExprs = Seq[Expression](
@@ -76,9 +79,13 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
       val keyGen = UnsafeProjection.create(keyExprs.map(_.dataType).toArray)
 
       withJoinStateManager(inputValueAttribs, keyExprs, version) { manager =>
-        val currentKey = keyGen.apply(new GenericInternalRow(Array[Any](
-          false, 10.0, UTF8String.fromString("string"),
-          Timestamp.valueOf("2021-6-8 10:25:50").getTime)))
+        val currentKey = keyGen.apply(
+          new GenericInternalRow(
+            Array[Any](
+              false,
+              10.0,
+              UTF8String.fromString("string"),
+              Timestamp.valueOf("2021-6-8 10:25:50").getTime)))
 
         val projectedRow = manager.getInternalRowOfKeyWithIndex(currentKey)
         assert(s"$projectedRow" == "[false,10.0,string,1623173150000]")
@@ -96,41 +103,41 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
     withJoinStateManager(inputValueAttribs, joinKeyExprs, stateFormatVersion) { manager =>
       implicit val mgr = manager
 
-      assert(get(20) === Seq.empty)     // initially empty
+      assert(get(20) === Seq.empty) // initially empty
       append(20, 2)
-      assert(get(20) === Seq(2))        // should first value correctly
+      assert(get(20) === Seq(2)) // should first value correctly
       assertNumRows(stateFormatVersion, 1)
 
       append(20, 3)
-      assert(get(20) === Seq(2, 3))     // should append new values
+      assert(get(20) === Seq(2, 3)) // should append new values
       append(20, 3)
-      assert(get(20) === Seq(2, 3, 3))  // should append another copy if same value added again
+      assert(get(20) === Seq(2, 3, 3)) // should append another copy if same value added again
       assertNumRows(stateFormatVersion, 3)
 
       assert(get(30) === Seq.empty)
       append(30, 1)
       assert(get(30) === Seq(1))
-      assert(get(20) === Seq(2, 3, 3))  // add another key-value should not affect existing ones
+      assert(get(20) === Seq(2, 3, 3)) // add another key-value should not affect existing ones
       assertNumRows(stateFormatVersion, 4)
 
       removeByKey(25)
       assert(get(20) === Seq.empty)
-      assert(get(30) === Seq(1))        // should remove 20, not 30
+      assert(get(30) === Seq(1)) // should remove 20, not 30
       assertNumRows(stateFormatVersion, 1)
 
       removeByKey(30)
-      assert(get(30) === Seq.empty)     // should remove 30
+      assert(get(30) === Seq.empty) // should remove 30
       assertNumRows(stateFormatVersion, 0)
 
       appendAndTest(40, 100, 200, 300)
       appendAndTest(50, 125)
-      appendAndTest(60, 275)              // prepare for testing removeByValue
+      appendAndTest(60, 275) // prepare for testing removeByValue
       assertNumRows(stateFormatVersion, 5)
 
       removeByValue(125)
       assert(get(40) === Seq(200, 300))
       assert(get(50) === Seq.empty)
-      assert(get(60) === Seq(275))        // should remove only some values, not all
+      assert(get(60) === Seq(275)) // should remove only some values, not all
       assertNumRows(stateFormatVersion, 3)
 
       append(40, 50)
@@ -139,12 +146,12 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
 
       removeByValue(200)
       assert(get(40) === Seq(300))
-      assert(get(60) === Seq(275))        // should remove only some values, not all
+      assert(get(60) === Seq(275)) // should remove only some values, not all
       assertNumRows(stateFormatVersion, 2)
 
       removeByValue(300)
       assert(get(40) === Seq.empty)
-      assert(get(60) === Seq.empty)       // should remove all values now
+      assert(get(60) === Seq.empty) // should remove all values now
       assertNumRows(stateFormatVersion, 0)
     }
   }
@@ -156,31 +163,31 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
 
       appendAndTest(40, 100, 200, 300)
       appendAndTest(50, 125)
-      appendAndTest(60, 275)              // prepare for testing removeByValue
+      appendAndTest(60, 275) // prepare for testing removeByValue
       assertNumRows(stateFormatVersion, 5)
 
-      updateNumValues(40, 5)   // update total values to 5 to create 2 nulls
+      updateNumValues(40, 5) // update total values to 5 to create 2 nulls
       removeByValue(125)
       assert(get(40) === Seq(200, 300))
       assert(get(50) === Seq.empty)
-      assert(get(60) === Seq(275))        // should remove only some values, not all and nulls
+      assert(get(60) === Seq(275)) // should remove only some values, not all and nulls
       assertNumRows(stateFormatVersion, 3)
 
       append(40, 50)
       assert(get(40) === Seq(50, 200, 300))
       assertNumRows(stateFormatVersion, 4)
-      updateNumValues(40, 4)   // update total values to 4 to create 1 null
+      updateNumValues(40, 4) // update total values to 4 to create 1 null
 
       removeByValue(200)
       assert(get(40) === Seq(300))
-      assert(get(60) === Seq(275))        // should remove only some values, not all and nulls
+      assert(get(60) === Seq(275)) // should remove only some values, not all and nulls
       assertNumRows(stateFormatVersion, 2)
-      updateNumValues(40, 2)   // update total values to simulate nulls
+      updateNumValues(40, 2) // update total values to simulate nulls
       updateNumValues(60, 4)
 
       removeByValue(300)
       assert(get(40) === Seq.empty)
-      assert(get(60) === Seq.empty)       // should remove all values now including nulls
+      assert(get(60) === Seq.empty) // should remove all values now including nulls
       assertNumRows(stateFormatVersion, 0)
     }
   }
@@ -201,21 +208,25 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
         removeByValue(50)
       }
       assert(ex.isInstanceOf[NullPointerException])
-      assert(getNumValues(40) === 7)        // we should get 7 with no nulls skipped
+      assert(getNumValues(40) === 7) // we should get 7 with no nulls skipped
 
       removeByValue(300)
-      assert(getNumValues(40) === 1)         // only 400 should remain
+      assert(getNumValues(40) === 1) // only 400 should remain
       assert(get(40) === Seq(400))
       removeByValue(400)
       assert(get(40) === Seq.empty)
-      assertNumRows(stateFormatVersion, 0)   // ensure all elements removed
+      assertNumRows(stateFormatVersion, 0) // ensure all elements removed
     }
 
     // Test with skipNullsForStreamStreamJoins set to true which would skip nulls
     // and continue iterating as part of removeByValue as well as get
     val metric = new SQLMetric("sum")
-    withJoinStateManager(inputValueAttribs, joinKeyExprs, stateFormatVersion, true,
-        Some(metric)) { manager =>
+    withJoinStateManager(
+      inputValueAttribs,
+      joinKeyExprs,
+      stateFormatVersion,
+      true,
+      Some(metric)) { manager =>
       implicit val mgr = manager
 
       appendAndTest(40, 50, 200, 300)
@@ -234,14 +245,14 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
 
       removeByValue(50)
 
-      assert(getNumValues(40) === 3)       // we should now get (400, 200, 300) with nulls skipped
+      assert(getNumValues(40) === 3) // we should now get (400, 200, 300) with nulls skipped
 
       removeByValue(300)
-      assert(getNumValues(40) === 1)         // only 400 should remain
+      assert(getNumValues(40) === 1) // only 400 should remain
       assert(get(40) === Seq(400))
       removeByValue(400)
       assert(get(40) === Seq.empty)
-      assertNumRows(stateFormatVersion, 0)   // ensure all elements removed
+      assertNumRows(stateFormatVersion, 0) // ensure all elements removed
     }
   }
 
@@ -255,7 +266,6 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
 
   val inputValueGen = UnsafeProjection.create(inputValueAttribs.map(_.dataType).toArray)
   val joinKeyGen = UnsafeProjection.create(joinKeyExprs.map(_.dataType).toArray)
-
 
   def toInputValue(i: Int): UnsafeRow = {
     inputValueGen.apply(new GenericInternalRow(Array[Any](i, false)))
@@ -272,19 +282,18 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
     manager.append(toJoinKeyRow(key), toInputValue(value), matched = false)
   }
 
-  def appendAndTest(key: Int, values: Int*)
-                   (implicit manager: SymmetricHashJoinStateManager): Unit = {
-    values.foreach { value => append(key, value)}
+  def appendAndTest(key: Int, values: Int*)(implicit
+      manager: SymmetricHashJoinStateManager): Unit = {
+    values.foreach { value => append(key, value) }
     require(get(key) === values)
   }
 
-  def updateNumValues(key: Int, numValues: Long)
-                     (implicit manager: SymmetricHashJoinStateManager): Unit = {
+  def updateNumValues(key: Int, numValues: Long)(implicit
+      manager: SymmetricHashJoinStateManager): Unit = {
     manager.updateNumValuesTestOnly(toJoinKeyRow(key), numValues)
   }
 
-  def getNumValues(key: Int)
-                  (implicit manager: SymmetricHashJoinStateManager): Int = {
+  def getNumValues(key: Int)(implicit manager: SymmetricHashJoinStateManager): Int = {
     manager.get(toJoinKeyRow(key)).size
   }
 
@@ -297,7 +306,9 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
     val expr =
       LessThanOrEqual(
         BoundReference(
-          1, inputValueAttribWithWatermark.dataType, inputValueAttribWithWatermark.nullable),
+          1,
+          inputValueAttribWithWatermark.dataType,
+          inputValueAttribWithWatermark.nullable),
         Literal(threshold))
     val iter = manager.removeByKeyCondition(GeneratePredicate.generate(expr).eval _)
     while (iter.hasNext) iter.next()
@@ -306,13 +317,13 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
   /** Remove values where `time <= threshold` */
   def removeByValue(watermark: Long)(implicit manager: SymmetricHashJoinStateManager): Unit = {
     val expr = LessThanOrEqual(inputValueAttribWithWatermark, Literal(watermark))
-    val iter = manager.removeByValueCondition(
-      GeneratePredicate.generate(expr, inputValueAttribs).eval _)
+    val iter =
+      manager.removeByValueCondition(GeneratePredicate.generate(expr, inputValueAttribs).eval _)
     while (iter.hasNext) iter.next()
   }
 
-  def assertNumRows(stateFormatVersion: Int, target: Long)(
-    implicit manager: SymmetricHashJoinStateManager): Unit = {
+  def assertNumRows(stateFormatVersion: Int, target: Long)(implicit
+      manager: SymmetricHashJoinStateManager): Unit = {
     // This suite originally uses HDFSBackStateStoreProvider, which provides instantaneous metrics
     // for numRows.
     // But for version 3 with virtual column families, RocksDBStateStoreProvider updates metrics
@@ -328,8 +339,7 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
       joinKeyExprs: Seq[Expression],
       stateFormatVersion: Int,
       skipNullsForStreamStreamJoins: Boolean = false,
-      metric: Option[SQLMetric] = None)
-      (f: SymmetricHashJoinStateManager => Unit): Unit = {
+      metric: Option[SQLMetric] = None)(f: SymmetricHashJoinStateManager => Unit): Unit = {
     // HDFS store providers do not support virtual column families
     val storeProvider = if (stateFormatVersion == 3) {
       classOf[RocksDBStateStoreProvider].getName
@@ -340,14 +350,22 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
       withSQLConf(
         SQLConf.STATE_STORE_SKIP_NULLS_FOR_STREAM_STREAM_JOINS.key ->
           skipNullsForStreamStreamJoins.toString,
-        SQLConf.STATE_STORE_PROVIDER_CLASS.key -> storeProvider
-      ) {
+        SQLConf.STATE_STORE_PROVIDER_CLASS.key -> storeProvider) {
         val storeConf = new StateStoreConf(spark.sessionState.conf)
-        val stateInfo = StatefulOperatorStateInfo(
-          file.getAbsolutePath, UUID.randomUUID, 0, 0, 5, None)
+        val stateInfo =
+          StatefulOperatorStateInfo(file.getAbsolutePath, UUID.randomUUID, 0, 0, 5, None)
         val manager = SymmetricHashJoinStateManager(
-          LeftSide, inputValueAttribs, joinKeyExprs, Some(stateInfo), storeConf, new Configuration,
-          partitionId = 0, None, None, stateFormatVersion, metric,
+          LeftSide,
+          inputValueAttribs,
+          joinKeyExprs,
+          Some(stateInfo),
+          storeConf,
+          new Configuration,
+          partitionId = 0,
+          None,
+          None,
+          stateFormatVersion,
+          metric,
           joinStoreGenerator = new JoinStateManagerStoreGenerator())
         try {
           f(manager)
@@ -363,10 +381,9 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
     withJoinStateManager(inputValueAttribs, joinKeyExprs, stateFormatVersion) { manager =>
       implicit val mgr = manager
 
-      val joinKeySchema = StructType(
-        joinKeyExprs.zipWithIndex.map { case (expr, i) =>
-          StructField(s"field$i", expr.dataType, expr.nullable)
-        })
+      val joinKeySchema = StructType(joinKeyExprs.zipWithIndex.map { case (expr, i) =>
+        StructField(s"field$i", expr.dataType, expr.nullable)
+      })
 
       // Add some test data
       append(key = 20, value = 100)
@@ -374,15 +391,20 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
       append(key = 30, value = 150)
 
       Seq(
-        (getKeyToNumValuesStoreAndKeySchema(), SymmetricHashJoinStateManager
-          .getStateStoreName(LeftSide, SymmetricHashJoinStateManager.KeyToNumValuesType),
+        (
+          getKeyToNumValuesStoreAndKeySchema(),
+          SymmetricHashJoinStateManager
+            .getStateStoreName(LeftSide, SymmetricHashJoinStateManager.KeyToNumValuesType),
           // expect 1 for both key 20 & 30
-          1, 1),
-        (getKeyWithIndexToValueStoreAndKeySchema(), SymmetricHashJoinStateManager
-          .getStateStoreName(LeftSide, SymmetricHashJoinStateManager.KeyWithIndexToValueType),
+          1,
+          1),
+        (
+          getKeyWithIndexToValueStoreAndKeySchema(),
+          SymmetricHashJoinStateManager
+            .getStateStoreName(LeftSide, SymmetricHashJoinStateManager.KeyWithIndexToValueType),
           // expect 2 for key 20 & 1 for key 30
-          2, 1)
-      ).foreach { case ((store, keySchema), name, expectedNumKey20, expectedNumKey30) =>
+          2,
+          1)).foreach { case ((store, keySchema), name, expectedNumKey20, expectedNumKey30) =>
         val storeName = if (stateFormatVersion == 3) {
           StateStoreId.DEFAULT_STORE_NAME
         } else {
@@ -400,28 +422,31 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
           keySchema,
           storeName,
           colFamilyName,
-          stateFormatVersion = Some(stateFormatVersion)
-        )
+          stateFormatVersion = Some(stateFormatVersion))
 
-        assert(extractor.partitionKeySchema === joinKeySchema,
+        assert(
+          extractor.partitionKeySchema === joinKeySchema,
           "Partition key schema should match the join key schema")
 
         // Copy both the state key and partition key to avoid UnsafeRow reuse issues
         val stateKeys = store.iterator(colFamilyName).map(_.key.copy()).toList
         val partitionKeys = stateKeys.map(extractor.partitionKey(_).copy())
 
-        assert(partitionKeys.length === expectedNumKey20 + expectedNumKey30,
+        assert(
+          partitionKeys.length === expectedNumKey20 + expectedNumKey30,
           "Should have same num partition keys as num state store keys")
-        assert(partitionKeys.count(_ === toJoinKeyRow(20)) === expectedNumKey20,
+        assert(
+          partitionKeys.count(_ === toJoinKeyRow(20)) === expectedNumKey20,
           "Should have the expected num partition keys for join key 20")
-        assert(partitionKeys.count(_ === toJoinKeyRow(30)) === expectedNumKey30,
+        assert(
+          partitionKeys.count(_ === toJoinKeyRow(30)) === expectedNumKey30,
           "Should have the expected num partition keys for join key 30")
       }
     }
   }
 
-  def getKeyToNumValuesStoreAndKeySchema()
-      (implicit manager: SymmetricHashJoinStateManager): (StateStore, StructType) = {
+  def getKeyToNumValuesStoreAndKeySchema()(implicit
+      manager: SymmetricHashJoinStateManager): (StateStore, StructType) = {
     val keyToNumValuesHandler = manager.keyToNumValues
     val keyToNumValuesStoreMethod = PrivateMethod[StateStore](Symbol("stateStore"))
     val keyToNumValuesStore = keyToNumValuesHandler.invokePrivate(keyToNumValuesStoreMethod())
@@ -429,8 +454,8 @@ class SymmetricHashJoinStateManagerSuite extends StreamTest with BeforeAndAfter
     (keyToNumValuesStore, manager.keySchema)
   }
 
-  def getKeyWithIndexToValueStoreAndKeySchema()
-      (implicit manager: SymmetricHashJoinStateManager): (StateStore, StructType) = {
+  def getKeyWithIndexToValueStoreAndKeySchema()(implicit
+      manager: SymmetricHashJoinStateManager): (StateStore, StructType) = {
     val keyWithIndexToValueHandler = manager.keyWithIndexToValue
 
     val keyWithIndexToValueStoreMethod = PrivateMethod[StateStore](Symbol("stateStore"))

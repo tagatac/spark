@@ -49,8 +49,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(1.0, -1.0),
       Vectors.dense(2.0, -2.0),
       Vectors.dense(3.0, -3.0),
-      Vectors.dense(4.0, -4.0)
-    )
+      Vectors.dense(4.0, -4.0))
 
     /*
       Using the following Python code to load the data and train the model using
@@ -77,8 +76,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(-1.0, 1.0),
       Vectors.dense(0.0, 0.0),
       Vectors.dense(1.0, -1.0),
-      Vectors.dense(2.0, -2.0)
-    )
+      Vectors.dense(2.0, -2.0))
 
     /*
       Python code:
@@ -96,8 +94,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(0.5, -0.5),
       Vectors.dense(1.0, -1.0),
       Vectors.dense(1.5, -1.5),
-      Vectors.dense(2.0, -2.0)
-    )
+      Vectors.dense(2.0, -2.0))
 
     /*
       Python code:
@@ -115,8 +112,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(-0.5, 0.5),
       Vectors.dense(0.0, 0.0),
       Vectors.dense(0.5, -0.5),
-      Vectors.dense(1.0, -1.0)
-    )
+      Vectors.dense(1.0, -1.0))
 
     dataWithNaN = Array(
       Vectors.dense(0.0, Double.NaN),
@@ -124,8 +120,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(1.0, -1.0),
       Vectors.dense(2.0, -2.0),
       Vectors.dense(3.0, -3.0),
-      Vectors.dense(4.0, -4.0)
-    )
+      Vectors.dense(4.0, -4.0))
 
     resWithNaN = Array(
       Vectors.dense(0.0, Double.NaN),
@@ -133,8 +128,7 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(0.5, -0.5),
       Vectors.dense(1.0, -1.0),
       Vectors.dense(1.5, -1.5),
-      Vectors.dense(2.0, -2.0)
-    )
+      Vectors.dense(2.0, -2.0))
 
     // median = [2.0, ...]
     // 1st quartile = [1.0, ...]
@@ -145,29 +139,26 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
       Vectors.dense(createArray(2000, 1.0)),
       Vectors.dense(createArray(2000, 2.0)),
       Vectors.dense(createArray(2000, 3.0)),
-      Vectors.dense(createArray(2000, 4.0))
-    )
+      Vectors.dense(createArray(2000, 4.0)))
 
     highDimRes = Array(
       Vectors.dense(createArray(2000, 0.0)),
       Vectors.dense(createArray(2000, 0.5)),
       Vectors.dense(createArray(2000, 1.0)),
       Vectors.dense(createArray(2000, 1.5)),
-      Vectors.dense(createArray(2000, 2.0))
-    )
+      Vectors.dense(createArray(2000, 2.0)))
   }
 
-
-  private def assertResult: Row => Unit = {
-    case Row(vector1: Vector, vector2: Vector) =>
-      assert(vector1 ~== vector2 absTol 1E-5,
-        "The vector value is not correct after transformation.")
+  private def assertResult: Row => Unit = { case Row(vector1: Vector, vector2: Vector) =>
+    assert(
+      vector1 ~== vector2 absTol 1e-5,
+      "The vector value is not correct after transformation.")
   }
 
   test("params") {
     ParamsSuite.checkParams(new RobustScaler)
-    ParamsSuite.checkParams(new RobustScalerModel("empty",
-      Vectors.dense(1.0), Vectors.dense(2.0)))
+    ParamsSuite.checkParams(
+      new RobustScalerModel("empty", Vectors.dense(1.0), Vectors.dense(2.0)))
   }
 
   test("Scaling with default parameter") {
@@ -218,8 +209,8 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
   }
 
   test("sparse data and withCentering") {
-    val someSparseData = data.zipWithIndex.map {
-      case (vec, i) => if (i % 2 == 0) vec.toSparse else vec
+    val someSparseData = data.zipWithIndex.map { case (vec, i) =>
+      if (i % 2 == 0) vec.toSparse else vec
     }
     val df = someSparseData.zip(resWithCentering).toSeq.toDF("features", "expected")
     val robustScaler = new RobustScaler()
@@ -268,8 +259,10 @@ class RobustScalerSuite extends MLTest with DefaultReadWriteTest {
   }
 
   test("RobustScalerModel read/write") {
-    val instance = new RobustScalerModel("myRobustScalerModel",
-      Vectors.dense(1.0, 2.0), Vectors.dense(3.0, 4.0))
+    val instance = new RobustScalerModel(
+      "myRobustScalerModel",
+      Vectors.dense(1.0, 2.0),
+      Vectors.dense(3.0, 4.0))
     val newInstance = testDefaultReadWrite(instance)
     assert(newInstance.range === instance.range)
     assert(newInstance.median === instance.median)

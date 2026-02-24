@@ -28,8 +28,8 @@ import org.apache.spark.annotation.DeveloperApi
 
 /**
  * A reader to load error information from one or more JSON files. Note that, if one error appears
- * in more than one JSON files, the latter wins.
- * Please read common/utils/src/main/resources/error/README.md for more details.
+ * in more than one JSON files, the latter wins. Please read
+ * common/utils/src/main/resources/error/README.md for more details.
  */
 @DeveloperApi
 class ErrorClassesJsonReader(jsonFileURLs: Seq[URL]) {
@@ -53,24 +53,28 @@ class ErrorClassesJsonReader(jsonFileURLs: Seq[URL]) {
       case (key, value) => key -> value
     }
     val sub = new StringSubstitutor(sanitizedParameters)
-    val errorMessage = try {
-      sub.replace(ErrorClassesJsonReader.TEMPLATE_REGEX.replaceAllIn(
-        messageTemplate, "\\$\\{$1\\}"))
-    } catch {
-      case i: IllegalArgumentException => throw SparkException.internalError(
-        s"Undefined error message parameter for error class: '$errorClass', " +
-          s"MessageTemplate: $messageTemplate, " +
-          s"Parameters: $messageParameters", i)
-    }
+    val errorMessage =
+      try {
+        sub.replace(
+          ErrorClassesJsonReader.TEMPLATE_REGEX.replaceAllIn(messageTemplate, "\\$\\{$1\\}"))
+      } catch {
+        case i: IllegalArgumentException =>
+          throw SparkException.internalError(
+            s"Undefined error message parameter for error class: '$errorClass', " +
+              s"MessageTemplate: $messageTemplate, " +
+              s"Parameters: $messageParameters",
+            i)
+      }
     if (util.SparkEnvUtils.isTesting) {
-      val placeHoldersNum = ErrorClassesJsonReader.TEMPLATE_REGEX.findAllIn(messageTemplate).length
+      val placeHoldersNum =
+        ErrorClassesJsonReader.TEMPLATE_REGEX.findAllIn(messageTemplate).length
       if (placeHoldersNum < sanitizedParameters.size &&
-          !ErrorClassesJsonReader.MORE_PARAMS_ALLOWLIST.contains(errorClass)) {
+        !ErrorClassesJsonReader.MORE_PARAMS_ALLOWLIST.contains(errorClass)) {
         throw SparkException.internalError(
           s"Found unused message parameters of the error class '$errorClass'. " +
-          s"Its error message format has $placeHoldersNum placeholders, " +
-          s"but the passed message parameters map has ${sanitizedParameters.size} items. " +
-          "Consider to add placeholders to the error format or remove unused message parameters.")
+            s"Its error message format has $placeHoldersNum placeholders, " +
+            s"but the passed message parameters map has ${sanitizedParameters.size} items. " +
+            "Consider to add placeholders to the error format or remove unused message parameters.")
       }
     }
     errorMessage
@@ -92,11 +96,11 @@ class ErrorClassesJsonReader(jsonFileURLs: Seq[URL]) {
       case Array(mainClass) =>
         errorInfoMap.get(mainClass).flatMap(_.breakingChangeInfo)
       case Array(mainClass, subClass) =>
-        errorInfoMap.get(mainClass).flatMap{
-          errorInfo =>
-            errorInfo.subClass.flatMap(_.get(subClass))
-              .flatMap(_.breakingChangeInfo)
-              .orElse(errorInfo.breakingChangeInfo)
+        errorInfoMap.get(mainClass).flatMap { errorInfo =>
+          errorInfo.subClass
+            .flatMap(_.get(subClass))
+            .flatMap(_.breakingChangeInfo)
+            .orElse(errorInfo.breakingChangeInfo)
         }
       case _ => None
     }
@@ -135,9 +139,10 @@ class ErrorClassesJsonReader(jsonFileURLs: Seq[URL]) {
     val errorClasses = errorClass.split("\\.")
     errorClasses match {
       case Array(mainClass) => errorInfoMap.contains(mainClass)
-      case Array(mainClass, subClass) => errorInfoMap.get(mainClass).exists { info =>
-        info.subClass.get.contains(subClass)
-      }
+      case Array(mainClass, subClass) =>
+        errorInfoMap.get(mainClass).exists { info =>
+          info.subClass.get.contains(subClass)
+        }
       case _ => false
     }
   }
@@ -148,7 +153,8 @@ private object ErrorClassesJsonReader {
 
   private val MORE_PARAMS_ALLOWLIST = Array("CAST_INVALID_INPUT", "CAST_OVERFLOW")
 
-  private val mapper: JsonMapper = JsonMapper.builder()
+  private val mapper: JsonMapper = JsonMapper
+    .builder()
     .addModule(DefaultScalaModule)
     .build()
   private def readAsMap(url: URL): Map[String, ErrorInfo] = {
@@ -170,11 +176,15 @@ private object ErrorClassesJsonReader {
 /**
  * Information associated with an error class.
  *
- * @param sqlState SQLSTATE associated with this class.
- * @param subClass SubClass associated with this class.
- * @param message Message format with optional placeholders (e.g. &lt;parm&gt;).
- *                The error message is constructed by concatenating the lines with newlines.
- * @param breakingChangeInfo Additional metadata if the error is due to a breaking change.
+ * @param sqlState
+ *   SQLSTATE associated with this class.
+ * @param subClass
+ *   SubClass associated with this class.
+ * @param message
+ *   Message format with optional placeholders (e.g. &lt;parm&gt;). The error message is
+ *   constructed by concatenating the lines with newlines.
+ * @param breakingChangeInfo
+ *   Additional metadata if the error is due to a breaking change.
  */
 private case class ErrorInfo(
     message: Seq[String],
@@ -190,9 +200,11 @@ private case class ErrorInfo(
 /**
  * Information associated with an error subclass.
  *
- * @param message Message format with optional placeholders (e.g. &lt;parm&gt;).
- *                The error message is constructed by concatenating the lines with newlines.
- * @param breakingChangeInfo Additional metadata if the error is due to a breaking change.
+ * @param message
+ *   Message format with optional placeholders (e.g. &lt;parm&gt;). The error message is
+ *   constructed by concatenating the lines with newlines.
+ * @param breakingChangeInfo
+ *   Additional metadata if the error is due to a breaking change.
  */
 private case class ErrorSubInfo(
     message: Seq[String],
@@ -200,19 +212,19 @@ private case class ErrorSubInfo(
   // For compatibility with multi-line error messages
   @JsonIgnore
   val messageTemplate: String = message.mkString("\n") +
-      breakingChangeInfo.map(_.migrationMessage.mkString(" ", "\n", "")).getOrElse("")
+    breakingChangeInfo.map(_.migrationMessage.mkString(" ", "\n", "")).getOrElse("")
 }
 
 /**
  * Additional information if the error was caused by a breaking change.
  *
- * @param migrationMessage A message explaining how the user can migrate their job to work
- *                         with the breaking change.
- * @param mitigationConfig A spark config flag that can be used to mitigate the
- *                              breaking change.
- * @param needsAudit If true, the breaking change should be inspected manually.
- *                       If false, the spark job should be retried by setting the
- *                       mitigationConfig.
+ * @param migrationMessage
+ *   A message explaining how the user can migrate their job to work with the breaking change.
+ * @param mitigationConfig
+ *   A spark config flag that can be used to mitigate the breaking change.
+ * @param needsAudit
+ *   If true, the breaking change should be inspected manually. If false, the spark job should be
+ *   retried by setting the mitigationConfig.
  */
 class BreakingChangeInfo(
     val migrationMessage: Seq[String],
@@ -221,8 +233,8 @@ class BreakingChangeInfo(
   override def equals(other: Any): Boolean = other match {
     case that: BreakingChangeInfo =>
       migrationMessage == that.migrationMessage &&
-        mitigationConfig == that.mitigationConfig &&
-        needsAudit == that.needsAudit
+      mitigationConfig == that.mitigationConfig &&
+      needsAudit == that.needsAudit
     case _ => false
   }
 
@@ -238,8 +250,10 @@ class BreakingChangeInfo(
 
 /**
  * A spark config flag that can be used to mitigate a breaking change.
- * @param key The spark config key.
- * @param value The spark config value that mitigates the breaking change.
+ * @param key
+ *   The spark config key.
+ * @param value
+ *   The spark config value that mitigates the breaking change.
  */
 class MitigationConfig(val key: String, val value: String) {
   override def equals(other: Any): Boolean = other match {
@@ -260,10 +274,14 @@ class MitigationConfig(val key: String, val value: String) {
 /**
  * Information associated with an error state / SQLSTATE.
  *
- * @param description What the error state means.
- * @param origin The DBMS where this error state was first defined.
- * @param standard Whether this error state is part of the SQL standard.
- * @param usedBy What database systems use this error state.
+ * @param description
+ *   What the error state means.
+ * @param origin
+ *   The DBMS where this error state was first defined.
+ * @param standard
+ *   Whether this error state is part of the SQL standard.
+ * @param usedBy
+ *   What database systems use this error state.
  */
 private case class ErrorStateInfo(
     description: String,

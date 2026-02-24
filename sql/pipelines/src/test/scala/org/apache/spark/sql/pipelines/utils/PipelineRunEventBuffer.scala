@@ -29,8 +29,8 @@ import org.apache.spark.sql.pipelines.logging.PipelineEvent
 class PipelineRunEventBuffer extends Logging {
 
   /**
-   * A buffer to hold the events emitted during a pipeline run.
-   * This buffer is thread-safe and can be accessed concurrently.
+   * A buffer to hold the events emitted during a pipeline run. This buffer is thread-safe and can
+   * be accessed concurrently.
    */
   private val events = ArrayBuffer[PipelineEvent]()
 

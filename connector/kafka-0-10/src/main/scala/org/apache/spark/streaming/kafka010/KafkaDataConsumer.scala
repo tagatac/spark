@@ -31,11 +31,14 @@ import org.apache.spark.internal.LogKeys._
 import org.apache.spark.kafka010.KafkaConfigUpdater
 
 private[kafka010] sealed trait KafkaDataConsumer[K, V] {
+
   /**
    * Get the record for the given offset if available.
    *
-   * @param offset         the offset to fetch.
-   * @param pollTimeoutMs  timeout in milliseconds to poll data from Kafka.
+   * @param offset
+   *   the offset to fetch.
+   * @param pollTimeoutMs
+   *   timeout in milliseconds to poll data from Kafka.
    */
   def get(offset: Long, pollTimeoutMs: Long): ConsumerRecord[K, V] = {
     internalConsumer.get(offset, pollTimeoutMs)
@@ -44,18 +47,21 @@ private[kafka010] sealed trait KafkaDataConsumer[K, V] {
   /**
    * Start a batch on a compacted topic
    *
-   * @param offset         the offset to fetch.
-   * @param pollTimeoutMs  timeout in milliseconds to poll data from Kafka.
+   * @param offset
+   *   the offset to fetch.
+   * @param pollTimeoutMs
+   *   timeout in milliseconds to poll data from Kafka.
    */
   def compactedStart(offset: Long, pollTimeoutMs: Long): Unit = {
     internalConsumer.compactedStart(offset, pollTimeoutMs)
   }
 
   /**
-   * Get the next record in the batch from a compacted topic.
-   * Assumes compactedStart has been called first, and ignores gaps.
+   * Get the next record in the batch from a compacted topic. Assumes compactedStart has been
+   * called first, and ignores gaps.
    *
-   * @param pollTimeoutMs  timeout in milliseconds to poll data from Kafka.
+   * @param pollTimeoutMs
+   *   timeout in milliseconds to poll data from Kafka.
    */
   def compactedNext(pollTimeoutMs: Long): ConsumerRecord[K, V] = {
     internalConsumer.compactedNext(pollTimeoutMs)
@@ -64,15 +70,16 @@ private[kafka010] sealed trait KafkaDataConsumer[K, V] {
   /**
    * Rewind to previous record in the batch from a compacted topic.
    *
-   * @throws NoSuchElementException if no previous element
+   * @throws NoSuchElementException
+   *   if no previous element
    */
   def compactedPrevious(): ConsumerRecord[K, V] = {
     internalConsumer.compactedPrevious()
   }
 
   /**
-   * Release this consumer from being further used. Depending on its implementation,
-   * this consumer will be either finalized, or reset for reuse later.
+   * Release this consumer from being further used. Depending on its implementation, this consumer
+   * will be either finalized, or reset for reuse later.
    */
   def release(): Unit
 
@@ -80,16 +87,16 @@ private[kafka010] sealed trait KafkaDataConsumer[K, V] {
   def internalConsumer: InternalKafkaConsumer[K, V]
 }
 
-
 /**
- * A wrapper around Kafka's KafkaConsumer.
- * This is not for direct use outside this file.
+ * A wrapper around Kafka's KafkaConsumer. This is not for direct use outside this file.
  */
 private[kafka010] class InternalKafkaConsumer[K, V](
     val topicPartition: TopicPartition,
-    val kafkaParams: ju.Map[String, Object]) extends Logging {
+    val kafkaParams: ju.Map[String, Object])
+    extends Logging {
 
-  private[kafka010] val groupId = kafkaParams.get(ConsumerConfig.GROUP_ID_CONFIG)
+  private[kafka010] val groupId = kafkaParams
+    .get(ConsumerConfig.GROUP_ID_CONFIG)
     .asInstanceOf[String]
 
   private val consumer = createConsumer
@@ -126,14 +133,15 @@ private[kafka010] class InternalKafkaConsumer[K, V](
   def close(): Unit = consumer.close()
 
   /**
-   * Get the record for the given offset, waiting up to timeout ms if IO is necessary.
-   * Sequential forward access will use buffers, but random access will be horribly inefficient.
+   * Get the record for the given offset, waiting up to timeout ms if IO is necessary. Sequential
+   * forward access will use buffers, but random access will be horribly inefficient.
    */
   def get(offset: Long, timeout: Long): ConsumerRecord[K, V] = {
     logDebug(s"Get $groupId $topicPartition nextOffset $nextOffset requested $offset")
     if (offset != nextOffset) {
-      logInfo(log"Initial fetch for ${MDC(GROUP_ID, groupId)} " +
-        log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
+      logInfo(
+        log"Initial fetch for ${MDC(GROUP_ID, groupId)} " +
+          log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
       seek(offset)
       poll(timeout)
     }
@@ -141,23 +149,26 @@ private[kafka010] class InternalKafkaConsumer[K, V](
     if (!buffer.hasNext()) {
       poll(timeout)
     }
-    require(buffer.hasNext(),
+    require(
+      buffer.hasNext(),
       s"Failed to get records for $groupId $topicPartition $offset after polling for $timeout")
     var record = buffer.next()
 
     if (record.offset != offset) {
-      logInfo(log"Buffer miss for ${MDC(GROUP_ID, groupId)} " +
-        log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
+      logInfo(
+        log"Buffer miss for ${MDC(GROUP_ID, groupId)} " +
+          log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
       seek(offset)
       poll(timeout)
-      require(buffer.hasNext(),
+      require(
+        buffer.hasNext(),
         s"Failed to get records for $groupId $topicPartition $offset after polling for $timeout")
       record = buffer.next()
-      require(record.offset == offset,
+      require(
+        record.offset == offset,
         s"Got wrong record for $groupId $topicPartition even after seeking to offset $offset " +
           s"got offset ${record.offset} instead. If this is a compacted topic, consider enabling " +
-          "spark.streaming.kafka.allowNonConsecutiveOffsets"
-      )
+          "spark.streaming.kafka.allowNonConsecutiveOffsets")
     }
 
     nextOffset = offset + 1
@@ -171,22 +182,24 @@ private[kafka010] class InternalKafkaConsumer[K, V](
     logDebug(s"compacted start $groupId $topicPartition starting $offset")
     // This seek may not be necessary, but it's hard to tell due to gaps in compacted topics
     if (offset != nextOffset) {
-      logInfo(log"Initial fetch for compacted ${MDC(GROUP_ID, groupId)} " +
-        log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
+      logInfo(
+        log"Initial fetch for compacted ${MDC(GROUP_ID, groupId)} " +
+          log"${MDC(TOPIC_PARTITION, topicPartition)} ${MDC(OFFSET, offset)}")
       seek(offset)
       poll(pollTimeoutMs)
     }
   }
 
   /**
-   * Get the next record in the batch from a compacted topic.
-   * Assumes compactedStart has been called first, and ignores gaps.
+   * Get the next record in the batch from a compacted topic. Assumes compactedStart has been
+   * called first, and ignores gaps.
    */
   def compactedNext(pollTimeoutMs: Long): ConsumerRecord[K, V] = {
     if (!buffer.hasNext()) {
       poll(pollTimeoutMs)
     }
-    require(buffer.hasNext(),
+    require(
+      buffer.hasNext(),
       s"Failed to get records for compacted $groupId $topicPartition " +
         s"after polling for $pollTimeoutMs")
     val record = buffer.next()
@@ -196,7 +209,8 @@ private[kafka010] class InternalKafkaConsumer[K, V](
 
   /**
    * Rewind to previous record in the batch from a compacted topic.
-   * @throws NoSuchElementException if no previous element
+   * @throws NoSuchElementException
+   *   if no previous element
    */
   def compactedPrevious(): ConsumerRecord[K, V] = {
     buffer.previous()
@@ -221,13 +235,14 @@ private[kafka010] case class CacheKey(groupId: String, topicPartition: TopicPart
 private[kafka010] object KafkaDataConsumer extends Logging {
 
   private case class CachedKafkaDataConsumer[K, V](internalConsumer: InternalKafkaConsumer[K, V])
-    extends KafkaDataConsumer[K, V] {
+      extends KafkaDataConsumer[K, V] {
     assert(internalConsumer.inUse)
     override def release(): Unit = KafkaDataConsumer.release(internalConsumer)
   }
 
-  private case class NonCachedKafkaDataConsumer[K, V](internalConsumer: InternalKafkaConsumer[K, V])
-    extends KafkaDataConsumer[K, V] {
+  private case class NonCachedKafkaDataConsumer[K, V](
+      internalConsumer: InternalKafkaConsumer[K, V])
+      extends KafkaDataConsumer[K, V] {
     override def release(): Unit = internalConsumer.close()
   }
 
@@ -235,18 +250,18 @@ private[kafka010] object KafkaDataConsumer extends Logging {
   private[kafka010] var cache: ju.Map[CacheKey, InternalKafkaConsumer[_, _]] = null
 
   /**
-   * Must be called before acquire, once per JVM, to configure the cache.
-   * Further calls are ignored.
+   * Must be called before acquire, once per JVM, to configure the cache. Further calls are
+   * ignored.
    */
-  def init(
-      initialCapacity: Int,
-      maxCapacity: Int,
-      loadFactor: Float): Unit = synchronized {
+  def init(initialCapacity: Int, maxCapacity: Int, loadFactor: Float): Unit = synchronized {
     if (null == cache) {
-      logInfo(log"Initializing cache ${MDC(INITIAL_CAPACITY, initialCapacity)} " +
-        log"${MDC(MAX_CAPACITY, maxCapacity)} ${MDC(LOAD_FACTOR, loadFactor)}")
+      logInfo(
+        log"Initializing cache ${MDC(INITIAL_CAPACITY, initialCapacity)} " +
+          log"${MDC(MAX_CAPACITY, maxCapacity)} ${MDC(LOAD_FACTOR, loadFactor)}")
       cache = new ju.LinkedHashMap[CacheKey, InternalKafkaConsumer[_, _]](
-        initialCapacity, loadFactor, true) {
+        initialCapacity,
+        loadFactor,
+        true) {
         override def removeEldestEntry(
             entry: ju.Map.Entry[CacheKey, InternalKafkaConsumer[_, _]]): Boolean = {
 
@@ -263,7 +278,7 @@ private[kafka010] object KafkaDataConsumer extends Logging {
             logWarning(
               log"KafkaConsumer cache hitting max capacity of ${MDC(MAX_CAPACITY, maxCapacity)}, " +
                 log"removing consumer for ${MDC(KEY, entry.getKey)}")
-               try {
+            try {
               entry.getValue.close()
             } catch {
               case x: KafkaException =>
@@ -279,13 +294,13 @@ private[kafka010] object KafkaDataConsumer extends Logging {
   }
 
   /**
-   * Get a cached consumer for groupId, assigned to topic and partition.
-   * If matching consumer doesn't already exist, will be created using kafkaParams.
-   * The returned consumer must be released explicitly using [[KafkaDataConsumer.release()]].
+   * Get a cached consumer for groupId, assigned to topic and partition. If matching consumer
+   * doesn't already exist, will be created using kafkaParams. The returned consumer must be
+   * released explicitly using [[KafkaDataConsumer.release()]].
    *
    * Note: This method guarantees that the consumer returned is not currently in use by anyone
-   * else. Within this guarantee, this method will make a best effort attempt to re-use consumers by
-   * caching them and tracking when they are in use.
+   * else. Within this guarantee, this method will make a best effort attempt to re-use consumers
+   * by caching them and tracking when they are in use.
    */
   def acquire[K, V](
       topicPartition: TopicPartition,
@@ -315,24 +330,28 @@ private[kafka010] object KafkaDataConsumer extends Logging {
         }
       }
 
-      logDebug("Reattempt detected, new non-cached consumer will be allocated " +
-        s"$newInternalConsumer")
+      logDebug(
+        "Reattempt detected, new non-cached consumer will be allocated " +
+          s"$newInternalConsumer")
       NonCachedKafkaDataConsumer(newInternalConsumer)
     } else if (!useCache) {
       // If consumer reuse turned off, then do not use it, return a new consumer
-      logDebug("Cache usage turned off, new non-cached consumer will be allocated " +
-        s"$newInternalConsumer")
+      logDebug(
+        "Cache usage turned off, new non-cached consumer will be allocated " +
+          s"$newInternalConsumer")
       NonCachedKafkaDataConsumer(newInternalConsumer)
     } else if (existingInternalConsumer == null) {
       // If consumer is not already cached, then put a new in the cache and return it
-      logDebug("No cached consumer, new cached consumer will be allocated " +
-        s"$newInternalConsumer")
+      logDebug(
+        "No cached consumer, new cached consumer will be allocated " +
+          s"$newInternalConsumer")
       cache.put(key, newInternalConsumer)
       CachedKafkaDataConsumer(newInternalConsumer)
     } else if (existingInternalConsumer.inUse) {
       // If consumer is already cached but is currently in use, then return a new consumer
-      logDebug("Used cached consumer found, new non-cached consumer will be allocated " +
-        s"$newInternalConsumer")
+      logDebug(
+        "Used cached consumer found, new non-cached consumer will be allocated " +
+          s"$newInternalConsumer")
       NonCachedKafkaDataConsumer(newInternalConsumer)
     } else {
       // If consumer is already cached and is currently not in use, then return that consumer
@@ -360,8 +379,9 @@ private[kafka010] object KafkaDataConsumer extends Logging {
       // at all. This may happen if the cache was invalidate while this consumer was being used.
       // Just close this consumer.
       internalConsumer.close()
-      logInfo(log"Released a supposedly cached consumer that was not found in the cache " +
-        log"${MDC(CONSUMER, internalConsumer)}")
+      logInfo(
+        log"Released a supposedly cached consumer that was not found in the cache " +
+          log"${MDC(CONSUMER, internalConsumer)}")
     }
   }
 }

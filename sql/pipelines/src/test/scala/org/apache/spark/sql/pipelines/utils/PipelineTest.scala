@@ -37,18 +37,19 @@ import org.apache.spark.sql.pipelines.utils.PipelineTest.cleanupMetastore
 import org.apache.spark.sql.test.SQLTestUtils
 
 abstract class PipelineTest
-  extends QueryTest
-  with StorageRootMixin
-  with SQLTestUtils
-  with SparkErrorTestMixin
-  with TargetCatalogAndDatabaseMixin
-  with Logging
-  with Eventually {
+    extends QueryTest
+    with StorageRootMixin
+    with SQLTestUtils
+    with SparkErrorTestMixin
+    with TargetCatalogAndDatabaseMixin
+    with Logging
+    with Eventually {
 
   protected def startPipelineAndWaitForCompletion(
-       unresolvedDataflowGraph: DataflowGraph): Unit = {
+      unresolvedDataflowGraph: DataflowGraph): Unit = {
     val updateContext = new PipelineUpdateContextImpl(
-      unresolvedDataflowGraph, eventCallback = _ => (),
+      unresolvedDataflowGraph,
+      eventCallback = _ => (),
       storageRoot = storageRoot)
     updateContext.pipelineExecution.runPipeline()
     updateContext.pipelineExecution.awaitCompletion()
@@ -59,8 +60,7 @@ abstract class PipelineTest
       name: String,
       catalog: Option[String] = catalogInPipelineSpec,
       database: Option[String] = databaseInPipelineSpec,
-      isView: Boolean = false
-  ): String = {
+      isView: Boolean = false): String = {
     fullyQualifiedIdentifier(name, catalog, database, isView).unquotedString
   }
 
@@ -69,16 +69,11 @@ abstract class PipelineTest
       name: String,
       catalog: Option[String] = catalogInPipelineSpec,
       database: Option[String] = databaseInPipelineSpec,
-      isTemporaryView: Boolean = false
-  ): TableIdentifier = {
+      isTemporaryView: Boolean = false): TableIdentifier = {
     if (isTemporaryView) {
       TableIdentifier(name)
     } else {
-      TableIdentifier(
-        catalog = catalog,
-        database = database,
-        table = name
-      )
+      TableIdentifier(catalog = catalog, database = database, table = name)
     }
   }
 
@@ -86,30 +81,26 @@ abstract class PipelineTest
   protected case class TestSqlFile(sqlText: String, sqlFilePath: String)
 
   /** Construct an unresolved DataflowGraph object from possibly multiple SQL files. */
-  protected def unresolvedDataflowGraphFromSqlFiles(
-      sqlFiles: Seq[TestSqlFile]
-  ): DataflowGraph = {
+  protected def unresolvedDataflowGraphFromSqlFiles(sqlFiles: Seq[TestSqlFile]): DataflowGraph = {
     val graphRegistrationContext = new TestGraphRegistrationContext(spark)
     sqlFiles.foreach { sqlFile =>
       new SqlGraphRegistrationContext(graphRegistrationContext).processSqlFile(
         sqlText = sqlFile.sqlText,
         sqlFilePath = sqlFile.sqlFilePath,
-        spark = spark
-      )
+        spark = spark)
     }
-    graphRegistrationContext
-      .toDataflowGraph
+    graphRegistrationContext.toDataflowGraph
   }
 
-  /** Construct an unresolved DataflowGraph object from a single SQL file, given the file contents
-   * and path. */
+  /**
+   * Construct an unresolved DataflowGraph object from a single SQL file, given the file contents
+   * and path.
+   */
   protected def unresolvedDataflowGraphFromSql(
       sqlText: String,
-      sqlFilePath: String = "dataset.sql"
-  ): DataflowGraph = {
+      sqlFilePath: String = "dataset.sql"): DataflowGraph = {
     unresolvedDataflowGraphFromSqlFiles(
-      Seq(TestSqlFile(sqlText = sqlText, sqlFilePath = sqlFilePath))
-    )
+      Seq(TestSqlFile(sqlText = sqlText, sqlFilePath = sqlFilePath)))
   }
 
   protected override def beforeEach(): Unit = {
@@ -141,9 +132,9 @@ abstract class PipelineTest
   /**
    * Adds custom instrumentation for tests.
    *
-   * This instrumentation runs after `beforeEach` and
-   * before `afterEach` which lets us instrument the state of a test and its environment
-   * after any setup and before any clean-up done for a test.
+   * This instrumentation runs after `beforeEach` and before `afterEach` which lets us instrument
+   * the state of a test and its environment after any setup and before any clean-up done for a
+   * test.
    */
   private def runWithInstrumentation(testFunc: => Any): Any = {
     testFunc
@@ -155,31 +146,34 @@ abstract class PipelineTest
    * The full test name will be "<testNamePrefix> (<paramName> = <param>)" where <param> is one
    * item in `params`.
    *
-   * @param testNamePrefix The test name prefix.
-   * @param paramName A descriptive name for the parameter.
-   * @param testTags Extra tags for the test.
-   * @param params The list of parameters for which to generate tests.
-   * @param testFun The actual test function. This function will be called with one argument of
-   *                type `A`.
-   * @tparam A The type of the params.
+   * @param testNamePrefix
+   *   The test name prefix.
+   * @param paramName
+   *   A descriptive name for the parameter.
+   * @param testTags
+   *   Extra tags for the test.
+   * @param params
+   *   The list of parameters for which to generate tests.
+   * @param testFun
+   *   The actual test function. This function will be called with one argument of type `A`.
+   * @tparam A
+   *   The type of the params.
    */
   protected def gridTest[A](testNamePrefix: String, paramName: String, testTags: Tag*)(
       params: Seq[A])(testFun: A => Unit): Unit =
-    namedGridTest(testNamePrefix, testTags: _*)(
-      params.map(a => s"$paramName = $a" -> a).toMap
-    )(testFun)
+    namedGridTest(testNamePrefix, testTags: _*)(params.map(a => s"$paramName = $a" -> a).toMap)(
+      testFun)
 
   /**
-   * Specialized version of gridTest where the params are two boolean values - `true` and
-   * `false`.
+   * Specialized version of gridTest where the params are two boolean values - `true` and `false`.
    */
   protected def booleanGridTest(testNamePrefix: String, paramName: String, testTags: Tag*)(
       testFun: Boolean => Unit): Unit = {
     gridTest(testNamePrefix, paramName, testTags: _*)(Seq(true, false))(testFun)
   }
 
-  protected def namedGridIgnore[A](testNamePrefix: String, testTags: Tag*)(params: Map[String, A])(
-      testFun: A => Unit): Unit = {
+  protected def namedGridIgnore[A](testNamePrefix: String, testTags: Tag*)(
+      params: Map[String, A])(testFun: A => Unit): Unit = {
     for (param <- params) {
       ignore(testNamePrefix + s" (${param._1})", testTags: _*)(testFun(param._2))
     }
@@ -219,21 +213,20 @@ abstract class PipelineTest
   /**
    * Runs the plan and makes sure the answer matches the expected result.
    *
-   * @param df the `DataFrame` to be executed
-   * @param expectedAnswer the expected result in a `Seq` of `Row`s.
+   * @param df
+   *   the `DataFrame` to be executed
+   * @param expectedAnswer
+   *   the expected result in a `Seq` of `Row`s.
    */
   override protected def checkAnswer(df: => DataFrame, expectedAnswer: Seq[Row]): Unit = {
     checkAnswerAndPlan(df, expectedAnswer, None)
   }
 
-  case class ValidationArgs(
-      ignoreFieldOrder: Boolean = false,
-      ignoreFieldCase: Boolean = false
-  )
+  case class ValidationArgs(ignoreFieldOrder: Boolean = false, ignoreFieldCase: Boolean = false)
 
   /**
-   * Helper method to verify unresolved column error message. We expect three elements to be present
-   * in the message: error class, unresolved column name, list of suggested columns.
+   * Helper method to verify unresolved column error message. We expect three elements to be
+   * present in the message: error class, unresolved column name, list of suggested columns.
    */
   protected def verifyUnresolveColumnError(
       errorMessage: String,
@@ -242,8 +235,7 @@ abstract class PipelineTest
     assert(errorMessage.contains(unresolved))
     assert(
       errorMessage.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]") ||
-      errorMessage.contains("[MISSING_COLUMN]")
-    )
+        errorMessage.contains("[MISSING_COLUMN]"))
     suggested.foreach { x =>
       if (errorMessage.contains("[UNRESOLVED_COLUMN.WITH_SUGGESTION]")) {
         assert(errorMessage.contains(s"`$x`"))
@@ -270,12 +262,10 @@ abstract class PipelineTest
 trait TargetCatalogAndDatabaseMixin {
 
   protected def catalogInPipelineSpec: Option[String] = Option(
-    TestGraphRegistrationContext.DEFAULT_CATALOG
-  )
+    TestGraphRegistrationContext.DEFAULT_CATALOG)
 
   protected def databaseInPipelineSpec: Option[String] = Option(
-    TestGraphRegistrationContext.DEFAULT_DATABASE
-  )
+    TestGraphRegistrationContext.DEFAULT_DATABASE)
 }
 
 object PipelineTest extends Logging {
@@ -287,12 +277,8 @@ object PipelineTest extends Logging {
   private val systemCatalogs: Set[String] = Set("samples")
 
   /** Catalogs that cannot be dropped but schemas or tables under it can be cleaned up. */
-  private val undroppableCatalogs: Set[String] = Set(
-    "hive_metastore",
-    "spark_catalog",
-    "system",
-    "main"
-  )
+  private val undroppableCatalogs: Set[String] =
+    Set("hive_metastore", "spark_catalog", "system", "main")
 
   /**
    * Try to drop the schema in the catalog and return whether it is successfully dropped.
@@ -307,8 +293,7 @@ object PipelineTest extends Logging {
     } catch {
       case NonFatal(e) =>
         logInfo(
-          s"Failed to drop database $databaseName in catalog $catalogName, ex:${e.getMessage}"
-        )
+          s"Failed to drop database $databaseName in catalog $catalogName, ex:${e.getMessage}")
         false
     }
   }
@@ -327,7 +312,8 @@ object PipelineTest extends Logging {
         val schemas =
           spark.sql(s"SHOW SCHEMAS IN `$catalog`").collect().map(_.getString(0))
         schemas.foreach { schema =>
-          if (systemDatabases.contains(schema) || !dropDatabaseIfPossible(spark, catalog, schema)) {
+          if (systemDatabases
+              .contains(schema) || !dropDatabaseIfPossible(spark, catalog, schema)) {
             spark
               .sql(s"SHOW tables in `$catalog`.`$schema`")
               .collect()
@@ -337,8 +323,7 @@ object PipelineTest extends Logging {
                   case Failure(e) =>
                     logInfo(
                       s"Failed to drop table $table in schema $schema in catalog $catalog, " +
-                      s"ex:${e.getMessage}"
-                    )
+                        s"ex:${e.getMessage}")
                   case _ =>
                 }
               }

@@ -32,19 +32,23 @@ import org.apache.spark.sql.SparkSession
 /**
  * Spark's own GetSchemasOperation
  *
- * @param session SparkSession to use
- * @param parentSession a HiveSession from SessionManager
- * @param catalogName catalog name. null if not applicable.
- * @param schemaName database name, null or a concrete database name
+ * @param session
+ *   SparkSession to use
+ * @param parentSession
+ *   a HiveSession from SessionManager
+ * @param catalogName
+ *   catalog name. null if not applicable.
+ * @param schemaName
+ *   database name, null or a concrete database name
  */
 private[hive] class SparkGetSchemasOperation(
     val session: SparkSession,
     parentSession: HiveSession,
     catalogName: String,
     schemaName: String)
-  extends GetSchemasOperation(parentSession, catalogName, schemaName)
-  with SparkOperation
-  with Logging {
+    extends GetSchemasOperation(parentSession, catalogName, schemaName)
+    with SparkOperation
+    with Logging {
 
   override def runInternal(): Unit = withClassLoader { _ =>
     // Do not change cmdStr. It's used for Hive auditing and authorization.
@@ -53,9 +57,10 @@ private[hive] class SparkGetSchemasOperation(
 
     val catalogNameStr = if (catalogName == null) "null" else catalogName
     val schemaNameStr = if (schemaName == null) "null" else schemaName
-    logInfo(log"Listing databases 'catalog : ${MDC(CATALOG_NAME, catalogNameStr)}, " +
-      log"schemaPattern : ${MDC(DATABASE_NAME, schemaNameStr)}' " +
-      log"with ${MDC(STATEMENT_ID, statementId)}")
+    logInfo(
+      log"Listing databases 'catalog : ${MDC(CATALOG_NAME, catalogNameStr)}, " +
+        log"schemaPattern : ${MDC(DATABASE_NAME, schemaNameStr)}' " +
+        log"with ${MDC(STATEMENT_ID, statementId)}")
 
     setState(OperationState.RUNNING)
     if (isAuthV2Enabled) {
@@ -78,7 +83,7 @@ private[hive] class SparkGetSchemasOperation(
       val globalTempViewDb = catalog.globalTempDatabase
       val databasePattern = Pattern.compile(CLIServiceUtils.patternToRegex(schemaName))
       if (schemaName == null || schemaName.isEmpty ||
-          databasePattern.matcher(globalTempViewDb).matches()) {
+        databasePattern.matcher(globalTempViewDb).matches()) {
         rowSet.addRow(Array[AnyRef](globalTempViewDb, DEFAULT_HIVE_CATALOG))
       }
       setState(OperationState.FINISHED)

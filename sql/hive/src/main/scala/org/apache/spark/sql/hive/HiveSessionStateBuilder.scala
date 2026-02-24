@@ -49,10 +49,8 @@ import org.apache.spark.util.Utils
 /**
  * Builder that produces a Hive-aware `SessionState`.
  */
-class HiveSessionStateBuilder(
-    session: SparkSession,
-    parentState: Option[SessionState])
-  extends BaseSessionStateBuilder(session, parentState) {
+class HiveSessionStateBuilder(session: SparkSession, parentState: Option[SessionState])
+    extends BaseSessionStateBuilder(session, parentState) {
 
   private def externalCatalog: ExternalCatalogWithListener = session.sharedState.externalCatalog
 
@@ -61,7 +59,8 @@ class HiveSessionStateBuilder(
    */
   override protected lazy val resourceLoader: HiveSessionResourceLoader = {
     new HiveSessionResourceLoader(
-      session, () => externalCatalog.unwrapped.asInstanceOf[HiveExternalCatalog].client)
+      session,
+      () => externalCatalog.unwrapped.asInstanceOf[HiveExternalCatalog].client)
   }
 
   /**
@@ -86,38 +85,34 @@ class HiveSessionStateBuilder(
    * A logical query plan `Analyzer` with rules specific to Hive.
    */
   override protected def analyzer: Analyzer = new Analyzer(catalogManager, sharedRelationCache) {
-    override val singlePassResolverExtensions: Seq[ResolverExtension] = Seq(
-      new LogicalRelationResolver,
-      new HiveTableRelationNoopResolver
-    )
+    override val singlePassResolverExtensions: Seq[ResolverExtension] =
+      Seq(new LogicalRelationResolver, new HiveTableRelationNoopResolver)
 
     override val singlePassMetadataResolverExtensions: Seq[ResolverExtension] = Seq(
       new DataSourceResolver(session),
       new FileResolver(session),
-      new HiveTableRelationResolver(catalog)
-    )
+      new HiveTableRelationResolver(catalog))
 
     override val singlePassPostHocResolutionRules: Seq[Rule[LogicalPlan]] =
       DetectAmbiguousSelfJoin +:
-      ApplyCharTypePadding +:
-      singlePassCustomPostHocResolutionRules
+        ApplyCharTypePadding +:
+        singlePassCustomPostHocResolutionRules
 
     override val singlePassExtendedResolutionChecks: Seq[LogicalPlan => Unit] = {
-      val heavyChecks = if (session.conf.get(
-          SQLConf.ANALYZER_SINGLE_PASS_RESOLVER_RUN_HEAVY_EXTENDED_RESOLUTION_CHECKS
-        )) {
-        Seq(
-          // [[ViewSyncSchemaToMetaStore]] calls `alterTable` if the view schema needs to be
-          // updated.
-          ViewSyncSchemaToMetaStore
-        )
-      } else {
-        Nil
-      }
+      val heavyChecks =
+        if (session.conf.get(
+            SQLConf.ANALYZER_SINGLE_PASS_RESOLVER_RUN_HEAVY_EXTENDED_RESOLUTION_CHECKS)) {
+          Seq(
+            // [[ViewSyncSchemaToMetaStore]] calls `alterTable` if the view schema needs to be
+            // updated.
+            ViewSyncSchemaToMetaStore)
+        } else {
+          Nil
+        }
 
       PreReadCheck +:
-      heavyChecks ++:
-      singlePassCustomResolutionChecks
+        heavyChecks ++:
+        singlePassCustomResolutionChecks
     }
 
     override val extendedResolutionRules: Seq[Rule[LogicalPlan]] =
@@ -178,10 +173,8 @@ class HiveSessionStateBuilder(
   override protected def newBuilder: NewBuilder = new HiveSessionStateBuilder(_, _)
 }
 
-class HiveSessionResourceLoader(
-    session: SparkSession,
-    clientBuilder: () => HiveClient)
-  extends SessionResourceLoader(session) {
+class HiveSessionResourceLoader(session: SparkSession, clientBuilder: () => HiveClient)
+    extends SessionResourceLoader(session) {
   private lazy val client = clientBuilder()
   override def addJar(path: String): Unit = {
     val uri = Utils.resolveURI(path)
@@ -193,7 +186,10 @@ class HiveSessionResourceLoader(
 }
 
 object HiveUDFExpressionBuilder extends SparkUDFExpressionBuilder {
-  override def makeExpression(name: String, clazz: Class[_], input: Seq[Expression]): Expression = {
+  override def makeExpression(
+      name: String,
+      clazz: Class[_],
+      input: Seq[Expression]): Expression = {
     // Current thread context classloader may not be the one loaded the class. Need to switch
     // context classloader to initialize instance properly.
     Utils.withContextClassLoader(clazz.getClassLoader) {
@@ -228,11 +224,12 @@ object HiveUDFExpressionBuilder extends SparkUDFExpressionBuilder {
         udfExpr = Some(HiveUDAFFunction(name, new HiveFunctionWrapper(clazz.getName), input))
         udfExpr.get.dataType // Force it to check input data types.
       } else if (classOf[UDAF].isAssignableFrom(clazz)) {
-        udfExpr = Some(HiveUDAFFunction(
-          name,
-          new HiveFunctionWrapper(clazz.getName),
-          input,
-          isUDAFBridgeRequired = true))
+        udfExpr = Some(
+          HiveUDAFFunction(
+            name,
+            new HiveFunctionWrapper(clazz.getName),
+            input,
+            isUDAFBridgeRequired = true))
         udfExpr.get.dataType // Force it to check input data types.
       } else if (classOf[GenericUDTF].isAssignableFrom(clazz)) {
         udfExpr = Some(HiveGenericUDTF(name, new HiveFunctionWrapper(clazz.getName), input))
@@ -247,9 +244,7 @@ object HiveUDFExpressionBuilder extends SparkUDFExpressionBuilder {
         }
         val analysisException = new AnalysisException(
           errorClass = "_LEGACY_ERROR_TEMP_3084",
-          messageParameters = Map(
-            "clazz" -> clazz.getCanonicalName,
-            "e" -> e.toString))
+          messageParameters = Map("clazz" -> clazz.getCanonicalName, "e" -> e.toString))
         analysisException.setStackTrace(e.getStackTrace)
         throw analysisException
     }

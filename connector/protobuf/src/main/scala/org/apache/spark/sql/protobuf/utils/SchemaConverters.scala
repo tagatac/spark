@@ -87,12 +87,13 @@ object SchemaConverters extends Logging {
         } else {
           Some(IntegerType)
         }
-      case LONG => if (fd.getLiteType == WireFormat.FieldType.UINT64
+      case LONG =>
+        if (fd.getLiteType == WireFormat.FieldType.UINT64
           && protobufOptions.upcastUnsignedInts) {
-        Some(DecimalType.LongDecimal)
-      } else {
-        Some(LongType)
-      }
+          Some(DecimalType.LongDecimal)
+        } else {
+          Some(LongType)
+        }
       case FLOAT => Some(FloatType)
       case DOUBLE => Some(DoubleType)
       case BOOLEAN => Some(BooleanType)
@@ -100,56 +101,66 @@ object SchemaConverters extends Logging {
       case BYTE_STRING => Some(BinaryType)
       case ENUM => if (protobufOptions.enumsAsInts) Some(IntegerType) else Some(StringType)
       case MESSAGE
-        if (fd.getMessageType.getName == "Duration" &&
-          fd.getMessageType.getFields.size() == 2 &&
-          fd.getMessageType.getFields.get(0).getName.equals("seconds") &&
-          fd.getMessageType.getFields.get(1).getName.equals("nanos")) =>
+          if (fd.getMessageType.getName == "Duration" &&
+            fd.getMessageType.getFields.size() == 2 &&
+            fd.getMessageType.getFields.get(0).getName.equals("seconds") &&
+            fd.getMessageType.getFields.get(1).getName.equals("nanos")) =>
         Some(DayTimeIntervalType.defaultConcreteType)
       case MESSAGE
-        if (fd.getMessageType.getName == "Timestamp" &&
-          fd.getMessageType.getFields.size() == 2 &&
-          fd.getMessageType.getFields.get(0).getName.equals("seconds") &&
-          fd.getMessageType.getFields.get(1).getName.equals("nanos")) =>
+          if (fd.getMessageType.getName == "Timestamp" &&
+            fd.getMessageType.getFields.size() == 2 &&
+            fd.getMessageType.getFields.get(0).getName.equals("seconds") &&
+            fd.getMessageType.getFields.get(1).getName.equals("nanos")) =>
         Some(TimestampType)
-      case MESSAGE if protobufOptions.convertAnyFieldsToJson &&
-        fd.getMessageType.getFullName == "google.protobuf.Any" =>
+      case MESSAGE
+          if protobufOptions.convertAnyFieldsToJson &&
+            fd.getMessageType.getFullName == "google.protobuf.Any" =>
         Some(StringType) // Any protobuf will be parsed and converted to json string.
 
       // Unwrap well known primitive wrapper types if the option has been set.
-      case MESSAGE if fd.getMessageType.getFullName == BoolValue.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == BoolValue.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(BooleanType)
-      case MESSAGE if fd.getMessageType.getFullName == Int32Value.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == Int32Value.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(IntegerType)
-      case MESSAGE if fd.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == UInt32Value.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         if (protobufOptions.upcastUnsignedInts) {
           Some(LongType)
         } else {
           Some(IntegerType)
         }
-      case MESSAGE if fd.getMessageType.getFullName == Int64Value.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == Int64Value.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(LongType)
-      case MESSAGE if fd.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == UInt64Value.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         if (protobufOptions.upcastUnsignedInts) {
           Some(DecimalType.LongDecimal)
         } else {
           Some(LongType)
         }
-      case MESSAGE if fd.getMessageType.getFullName == StringValue.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == StringValue.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(StringType)
-      case MESSAGE if fd.getMessageType.getFullName == BytesValue.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == BytesValue.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(BinaryType)
-      case MESSAGE if fd.getMessageType.getFullName == FloatValue.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == FloatValue.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(FloatType)
-      case MESSAGE if fd.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName
-        && protobufOptions.unwrapWellKnownTypes =>
+      case MESSAGE
+          if fd.getMessageType.getFullName == DoubleValue.getDescriptor.getFullName
+            && protobufOptions.unwrapWellKnownTypes =>
         Some(DoubleType)
 
       case MESSAGE if fd.isRepeated && fd.getMessageType.getOptions.hasMapEntry =>
@@ -198,7 +209,7 @@ object SchemaConverters extends Logging {
         val recursiveDepth = existingRecordNames.getOrElse(recordName, 0)
         val recursiveFieldMaxDepth = protobufOptions.recursiveFieldMaxDepth
         if (existingRecordNames.contains(recordName) && (recursiveFieldMaxDepth <= 0 ||
-          recursiveFieldMaxDepth > 10)) {
+            recursiveFieldMaxDepth > 10)) {
           throw QueryCompilationErrors.foundRecursionInProtobufSchema(fd.toString())
         } else if (existingRecordNames.contains(recordName) &&
           recursiveDepth >= recursiveFieldMaxDepth) {
@@ -206,8 +217,7 @@ object SchemaConverters extends Logging {
           // If it is inside a container like map or array, the containing field is dropped.
           log.info(
             s"The field ${fd.getFullName} of type $recordName is dropped " +
-              s"at recursive depth $recursiveDepth"
-          )
+              s"at recursive depth $recursiveDepth")
           None
         } else {
           val newRecordNames = existingRecordNames + (recordName -> (recursiveDepth + 1))
@@ -227,8 +237,7 @@ object SchemaConverters extends Logging {
               } else {
                 log.info(
                   s"Dropping ${fd.getFullName} as it does not have any fields left " +
-                    "likely due to recursive depth limit."
-                )
+                    "likely due to recursive depth limit.")
                 None
               }
             case fds => Some(StructType(fds))

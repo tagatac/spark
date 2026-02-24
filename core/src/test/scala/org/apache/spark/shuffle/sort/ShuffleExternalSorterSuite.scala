@@ -55,13 +55,14 @@ class ShuffleExternalSorterSuite extends SparkFunSuite with LocalSparkContext wi
           memoryManager.maxHeapMemory - memoryManager.executionMemoryUsed > 400) {
           val acquireExecutionMemoryMethod =
             memoryManager.getClass.getMethods.filter(_.getName == "acquireExecutionMemory").head
-          acquireExecutionMemoryMethod.invoke(
-            memoryManager,
-            JLong.valueOf(
-              memoryManager.maxHeapMemory - memoryManager.executionMemoryUsed - 400),
-            JLong.valueOf(1L), // taskAttemptId
-            MemoryMode.ON_HEAP
-          ).asInstanceOf[java.lang.Long]
+          acquireExecutionMemoryMethod
+            .invoke(
+              memoryManager,
+              JLong.valueOf(
+                memoryManager.maxHeapMemory - memoryManager.executionMemoryUsed - 400),
+              JLong.valueOf(1L), // taskAttemptId
+              MemoryMode.ON_HEAP)
+            .asInstanceOf[java.lang.Long]
         }
         super.acquireExecutionMemory(required, consumer)
       }

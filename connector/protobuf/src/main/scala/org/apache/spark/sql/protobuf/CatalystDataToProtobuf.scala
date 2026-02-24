@@ -68,10 +68,10 @@ private[sql] case class CatalystDataToProtobuf(
         this.messageName == that.messageName &&
         (
           (this.binaryFileDescriptorSet.isEmpty && that.binaryFileDescriptorSet.isEmpty) ||
-          (
-            this.binaryFileDescriptorSet.nonEmpty && that.binaryFileDescriptorSet.nonEmpty &&
-            this.binaryFileDescriptorSet.get.sameElements(that.binaryFileDescriptorSet.get)
-          )
+            (
+              this.binaryFileDescriptorSet.nonEmpty && that.binaryFileDescriptorSet.nonEmpty &&
+                this.binaryFileDescriptorSet.get.sameElements(that.binaryFileDescriptorSet.get)
+            )
         ) &&
         this.options == that.options
       case _ => false

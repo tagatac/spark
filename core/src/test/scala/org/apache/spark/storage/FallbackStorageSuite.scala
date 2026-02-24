@@ -57,8 +57,9 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
       .set(DECOMMISSION_ENABLED, true)
       .set(STORAGE_DECOMMISSION_ENABLED, true)
       .set(STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED, true)
-      .set(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
-         Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
+      .set(
+        STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
+        Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
   }
 
   test("fallback storage APIs - copy/exists") {
@@ -66,7 +67,8 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
       .set("spark.app.id", "testId")
       .set(SHUFFLE_COMPRESS, false)
       .set(STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED, true)
-      .set(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
+      .set(
+        STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
         Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     val rpcEndpointRef = new FallbackStorageRpcEndpointRef(conf, hadoopConf)
@@ -119,7 +121,8 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
       .set("spark.hadoop.fs.file.impl", classOf[ReadPartialFileSystem].getName)
       .set(SHUFFLE_COMPRESS, false)
       .set(STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED, true)
-      .set(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
+      .set(
+        STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
         "file://" + Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     val rpcEndpointRef = new FallbackStorageRpcEndpointRef(conf, hadoopConf)
@@ -146,7 +149,7 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
 
     val dataFile = resolver.getDataFile(1, 2L)
     tryWithResource(new FileOutputStream(dataFile)) { fos =>
-        fos.write(content)
+      fos.write(content)
     }
 
     fallbackStorage.copy(ShuffleBlockInfo(1, 2L), bm)
@@ -210,7 +213,8 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     val conf = new SparkConf(false)
       .set("spark.app.id", "testId")
       .set(STORAGE_DECOMMISSION_SHUFFLE_BLOCKS_ENABLED, true)
-      .set(STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
+      .set(
+        STORAGE_DECOMMISSION_FALLBACK_STORAGE_PATH,
         Files.createTempDirectory("tmp").toFile.getAbsolutePath + "/")
     val hadoopConf = SparkHadoopUtil.get.newConfiguration(conf)
     val rpcEndpointRef = new FallbackStorageRpcEndpointRef(conf, hadoopConf)
@@ -242,8 +246,10 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     val bmm = new BlockManagerMaster(rpcEndpointRef, null, conf, false)
     when(bm.master).thenReturn(bmm)
     val blockTransferService = mock(classOf[BlockTransferService])
-    when(blockTransferService.uploadBlockSync(mc.any(), mc.any(), mc.any(), mc.any(), mc.any(),
-      mc.any(), mc.any())).thenThrow(new IOException)
+    when(
+      blockTransferService
+        .uploadBlockSync(mc.any(), mc.any(), mc.any(), mc.any(), mc.any(), mc.any(), mc.any()))
+      .thenThrow(new IOException)
     when(bm.blockTransferService).thenReturn(blockTransferService)
     when(bm.migratableResolver).thenReturn(resolver)
     when(bm.getMigratableRDDBlocks()).thenReturn(Seq())
@@ -308,11 +314,15 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
       assert(rdd4.count() === 2)
 
       val shuffle0_files = Seq(
-        "shuffle_0_0_0.index", "shuffle_0_0_0.data",
-        "shuffle_0_1_0.index", "shuffle_0_1_0.data")
+        "shuffle_0_0_0.index",
+        "shuffle_0_0_0.data",
+        "shuffle_0_1_0.index",
+        "shuffle_0_1_0.data")
       val shuffle1_files = Seq(
-        "shuffle_1_4_0.index", "shuffle_1_4_0.data",
-        "shuffle_1_5_0.index", "shuffle_1_5_0.data")
+        "shuffle_1_4_0.index",
+        "shuffle_1_4_0.data",
+        "shuffle_1_5_0.index",
+        "shuffle_1_5_0.data")
       val fallbackStorage = new FallbackStorage(sc.getConf)
       shuffle0_files.foreach { file => assert(!fallbackStorage.exists(0, file)) }
       shuffle1_files.foreach { file => assert(!fallbackStorage.exists(1, file)) }
@@ -350,8 +360,10 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
         val fallbackStorage = new FallbackStorage(sc.getConf)
         eventually(timeout(20.seconds), interval(1.seconds)) {
           Seq(
-            "shuffle_0_0_0.index", "shuffle_0_0_0.data",
-            "shuffle_0_1_0.index", "shuffle_0_1_0.data").foreach { file =>
+            "shuffle_0_0_0.index",
+            "shuffle_0_0_0.data",
+            "shuffle_0_1_0.index",
+            "shuffle_0_1_0.data").foreach { file =>
             assert(fallbackStorage.exists(0, file))
           }
         }
@@ -372,8 +384,10 @@ class FallbackStorageSuite extends SparkFunSuite with LocalSparkContext {
     }
   }
 }
-class ReadPartialInputStream(val in: FSDataInputStream) extends InputStream
-  with Seekable with PositionedReadable {
+class ReadPartialInputStream(val in: FSDataInputStream)
+    extends InputStream
+    with Seekable
+    with PositionedReadable {
   override def read: Int = in.read
 
   override def read(b: Array[Byte], off: Int, len: Int): Int = {

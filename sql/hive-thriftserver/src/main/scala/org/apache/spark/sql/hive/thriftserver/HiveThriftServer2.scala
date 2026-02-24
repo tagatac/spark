@@ -38,7 +38,7 @@ import org.apache.spark.status.ElementTrackingStore
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
 /**
- * The main entry point for the Spark SQL port of HiveServer2.  Starts up a `SparkSQLContext` and a
+ * The main entry point for the Spark SQL port of HiveServer2. Starts up a `SparkSQLContext` and a
  * `HiveThriftServer2` thrift server.
  */
 object HiveThriftServer2 extends Logging {
@@ -48,13 +48,14 @@ object HiveThriftServer2 extends Logging {
   val systemExitOnError = new AtomicBoolean(true)
 
   /**
-   * :: DeveloperApi ::
-   * Starts a new thrift server with the given SparkSession.
+   * :: DeveloperApi :: Starts a new thrift server with the given SparkSession.
    *
-   * @param sparkSession SparkSession to use for the server
-   * @param exitOnError Whether to exit the JVM if HiveThriftServer2 fails to initialize. When true,
-   *                    the call logs the error and exits the JVM with exit code -1. When false, the
-   *                    call throws an exception instead.
+   * @param sparkSession
+   *   SparkSession to use for the server
+   * @param exitOnError
+   *   Whether to exit the JVM if HiveThriftServer2 fails to initialize. When true, the call logs
+   *   the error and exits the JVM with exit code -1. When false, the call throws an exception
+   *   instead.
    */
   @Since("4.0.0")
   @DeveloperApi
@@ -79,10 +80,10 @@ object HiveThriftServer2 extends Logging {
   }
 
   /**
-   * :: DeveloperApi ::
-   * Starts a new thrift server with the given context.
+   * :: DeveloperApi :: Starts a new thrift server with the given context.
    *
-   * @param sqlContext SQLContext to use for the server
+   * @param sqlContext
+   *   SQLContext to use for the server
    */
   @deprecated("Use startWithSparkSession instead", since = "4.0.0")
   @Since("2.0.0")
@@ -97,8 +98,10 @@ object HiveThriftServer2 extends Logging {
     listener = new HiveThriftServer2Listener(kvStore, sc.conf, Some(server))
     sc.listenerBus.addToStatusQueue(listener)
     uiTab = if (sc.getReadOnlyConf.get(UI_ENABLED)) {
-      Some(new ThriftServerTab(new HiveThriftServer2AppStatusStore(kvStore),
-        ThriftServerTab.getSparkUI(sc)))
+      Some(
+        new ThriftServerTab(
+          new HiveThriftServer2AppStatusStore(kvStore),
+          ThriftServerTab.getSparkUI(sc)))
     } else {
       None
     }
@@ -146,8 +149,8 @@ object HiveThriftServer2 extends Logging {
 }
 
 private[hive] class HiveThriftServer2(sparkSession: SparkSession)
-  extends HiveServer2
-  with ReflectedCompositeService {
+    extends HiveServer2
+    with ReflectedCompositeService {
   // state is tracked internally so that the server only attempts to shut down if it successfully
   // started, and then once only.
   private val started = new AtomicBoolean(false)
@@ -173,7 +176,6 @@ private[hive] class HiveThriftServer2(sparkSession: SparkSession)
     transportMode.toLowerCase(Locale.ROOT).equals("http")
   }
 
-
   override def start(): Unit = {
     super.start()
     started.set(true)
@@ -181,7 +183,7 @@ private[hive] class HiveThriftServer2(sparkSession: SparkSession)
 
   override def stop(): Unit = {
     if (started.getAndSet(false)) {
-       super.stop()
+      super.stop()
     }
   }
 }

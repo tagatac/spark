@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.spark.util
 
 import java.util.concurrent.{CountDownLatch, TimeUnit}
@@ -48,12 +47,15 @@ class ThreadUtilsSuite extends SparkFunSuite {
     try {
       val latch = new CountDownLatch(1)
       @volatile var threadName = ""
-      executor.schedule(new Runnable {
-        override def run(): Unit = {
-          threadName = Thread.currentThread().getName()
-          latch.countDown()
-        }
-      }, 1, TimeUnit.MILLISECONDS)
+      executor.schedule(
+        new Runnable {
+          override def run(): Unit = {
+            threadName = Thread.currentThread().getName()
+            latch.countDown()
+          }
+        },
+        1,
+        TimeUnit.MILLISECONDS)
       latch.await(10, TimeUnit.SECONDS)
       assert(threadName === "this-is-a-thread-name")
     } finally {
@@ -104,7 +106,9 @@ class ThreadUtilsSuite extends SparkFunSuite {
     val submithreadsLatch = new CountDownLatch(nThread + workQueueSize + 1)
     val latch = new CountDownLatch(1)
     val blockingPool = ThreadUtils.newDaemonBlockingThreadPoolExecutorService(
-      nThread, workQueueSize, "ThreadUtilsSuite-newDaemonBlockingThreadPoolExecutorService")
+      nThread,
+      workQueueSize,
+      "ThreadUtilsSuite-newDaemonBlockingThreadPoolExecutorService")
 
     try {
       val submitThread = new Thread(() => {
@@ -145,22 +149,22 @@ class ThreadUtilsSuite extends SparkFunSuite {
     import ThreadUtils._
     assert(runInNewThread("thread-name") { Thread.currentThread().getName } === "thread-name")
     assert(runInNewThread("thread-name") { Thread.currentThread().isDaemon })
-    assert(
-      runInNewThread("thread-name", isDaemon = false) { Thread.currentThread().isDaemon } === false
-    )
+    assert(runInNewThread("thread-name", isDaemon = false) {
+      Thread.currentThread().isDaemon
+    } === false)
     val uniqueExceptionMessage = "test" + Random.nextInt()
     val exception = intercept[IllegalArgumentException] {
       runInNewThread("thread-name") { throw new IllegalArgumentException(uniqueExceptionMessage) }
     }
     assert(exception.getMessage === uniqueExceptionMessage)
     val stacktrace = exception.getStackTrace.mkString("\n")
-    assert(stacktrace.contains(
-      "... run in separate thread using org.apache.spark.util.ThreadUtils ..."),
-      "stack trace does not contain expected place holder"
-    )
-    assert(!stacktrace.contains("ThreadUtils.scala"),
-      "stack trace contains unexpected references to ThreadUtils"
-    )
+    assert(
+      stacktrace.contains(
+        "... run in separate thread using org.apache.spark.util.ThreadUtils ..."),
+      "stack trace does not contain expected place holder")
+    assert(
+      !stacktrace.contains("ThreadUtils.scala"),
+      "stack trace contains unexpected references to ThreadUtils")
   }
 
   test("SPARK-47833: wrapCallerStacktrace") {
@@ -183,18 +187,18 @@ class ThreadUtilsSuite extends SparkFunSuite {
     ThreadUtils.wrapCallerStacktrace(exception, s"run in separate thread: $runnerThreadName")
 
     val stacktrace = exception.getStackTrace.mkString("\n")
-    assert(stacktrace.contains("internalMethod"),
-      "stack trace does not contain real exception stack trace"
-    )
-    assert(stacktrace.contains(s"... run in separate thread: $runnerThreadName ..."),
-      "stack trace does not contain expected place holder"
-    )
-    assert(stacktrace.contains("org.scalatest.Suite.run"),
-      "stack trace does not contain caller stack trace"
-    )
-    assert(!stacktrace.contains("ThreadUtils.scala"),
-      "stack trace contains unexpected references to ThreadUtils"
-    )
+    assert(
+      stacktrace.contains("internalMethod"),
+      "stack trace does not contain real exception stack trace")
+    assert(
+      stacktrace.contains(s"... run in separate thread: $runnerThreadName ..."),
+      "stack trace does not contain expected place holder")
+    assert(
+      stacktrace.contains("org.scalatest.Suite.run"),
+      "stack trace does not contain caller stack trace")
+    assert(
+      !stacktrace.contains("ThreadUtils.scala"),
+      "stack trace contains unexpected references to ThreadUtils")
   }
 
   test("parmap should be interruptible") {
@@ -211,10 +215,12 @@ class ThreadUtilsSuite extends SparkFunSuite {
           //   1 to i
           // }
           //
-          ThreadUtils.parmap(1 to 10, "test", 2) { i =>
-            Thread.sleep(100000)
-            1 to i
-          }.flatten
+          ThreadUtils
+            .parmap(1 to 10, "test", 2) { i =>
+              Thread.sleep(100000)
+              1 to i
+            }
+            .flatten
         } catch {
           case _: InterruptedException => // excepted
         }

@@ -44,8 +44,8 @@ private case class StopExecutor()
 
 /**
  * Calls to [[LocalSchedulerBackend]] are all serialized through LocalEndpoint. Using an
- * RpcEndpoint makes the calls on [[LocalSchedulerBackend]] asynchronous, which is necessary
- * to prevent deadlock between [[LocalSchedulerBackend]] and the [[TaskSchedulerImpl]].
+ * RpcEndpoint makes the calls on [[LocalSchedulerBackend]] asynchronous, which is necessary to
+ * prevent deadlock between [[LocalSchedulerBackend]] and the [[TaskSchedulerImpl]].
  */
 private[spark] class LocalEndpoint(
     override val rpcEnv: RpcEnv,
@@ -53,7 +53,8 @@ private[spark] class LocalEndpoint(
     scheduler: TaskSchedulerImpl,
     executorBackend: LocalSchedulerBackend,
     private val totalCores: Int)
-  extends ThreadSafeRpcEndpoint with Logging {
+    extends ThreadSafeRpcEndpoint
+    with Logging {
 
   private var freeCores = totalCores
 
@@ -62,7 +63,11 @@ private[spark] class LocalEndpoint(
 
   // local mode doesn't support extra resources like GPUs right now
   private val executor = new Executor(
-    localExecutorId, localExecutorHostname, SparkEnv.get, userClassPath, isLocal = true,
+    localExecutorId,
+    localExecutorHostname,
+    SparkEnv.get,
+    userClassPath,
+    isLocal = true,
     resources = Map.empty[String, ResourceInformation])
 
   override def receive: PartialFunction[Any, Unit] = {
@@ -90,8 +95,12 @@ private[spark] class LocalEndpoint(
 
   def reviveOffers(): Unit = {
     // local mode doesn't support extra resources like GPUs right now
-    val offers = IndexedSeq(new WorkerOffer(localExecutorId, localExecutorHostname, freeCores,
-      Some(rpcEnv.address.hostPort)))
+    val offers = IndexedSeq(
+      new WorkerOffer(
+        localExecutorId,
+        localExecutorHostname,
+        freeCores,
+        Some(rpcEnv.address.hostPort)))
     for (task <- scheduler.resourceOffers(offers, true).flatten) {
       freeCores -= scheduler.CPUS_PER_TASK
       executor.launchTask(executorBackend, task)
@@ -108,7 +117,9 @@ private[spark] class LocalSchedulerBackend(
     conf: SparkConf,
     scheduler: TaskSchedulerImpl,
     val totalCores: Int)
-  extends SchedulerBackend with ExecutorBackend with Logging {
+    extends SchedulerBackend
+    with ExecutorBackend
+    with Logging {
 
   private val appId = conf.get("spark.test.appId", "local-" + System.currentTimeMillis)
   private var localEndpoint: RpcEndpointRef = null
@@ -122,7 +133,8 @@ private[spark] class LocalSchedulerBackend(
   /**
    * Returns a list of URLs representing the user classpath.
    *
-   * @param conf Spark configuration.
+   * @param conf
+   *   Spark configuration.
    */
   def getUserClasspath(conf: SparkConf): Seq[URL] = {
     val userClassPathStr = conf.get(config.EXECUTOR_CLASS_PATH)
@@ -138,8 +150,7 @@ private[spark] class LocalSchedulerBackend(
     listenerBus.post(SparkListenerExecutorAdded(
       System.currentTimeMillis,
       executorEndpoint.localExecutorId,
-      new ExecutorInfo(executorEndpoint.localExecutorHostname, totalCores, Map.empty,
-        Map.empty)))
+      new ExecutorInfo(executorEndpoint.localExecutorHostname, totalCores, Map.empty, Map.empty)))
     launcherBackend.setAppId(appId)
     launcherBackend.setState(SparkAppHandle.State.RUNNING)
     reviveOffers()
@@ -157,7 +168,10 @@ private[spark] class LocalSchedulerBackend(
     scheduler.conf.getInt(config.DEFAULT_PARALLELISM.key, totalCores)
 
   override def killTask(
-      taskId: Long, executorId: String, interruptThread: Boolean, reason: String): Unit = {
+      taskId: Long,
+      executorId: String,
+      interruptThread: Boolean,
+      reason: String): Unit = {
     localEndpoint.send(KillTask(taskId, interruptThread, reason))
   }
 

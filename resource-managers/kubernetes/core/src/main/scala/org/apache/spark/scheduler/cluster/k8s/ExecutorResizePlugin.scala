@@ -36,8 +36,8 @@ import org.apache.spark.internal.LogKeys.{EXECUTOR_ID, MEMORY_SIZE}
 import org.apache.spark.util.{ThreadUtils, Utils}
 
 /**
- * Spark plugin to monitor executor pod memory usage and increase the memory limit
- * if the usage exceeds a threshold.
+ * Spark plugin to monitor executor pod memory usage and increase the memory limit if the usage
+ * exceeds a threshold.
  */
 class ExecutorResizePlugin extends SparkPlugin {
   override def driverPlugin(): DriverPlugin = new ExecutorResizeDriverPlugin()
@@ -53,8 +53,7 @@ class ExecutorResizeDriverPlugin extends DriverPlugin with Logging {
     ThreadUtils.newDaemonSingleThreadScheduledExecutor("executor-resize-plugin")
 
   override def init(sc: SparkContext, ctx: PluginContext): JMap[String, String] = {
-    val interval = Utils.timeStringAsSeconds(
-      sc.conf.get(EXECUTOR_RESIZE_INTERVAL.key, "1m"))
+    val interval = Utils.timeStringAsSeconds(sc.conf.get(EXECUTOR_RESIZE_INTERVAL.key, "1m"))
     val threshold = sc.conf.getDouble(EXECUTOR_RESIZE_THRESHOLD.key, 0.9)
     val factor = sc.conf.getDouble(EXECUTOR_RESIZE_FACTOR.key, 0.1)
     val namespace = sc.conf.get(KUBERNETES_NAMESPACE)
@@ -70,13 +69,17 @@ class ExecutorResizeDriverPlugin extends DriverPlugin with Logging {
         sc.conf,
         None)
 
-      periodicService.scheduleAtFixedRate(() => {
-        try {
-          checkAndIncreaseMemory(namespace, threshold, factor)
-        } catch {
-          case e: Throwable => logError("Error in memory check thread", e)
-        }
-      }, interval, interval, TimeUnit.SECONDS)
+      periodicService.scheduleAtFixedRate(
+        () => {
+          try {
+            checkAndIncreaseMemory(namespace, threshold, factor)
+          } catch {
+            case e: Throwable => logError("Error in memory check thread", e)
+          }
+        },
+        interval,
+        interval,
+        TimeUnit.SECONDS)
     } catch {
       case e: Exception =>
         logError("Failed to initialize", e)
@@ -92,16 +95,21 @@ class ExecutorResizeDriverPlugin extends DriverPlugin with Logging {
     }
   }
 
-  private def checkAndIncreaseMemory(namespace: String, threshold: Double, factor: Double): Unit = {
+  private def checkAndIncreaseMemory(
+      namespace: String,
+      threshold: Double,
+      factor: Double): Unit = {
     val appId = sparkContext.applicationId
 
     // Get all running executor pods for this application
-    val pods = kubernetesClient.pods()
+    val pods = kubernetesClient
+      .pods()
       .inNamespace(namespace)
       .withLabel(SPARK_APP_ID_LABEL, appId)
       .withLabel(SPARK_ROLE_LABEL, SPARK_POD_EXECUTOR_ROLE)
       .list()
-      .getItems.asScala
+      .getItems
+      .asScala
 
     pods.filter(_.getMetadata.getLabels.get(SPARK_EXECUTOR_ID_LABEL) != null).foreach { pod =>
       val execId = pod.getMetadata.getLabels.get(SPARK_EXECUTOR_ID_LABEL)
@@ -121,46 +129,54 @@ class ExecutorResizeDriverPlugin extends DriverPlugin with Logging {
             .find(_.getName == DEFAULT_EXECUTOR_CONTAINER_NAME)
             .orElse(pod.getSpec.getContainers.asScala.headOption)
 
-          container.filter(c => c.getResources.getLimits != null &&
-              c.getResources.getLimits.containsKey("memory")).foreach { c =>
-            val limit = Quantity.getAmountInBytes(c.getResources.getLimits.get("memory"))
+          container
+            .filter(c =>
+              c.getResources.getLimits != null &&
+                c.getResources.getLimits.containsKey("memory"))
+            .foreach { c =>
+              val limit = Quantity
+                .getAmountInBytes(c.getResources.getLimits.get("memory"))
                 .longValue()
-            if (usage > limit * threshold) {
-              val newLimit = (limit * (1.0 + factor)).toLong
-              val newQuantity = new Quantity(newLimit.toString)
+              if (usage > limit * threshold) {
+                val newLimit = (limit * (1.0 + factor)).toLong
+                val newQuantity = new Quantity(newLimit.toString)
 
-              logInfo(log"Increase executor ${MDC(EXECUTOR_ID, execId)} container memory " +
-                log"from ${MDC(MEMORY_SIZE, limit)} to ${MDC(MEMORY_SIZE, newLimit)} " +
-                log"as usage ${MDC(MEMORY_SIZE, usage)} exceeded threshold.")
+                logInfo(
+                  log"Increase executor ${MDC(EXECUTOR_ID, execId)} container memory " +
+                    log"from ${MDC(MEMORY_SIZE, limit)} to ${MDC(MEMORY_SIZE, newLimit)} " +
+                    log"as usage ${MDC(MEMORY_SIZE, usage)} exceeded threshold.")
 
-              // Patch the pod to update both memory request and limit
-              try {
-                kubernetesClient.pods()
-                  .inNamespace(namespace)
-                  .withName(pod.getMetadata.getName)
-                  .subresource("resize")
-                  .patch(PatchContext.of(PatchType.STRATEGIC_MERGE), new PodBuilder()
-                    .withNewMetadata()
-                    .endMetadata()
-                    .withNewSpec()
-                    .addNewContainer()
-                    .withName(c.getName)
-                    .withNewResources()
-                    .addToLimits("memory", newQuantity)
-                    .addToRequests("memory", newQuantity)
-                    .endResources()
-                    .endContainer()
-                    .endSpec()
-                    .build())
-              } catch {
-                case e: Throwable =>
-                  logInfo(log"Failed to update ${MDC(EXECUTOR_ID, execId)}", e)
+                // Patch the pod to update both memory request and limit
+                try {
+                  kubernetesClient
+                    .pods()
+                    .inNamespace(namespace)
+                    .withName(pod.getMetadata.getName)
+                    .subresource("resize")
+                    .patch(
+                      PatchContext.of(PatchType.STRATEGIC_MERGE),
+                      new PodBuilder()
+                        .withNewMetadata()
+                        .endMetadata()
+                        .withNewSpec()
+                        .addNewContainer()
+                        .withName(c.getName)
+                        .withNewResources()
+                        .addToLimits("memory", newQuantity)
+                        .addToRequests("memory", newQuantity)
+                        .endResources()
+                        .endContainer()
+                        .endSpec()
+                        .build())
+                } catch {
+                  case e: Throwable =>
+                    logInfo(log"Failed to update ${MDC(EXECUTOR_ID, execId)}", e)
+                }
+              } else {
+                logDebug(log"Executor ${MDC(EXECUTOR_ID, execId)} limit " +
+                  log"${MDC(MEMORY_SIZE, limit)}, usage ${MDC(MEMORY_SIZE, usage)}")
               }
-            } else {
-              logDebug(log"Executor ${MDC(EXECUTOR_ID, execId)} limit " +
-                log"${MDC(MEMORY_SIZE, limit)}, usage ${MDC(MEMORY_SIZE, usage)}")
             }
-          }
         }
       } catch {
         case e: Throwable =>

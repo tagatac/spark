@@ -37,7 +37,7 @@ import org.apache.spark.util.Utils
 import org.apache.spark.util.collection.ExternalSorter
 
 class SortShuffleWriterSuite
-  extends SparkFunSuite
+    extends SparkFunSuite
     with SharedSparkContext
     with Matchers
     with PrivateMethodTester
@@ -66,8 +66,8 @@ class SortShuffleWriterSuite
       new BaseShuffleHandle(shuffleId, dependency)
     }
     resetDependency(rowBasedChecksumEnabled = false)
-    shuffleExecutorComponents = new LocalDiskShuffleExecutorComponents(
-      conf, blockManager, shuffleBlockResolver)
+    shuffleExecutorComponents =
+      new LocalDiskShuffleExecutorComponents(conf, blockManager, shuffleBlockResolver)
   }
 
   override def afterAll(): Unit = {
@@ -132,13 +132,33 @@ class SortShuffleWriterSuite
     val shuffleBlockResolver = new IndexShuffleBlockResolver(conf)
     val context = MemoryTestingUtils.fakeTaskContext(sc.env)
     val records: List[(Int, Int)] = List(
-      (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
-      (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-      (3, 3), (3, 4), (3, 5), (3, 6), (3, 7),
-      (4, 4), (4, 5), (4, 6), (4, 7), (4, 8),
-      (5, 5), (5, 6), (5, 7), (5, 8), (5, 9))
+      (1, 1),
+      (1, 2),
+      (1, 3),
+      (1, 4),
+      (1, 5),
+      (2, 2),
+      (2, 3),
+      (2, 4),
+      (2, 5),
+      (2, 6),
+      (3, 3),
+      (3, 4),
+      (3, 5),
+      (3, 6),
+      (3, 7),
+      (4, 4),
+      (4, 5),
+      (4, 6),
+      (4, 7),
+      (4, 8),
+      (5, 5),
+      (5, 6),
+      (5, 7),
+      (5, 8),
+      (5, 9))
 
-    var checksumValues : Array[Long] = Array[Long]()
+    var checksumValues: Array[Long] = Array[Long]()
     var aggregatedChecksumValue = 0L
     for (i <- 1 to 100) {
       resetDependency(rowBasedChecksumEnabled = true)
@@ -148,9 +168,11 @@ class SortShuffleWriterSuite
         context,
         context.taskMetrics().shuffleWriteMetrics,
         new LocalDiskShuffleExecutorComponents(
-          conf, shuffleBlockResolver._blockManager, shuffleBlockResolver))
+          conf,
+          shuffleBlockResolver._blockManager,
+          shuffleBlockResolver))
       writer.write(Random.shuffle(records).iterator)
-      if(i == 1) {
+      if (i == 1) {
         checksumValues = getRowBasedChecksumValues(writer.getRowBasedChecksums)
         assert(checksumValues.length > 0)
         assert(checksumValues.forall(_ > 0))
@@ -158,15 +180,16 @@ class SortShuffleWriterSuite
         aggregatedChecksumValue = writer.getAggregatedChecksumValue
         assert(aggregatedChecksumValue != 0)
       } else {
-        assert(checksumValues.sameElements(
-          getRowBasedChecksumValues(writer.getRowBasedChecksums)))
+        assert(
+          checksumValues.sameElements(getRowBasedChecksumValues(writer.getRowBasedChecksums)))
         assert(aggregatedChecksumValue == writer.getAggregatedChecksumValue)
       }
       writer.stop(success = true)
     }
   }
 
-  Seq((true, false, false),
+  Seq(
+    (true, false, false),
     (true, true, false),
     (true, false, true),
     (true, true, true),
@@ -176,10 +199,7 @@ class SortShuffleWriterSuite
     (false, true, true)).foreach { case (doSpill, doAgg, doOrder) =>
     test(s"write checksum file (spill=$doSpill, aggregator=$doAgg, order=$doOrder)") {
       val aggregator = if (doAgg) {
-        Some(Aggregator[Int, Int, Int](
-          v => v,
-          (c, v) => c + v,
-          (c1, c2) => c1 + c2))
+        Some(Aggregator[Int, Int, Int](v => v, (c, v) => c + v, (c1, c2) => c1 + c2))
       } else None
       val order = if (doOrder) {
         Some(new Ordering[Int] {
@@ -200,14 +220,15 @@ class SortShuffleWriterSuite
       // FIXME: this can affect other tests (if any) after this set of tests
       //  since `sc` is global.
       sc.stop()
-      conf.set("spark.shuffle.spill.numElementsForceSpillThreshold",
+      conf.set(
+        "spark.shuffle.spill.numElementsForceSpillThreshold",
         if (doSpill) "0" else Int.MaxValue.toString)
       conf.set("spark.hadoop.fs.file.impl", classOf[DebugFilesystem].getName)
       val localSC = new SparkContext("local[4]", "test", conf)
       val shuffleBlockResolver = new IndexShuffleBlockResolver(conf)
       val context = MemoryTestingUtils.fakeTaskContext(localSC.env)
-      val records = List[(Int, Int)](
-        (0, 1), (1, 2), (0, 2), (1, 3), (2, 3), (3, 4), (4, 5), (3, 5), (4, 6))
+      val records =
+        List[(Int, Int)]((0, 1), (1, 2), (0, 2), (1, 3), (2, 3), (3, 4), (4, 5), (3, 5), (4, 6))
       val numPartition = shuffleHandle.dependency.partitioner.numPartitions
       val writer = new SortShuffleWriter[Int, Int, Int](
         shuffleHandle,
@@ -215,7 +236,9 @@ class SortShuffleWriterSuite
         context,
         context.taskMetrics().shuffleWriteMetrics,
         new LocalDiskShuffleExecutorComponents(
-          conf, shuffleBlockResolver._blockManager, shuffleBlockResolver))
+          conf,
+          shuffleBlockResolver._blockManager,
+          shuffleBlockResolver))
       writer.write(records.iterator)
       val sorterMethod = PrivateMethod[ExternalSorter[_, _, _]](Symbol("sorter"))
       val sorter = writer.invokePrivate(sorterMethod())

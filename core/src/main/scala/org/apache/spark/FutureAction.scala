@@ -29,10 +29,9 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.scheduler.JobWaiter
 import org.apache.spark.util.ThreadUtils
 
-
 /**
- * A future for the result of an action to support cancellation. This is an extension of the
- * Scala Future interface to support cancellation.
+ * A future for the result of an action to support cancellation. This is an extension of the Scala
+ * Future interface to support cancellation.
  */
 trait FutureAction[T] extends Future[T] {
   // Note that we redefine methods of the Future trait here explicitly so we can specify a different
@@ -51,19 +50,24 @@ trait FutureAction[T] extends Future[T] {
   /**
    * Blocks until this action completes.
    *
-   * @param atMost maximum wait time, which may be negative (no waiting is done), Duration.Inf
-   *               for unbounded waiting, or a finite positive duration
-   * @return this FutureAction
+   * @param atMost
+   *   maximum wait time, which may be negative (no waiting is done), Duration.Inf for unbounded
+   *   waiting, or a finite positive duration
+   * @return
+   *   this FutureAction
    */
   override def ready(atMost: Duration)(implicit permit: CanAwait): FutureAction.this.type
 
   /**
    * Awaits and returns the result (of type T) of this action.
    *
-   * @param atMost maximum wait time, which may be negative (no waiting is done), Duration.Inf
-   *               for unbounded waiting, or a finite positive duration
-   * @throws Exception exception during action execution
-   * @return the result value if the action is completed within the specific maximum wait time
+   * @param atMost
+   *   maximum wait time, which may be negative (no waiting is done), Duration.Inf for unbounded
+   *   waiting, or a finite positive duration
+   * @throws Exception
+   *   exception during action execution
+   * @return
+   *   the result value if the action is completed within the specific maximum wait time
    */
   @throws(classOf[Exception])
   override def result(atMost: Duration)(implicit permit: CanAwait): T
@@ -102,8 +106,8 @@ trait FutureAction[T] extends Future[T] {
   /**
    * Returns the job IDs run by the underlying async operation.
    *
-   * This returns the current snapshot of the job list. Certain operations may run multiple
-   * jobs, so multiple calls to this method may return different lists.
+   * This returns the current snapshot of the job list. Certain operations may run multiple jobs,
+   * so multiple calls to this method may return different lists.
    */
   def jobIds: Seq[Int]
 
@@ -114,8 +118,8 @@ trait FutureAction[T] extends Future[T] {
  * count, collect, reduce.
  */
 @DeveloperApi
-class SimpleFutureAction[T] private[spark](jobWaiter: JobWaiter[_], resultFunc: => T)
-  extends FutureAction[T] {
+class SimpleFutureAction[T] private[spark] (jobWaiter: JobWaiter[_], resultFunc: => T)
+    extends FutureAction[T] {
 
   @volatile private var _cancelled: Boolean = false
 
@@ -124,7 +128,8 @@ class SimpleFutureAction[T] private[spark](jobWaiter: JobWaiter[_], resultFunc: 
     jobWaiter.cancel(reason)
   }
 
-  override def ready(atMost: Duration)(implicit permit: CanAwait): SimpleFutureAction.this.type = {
+  override def ready(
+      atMost: Duration)(implicit permit: CanAwait): SimpleFutureAction.this.type = {
     jobWaiter.completionFuture.ready(atMost)
     this
   }
@@ -137,7 +142,7 @@ class SimpleFutureAction[T] private[spark](jobWaiter: JobWaiter[_], resultFunc: 
   }
 
   override def onComplete[U](func: (Try[T]) => U)(implicit executor: ExecutionContext): Unit = {
-    jobWaiter.completionFuture onComplete {_ => func(value.get)}
+    jobWaiter.completionFuture onComplete { _ => func(value.get) }
   }
 
   override def isCompleted: Boolean = jobWaiter.jobFinished
@@ -145,37 +150,36 @@ class SimpleFutureAction[T] private[spark](jobWaiter: JobWaiter[_], resultFunc: 
   override def isCancelled: Boolean = _cancelled
 
   override def value: Option[Try[T]] =
-    jobWaiter.completionFuture.value.map {res => res.map(_ => resultFunc)}
+    jobWaiter.completionFuture.value.map { res => res.map(_ => resultFunc) }
 
   def jobIds: Seq[Int] = Seq(jobWaiter.jobId)
 
   override def transform[S](f: (Try[T]) => Try[S])(implicit e: ExecutionContext): Future[S] =
     jobWaiter.completionFuture.transform((u: Try[Unit]) => f(u.map(_ => resultFunc)))
 
-  override def transformWith[S](f: (Try[T]) => Future[S])(implicit e: ExecutionContext): Future[S] =
+  override def transformWith[S](f: (Try[T]) => Future[S])(implicit
+      e: ExecutionContext): Future[S] =
     jobWaiter.completionFuture.transformWith((u: Try[Unit]) => f(u.map(_ => resultFunc)))
 }
 
-
 /**
- * Handle via which a "run" function passed to a [[ComplexFutureAction]]
- * can submit jobs for execution.
+ * Handle via which a "run" function passed to a [[ComplexFutureAction]] can submit jobs for
+ * execution.
  */
 @DeveloperApi
 trait JobSubmitter {
+
   /**
-   * Submit a job for execution and return a FutureAction holding the result.
-   * This is a wrapper around the same functionality provided by SparkContext
-   * to enable cancellation.
+   * Submit a job for execution and return a FutureAction holding the result. This is a wrapper
+   * around the same functionality provided by SparkContext to enable cancellation.
    */
   def submitJob[T, U, R](
-    rdd: RDD[T],
-    processPartition: Iterator[T] => U,
-    partitions: Seq[Int],
-    resultHandler: (Int, U) => Unit,
-    resultFunc: => R): FutureAction[R]
+      rdd: RDD[T],
+      processPartition: Iterator[T] => U,
+      partitions: Seq[Int],
+      resultHandler: (Int, U) => Unit,
+      resultFunc: => R): FutureAction[R]
 }
-
 
 /**
  * A [[FutureAction]] for actions that could trigger multiple Spark jobs. Examples include take,
@@ -183,8 +187,7 @@ trait JobSubmitter {
  * jobs.
  */
 @DeveloperApi
-class ComplexFutureAction[T](run : JobSubmitter => Future[T])
-  extends FutureAction[T] { self =>
+class ComplexFutureAction[T](run: JobSubmitter => Future[T]) extends FutureAction[T] { self =>
 
   @volatile private var _cancelled = false
 
@@ -201,20 +204,16 @@ class ComplexFutureAction[T](run : JobSubmitter => Future[T])
 
   private def jobSubmitter = new JobSubmitter {
     def submitJob[T, U, R](
-      rdd: RDD[T],
-      processPartition: Iterator[T] => U,
-      partitions: Seq[Int],
-      resultHandler: (Int, U) => Unit,
-      resultFunc: => R): FutureAction[R] = self.synchronized {
+        rdd: RDD[T],
+        processPartition: Iterator[T] => U,
+        partitions: Seq[Int],
+        resultHandler: (Int, U) => Unit,
+        resultFunc: => R): FutureAction[R] = self.synchronized {
       // If the action hasn't been cancelled yet, submit the job. The check and the submitJob
       // command need to be in an atomic block.
       if (!isCancelled) {
-        val job = rdd.context.submitJob(
-          rdd,
-          processPartition,
-          partitions,
-          resultHandler,
-          resultFunc)
+        val job =
+          rdd.context.submitJob(rdd, processPartition, partitions, resultHandler, resultFunc)
         subActions = job :: subActions
         job
       } else {
@@ -250,14 +249,15 @@ class ComplexFutureAction[T](run : JobSubmitter => Future[T])
   override def transform[S](f: (Try[T]) => Try[S])(implicit e: ExecutionContext): Future[S] =
     p.future.transform(f)
 
-  override def transformWith[S](f: (Try[T]) => Future[S])(implicit e: ExecutionContext): Future[S] =
+  override def transformWith[S](f: (Try[T]) => Future[S])(implicit
+      e: ExecutionContext): Future[S] =
     p.future.transformWith(f)
 }
 
-
-private[spark]
-class JavaFutureActionWrapper[S, T](futureAction: FutureAction[S], converter: S => T)
-  extends JavaFutureAction[T] {
+private[spark] class JavaFutureActionWrapper[S, T](
+    futureAction: FutureAction[S],
+    converter: S => T)
+    extends JavaFutureAction[T] {
 
   override def isCancelled: Boolean = futureAction.isCancelled
 

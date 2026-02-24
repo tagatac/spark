@@ -58,7 +58,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   private var _streamName: String = _
 
   protected lazy val kinesisClient: KinesisClient = {
-    KinesisClient.builder()
+    KinesisClient
+      .builder()
       .credentialsProvider(DefaultCredentialsProvider.create())
       .region(Region.of(regionName))
       .httpClientBuilder(ApacheHttpClient.builder())
@@ -69,7 +70,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   private lazy val streamExistsWaiter = kinesisClient.waiter()
 
   private lazy val dynamoDB = {
-    DynamoDbClient.builder()
+    DynamoDbClient
+      .builder()
       .credentialsProvider(DefaultCredentialsProvider.create())
       .region(Region.of(regionName))
       .httpClientBuilder(ApacheHttpClient.builder())
@@ -80,7 +82,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
     if (!aggregate) {
       new SimpleDataGenerator(kinesisClient)
     } else {
-      throw new UnsupportedOperationException("Aggregation is not supported through this code path")
+      throw new UnsupportedOperationException(
+        "Aggregation is not supported through this code path")
     }
   }
 
@@ -95,7 +98,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
 
     // Create a stream. The number of shards determines the provisioned throughput.
     logInfo(s"Creating stream ${_streamName}")
-    val createStreamRequest = CreateStreamRequest.builder()
+    val createStreamRequest = CreateStreamRequest
+      .builder()
       .streamName(_streamName)
       .shardCount(streamShardCount)
       .build()
@@ -108,14 +112,16 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   def getShards(): Seq[Shard] = {
-    val describeStreamRequest = DescribeStreamRequest.builder()
+    val describeStreamRequest = DescribeStreamRequest
+      .builder()
       .streamName(_streamName)
       .build()
     kinesisClient.describeStream(describeStreamRequest).streamDescription.shards.asScala.toSeq
   }
 
   def splitShard(shardId: String): Unit = {
-    val splitShardRequest = SplitShardRequest.builder()
+    val splitShardRequest = SplitShardRequest
+      .builder()
       .streamName(_streamName)
       .shardToSplit(shardId)
       // Set a half of the max hash value
@@ -127,7 +133,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   def mergeShard(shardToMerge: String, adjacentShardToMerge: String): Unit = {
-    val mergeShardRequest = MergeShardsRequest.builder()
+    val mergeShardRequest = MergeShardsRequest
+      .builder()
       .streamName(_streamName)
       .shardToMerge(shardToMerge)
       .adjacentShardToMerge(adjacentShardToMerge)
@@ -138,8 +145,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   /**
-   * Push data to Kinesis stream and return a map of
-   * shardId -> seq of (data, seq number) pushed to corresponding shard
+   * Push data to Kinesis stream and return a map of shardId -> seq of (data, seq number) pushed
+   * to corresponding shard
    */
   def pushData(testData: Seq[Int], aggregate: Boolean): Map[String, Seq[(Int, String)]] = {
     require(streamCreated, "Stream not yet created, call createStream() to create one")
@@ -157,7 +164,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   def deleteStream(): Unit = {
-    val deleteStreamRequest = DeleteStreamRequest.builder()
+    val deleteStreamRequest = DeleteStreamRequest
+      .builder()
       .streamName(streamName)
       .build()
     try {
@@ -171,7 +179,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   def deleteDynamoDBTable(tableName: String): Unit = {
-    val deleteTableRequest = DeleteTableRequest.builder()
+    val deleteTableRequest = DeleteTableRequest
+      .builder()
       .tableName(tableName)
       .build()
     try {
@@ -184,7 +193,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
 
   private def describeStream(streamNameToDescribe: String): Option[StreamDescription] = {
     try {
-      val describeStreamRequest = DescribeStreamRequest.builder()
+      val describeStreamRequest = DescribeStreamRequest
+        .builder()
         .streamName(streamNameToDescribe)
         .build()
       val desc = kinesisClient.describeStream(describeStreamRequest).streamDescription
@@ -206,7 +216,8 @@ private[kinesis] class KinesisTestUtils(streamShardCount: Int = 2) extends Loggi
   }
 
   private def waitForStreamToBeActive(streamNameToWaitFor: String): Unit = {
-    val describeStreamRequest = DescribeStreamRequest.builder()
+    val describeStreamRequest = DescribeStreamRequest
+      .builder()
       .streamName(streamNameToWaitFor)
       .build()
     streamExistsWaiter.waitUntilStreamExists(describeStreamRequest)
@@ -222,8 +233,7 @@ private[kinesis] object KinesisTestUtils {
   def getRegionNameByEndpoint(endpoint: String): String = {
     val uri = new java.net.URI(endpoint)
     val kinesisServiceMetadata = new KinesisServiceMetadata()
-    kinesisServiceMetadata.regions
-      .asScala
+    kinesisServiceMetadata.regions.asScala
       .find(r => kinesisServiceMetadata.endpointFor(r).toString.equals(uri.getHost))
       .map(_.id)
       .getOrElse(
@@ -235,8 +245,7 @@ private[kinesis] object KinesisTestUtils {
     if (isEnvSet) {
       // scalastyle:off println
       // Print this so that they are easily visible on the console and not hidden in the log4j logs.
-      println(
-        s"""
+      println(s"""
           |Kinesis tests that actually send data has been enabled by setting the environment
           |variable $envVarNameForEnablingTests to 1. This will create Kinesis Streams and
           |DynamoDB tables in AWS. Please be aware that this may incur some AWS costs.
@@ -264,13 +273,11 @@ private[kinesis] object KinesisTestUtils {
   }
 
   def getAWSCredentials(): AwsCredentials = {
-    assert(shouldRunTests,
-      "Kinesis test not enabled, should not attempt to get AWS credentials")
+    assert(shouldRunTests, "Kinesis test not enabled, should not attempt to get AWS credentials")
     Try { DefaultCredentialsProvider.create().resolveCredentials() } match {
       case Success(cred) => cred
       case Failure(e) =>
-        throw new Exception(
-          s"""
+        throw new Exception(s"""
              |Kinesis tests enabled using environment variable $envVarNameForEnablingTests
              |but could not find AWS credentials. Please follow instructions in AWS documentation
              |to set the credentials in your system such that the DefaultCredentialsProvider
@@ -280,20 +287,23 @@ private[kinesis] object KinesisTestUtils {
   }
 }
 
-/** A wrapper interface that will allow us to consolidate the code for synthetic data generation. */
+/**
+ * A wrapper interface that will allow us to consolidate the code for synthetic data generation.
+ */
 private[kinesis] trait KinesisDataGenerator {
+
   /** Sends the data to Kinesis and returns the metadata for everything that has been sent. */
   def sendData(streamName: String, data: Seq[Int]): Map[String, Seq[(Int, String)]]
 }
 
-private[kinesis] class SimpleDataGenerator(
-    client: KinesisClient) extends KinesisDataGenerator {
+private[kinesis] class SimpleDataGenerator(client: KinesisClient) extends KinesisDataGenerator {
   override def sendData(streamName: String, data: Seq[Int]): Map[String, Seq[(Int, String)]] = {
     val shardIdToSeqNumbers = new mutable.HashMap[String, ArrayBuffer[(Int, String)]]()
     data.foreach { num =>
       val str = num.toString
       val data = SdkBytes.fromByteArray(str.getBytes(StandardCharsets.UTF_8))
-      val putRecordRequest = PutRecordRequest.builder()
+      val putRecordRequest = PutRecordRequest
+        .builder()
         .streamName(streamName)
         .data(data)
         .partitionKey(str)
@@ -302,8 +312,8 @@ private[kinesis] class SimpleDataGenerator(
       val putRecordResponse = client.putRecord(putRecordRequest)
       val shardId = putRecordResponse.shardId
       val seqNumber = putRecordResponse.sequenceNumber
-      val sentSeqNumbers = shardIdToSeqNumbers.getOrElseUpdate(shardId,
-        new ArrayBuffer[(Int, String)]())
+      val sentSeqNumbers =
+        shardIdToSeqNumbers.getOrElseUpdate(shardId, new ArrayBuffer[(Int, String)]())
       sentSeqNumbers += ((num, seqNumber))
     }
 

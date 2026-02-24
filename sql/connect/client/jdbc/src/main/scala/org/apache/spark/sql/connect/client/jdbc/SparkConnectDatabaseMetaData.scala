@@ -88,8 +88,12 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
 
   override def getSQLKeywords: String = {
     conn.checkOpen()
-    conn.spark.sql("SELECT keyword FROM sql_keywords()").collect()
-      .map(_.getString(0)).diff(SQL_2003_RESERVED_KEYWORDS).mkString(",")
+    conn.spark
+      .sql("SELECT keyword FROM sql_keywords()")
+      .collect()
+      .map(_.getString(0))
+      .diff(SQL_2003_RESERVED_KEYWORDS)
+      .mkString(",")
   }
 
   override def getNumericFunctions: String =
@@ -302,7 +306,8 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
   override def getCatalogs: ResultSet = {
     conn.checkOpen()
 
-    val df = conn.spark.sql("SHOW CATALOGS")
+    val df = conn.spark
+      .sql("SHOW CATALOGS")
       .select($"catalog".as("TABLE_CAT"))
       .orderBy("TABLE_CAT")
     new SparkConnectResultSet(df.collectResult())
@@ -318,7 +323,8 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
   // |-- TABLE_SCHEM: string (nullable = false)
   // |-- TABLE_CATALOG: string (nullable = false)
   private def getSchemasDataFrame(
-      catalog: String, schemaPatternOpt: Option[String]): connect.DataFrame = {
+      catalog: String,
+      schemaPatternOpt: Option[String]): connect.DataFrame = {
 
     val schemaFilterExpr = schemaPatternOpt match {
       case None => $"TABLE_SCHEM".equalTo(conn.spark.catalog.currentDatabase)
@@ -337,7 +343,8 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
       try {
         // Spark SQL supports LIKE clause in SHOW SCHEMAS command, but we can't use that
         // because the LIKE pattern does not follow SQL standard.
-        conn.spark.sql(s"SHOW SCHEMAS IN ${quoteIdentifier(catalog)}")
+        conn.spark
+          .sql(s"SHOW SCHEMAS IN ${quoteIdentifier(catalog)}")
           .select($"namespace".as("TABLE_SCHEM"))
           .filter(schemaFilterExpr)
           .withColumn("TABLE_CATALOG", lit(catalog))
@@ -349,9 +356,14 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
 
     if (catalog == null) {
       // search in all catalogs
-      conn.spark.catalog.listCatalogs().collect().map(_.name).map { c =>
-        internalGetSchemas(Some(c), schemaFilterExpr)
-      }.fold(emptyDf) { (l, r) => l.unionAll(r) }
+      conn.spark.catalog
+        .listCatalogs()
+        .collect()
+        .map(_.name)
+        .map { c =>
+          internalGetSchemas(Some(c), schemaFilterExpr)
+        }
+        .fold(emptyDf) { (l, r) => l.unionAll(r) }
     } else if (catalog == "") {
       // search only in current catalog
       internalGetSchemas(None, schemaFilterExpr)
@@ -372,7 +384,8 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
   override def getTableTypes: ResultSet = {
     conn.checkOpen()
 
-    val df = TABLE_TYPES.toDF("TABLE_TYPE")
+    val df = TABLE_TYPES
+      .toDF("TABLE_TYPE")
       .orderBy("TABLE_TYPE")
     new SparkConnectResultSet(df.collectResult())
   }
@@ -399,7 +412,8 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
       getSchemasDataFrame(catalog, Some(schemaPattern))
     }
 
-    val catalogSchemas = catalogSchemasDf.collect()
+    val catalogSchemas = catalogSchemasDf
+      .collect()
       .map { row => (row.getString(1), row.getString(0)) }
 
     val tableNameFilterExpr = if (isNullOrWildcard(tableNamePattern)) {
@@ -420,41 +434,54 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
       .withColumn("SELF_REFERENCING_COL_NAME", lit(""))
       .withColumn("REF_GENERATION", lit(""))
 
-    catalogSchemas.map { case (catalog, schema) =>
-      val viewDf = try {
-        conn.spark
-          .sql(s"SHOW VIEWS IN ${quoteNameParts(Seq(catalog, schema))}")
-          .select($"namespace".as("TABLE_SCHEM"), $"viewName".as("TABLE_NAME"))
-          .filter(tableNameFilterExpr)
-      } catch {
-        case st: SparkThrowable if st.getCondition == "MISSING_CATALOG_ABILITY.VIEWS" =>
-          emptyDf.select("TABLE_SCHEM", "TABLE_NAME")
-      }
+    catalogSchemas
+      .map { case (catalog, schema) =>
+        val viewDf =
+          try {
+            conn.spark
+              .sql(s"SHOW VIEWS IN ${quoteNameParts(Seq(catalog, schema))}")
+              .select($"namespace".as("TABLE_SCHEM"), $"viewName".as("TABLE_NAME"))
+              .filter(tableNameFilterExpr)
+          } catch {
+            case st: SparkThrowable if st.getCondition == "MISSING_CATALOG_ABILITY.VIEWS" =>
+              emptyDf.select("TABLE_SCHEM", "TABLE_NAME")
+          }
 
-      val tableDf = try {
-        conn.spark
-          .sql(s"SHOW TABLES IN ${quoteNameParts(Seq(catalog, schema))}")
-          .select($"namespace".as("TABLE_SCHEM"), $"tableName".as("TABLE_NAME"))
-          .filter(tableNameFilterExpr)
-          .exceptAll(viewDf)
-      } catch {
-        case st: SparkThrowable if st.getCondition == "MISSING_CATALOG_ABILITY.TABLES" =>
-          emptyDf.select("TABLE_SCHEM", "TABLE_NAME")
-      }
+        val tableDf =
+          try {
+            conn.spark
+              .sql(s"SHOW TABLES IN ${quoteNameParts(Seq(catalog, schema))}")
+              .select($"namespace".as("TABLE_SCHEM"), $"tableName".as("TABLE_NAME"))
+              .filter(tableNameFilterExpr)
+              .exceptAll(viewDf)
+          } catch {
+            case st: SparkThrowable if st.getCondition == "MISSING_CATALOG_ABILITY.TABLES" =>
+              emptyDf.select("TABLE_SCHEM", "TABLE_NAME")
+          }
 
-      tableDf.withColumn("TABLE_TYPE", lit("TABLE"))
-        .unionAll(viewDf.withColumn("TABLE_TYPE", lit("VIEW")))
-        .withColumn("TABLE_CAT", lit(catalog))
-        .withColumn("REMARKS", lit(""))
-        .withColumn("TYPE_CAT", lit(""))
-        .withColumn("TYPE_SCHEM", lit(""))
-        .withColumn("TYPE_NAME", lit(""))
-        .withColumn("SELF_REFERENCING_COL_NAME", lit(""))
-        .withColumn("REF_GENERATION", lit(""))
-        .select("TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "TABLE_TYPE", "REMARKS",
-          "TYPE_CAT", "TYPE_SCHEM", "TYPE_NAME", "SELF_REFERENCING_COL_NAME",
-          "REF_GENERATION")
-    }.fold(emptyDf) { (l, r) => l.unionAll(r) }
+        tableDf
+          .withColumn("TABLE_TYPE", lit("TABLE"))
+          .unionAll(viewDf.withColumn("TABLE_TYPE", lit("VIEW")))
+          .withColumn("TABLE_CAT", lit(catalog))
+          .withColumn("REMARKS", lit(""))
+          .withColumn("TYPE_CAT", lit(""))
+          .withColumn("TYPE_SCHEM", lit(""))
+          .withColumn("TYPE_NAME", lit(""))
+          .withColumn("SELF_REFERENCING_COL_NAME", lit(""))
+          .withColumn("REF_GENERATION", lit(""))
+          .select(
+            "TABLE_CAT",
+            "TABLE_SCHEM",
+            "TABLE_NAME",
+            "TABLE_TYPE",
+            "REMARKS",
+            "TYPE_CAT",
+            "TYPE_SCHEM",
+            "TYPE_NAME",
+            "SELF_REFERENCING_COL_NAME",
+            "REF_GENERATION")
+      }
+      .fold(emptyDf) { (l, r) => l.unionAll(r) }
   }
 
   override def getTables(
@@ -525,31 +552,47 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
     val catalogSchemaTables =
       getTablesDataFrame(catalog, schemaPattern, tableNamePattern)
         .select("TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME")
-        .collect().map { row => (row.getString(0), row.getString(1), row.getString(2)) }
+        .collect()
+        .map { row => (row.getString(0), row.getString(1), row.getString(2)) }
 
-    val df = catalogSchemaTables.map { case (catalog, schema, table) =>
-      val columns = conn.spark.table(quoteNameParts(Seq(catalog, schema, table)))
-        .schema.zipWithIndex.map { case (field, i) =>
-          (
-            field.name, // COLUMN_NAME
-            JdbcTypeUtils.getColumnType(field), // DATA_TYPE
-            field.dataType.sql, // TYPE_NAME
-            JdbcTypeUtils.getDisplaySize(field), // COLUMN_SIZE
-            JdbcTypeUtils.getDecimalDigits(field), // DECIMAL_DIGITS
-            JdbcTypeUtils.getNumPrecRadix(field), // NUM_PREC_RADIX
-            if (field.nullable) columnNullable else columnNoNulls, // NULLABLE
-            field.getComment().orNull, // REMARKS
-            field.getCurrentDefaultValue().orNull, // COLUMN_DEF
-            0, // CHAR_OCTET_LENGTH
-            i + 1, // ORDINAL_POSITION
-            if (field.nullable) "YES" else "NO", // IS_NULLABLE
-            "", // IS_AUTOINCREMENT
-            "" // IS_GENERATEDCOLUMN
-          )
-        }
-        columns.toDF("COLUMN_NAME", "DATA_TYPE", "TYPE_NAME", "COLUMN_SIZE", "DECIMAL_DIGITS",
-            "NUM_PREC_RADIX", "NULLABLE", "REMARKS", "COLUMN_DEF", "CHAR_OCTET_LENGTH",
-            "ORDINAL_POSITION", "IS_NULLABLE", "IS_AUTOINCREMENT", "IS_GENERATEDCOLUMN")
+    val df = catalogSchemaTables
+      .map { case (catalog, schema, table) =>
+        val columns =
+          conn.spark.table(quoteNameParts(Seq(catalog, schema, table))).schema.zipWithIndex.map {
+            case (field, i) =>
+              (
+                field.name, // COLUMN_NAME
+                JdbcTypeUtils.getColumnType(field), // DATA_TYPE
+                field.dataType.sql, // TYPE_NAME
+                JdbcTypeUtils.getDisplaySize(field), // COLUMN_SIZE
+                JdbcTypeUtils.getDecimalDigits(field), // DECIMAL_DIGITS
+                JdbcTypeUtils.getNumPrecRadix(field), // NUM_PREC_RADIX
+                if (field.nullable) columnNullable else columnNoNulls, // NULLABLE
+                field.getComment().orNull, // REMARKS
+                field.getCurrentDefaultValue().orNull, // COLUMN_DEF
+                0, // CHAR_OCTET_LENGTH
+                i + 1, // ORDINAL_POSITION
+                if (field.nullable) "YES" else "NO", // IS_NULLABLE
+                "", // IS_AUTOINCREMENT
+                "" // IS_GENERATEDCOLUMN
+              )
+          }
+        columns
+          .toDF(
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "TYPE_NAME",
+            "COLUMN_SIZE",
+            "DECIMAL_DIGITS",
+            "NUM_PREC_RADIX",
+            "NULLABLE",
+            "REMARKS",
+            "COLUMN_DEF",
+            "CHAR_OCTET_LENGTH",
+            "ORDINAL_POSITION",
+            "IS_NULLABLE",
+            "IS_AUTOINCREMENT",
+            "IS_GENERATEDCOLUMN")
           .filter(columnNameFilterExpr)
           .withColumn("TABLE_CAT", lit(catalog))
           .withColumn("TABLE_SCHEM", lit(schema))
@@ -561,13 +604,33 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
           .withColumn("SCOPE_SCHEMA", lit(""))
           .withColumn("SCOPE_TABLE", lit(""))
           .withColumn("SOURCE_DATA_TYPE", lit(0.toShort))
-          .select("TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "COLUMN_NAME", "DATA_TYPE",
-            "TYPE_NAME", "COLUMN_SIZE", "BUFFER_LENGTH", "DECIMAL_DIGITS", "NUM_PREC_RADIX",
-            "NULLABLE", "REMARKS", "COLUMN_DEF", "SQL_DATA_TYPE", "SQL_DATETIME_SUB",
-            "CHAR_OCTET_LENGTH", "ORDINAL_POSITION", "IS_NULLABLE", "SCOPE_CATALOG",
-            "SCOPE_SCHEMA", "SCOPE_TABLE", "SOURCE_DATA_TYPE", "IS_AUTOINCREMENT",
+          .select(
+            "TABLE_CAT",
+            "TABLE_SCHEM",
+            "TABLE_NAME",
+            "COLUMN_NAME",
+            "DATA_TYPE",
+            "TYPE_NAME",
+            "COLUMN_SIZE",
+            "BUFFER_LENGTH",
+            "DECIMAL_DIGITS",
+            "NUM_PREC_RADIX",
+            "NULLABLE",
+            "REMARKS",
+            "COLUMN_DEF",
+            "SQL_DATA_TYPE",
+            "SQL_DATETIME_SUB",
+            "CHAR_OCTET_LENGTH",
+            "ORDINAL_POSITION",
+            "IS_NULLABLE",
+            "SCOPE_CATALOG",
+            "SCOPE_SCHEMA",
+            "SCOPE_TABLE",
+            "SOURCE_DATA_TYPE",
+            "IS_AUTOINCREMENT",
             "IS_GENERATEDCOLUMN")
-      }.fold(emptyDf) { (l, r) => l.unionAll(r) }
+      }
+      .fold(emptyDf) { (l, r) => l.unionAll(r) }
       .orderBy("TABLE_CAT", "TABLE_SCHEM", "TABLE_NAME", "ORDINAL_POSITION")
 
     new SparkConnectResultSet(df.collectResult())
@@ -594,8 +657,7 @@ class SparkConnectDatabaseMetaData(conn: SparkConnectConnection) extends Databas
       nullable: Boolean): ResultSet =
     throw new SQLFeatureNotSupportedException
 
-  override def getVersionColumns(
-      catalog: String, schema: String, table: String): ResultSet =
+  override def getVersionColumns(catalog: String, schema: String, table: String): ResultSet =
     throw new SQLFeatureNotSupportedException
 
   override def getPrimaryKeys(catalog: String, schema: String, table: String): ResultSet =
@@ -763,57 +825,322 @@ object SparkConnectDatabaseMetaData {
   // SQL:2003 reserved keywords refers to PostgreSQL 9.1 docs:
   // https://www.postgresql.org/docs/9.1/sql-keywords-appendix.html
   private[jdbc] val SQL_2003_RESERVED_KEYWORDS = Array(
-    "ABS", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "ARRAY", "AS", "ASENSITIVE",
-    "ASYMMETRIC", "AT", "ATOMIC", "AUTHORIZATION", "AVG",
-    "BEGIN", "BETWEEN", "BIGINT", "BINARY", "BLOB", "BOOLEAN", "BOTH", "BY",
-    "CALL", "CALLED", "CARDINALITY", "CASCADED", "CASE", "CAST", "CEIL", "CEILING", "CHAR",
-    "CHARACTER", "CHARACTER_LENGTH", "CHAR_LENGTH", "CHECK", "CLOB", "CLOSE", "COALESCE",
-    "COLLATE", "COLLECT", "COLUMN", "COMMIT", "CONDITION", "CONNECT", "CONSTRAINT", "CONVERT",
-    "CORR", "CORRESPONDING", "COUNT", "COVAR_POP", "COVAR_SAMP", "CREATE", "CROSS", "CUBE",
-    "CUME_DIST", "CURRENT", "CURRENT_DATE", "CURRENT_DEFAULT_TRANSFORM_GROUP", "CURRENT_PATH",
-    "CURRENT_ROLE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_TRANSFORM_GROUP_FOR_TYPE",
-    "CURRENT_USER", "CURSOR", "CYCLE",
-    "DATALINK", "DATE", "DAY", "DEALLOCATE", "DEC", "DECIMAL", "DECLARE", "DEFAULT", "DELETE",
-    "DENSE_RANK", "DEREF", "DESCRIBE", "DETERMINISTIC", "DISCONNECT", "DISTINCT", "DLNEWCOPY",
-    "DLPREVIOUSCOPY", "DLURLCOMPLETE", "DLURLCOMPLETEONLY", "DLURLCOMPLETEWRITE", "DLURLPATH",
-    "DLURLPATHONLY", "DLURLPATHWRITE", "DLURLSCHEME", "DLURLSERVER", "DLVALUE", "DOUBLE",
-    "DROP", "DYNAMIC",
-    "EACH", "ELEMENT", "ELSE", "END", "END-EXEC", "ESCAPE", "EVERY", "EXCEPT", "EXEC",
-    "EXECUTE", "EXISTS", "EXP", "EXTERNAL", "EXTRACT",
-    "FALSE", "FETCH", "FILTER", "FLOAT", "FLOOR", "FOR", "FOREIGN", "FREE", "FROM", "FULL",
-    "FUNCTION", "FUSION",
-    "GET", "GLOBAL", "GRANT", "GROUP", "GROUPING",
-    "HAVING", "HOLD", "HOUR",
-    "IDENTITY", "IMPORT", "IN", "INDICATOR", "INNER", "INOUT", "INSENSITIVE", "INSERT", "INT",
-    "INTEGER", "INTERSECT", "INTERSECTION", "INTERVAL", "INTO", "IS",
+    "ABS",
+    "ALL",
+    "ALLOCATE",
+    "ALTER",
+    "AND",
+    "ANY",
+    "ARE",
+    "ARRAY",
+    "AS",
+    "ASENSITIVE",
+    "ASYMMETRIC",
+    "AT",
+    "ATOMIC",
+    "AUTHORIZATION",
+    "AVG",
+    "BEGIN",
+    "BETWEEN",
+    "BIGINT",
+    "BINARY",
+    "BLOB",
+    "BOOLEAN",
+    "BOTH",
+    "BY",
+    "CALL",
+    "CALLED",
+    "CARDINALITY",
+    "CASCADED",
+    "CASE",
+    "CAST",
+    "CEIL",
+    "CEILING",
+    "CHAR",
+    "CHARACTER",
+    "CHARACTER_LENGTH",
+    "CHAR_LENGTH",
+    "CHECK",
+    "CLOB",
+    "CLOSE",
+    "COALESCE",
+    "COLLATE",
+    "COLLECT",
+    "COLUMN",
+    "COMMIT",
+    "CONDITION",
+    "CONNECT",
+    "CONSTRAINT",
+    "CONVERT",
+    "CORR",
+    "CORRESPONDING",
+    "COUNT",
+    "COVAR_POP",
+    "COVAR_SAMP",
+    "CREATE",
+    "CROSS",
+    "CUBE",
+    "CUME_DIST",
+    "CURRENT",
+    "CURRENT_DATE",
+    "CURRENT_DEFAULT_TRANSFORM_GROUP",
+    "CURRENT_PATH",
+    "CURRENT_ROLE",
+    "CURRENT_TIME",
+    "CURRENT_TIMESTAMP",
+    "CURRENT_TRANSFORM_GROUP_FOR_TYPE",
+    "CURRENT_USER",
+    "CURSOR",
+    "CYCLE",
+    "DATALINK",
+    "DATE",
+    "DAY",
+    "DEALLOCATE",
+    "DEC",
+    "DECIMAL",
+    "DECLARE",
+    "DEFAULT",
+    "DELETE",
+    "DENSE_RANK",
+    "DEREF",
+    "DESCRIBE",
+    "DETERMINISTIC",
+    "DISCONNECT",
+    "DISTINCT",
+    "DLNEWCOPY",
+    "DLPREVIOUSCOPY",
+    "DLURLCOMPLETE",
+    "DLURLCOMPLETEONLY",
+    "DLURLCOMPLETEWRITE",
+    "DLURLPATH",
+    "DLURLPATHONLY",
+    "DLURLPATHWRITE",
+    "DLURLSCHEME",
+    "DLURLSERVER",
+    "DLVALUE",
+    "DOUBLE",
+    "DROP",
+    "DYNAMIC",
+    "EACH",
+    "ELEMENT",
+    "ELSE",
+    "END",
+    "END-EXEC",
+    "ESCAPE",
+    "EVERY",
+    "EXCEPT",
+    "EXEC",
+    "EXECUTE",
+    "EXISTS",
+    "EXP",
+    "EXTERNAL",
+    "EXTRACT",
+    "FALSE",
+    "FETCH",
+    "FILTER",
+    "FLOAT",
+    "FLOOR",
+    "FOR",
+    "FOREIGN",
+    "FREE",
+    "FROM",
+    "FULL",
+    "FUNCTION",
+    "FUSION",
+    "GET",
+    "GLOBAL",
+    "GRANT",
+    "GROUP",
+    "GROUPING",
+    "HAVING",
+    "HOLD",
+    "HOUR",
+    "IDENTITY",
+    "IMPORT",
+    "IN",
+    "INDICATOR",
+    "INNER",
+    "INOUT",
+    "INSENSITIVE",
+    "INSERT",
+    "INT",
+    "INTEGER",
+    "INTERSECT",
+    "INTERSECTION",
+    "INTERVAL",
+    "INTO",
+    "IS",
     "JOIN",
-    "LANGUAGE", "LARGE", "LATERAL", "LEADING", "LEFT", "LIKE", "LN", "LOCAL", "LOCALTIME",
-    "LOCALTIMESTAMP", "LOWER",
-    "MATCH", "MAX", "MEMBER", "MERGE", "METHOD", "MIN", "MINUTE", "MOD", "MODIFIES", "MODULE",
-    "MONTH", "MULTISET",
-    "NATIONAL", "NATURAL", "NCHAR", "NCLOB", "NEW", "NEXT", "NO", "NONE", "NORMALIZE", "NOT",
-    "NULL", "NULLIF", "NUMERIC",
-    "OCTET_LENGTH", "OF", "OLD", "ON", "ONLY", "OPEN", "OR", "ORDER", "OUT", "OUTER", "OVER",
-    "OVERLAPS", "OVERLAY",
-    "PARAMETER", "PARTITION", "PERCENTILE_CONT", "PERCENTILE_DISC", "PERCENT_RANK", "POSITION",
-    "POWER", "PRECISION", "PREPARE", "PRIMARY", "PROCEDURE",
-    "RANGE", "RANK", "READ", "READS", "REAL", "RECURSIVE", "REF", "REFERENCES", "REFERENCING",
-    "REGR_AVGX", "REGR_AVGY", "REGR_COUNT", "REGR_INTERCEPT", "REGR_R2", "REGR_SLOPE",
-    "REGR_SXX", "REGR_SXY", "REGR_SYY", "RELEASE", "RESULT", "RETURN", "RETURNS", "REVOKE",
-    "RIGHT", "ROLLBACK", "ROLLUP", "ROW", "ROWS", "ROW_NUMBER",
-    "SAVEPOINT", "SCOPE", "SCROLL", "SEARCH", "SECOND", "SELECT", "SENSITIVE", "SESSION_USER",
-    "SET", "SIMILAR", "SMALLINT", "SOME", "SPECIFIC", "SPECIFICTYPE", "SQL", "SQLEXCEPTION",
-    "SQLSTATE", "SQLWARNING", "SQRT", "START", "STATIC", "STDDEV_POP", "STDDEV_SAMP",
-    "SUBMULTISET", "SUBSTRING", "SUM", "SYMMETRIC", "SYSTEM", "SYSTEM_USER",
-    "TABLE", "TABLESAMPLE", "THEN", "TIME", "TIMESTAMP", "TIMEZONE_HOUR", "TIMEZONE_MINUTE",
-    "TO", "TRAILING", "TRANSLATE", "TRANSLATION", "TREAT", "TRIGGER", "TRIM", "TRUE",
-    "UESCAPE", "UNION", "UNIQUE", "UNKNOWN", "UNNEST", "UPDATE", "UPPER", "USER", "USING",
-    "VALUE", "VALUES", "VARCHAR", "VARYING", "VAR_POP", "VAR_SAMP",
-    "WHEN", "WHENEVER", "WHERE", "WIDTH_BUCKET", "WINDOW", "WITH", "WITHIN", "WITHOUT",
-    "XML", "XMLAGG", "XMLATTRIBUTES", "XMLBINARY", "XMLCOMMENT", "XMLCONCAT", "XMLELEMENT",
-    "XMLFOREST", "XMLNAMESPACES", "XMLPARSE", "XMLPI", "XMLROOT", "XMLSERIALIZE",
-    "YEAR"
-  )
+    "LANGUAGE",
+    "LARGE",
+    "LATERAL",
+    "LEADING",
+    "LEFT",
+    "LIKE",
+    "LN",
+    "LOCAL",
+    "LOCALTIME",
+    "LOCALTIMESTAMP",
+    "LOWER",
+    "MATCH",
+    "MAX",
+    "MEMBER",
+    "MERGE",
+    "METHOD",
+    "MIN",
+    "MINUTE",
+    "MOD",
+    "MODIFIES",
+    "MODULE",
+    "MONTH",
+    "MULTISET",
+    "NATIONAL",
+    "NATURAL",
+    "NCHAR",
+    "NCLOB",
+    "NEW",
+    "NEXT",
+    "NO",
+    "NONE",
+    "NORMALIZE",
+    "NOT",
+    "NULL",
+    "NULLIF",
+    "NUMERIC",
+    "OCTET_LENGTH",
+    "OF",
+    "OLD",
+    "ON",
+    "ONLY",
+    "OPEN",
+    "OR",
+    "ORDER",
+    "OUT",
+    "OUTER",
+    "OVER",
+    "OVERLAPS",
+    "OVERLAY",
+    "PARAMETER",
+    "PARTITION",
+    "PERCENTILE_CONT",
+    "PERCENTILE_DISC",
+    "PERCENT_RANK",
+    "POSITION",
+    "POWER",
+    "PRECISION",
+    "PREPARE",
+    "PRIMARY",
+    "PROCEDURE",
+    "RANGE",
+    "RANK",
+    "READ",
+    "READS",
+    "REAL",
+    "RECURSIVE",
+    "REF",
+    "REFERENCES",
+    "REFERENCING",
+    "REGR_AVGX",
+    "REGR_AVGY",
+    "REGR_COUNT",
+    "REGR_INTERCEPT",
+    "REGR_R2",
+    "REGR_SLOPE",
+    "REGR_SXX",
+    "REGR_SXY",
+    "REGR_SYY",
+    "RELEASE",
+    "RESULT",
+    "RETURN",
+    "RETURNS",
+    "REVOKE",
+    "RIGHT",
+    "ROLLBACK",
+    "ROLLUP",
+    "ROW",
+    "ROWS",
+    "ROW_NUMBER",
+    "SAVEPOINT",
+    "SCOPE",
+    "SCROLL",
+    "SEARCH",
+    "SECOND",
+    "SELECT",
+    "SENSITIVE",
+    "SESSION_USER",
+    "SET",
+    "SIMILAR",
+    "SMALLINT",
+    "SOME",
+    "SPECIFIC",
+    "SPECIFICTYPE",
+    "SQL",
+    "SQLEXCEPTION",
+    "SQLSTATE",
+    "SQLWARNING",
+    "SQRT",
+    "START",
+    "STATIC",
+    "STDDEV_POP",
+    "STDDEV_SAMP",
+    "SUBMULTISET",
+    "SUBSTRING",
+    "SUM",
+    "SYMMETRIC",
+    "SYSTEM",
+    "SYSTEM_USER",
+    "TABLE",
+    "TABLESAMPLE",
+    "THEN",
+    "TIME",
+    "TIMESTAMP",
+    "TIMEZONE_HOUR",
+    "TIMEZONE_MINUTE",
+    "TO",
+    "TRAILING",
+    "TRANSLATE",
+    "TRANSLATION",
+    "TREAT",
+    "TRIGGER",
+    "TRIM",
+    "TRUE",
+    "UESCAPE",
+    "UNION",
+    "UNIQUE",
+    "UNKNOWN",
+    "UNNEST",
+    "UPDATE",
+    "UPPER",
+    "USER",
+    "USING",
+    "VALUE",
+    "VALUES",
+    "VARCHAR",
+    "VARYING",
+    "VAR_POP",
+    "VAR_SAMP",
+    "WHEN",
+    "WHENEVER",
+    "WHERE",
+    "WIDTH_BUCKET",
+    "WINDOW",
+    "WITH",
+    "WITHIN",
+    "WITHOUT",
+    "XML",
+    "XMLAGG",
+    "XMLATTRIBUTES",
+    "XMLBINARY",
+    "XMLCOMMENT",
+    "XMLCONCAT",
+    "XMLELEMENT",
+    "XMLFOREST",
+    "XMLNAMESPACES",
+    "XMLPARSE",
+    "XMLPI",
+    "XMLROOT",
+    "XMLSERIALIZE",
+    "YEAR")
 
   private[jdbc] val TABLE_TYPES = Seq("TABLE", "VIEW")
 }

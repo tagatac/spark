@@ -29,17 +29,17 @@ import org.apache.spark.scheduler.Task
 import org.apache.spark.shuffle.FetchFailedException
 import org.apache.spark.util.{AccumulatorV2, TaskCompletionListener, TaskFailureListener}
 
-
 object TaskContext {
+
   /**
-   * Return the currently active TaskContext. This can be called inside of
-   * user functions to access contextual information about running tasks.
+   * Return the currently active TaskContext. This can be called inside of user functions to
+   * access contextual information about running tasks.
    */
   def get(): TaskContext = taskContext.get
 
   /**
-   * Returns the partition id of currently active TaskContext. It will return 0
-   * if there is no active TaskContext for cases like local execution.
+   * Returns the partition id of currently active TaskContext. It will return 0 if there is no
+   * active TaskContext for cases like local execution.
    */
   def getPartitionId(): Int = {
     val tc = taskContext.get()
@@ -74,18 +74,16 @@ object TaskContext {
   protected[spark] def unset(): Unit = taskContext.remove()
 
   /**
-   * An empty task context that does not represent an actual task.  This is only used in tests.
+   * An empty task context that does not represent an actual task. This is only used in tests.
    */
   private[spark] def empty(): TaskContextImpl = {
-    new TaskContextImpl(0, 0, 0, 0, 0, 1,
-      null, new Properties, null, TaskMetrics.empty, 1)
+    new TaskContextImpl(0, 0, 0, 0, 0, 1, null, new Properties, null, TaskMetrics.empty, 1)
   }
 }
 
-
 /**
- * Contextual information about a task which can be read or mutated during
- * execution. To access the TaskContext for a running task, use:
+ * Contextual information about a task which can be read or mutated during execution. To access
+ * the TaskContext for a running task, use:
  * {{{
  *   org.apache.spark.TaskContext.get()
  * }}}
@@ -114,14 +112,14 @@ abstract class TaskContext extends Serializable {
   def isInterrupted(): Boolean
 
   /**
-   * Adds a (Java friendly) listener to be executed on task completion.
-   * This will be called in all situations - success, failure, or cancellation. Adding a listener
-   * to an already completed task will result in that listener being called immediately.
+   * Adds a (Java friendly) listener to be executed on task completion. This will be called in all
+   * situations - success, failure, or cancellation. Adding a listener to an already completed
+   * task will result in that listener being called immediately.
    *
-   * Two listeners registered in the same thread will be invoked in reverse order of registration if
-   * the task completes after both are registered. There are no ordering guarantees for listeners
-   * registered in different threads, or for listeners registered after the task completes.
-   * Listeners are guaranteed to execute sequentially.
+   * Two listeners registered in the same thread will be invoked in reverse order of registration
+   * if the task completes after both are registered. There are no ordering guarantees for
+   * listeners registered in different threads, or for listeners registered after the task
+   * completes. Listeners are guaranteed to execute sequentially.
    *
    * An example use is for HadoopRDD to register a callback to close the input stream.
    *
@@ -130,9 +128,9 @@ abstract class TaskContext extends Serializable {
   def addTaskCompletionListener(listener: TaskCompletionListener): TaskContext
 
   /**
-   * Adds a listener in the form of a Scala closure to be executed on task completion.
-   * This will be called in all situations - success, failure, or cancellation. Adding a listener
-   * to an already completed task will result in that listener being called immediately.
+   * Adds a listener in the form of a Scala closure to be executed on task completion. This will
+   * be called in all situations - success, failure, or cancellation. Adding a listener to an
+   * already completed task will result in that listener being called immediately.
    *
    * An example use is for HadoopRDD to register a callback to close the input stream.
    *
@@ -148,18 +146,18 @@ abstract class TaskContext extends Serializable {
   }
 
   /**
-   * Adds a listener to be executed on task failure (which includes completion listener failure, if
-   * the task body did not already fail). Adding a listener to an already failed task will result in
-   * that listener being called immediately.
+   * Adds a listener to be executed on task failure (which includes completion listener failure,
+   * if the task body did not already fail). Adding a listener to an already failed task will
+   * result in that listener being called immediately.
    *
    * Note: Prior to Spark 3.4.0, failure listeners were only invoked if the main task body failed.
    */
   def addTaskFailureListener(listener: TaskFailureListener): TaskContext
 
   /**
-   * Adds a listener to be executed on task failure (which includes completion listener failure, if
-   * the task body did not already fail). Adding a listener to an already failed task will result in
-   * that listener being called immediately.
+   * Adds a listener to be executed on task failure (which includes completion listener failure,
+   * if the task body did not already fail). Adding a listener to an already failed task will
+   * result in that listener being called immediately.
    *
    * Note: Prior to Spark 3.4.0, failure listeners were only invoked if the main task body failed.
    */
@@ -206,9 +204,9 @@ abstract class TaskContext extends Serializable {
   def stageId(): Int
 
   /**
-   * How many times the stage that this task belongs to has been attempted. The first stage attempt
-   * will be assigned stageAttemptNumber = 0, and subsequent attempts will have increasing attempt
-   * numbers.
+   * How many times the stage that this task belongs to has been attempted. The first stage
+   * attempt will be assigned stageAttemptNumber = 0, and subsequent attempts will have increasing
+   * attempt numbers.
    */
   def stageAttemptNumber(): Int
 
@@ -223,14 +221,14 @@ abstract class TaskContext extends Serializable {
   def numPartitions(): Int
 
   /**
-   * How many times this task has been attempted.  The first task attempt will be assigned
+   * How many times this task has been attempted. The first task attempt will be assigned
    * attemptNumber = 0, and subsequent attempts will have increasing attempt numbers.
    */
   def attemptNumber(): Int
 
   /**
    * An ID that is unique to this task attempt (within the same SparkContext, no two task attempts
-   * will share the same attempt ID).  This is roughly equivalent to Hadoop's TaskAttemptID.
+   * will share the same attempt ID). This is roughly equivalent to Hadoop's TaskAttemptID.
    */
   def taskAttemptId(): Long
 
@@ -266,9 +264,9 @@ abstract class TaskContext extends Serializable {
   def taskMetrics(): TaskMetrics
 
   /**
-   * ::DeveloperApi::
-   * Returns all metrics sources with the given name which are associated with the instance
-   * which runs the task. For more information see `org.apache.spark.metrics.MetricsSystem`.
+   * ::DeveloperApi:: Returns all metrics sources with the given name which are associated with
+   * the instance which runs the task. For more information see
+   * `org.apache.spark.metrics.MetricsSystem`.
    */
   @DeveloperApi
   def getMetricsSources(sourceName: String): Seq[Source]
@@ -295,7 +293,7 @@ abstract class TaskContext extends Serializable {
   private[spark] def registerAccumulator(a: AccumulatorV2[_, _]): Unit
 
   /**
-   * Record that this task has failed due to a fetch failure from a remote host.  This allows
+   * Record that this task has failed due to a fetch failure from a remote host. This allows
    * fetch-failure handling to get triggered by the driver, regardless of intervening user-code.
    */
   private[spark] def setFetchFailed(fetchFailed: FetchFailedException): Unit
@@ -322,8 +320,8 @@ abstract class TaskContext extends Serializable {
   private[spark] def interruptible(): Boolean
 
   /**
-   * Pending the interruption request until the task is able to
-   * interrupt after creating the resource uninterruptibly.
+   * Pending the interruption request until the task is able to interrupt after creating the
+   * resource uninterruptibly.
    */
   private[spark] def pendingInterrupt(threadToInterrupt: Option[Thread], reason: String): Unit
 

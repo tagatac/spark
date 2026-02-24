@@ -29,12 +29,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.classic.{DataFrame, SparkSession}
 import org.apache.spark.sql.execution.streaming.runtime.MemoryStream
 import org.apache.spark.sql.pipelines.common.DatasetType
-import org.apache.spark.sql.pipelines.util.{
-  BatchReadOptions,
-  InputReadOptions,
-  SchemaInferenceUtils,
-  StreamingReadOptions
-}
+import org.apache.spark.sql.pipelines.util.{BatchReadOptions, InputReadOptions, SchemaInferenceUtils, StreamingReadOptions}
 import org.apache.spark.sql.types.StructType
 
 /** An element in a [[DataflowGraph]]. */
@@ -43,10 +38,9 @@ trait GraphElement {
   /**
    * Contains provenance to tie back this GraphElement to the user code that defined it.
    *
-   * This must be set when a [[GraphElement]] is directly created by some user code.
-   * Subsequently, this initial origin must be propagated as is without modification.
-   * If this [[GraphElement]] is copied or converted to a different type, then this origin must be
-   * copied as is.
+   * This must be set when a [[GraphElement]] is directly created by some user code. Subsequently,
+   * this initial origin must be propagated as is without modification. If this [[GraphElement]]
+   * is copied or converted to a different type, then this origin must be copied as is.
    */
   def origin: QueryOrigin
 
@@ -68,15 +62,17 @@ trait Input extends GraphElement {
 
   /**
    * Returns a DataFrame that is a result of loading data from this [[Input]].
-   * @param readOptions Type of input. Used to determine streaming/batch
-   * @return Streaming or batch DataFrame of this Input's data.
+   * @param readOptions
+   *   Type of input. Used to determine streaming/batch
+   * @return
+   *   Streaming or batch DataFrame of this Input's data.
    */
   def load(readOptions: InputReadOptions): DataFrame
 }
 
 /**
- * Represents a node in a [[DataflowGraph]] that can be written to by a [[Flow]].
- * Must be backed by a file source.
+ * Represents a node in a [[DataflowGraph]] that can be written to by a [[Flow]]. Must be backed
+ * by a file source.
  */
 sealed trait Output {}
 
@@ -84,9 +80,10 @@ sealed trait Output {}
  * A type of [[Output]] that represents a materialized dataset in a [[DataflowGraph]].
  */
 sealed trait Dataset extends Output {
+
   /**
-   * Normalized storage location used for storing materializations for this [[Output]].
-   * If None, it means this [[Output]] has not been normalized yet.
+   * Normalized storage location used for storing materializations for this [[Output]]. If None,
+   * it means this [[Output]] has not been normalized yet.
    */
   def normalizedPath: Option[String]
 
@@ -94,8 +91,8 @@ sealed trait Dataset extends Output {
   final def normalized: Boolean = normalizedPath.isDefined
 
   /**
-   * Return the normalized storage location for this [[Output]] and throw if the
-   * storage location has not been normalized.
+   * Return the normalized storage location for this [[Output]] and throw if the storage location
+   * has not been normalized.
    */
   @throws[SparkException]
   def path: String
@@ -111,15 +108,23 @@ sealed trait TableInput extends Input {
 /**
  * A table representing a materialized dataset in a [[DataflowGraph]].
  *
- * @param identifier The identifier of this table within the graph.
- * @param specifiedSchema The user-specified schema for this table.
- * @param partitionCols What columns the table should be partitioned by when materialized.
- * @param clusterCols What columns the table should be clustered by when materialized.
- * @param normalizedPath Normalized storage location for the table based on the user-specified table
- *                       path (if not defined, we will normalize a managed storage path for it).
- * @param properties Table Properties to set in table metadata.
- * @param comment User-specified comment that can be placed on the table.
- * @param isStreamingTable if the table is a streaming table, as defined by the source code.
+ * @param identifier
+ *   The identifier of this table within the graph.
+ * @param specifiedSchema
+ *   The user-specified schema for this table.
+ * @param partitionCols
+ *   What columns the table should be partitioned by when materialized.
+ * @param clusterCols
+ *   What columns the table should be clustered by when materialized.
+ * @param normalizedPath
+ *   Normalized storage location for the table based on the user-specified table path (if not
+ *   defined, we will normalize a managed storage path for it).
+ * @param properties
+ *   Table Properties to set in table metadata.
+ * @param comment
+ *   User-specified comment that can be placed on the table.
+ * @param isStreamingTable
+ *   if the table is a streaming table, as defined by the source code.
  */
 case class Table(
     identifier: TableIdentifier,
@@ -131,8 +136,8 @@ case class Table(
     comment: Option[String],
     override val origin: QueryOrigin,
     isStreamingTable: Boolean,
-    format: Option[String]
-) extends TableInput
+    format: Option[String])
+    extends TableInput
     with Dataset {
 
   // Load this table's data from underlying storage.
@@ -146,7 +151,8 @@ case class Table(
         case _: BatchReadOptions =>
           spark.read.table(tableName)
         case _ =>
-          throw new IllegalArgumentException("Unhandled `InputReadOptions` type when loading table")
+          throw new IllegalArgumentException(
+            "Unhandled `InputReadOptions` type when loading table")
       }
 
       df
@@ -183,8 +189,8 @@ case class VirtualTableInput(
     identifier: TableIdentifier,
     specifiedSchema: Option[StructType],
     incomingFlowIdentifiers: Set[TableIdentifier],
-    availableFlows: Seq[ResolvedFlow] = Nil
-) extends TableInput
+    availableFlows: Seq[ResolvedFlow] = Nil)
+    extends TableInput
     with Logging {
   override def origin: QueryOrigin = QueryOrigin()
 
@@ -241,8 +247,8 @@ case class TemporaryView(
     properties: Map[String, String],
     sqlText: Option[String],
     comment: Option[String],
-    origin: QueryOrigin
-) extends View {}
+    origin: QueryOrigin)
+    extends View {}
 
 /**
  * Representing a persisted [[View]] in a [[DataflowGraph]].
@@ -252,10 +258,11 @@ case class PersistedView(
     properties: Map[String, String],
     sqlText: Option[String],
     comment: Option[String],
-    origin: QueryOrigin
-) extends View {}
+    origin: QueryOrigin)
+    extends View {}
 
 trait Sink extends GraphElement with Output {
+
   /** format of the sink */
   val format: String
 
@@ -264,8 +271,8 @@ trait Sink extends GraphElement with Output {
 }
 
 case class SinkImpl(
-   identifier: TableIdentifier,
-   format: String,
-   options: Map[String, String],
-   origin: QueryOrigin
-) extends Sink {}
+    identifier: TableIdentifier,
+    format: String,
+    options: Map[String, String],
+    origin: QueryOrigin)
+    extends Sink {}

@@ -57,7 +57,8 @@ object SparkKubernetesClientFactory extends Logging {
       defaultServiceAccountCaCert: Option[File]): KubernetesClient = {
     val oauthTokenFileConf = s"$kubernetesAuthConfPrefix.$OAUTH_TOKEN_FILE_CONF_SUFFIX"
     val oauthTokenConf = s"$kubernetesAuthConfPrefix.$OAUTH_TOKEN_CONF_SUFFIX"
-    val oauthTokenFile = sparkConf.getOption(oauthTokenFileConf)
+    val oauthTokenFile = sparkConf
+      .getOption(oauthTokenFileConf)
       .map(new File(_))
     val oauthTokenValue = sparkConf.getOption(oauthTokenConf)
     KubernetesUtils.requireNandDefined(
@@ -76,12 +77,14 @@ object SparkKubernetesClientFactory extends Logging {
 
     // Allow for specifying a context used to auto-configure from the users K8S config file
     val kubeContext = sparkConf.get(KUBERNETES_CONTEXT).filter(_.nonEmpty)
-    logInfo(log"Auto-configuring K8S client using " +
-      log"${MDC(K8S_CONTEXT, kubeContext.map("context " + _).getOrElse("current context"))}" +
-      log" from users K8S config file")
+    logInfo(
+      log"Auto-configuring K8S client using " +
+        log"${MDC(K8S_CONTEXT, kubeContext.map("context " + _).getOrElse("current context"))}" +
+        log" from users K8S config file")
 
     // if backoff limit is not set then set it to 3
-    if (getSystemPropertyOrEnvVar(KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY) == null) {
+    if (getSystemPropertyOrEnvVar(
+        KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY) == null) {
       System.setProperty(KUBERNETES_REQUEST_RETRY_BACKOFFLIMIT_SYSTEM_PROPERTY, "3")
     }
 
@@ -94,33 +97,41 @@ object SparkKubernetesClientFactory extends Logging {
       .withRequestTimeout(clientType.requestTimeout(sparkConf))
       .withConnectionTimeout(clientType.connectionTimeout(sparkConf))
       .withTrustCerts(sparkConf.get(KUBERNETES_TRUST_CERTIFICATES))
-      .withOption(oauthTokenValue) {
-        (token, configBuilder) => configBuilder.withOauthToken(token)
-      }.withOption(oauthTokenFile) {
-        (file, configBuilder) => configBuilder.withOauthToken(Files.readString(file.toPath))
-      }.withOption(caCertFile) {
-        (file, configBuilder) => configBuilder.withCaCertFile(file)
-      }.withOption(clientKeyFile) {
-        (file, configBuilder) => configBuilder.withClientKeyFile(file)
-      }.withOption(clientCertFile) {
-        (file, configBuilder) => configBuilder.withClientCertFile(file)
-      }.withOption(namespace) {
-        (ns, configBuilder) => configBuilder.withNamespace(ns)
-      }.build()
-    logDebug("Kubernetes client config: " +
-      new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(config))
+      .withOption(oauthTokenValue) { (token, configBuilder) =>
+        configBuilder.withOauthToken(token)
+      }
+      .withOption(oauthTokenFile) { (file, configBuilder) =>
+        configBuilder.withOauthToken(Files.readString(file.toPath))
+      }
+      .withOption(caCertFile) { (file, configBuilder) =>
+        configBuilder.withCaCertFile(file)
+      }
+      .withOption(clientKeyFile) { (file, configBuilder) =>
+        configBuilder.withClientKeyFile(file)
+      }
+      .withOption(clientCertFile) { (file, configBuilder) =>
+        configBuilder.withClientCertFile(file)
+      }
+      .withOption(namespace) { (ns, configBuilder) =>
+        configBuilder.withNamespace(ns)
+      }
+      .build()
+    logDebug(
+      "Kubernetes client config: " +
+        new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(config))
     new KubernetesClientBuilder().withConfig(config).build()
   }
 
   private implicit class OptionConfigurableConfigBuilder(val configBuilder: ConfigBuilder)
-    extends AnyVal {
+      extends AnyVal {
 
-    def withOption[T]
-        (option: Option[T])
-        (configurator: ((T, ConfigBuilder) => ConfigBuilder)): ConfigBuilder = {
-      option.map { opt =>
-        configurator(opt, configBuilder)
-      }.getOrElse(configBuilder)
+    def withOption[T](option: Option[T])(
+        configurator: ((T, ConfigBuilder) => ConfigBuilder)): ConfigBuilder = {
+      option
+        .map { opt =>
+          configurator(opt, configBuilder)
+        }
+        .getOrElse(configBuilder)
     }
   }
 
@@ -134,7 +145,7 @@ object SparkKubernetesClientFactory extends Logging {
     protected case class ClientTypeVal(
         requestTimeoutEntry: ConfigEntry[Int],
         connectionTimeoutEntry: ConfigEntry[Int])
-      extends Val {
+        extends Val {
       def requestTimeout(conf: SparkConf): Int = conf.get(requestTimeoutEntry)
       def connectionTimeout(conf: SparkConf): Int = conf.get(connectionTimeoutEntry)
     }

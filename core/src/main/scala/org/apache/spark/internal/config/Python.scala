@@ -62,19 +62,22 @@ private[spark] object Python {
     .timeConf(TimeUnit.SECONDS)
     .createWithDefaultString("15s")
 
-  val PYTHON_WORKER_FAULTHANLDER_ENABLED = ConfigBuilder("spark.python.worker.faulthandler.enabled")
-    .doc("When true, Python workers set up the faulthandler for the case when the Python worker " +
-      "exits unexpectedly (crashes), and shows the stack trace of the moment the Python worker " +
-      "crashes in the error message if captured successfully.")
+  val PYTHON_WORKER_FAULTHANLDER_ENABLED = ConfigBuilder(
+    "spark.python.worker.faulthandler.enabled")
+    .doc(
+      "When true, Python workers set up the faulthandler for the case when the Python worker " +
+        "exits unexpectedly (crashes), and shows the stack trace of the moment the Python worker " +
+        "crashes in the error message if captured successfully.")
     .version("3.2.0")
     .booleanConf
     .createWithDefault(false)
 
   val PYTHON_UNIX_DOMAIN_SOCKET_ENABLED = ConfigBuilder("spark.python.unix.domain.socket.enabled")
-    .doc("When set to true, the Python driver uses a Unix domain socket for operations like " +
-      "creating or collecting a DataFrame from local data, using accumulators, and executing " +
-      "Python functions with PySpark such as Python UDFs. This configuration only applies " +
-      "to Spark Classic and Spark Connect server.")
+    .doc(
+      "When set to true, the Python driver uses a Unix domain socket for operations like " +
+        "creating or collecting a DataFrame from local data, using accumulators, and executing " +
+        "Python functions with PySpark such as Python UDFs. This configuration only applies " +
+        "to Spark Classic and Spark Connect server.")
     .version("4.1.0")
     .booleanConf
     .createWithDefault(sys.env.get("PYSPARK_UDS_MODE").contains("true"))
@@ -98,31 +101,34 @@ private[spark] object Python {
   private val PYTHON_WORKER_KILL_ON_IDLE_TIMEOUT_KEY = "spark.python.worker.killOnIdleTimeout"
 
   val PYTHON_WORKER_IDLE_TIMEOUT_SECONDS = ConfigBuilder(PYTHON_WORKER_IDLE_TIMEOUT_SECONDS_KEY)
-    .doc("The time (in seconds) Spark will wait for activity " +
-      "(e.g., data transfer or communication) from a Python worker before considering it " +
-      "potentially idle or unresponsive. When the timeout is triggered, " +
-      "Spark will log the network-related status for debugging purposes. " +
-      "However, the Python worker will remain active and continue waiting for communication " +
-      s"unless explicitly terminated via $PYTHON_WORKER_KILL_ON_IDLE_TIMEOUT_KEY." +
-      "The default is `0` that means no timeout.")
+    .doc(
+      "The time (in seconds) Spark will wait for activity " +
+        "(e.g., data transfer or communication) from a Python worker before considering it " +
+        "potentially idle or unresponsive. When the timeout is triggered, " +
+        "Spark will log the network-related status for debugging purposes. " +
+        "However, the Python worker will remain active and continue waiting for communication " +
+        s"unless explicitly terminated via $PYTHON_WORKER_KILL_ON_IDLE_TIMEOUT_KEY." +
+        "The default is `0` that means no timeout.")
     .version("4.0.0")
     .timeConf(TimeUnit.SECONDS)
     .checkValue(_ >= 0, "The idle timeout should be 0 or positive.")
     .createWithDefault(0)
 
   val PYTHON_WORKER_KILL_ON_IDLE_TIMEOUT = ConfigBuilder(PYTHON_WORKER_KILL_ON_IDLE_TIMEOUT_KEY)
-    .doc("Whether Spark should terminate the Python worker process when the idle timeout " +
-      s"(as defined by $PYTHON_WORKER_IDLE_TIMEOUT_SECONDS_KEY) is reached. If enabled, " +
-      "Spark will terminate the Python worker process in addition to logging the status.")
+    .doc(
+      "Whether Spark should terminate the Python worker process when the idle timeout " +
+        s"(as defined by $PYTHON_WORKER_IDLE_TIMEOUT_SECONDS_KEY) is reached. If enabled, " +
+        "Spark will terminate the Python worker process in addition to logging the status.")
     .version("4.1.0")
     .booleanConf
     .createWithDefault(false)
 
   val PYTHON_WORKER_TRACEBACK_DUMP_INTERVAL_SECONDS =
     ConfigBuilder("spark.python.worker.tracebackDumpIntervalSeconds")
-      .doc("The interval (in seconds) for Python workers to dump their tracebacks. " +
-        "If it's positive, the Python worker will periodically dump the traceback into " +
-        "its `stderr`. The default is `0` that means it is disabled.")
+      .doc(
+        "The interval (in seconds) for Python workers to dump their tracebacks. " +
+          "If it's positive, the Python worker will periodically dump the traceback into " +
+          "its `stderr`. The default is `0` that means it is disabled.")
       .version("4.1.0")
       .timeConf(TimeUnit.SECONDS)
       .checkValue(_ >= 0, "The interval should be 0 or positive.")
@@ -130,10 +136,11 @@ private[spark] object Python {
 
   val PYTHON_FACTORY_IDLE_WORKER_MAX_POOL_SIZE =
     ConfigBuilder("spark.python.factory.idleWorkerMaxPoolSize")
-      .doc("Maximum number of idle Python workers to keep. " +
-        "If unset, the number is unbounded. " +
-        "If set to a positive integer N, at most N idle workers are retained; " +
-        "least-recently used workers are evicted first.")
+      .doc(
+        "Maximum number of idle Python workers to keep. " +
+          "If unset, the number is unbounded. " +
+          "If set to a positive integer N, at most N idle workers are retained; " +
+          "least-recently used workers are evicted first.")
       .version("4.1.0")
       .intConf
       .checkValue(_ > 0, "If set, the idle worker max size must be > 0.")
@@ -141,12 +148,13 @@ private[spark] object Python {
 
   val PYTHON_DAEMON_KILL_WORKER_ON_FLUSH_FAILURE =
     ConfigBuilder("spark.python.daemon.killWorkerOnFlushFailure")
-      .doc("When enabled, exceptions raised during output flush operations in the Python " +
-        "worker managed under Python daemon are not caught, causing the worker to terminate " +
-        "with the exception. This allows Spark to detect the failure and launch a new worker " +
-        "and retry the task. " +
-        "When disabled, flush exceptions are caught and logged but the worker continues, " +
-        "which could cause the worker to get stuck due to protocol mismatch.")
+      .doc(
+        "When enabled, exceptions raised during output flush operations in the Python " +
+          "worker managed under Python daemon are not caught, causing the worker to terminate " +
+          "with the exception. This allows Spark to detect the failure and launch a new worker " +
+          "and retry the task. " +
+          "When disabled, flush exceptions are caught and logged but the worker continues, " +
+          "which could cause the worker to get stuck due to protocol mismatch.")
       .version("4.1.0")
       .booleanConf
       .createWithDefault(true)

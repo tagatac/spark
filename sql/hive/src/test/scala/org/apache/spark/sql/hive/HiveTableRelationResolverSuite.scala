@@ -18,11 +18,7 @@
 package org.apache.spark.sql.hive
 
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.analysis.resolver.{
-  MetadataResolver,
-  ProhibitedResolver,
-  Resolver
-}
+import org.apache.spark.sql.catalyst.analysis.resolver.{MetadataResolver, ProhibitedResolver, Resolver}
 import org.apache.spark.sql.catalyst.catalog.HiveTableRelation
 import org.apache.spark.sql.catalyst.plans.logical.SubqueryAlias
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -32,11 +28,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 class HiveTableRelationResolverSuite extends TestHiveSingleton with SQLTestUtils {
   private val keyValueTableSchema = StructType(
-    Seq(
-      StructField("key", IntegerType, true),
-      StructField("value", StringType, true)
-    )
-  )
+    Seq(StructField("key", IntegerType, true), StructField("value", StringType, true)))
 
   test("ORC table resolution") {
     withTable("src_orc") {
@@ -46,8 +38,7 @@ class HiveTableRelationResolverSuite extends TestHiveSingleton with SQLTestUtils
         sqlText = "SELECT * FROM src_orc",
         expectedTableName = "spark_catalog.default.src_orc",
         expectedTableSchema = keyValueTableSchema,
-        convertedToLogicalRelation = true
-      )
+        convertedToLogicalRelation = true)
     }
   }
 
@@ -60,8 +51,7 @@ class HiveTableRelationResolverSuite extends TestHiveSingleton with SQLTestUtils
           sqlText = "SELECT * FROM src_orc_no_conversion",
           expectedTableName = "spark_catalog.default.src_orc_no_conversion",
           expectedTableSchema = keyValueTableSchema,
-          convertedToLogicalRelation = false
-        )
+          convertedToLogicalRelation = false)
       }
     }
   }
@@ -76,11 +66,9 @@ class HiveTableRelationResolverSuite extends TestHiveSingleton with SQLTestUtils
     val metadataResolver = new MetadataResolver(
       spark.sessionState.catalogManager,
       relationResolution,
-      extensions = spark.sessionState.analyzer.singlePassMetadataResolverExtensions
-    )
+      extensions = spark.sessionState.analyzer.singlePassMetadataResolverExtensions)
     val hiveTableRelationResolver = new HiveTableRelationResolver(
-      spark.sessionState.catalog.asInstanceOf[HiveSessionCatalog]
-    )
+      spark.sessionState.catalog.asInstanceOf[HiveSessionCatalog])
 
     val unresolvedPlan = spark.sql(sqlText).queryExecution.logical
 

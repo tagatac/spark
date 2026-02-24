@@ -33,9 +33,7 @@ import org.apache.spark.storage.memory.{MemoryStore, PartiallySerializedBlock, R
 import org.apache.spark.util.{ByteBufferInputStream, ByteBufferOutputStream}
 import org.apache.spark.util.io.{ChunkedByteBuffer, ChunkedByteBufferOutputStream}
 
-class PartiallySerializedBlockSuite
-    extends SparkFunSuite
-    with PrivateMethodTester {
+class PartiallySerializedBlockSuite extends SparkFunSuite with PrivateMethodTester {
 
   private val blockId = new TestBlockId("test")
   private val conf = new SparkConf()
@@ -59,20 +57,24 @@ class PartiallySerializedBlockSuite
     val bbos: ChunkedByteBufferOutputStream = {
       val spy = Mockito.spy[ChunkedByteBufferOutputStream](
         new ChunkedByteBufferOutputStream(128, ByteBuffer.allocate))
-      Mockito.doAnswer { (invocationOnMock: InvocationOnMock) =>
-        Mockito.spy[ChunkedByteBuffer](
-          invocationOnMock.callRealMethod().asInstanceOf[ChunkedByteBuffer])
-      }.when(spy).toChunkedByteBuffer
+      Mockito
+        .doAnswer { (invocationOnMock: InvocationOnMock) =>
+          Mockito.spy[ChunkedByteBuffer](
+            invocationOnMock.callRealMethod().asInstanceOf[ChunkedByteBuffer])
+        }
+        .when(spy)
+        .toChunkedByteBuffer
       spy
     }
 
     val serializer = serializerManager
-      .getSerializer(implicitly[ClassTag[T]], autoPick = true).newInstance()
-    val redirectableOutputStream = Mockito.spy[RedirectableOutputStream](
-      new RedirectableOutputStream)
+      .getSerializer(implicitly[ClassTag[T]], autoPick = true)
+      .newInstance()
+    val redirectableOutputStream =
+      Mockito.spy[RedirectableOutputStream](new RedirectableOutputStream)
     redirectableOutputStream.setOutputStream(bbos)
-    val serializationStream = Mockito.spy[SerializationStream](
-      serializer.serializeStream(redirectableOutputStream))
+    val serializationStream =
+      Mockito.spy[SerializationStream](serializer.serializeStream(redirectableOutputStream))
 
     (1 to numItemsToBuffer).foreach { _ =>
       assert(iter.hasNext)
@@ -93,7 +95,8 @@ class PartiallySerializedBlockSuite
       classTag = implicitly[ClassTag[T]])
   }
 
-  test("valuesIterator() and finishWritingToStream() cannot be called after discard() is called") {
+  test(
+    "valuesIterator() and finishWritingToStream() cannot be called after discard() is called") {
     val partiallySerializedBlock = partiallyUnroll((1 to 10).iterator, 2)
     partiallySerializedBlock.discard()
     intercept[SparkException] {
@@ -163,10 +166,13 @@ class PartiallySerializedBlockSuite
       val partiallySerializedBlock = partiallyUnroll(items.iterator, numItemsToBuffer)
       partiallySerializedBlock.discard()
 
-      Mockito.verify(memoryStore).releaseUnrollMemoryForThisTask(
-        MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
+      Mockito
+        .verify(memoryStore)
+        .releaseUnrollMemoryForThisTask(MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
       Mockito.verify(partiallySerializedBlock.invokePrivate(getSerializationStream())).close()
-      Mockito.verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream())).close()
+      Mockito
+        .verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream()))
+        .close()
       Mockito.verifyNoMoreInteractions(memoryStore)
       Mockito.verify(partiallySerializedBlock.getUnrolledChunkedByteBuffer, atLeastOnce).dispose()
     }
@@ -176,18 +182,25 @@ class PartiallySerializedBlockSuite
       val bbos = Mockito.spy[ByteBufferOutputStream](new ByteBufferOutputStream())
       partiallySerializedBlock.finishWritingToStream(bbos)
 
-      Mockito.verify(memoryStore).releaseUnrollMemoryForThisTask(
-        MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
+      Mockito
+        .verify(memoryStore)
+        .releaseUnrollMemoryForThisTask(MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
       Mockito.verify(partiallySerializedBlock.invokePrivate(getSerializationStream())).close()
-      Mockito.verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream())).close()
+      Mockito
+        .verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream()))
+        .close()
       Mockito.verify(bbos).close()
       Mockito.verifyNoMoreInteractions(memoryStore)
       Mockito.verify(partiallySerializedBlock.getUnrolledChunkedByteBuffer, atLeastOnce).dispose()
 
       val serializer = serializerManager
-        .getSerializer(implicitly[ClassTag[T]], autoPick = true).newInstance()
+        .getSerializer(implicitly[ClassTag[T]], autoPick = true)
+        .newInstance()
       val deserialized =
-        serializer.deserializeStream(new ByteBufferInputStream(bbos.toByteBuffer)).asIterator.toSeq
+        serializer
+          .deserializeStream(new ByteBufferInputStream(bbos.toByteBuffer))
+          .asIterator
+          .toSeq
       assert(deserialized === items)
     }
 
@@ -195,11 +208,14 @@ class PartiallySerializedBlockSuite
       val partiallySerializedBlock = partiallyUnroll(items.iterator, numItemsToBuffer)
       val valuesIterator = partiallySerializedBlock.valuesIterator
       Mockito.verify(partiallySerializedBlock.invokePrivate(getSerializationStream())).close()
-      Mockito.verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream())).close()
+      Mockito
+        .verify(partiallySerializedBlock.invokePrivate(getRedirectableOutputStream()))
+        .close()
 
       val deserializedItems = valuesIterator.toArray.toSeq
-      Mockito.verify(memoryStore).releaseUnrollMemoryForThisTask(
-        MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
+      Mockito
+        .verify(memoryStore)
+        .releaseUnrollMemoryForThisTask(MemoryMode.ON_HEAP, partiallySerializedBlock.unrollMemory)
       Mockito.verifyNoMoreInteractions(memoryStore)
       Mockito.verify(partiallySerializedBlock.getUnrolledChunkedByteBuffer, atLeastOnce).dispose()
       assert(deserializedItems === items)
@@ -211,7 +227,10 @@ class PartiallySerializedBlockSuite
   testUnroll("basic numbers", 1 to 1000, numItemsToBuffer = 1000)
   testUnroll("case classes", (1 to 1000).map(x => MyCaseClass(x.toString)), numItemsToBuffer = 50)
   testUnroll("case classes", (1 to 1000).map(x => MyCaseClass(x.toString)), numItemsToBuffer = 0)
-  testUnroll("case classes", (1 to 1000).map(x => MyCaseClass(x.toString)), numItemsToBuffer = 1000)
+  testUnroll(
+    "case classes",
+    (1 to 1000).map(x => MyCaseClass(x.toString)),
+    numItemsToBuffer = 1000)
   testUnroll("empty iterator", Seq.empty[String], numItemsToBuffer = 0)
 }
 

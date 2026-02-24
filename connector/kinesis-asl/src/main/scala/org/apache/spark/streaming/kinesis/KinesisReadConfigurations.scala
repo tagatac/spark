@@ -23,12 +23,13 @@ import org.apache.spark.streaming.StreamingContext
 /**
  * Configurations to pass to the [[KinesisBackedBlockRDD]].
  *
- * @param maxRetries: The maximum number of attempts to be made to Kinesis. Defaults to 3.
- * @param retryWaitTimeMs: The interval between consequent Kinesis retries.
- *                         Defaults to 100ms.
- * @param retryTimeoutMs: The timeout in milliseconds for a Kinesis request.
- *                         Defaults to batch duration provided for streaming,
- *                         else uses 10000 if invoked directly.
+ * @param maxRetries:
+ *   The maximum number of attempts to be made to Kinesis. Defaults to 3.
+ * @param retryWaitTimeMs:
+ *   The interval between consequent Kinesis retries. Defaults to 100ms.
+ * @param retryTimeoutMs:
+ *   The timeout in milliseconds for a Kinesis request. Defaults to batch duration provided for
+ *   streaming, else uses 10000 if invoked directly.
  */
 private[kinesis] case class KinesisReadConfigurations(
     maxRetries: Int,
@@ -37,7 +38,8 @@ private[kinesis] case class KinesisReadConfigurations(
 
 private[kinesis] object KinesisReadConfigurations {
   def apply(): KinesisReadConfigurations = {
-    KinesisReadConfigurations(maxRetries = DEFAULT_MAX_RETRIES,
+    KinesisReadConfigurations(
+      maxRetries = DEFAULT_MAX_RETRIES,
       retryWaitTimeMs = JavaUtils.timeStringAsMs(DEFAULT_RETRY_WAIT_TIME),
       retryTimeoutMs = DEFAULT_RETRY_TIMEOUT)
   }

@@ -38,8 +38,8 @@ import org.apache.spark.util.Utils
 /**
  * Re-run all the tests in SQLQueryTestSuite via Thrift Server.
  *
- * Each case is loaded from a file in "spark/sql/core/src/test/resources/sql-tests/inputs".
- * Each case has a golden result file in "spark/sql/core/src/test/resources/sql-tests/results".
+ * Each case is loaded from a file in "spark/sql/core/src/test/resources/sql-tests/inputs". Each
+ * case has a golden result file in "spark/sql/core/src/test/resources/sql-tests/results".
  *
  * To run the entire test suite:
  * {{{
@@ -69,7 +69,6 @@ import org.apache.spark.util.Utils
  */
 // scalastyle:on line.size.limit
 class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServer with Logging {
-
 
   override def mode: ServerMode.Value = ServerMode.binary
 
@@ -111,8 +110,7 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
     "pipe-operators.sql",
     // VARIANT type
     "variant/named-function-arguments.sql",
-    "variant-field-extractions.sql"
-  )
+    "variant-field-extractions.sql")
 
   override def runQueries(
       queries: Seq[String],
@@ -120,7 +118,6 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
       configSet: Seq[(String, String)]): Unit = {
     // We do not test with configSet.
     withJdbcStatement() { statement =>
-
       configSet.foreach { case (k, v) =>
         statement.execute(s"SET $k = $v")
       }
@@ -132,8 +129,9 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
         case _: SQLQueryTestSuite#NonAnsiTest =>
           statement.execute(s"SET ${SQLConf.ANSI_ENABLED.key} = false")
         case _: SQLQueryTestSuite#TimestampNTZTest =>
-          statement.execute(s"SET ${SQLConf.TIMESTAMP_TYPE.key} = " +
-            s"${TimestampTypes.TIMESTAMP_NTZ.toString}")
+          statement.execute(
+            s"SET ${SQLConf.TIMESTAMP_TYPE.key} = " +
+              s"${TimestampTypes.TIMESTAMP_NTZ.toString}")
         case _ =>
           statement.execute(s"SET ${SQLConf.ANSI_ENABLED.key} = true")
       }
@@ -158,7 +156,8 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
         val segments = goldenOutput.split("-- !query.*\n")
 
         // each query has 3 segments, plus the header
-        assert(segments.size == outputs.size * 3 + 1,
+        assert(
+          segments.size == outputs.size * 3 + 1,
           s"Expected ${outputs.size * 3 + 1} blocks in result file but got ${segments.size}. " +
             "Try regenerate the result files.")
         Seq.tabulate(outputs.size) { i =>
@@ -178,11 +177,7 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
             } else {
               originalOut
             }
-          ExecutionOutput(
-            sql = sql,
-            schema = Some(""),
-            output = output.replaceAll("\\s+$", "")
-          )
+          ExecutionOutput(sql = sql, schema = Some(""), output = output.replaceAll("\\s+$", ""))
         }
       }
 
@@ -198,54 +193,67 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
 
         expected match {
           // Skip desc command, see HiveResult.hiveResultString
-          case d if d.sql.toUpperCase(Locale.ROOT).startsWith("DESC ")
-            || d.sql.toUpperCase(Locale.ROOT).startsWith("DESC\n")
-            || d.sql.toUpperCase(Locale.ROOT).startsWith("DESCRIBE ")
-            || d.sql.toUpperCase(Locale.ROOT).startsWith("DESCRIBE\n") =>
+          case d
+              if d.sql.toUpperCase(Locale.ROOT).startsWith("DESC ")
+                || d.sql.toUpperCase(Locale.ROOT).startsWith("DESC\n")
+                || d.sql.toUpperCase(Locale.ROOT).startsWith("DESCRIBE ")
+                || d.sql.toUpperCase(Locale.ROOT).startsWith("DESCRIBE\n") =>
 
           // Skip show command, see HiveResult.hiveResultString
-          case s if s.sql.toUpperCase(Locale.ROOT).startsWith("SHOW ")
-            || s.sql.toUpperCase(Locale.ROOT).startsWith("SHOW\n") =>
+          case s
+              if s.sql.toUpperCase(Locale.ROOT).startsWith("SHOW ")
+                || s.sql.toUpperCase(Locale.ROOT).startsWith("SHOW\n") =>
 
           case _ if output.output.startsWith(classOf[NoSuchTableException].getPackage.getName) =>
-            assert(expected.output.startsWith(classOf[NoSuchTableException].getPackage.getName),
+            assert(
+              expected.output.startsWith(classOf[NoSuchTableException].getPackage.getName),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
-          case _ if output.output.startsWith(classOf[SparkException].getName) &&
-            output.output.contains("overflow") =>
-            assert(expected.output.contains(classOf[ArithmeticException].getName) &&
-              expected.output.contains("overflow"),
+          case _
+              if output.output.startsWith(classOf[SparkException].getName) &&
+                output.output.contains("overflow") =>
+            assert(
+              expected.output.contains(classOf[ArithmeticException].getName) &&
+                expected.output.contains("overflow"),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
           case _ if output.output.startsWith(classOf[RuntimeException].getName) =>
-            assert(expected.output.contains("Exception"),
+            assert(
+              expected.output.contains("Exception"),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
-          case _ if output.output.startsWith(classOf[ArithmeticException].getName) &&
-            output.output.contains("causes overflow") =>
-            assert(expected.output.contains(classOf[ArithmeticException].getName) &&
-              expected.output.contains("causes overflow"),
+          case _
+              if output.output.startsWith(classOf[ArithmeticException].getName) &&
+                output.output.contains("causes overflow") =>
+            assert(
+              expected.output.contains(classOf[ArithmeticException].getName) &&
+                expected.output.contains("causes overflow"),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
-          case _ if output.output.startsWith(classOf[MissingFormatArgumentException].getName) &&
-            output.output.contains("Format specifier") =>
-            assert(expected.output.contains(classOf[MissingFormatArgumentException].getName) &&
-              expected.output.contains("Format specifier"),
+          case _
+              if output.output.startsWith(classOf[MissingFormatArgumentException].getName) &&
+                output.output.contains("Format specifier") =>
+            assert(
+              expected.output.contains(classOf[MissingFormatArgumentException].getName) &&
+                expected.output.contains("Format specifier"),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
           // SQLException should not exactly match. We only assert the result contains Exception.
           case _ if output.output.startsWith(classOf[SQLException].getName) =>
-            assert(expected.output.contains("Exception"),
+            assert(
+              expected.output.contains("Exception"),
               s"Exception did not match for query #$i\n${expected.sql}, " +
                 s"expected: ${expected.output}, but got: ${output.output}")
 
           case _ =>
-            assertResult(expected.output, s"Result did not match for query #$i\n${expected.sql}") {
+            assertResult(
+              expected.output,
+              s"Result did not match for query #$i\n${expected.sql}") {
               output.output
             }
         }
@@ -255,7 +263,7 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
 
   override def createScalaTestCase(testCase: TestCase): Unit = {
     if (ignoreList.exists(t =>
-      testCase.name.toLowerCase(Locale.ROOT).contains(t.toLowerCase(Locale.ROOT)))) {
+        testCase.name.toLowerCase(Locale.ROOT).contains(t.toLowerCase(Locale.ROOT)))) {
       // Create a test case to ignore this case.
       ignore(testCase.name) { /* Do nothing */ }
     } else {
@@ -287,7 +295,8 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
         PgSQLTestCase(testCaseName, absPath, resultFile) :: Nil
       } else if (file.getAbsolutePath.startsWith(s"$inputFilePath${File.separator}nonansi")) {
         NonAnsiTestCase(testCaseName, absPath, resultFile) :: Nil
-      } else if (file.getAbsolutePath.startsWith(s"$inputFilePath${File.separator}timestampNTZ")) {
+      } else if (file.getAbsolutePath.startsWith(
+          s"$inputFilePath${File.separator}timestampNTZ")) {
         TimestampNTZTestCase(testCaseName, absPath, resultFile) :: Nil
       } else {
         RegularTestCase(testCaseName, absPath, resultFile) :: Nil
@@ -319,11 +328,16 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
     val cols = rs.getMetaData.getColumnCount
     val timeFormatters = getTimeFormatters
     val binaryFormatter = getBinaryFormatter
-    val buildStr = () => (for (i <- 1 to cols) yield {
-      getHiveResult(rs.getObject(i), timeFormatters, binaryFormatter)
-    }).mkString("\t")
+    val buildStr = () =>
+      (for (i <- 1 to cols) yield {
+        getHiveResult(rs.getObject(i), timeFormatters, binaryFormatter)
+      }).mkString("\t")
 
-    val answer = Iterator.continually(rs.next()).takeWhile(identity).map(_ => buildStr()).toSeq
+    val answer = Iterator
+      .continually(rs.next())
+      .takeWhile(identity)
+      .map(_ => buildStr())
+      .toSeq
       .map(replaceNotIncludedMsg)
     if (isNeedSort(sql)) {
       ("", answer.sorted)
@@ -336,14 +350,16 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
   private def isNeedSort(sql: String): Boolean = {
     val upperCase = sql.toUpperCase(Locale.ROOT)
     upperCase.startsWith("SELECT ") || upperCase.startsWith("SELECT\n") ||
-      upperCase.startsWith("WITH ") || upperCase.startsWith("WITH\n") ||
-      upperCase.startsWith("VALUES ") || upperCase.startsWith("VALUES\n") ||
-      // postgreSQL/union.sql
-      upperCase.startsWith("(")
+    upperCase.startsWith("WITH ") || upperCase.startsWith("WITH\n") ||
+    upperCase.startsWith("VALUES ") || upperCase.startsWith("VALUES\n") ||
+    // postgreSQL/union.sql
+    upperCase.startsWith("(")
   }
 
   private def getHiveResult(
-      obj: Object, timeFormatters: TimeFormatters, binaryFormatter: BinaryFormatter): String = {
+      obj: Object,
+      timeFormatters: TimeFormatters,
+      binaryFormatter: BinaryFormatter): String = {
     obj match {
       case null =>
         toHiveString((null, StringType), false, timeFormatters, binaryFormatter)
@@ -352,8 +368,11 @@ class ThriftServerQueryTestSuite extends SQLQueryTestSuite with SharedThriftServ
       case t: Timestamp =>
         toHiveString((t, TimestampType), false, timeFormatters, binaryFormatter)
       case d: java.math.BigDecimal =>
-        toHiveString((
-          d, DecimalType.fromDecimal(Decimal(d))), false, timeFormatters, binaryFormatter)
+        toHiveString(
+          (d, DecimalType.fromDecimal(Decimal(d))),
+          false,
+          timeFormatters,
+          binaryFormatter)
       case bin: Array[Byte] =>
         toHiveString((bin, BinaryType), false, timeFormatters, binaryFormatter)
       case other =>

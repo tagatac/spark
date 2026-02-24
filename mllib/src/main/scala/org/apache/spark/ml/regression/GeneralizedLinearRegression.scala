@@ -46,22 +46,30 @@ import org.apache.spark.util.Utils
 /**
  * Params for Generalized Linear Regression.
  */
-private[regression] trait GeneralizedLinearRegressionBase extends PredictorParams
-  with HasFitIntercept with HasMaxIter with HasTol with HasRegParam with HasWeightCol
-  with HasSolver with HasAggregationDepth with Logging {
+private[regression] trait GeneralizedLinearRegressionBase
+    extends PredictorParams
+    with HasFitIntercept
+    with HasMaxIter
+    with HasTol
+    with HasRegParam
+    with HasWeightCol
+    with HasSolver
+    with HasAggregationDepth
+    with Logging {
 
   import GeneralizedLinearRegression._
 
   /**
-   * Param for the name of family which is a description of the error distribution
-   * to be used in the model.
-   * Supported options: "gaussian", "binomial", "poisson", "gamma" and "tweedie".
+   * Param for the name of family which is a description of the error distribution to be used in
+   * the model. Supported options: "gaussian", "binomial", "poisson", "gamma" and "tweedie".
    * Default is "gaussian".
    *
    * @group param
    */
   @Since("2.0.0")
-  final val family: Param[String] = new Param(this, "family",
+  final val family: Param[String] = new Param(
+    this,
+    "family",
     "The name of family which is a description of the error distribution to be used in the " +
       s"model. Supported options: ${supportedFamilyNames.mkString(", ")}.",
     (value: String) => supportedFamilyNames.contains(value.toLowerCase(Locale.ROOT)))
@@ -71,22 +79,21 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
   def getFamily: String = $(family)
 
   /**
-   * Param for the power in the variance function of the Tweedie distribution which provides
-   * the relationship between the variance and mean of the distribution.
-   * Only applicable to the Tweedie family.
-   * (see <a href="https://en.wikipedia.org/wiki/Tweedie_distribution">
-   * Tweedie Distribution (Wikipedia)</a>)
-   * Supported values: 0 and [1, Inf).
-   * Note that variance power 0, 1, or 2 corresponds to the Gaussian, Poisson or Gamma
-   * family, respectively.
+   * Param for the power in the variance function of the Tweedie distribution which provides the
+   * relationship between the variance and mean of the distribution. Only applicable to the
+   * Tweedie family. (see <a href="https://en.wikipedia.org/wiki/Tweedie_distribution"> Tweedie
+   * Distribution (Wikipedia)</a>) Supported values: 0 and [1, Inf). Note that variance power 0,
+   * 1, or 2 corresponds to the Gaussian, Poisson or Gamma family, respectively.
    *
    * @group param
    */
   @Since("2.2.0")
-  final val variancePower: DoubleParam = new DoubleParam(this, "variancePower",
+  final val variancePower: DoubleParam = new DoubleParam(
+    this,
+    "variancePower",
     "The power in the variance function of the Tweedie distribution which characterizes " +
-    "the relationship between the variance and mean of the distribution. " +
-    "Only applicable to the Tweedie family. Supported values: 0 and [1, Inf).",
+      "the relationship between the variance and mean of the distribution. " +
+      "Only applicable to the Tweedie family. Supported values: 0 and [1, Inf).",
     (x: Double) => x >= 1.0 || x == 0.0)
 
   /** @group getParam */
@@ -94,18 +101,21 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
   def getVariancePower: Double = $(variancePower)
 
   /**
-   * Param for the name of link function which provides the relationship
-   * between the linear predictor and the mean of the distribution function.
-   * Supported options: "identity", "log", "inverse", "logit", "probit", "cloglog" and "sqrt".
-   * This is used only when family is not "tweedie". The link function for the "tweedie" family
-   * must be specified through [[linkPower]].
+   * Param for the name of link function which provides the relationship between the linear
+   * predictor and the mean of the distribution function. Supported options: "identity", "log",
+   * "inverse", "logit", "probit", "cloglog" and "sqrt". This is used only when family is not
+   * "tweedie". The link function for the "tweedie" family must be specified through
+   * [[linkPower]].
    *
    * @group param
    */
   @Since("2.0.0")
-  final val link: Param[String] = new Param(this, "link", "The name of link function " +
-    "which provides the relationship between the linear predictor and the mean of the " +
-    s"distribution function. Supported options: ${supportedLinkNames.mkString(", ")}",
+  final val link: Param[String] = new Param(
+    this,
+    "link",
+    "The name of link function " +
+      "which provides the relationship between the linear predictor and the mean of the " +
+      s"distribution function. Supported options: ${supportedLinkNames.mkString(", ")}",
     (value: String) => supportedLinkNames.contains(value.toLowerCase(Locale.ROOT)))
 
   /** @group getParam */
@@ -113,16 +123,17 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
   def getLink: String = $(link)
 
   /**
-   * Param for the index in the power link function. Only applicable to the Tweedie family.
-   * Note that link power 0, 1, -1 or 0.5 corresponds to the Log, Identity, Inverse or Sqrt
-   * link, respectively.
-   * When not set, this value defaults to 1 - [[variancePower]], which matches the R "statmod"
-   * package.
+   * Param for the index in the power link function. Only applicable to the Tweedie family. Note
+   * that link power 0, 1, -1 or 0.5 corresponds to the Log, Identity, Inverse or Sqrt link,
+   * respectively. When not set, this value defaults to 1 - [[variancePower]], which matches the R
+   * "statmod" package.
    *
    * @group param
    */
   @Since("2.2.0")
-  final val linkPower: DoubleParam = new DoubleParam(this, "linkPower",
+  final val linkPower: DoubleParam = new DoubleParam(
+    this,
+    "linkPower",
     "The index in the power link function. Only applicable to the Tweedie family.")
 
   /** @group getParam */
@@ -130,28 +141,31 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
   def getLinkPower: Double = $(linkPower)
 
   /**
-   * Param for link prediction (linear predictor) column name.
-   * Default is not set, which means we do not output link prediction.
+   * Param for link prediction (linear predictor) column name. Default is not set, which means we
+   * do not output link prediction.
    *
    * @group param
    */
   @Since("2.0.0")
-  final val linkPredictionCol: Param[String] = new Param[String](this, "linkPredictionCol",
-    "link prediction (linear predictor) column name")
+  final val linkPredictionCol: Param[String] =
+    new Param[String](this, "linkPredictionCol", "link prediction (linear predictor) column name")
 
   /** @group getParam */
   @Since("2.0.0")
   def getLinkPredictionCol: String = $(linkPredictionCol)
 
   /**
-   * Param for offset column name. If this is not set or empty, we treat all instance offsets
-   * as 0.0. The feature specified as offset has a constant coefficient of 1.0.
+   * Param for offset column name. If this is not set or empty, we treat all instance offsets as
+   * 0.0. The feature specified as offset has a constant coefficient of 1.0.
    *
    * @group param
    */
   @Since("2.3.0")
-  final val offsetCol: Param[String] = new Param[String](this, "offsetCol", "The offset " +
-    "column name. If this is not set or empty, we treat all instance offsets as 0.0")
+  final val offsetCol: Param[String] = new Param[String](
+    this,
+    "offsetCol",
+    "The offset " +
+      "column name. If this is not set or empty, we treat all instance offsets as 0.0")
 
   /** @group getParam */
   @Since("2.3.0")
@@ -171,20 +185,26 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
   }
 
   /**
-   * The solver algorithm for optimization.
-   * Supported options: "irls" (iteratively reweighted least squares).
-   * Default: "irls"
+   * The solver algorithm for optimization. Supported options: "irls" (iteratively reweighted
+   * least squares). Default: "irls"
    *
    * @group param
    */
   @Since("2.0.0")
-  final override val solver: Param[String] = new Param[String](this, "solver",
+  final override val solver: Param[String] = new Param[String](
+    this,
+    "solver",
     "The solver algorithm for optimization. Supported options: " +
       s"${supportedSolvers.mkString(", ")}. (Default irls)",
     ParamValidators.inArray[String](supportedSolvers))
 
-  setDefault(family -> Gaussian.name, variancePower -> 0.0, maxIter -> 25, tol -> 1E-6,
-    regParam -> 0.0, solver -> IRLS)
+  setDefault(
+    family -> Gaussian.name,
+    variancePower -> 0.0,
+    maxIter -> 25,
+    tol -> 1e-6,
+    regParam -> 0.0,
+    solver -> IRLS)
 
   @Since("2.0.0")
   override def validateAndTransformSchema(
@@ -193,20 +213,22 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
       featuresDataType: DataType): StructType = {
     if ($(family).toLowerCase(Locale.ROOT) == "tweedie") {
       if (isSet(link)) {
-        logWarning("When family is tweedie, use param linkPower to specify link function. " +
-          "Setting param link will take no effect.")
+        logWarning(
+          "When family is tweedie, use param linkPower to specify link function. " +
+            "Setting param link will take no effect.")
       }
     } else {
       if (isSet(variancePower)) {
         logWarning("When family is not tweedie, setting param variancePower will take no effect.")
       }
       if (isSet(linkPower)) {
-        logWarning("When family is not tweedie, use param link to specify link function. " +
-          "Setting param linkPower will take no effect.")
+        logWarning(
+          "When family is not tweedie, use param link to specify link function. " +
+            "Setting param linkPower will take no effect.")
       }
       if (isSet(link)) {
-        require(supportedFamilyAndLinkPairs.contains(
-          Family.fromParams(this) -> Link.fromParams(this)),
+        require(
+          supportedFamilyAndLinkPairs.contains(Family.fromParams(this) -> Link.fromParams(this)),
           s"Generalized Linear Regression with ${$(family)} family " +
             s"does not support ${$(link)} link function.")
       }
@@ -229,25 +251,25 @@ private[regression] trait GeneralizedLinearRegressionBase extends PredictorParam
 }
 
 /**
- * Fit a Generalized Linear Model
- * (see <a href="https://en.wikipedia.org/wiki/Generalized_linear_model">
- * Generalized linear model (Wikipedia)</a>)
- * specified by giving a symbolic description of the linear
- * predictor (link function) and a description of the error distribution (family).
- * It supports "gaussian", "binomial", "poisson", "gamma" and "tweedie" as family.
- * Valid link functions for each family is listed below. The first link function of each family
- * is the default one.
- *  - "gaussian" : "identity", "log", "inverse"
- *  - "binomial" : "logit", "probit", "cloglog"
- *  - "poisson"  : "log", "identity", "sqrt"
- *  - "gamma"    : "inverse", "identity", "log"
- *  - "tweedie"  : power link function specified through "linkPower". The default link power in
- *  the tweedie family is 1 - variancePower.
+ * Fit a Generalized Linear Model (see <a
+ * href="https://en.wikipedia.org/wiki/Generalized_linear_model"> Generalized linear model
+ * (Wikipedia)</a>) specified by giving a symbolic description of the linear predictor (link
+ * function) and a description of the error distribution (family). It supports "gaussian",
+ * "binomial", "poisson", "gamma" and "tweedie" as family. Valid link functions for each family is
+ * listed below. The first link function of each family is the default one.
+ *   - "gaussian" : "identity", "log", "inverse"
+ *   - "binomial" : "logit", "probit", "cloglog"
+ *   - "poisson" : "log", "identity", "sqrt"
+ *   - "gamma" : "inverse", "identity", "log"
+ *   - "tweedie" : power link function specified through "linkPower". The default link power in
+ *     the tweedie family is 1 - variancePower.
  */
 @Since("2.0.0")
 class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val uid: String)
-  extends Regressor[Vector, GeneralizedLinearRegression, GeneralizedLinearRegressionModel]
-  with GeneralizedLinearRegressionBase with DefaultParamsWritable with Logging {
+    extends Regressor[Vector, GeneralizedLinearRegression, GeneralizedLinearRegressionModel]
+    with GeneralizedLinearRegressionBase
+    with DefaultParamsWritable
+    with Logging {
 
   import GeneralizedLinearRegression._
 
@@ -255,8 +277,7 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def this() = this(Identifiable.randomUID("glm"))
 
   /**
-   * Sets the value of param [[family]].
-   * Default is "gaussian".
+   * Sets the value of param [[family]]. Default is "gaussian".
    *
    * @group setParam
    */
@@ -264,9 +285,8 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setFamily(value: String): this.type = set(family, value)
 
   /**
-   * Sets the value of param [[variancePower]].
-   * Used only when family is "tweedie".
-   * Default is 0.0, which corresponds to the "gaussian" family.
+   * Sets the value of param [[variancePower]]. Used only when family is "tweedie". Default is
+   * 0.0, which corresponds to the "gaussian" family.
    *
    * @group setParam
    */
@@ -274,8 +294,7 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setVariancePower(value: Double): this.type = set(variancePower, value)
 
   /**
-   * Sets the value of param [[linkPower]].
-   * Used only when family is "tweedie".
+   * Sets the value of param [[linkPower]]. Used only when family is "tweedie".
    *
    * @group setParam
    */
@@ -283,8 +302,7 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setLinkPower(value: Double): this.type = set(linkPower, value)
 
   /**
-   * Sets the value of param [[link]].
-   * Used only when family is not "tweedie".
+   * Sets the value of param [[link]]. Used only when family is not "tweedie".
    *
    * @group setParam
    */
@@ -292,8 +310,7 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setLink(value: String): this.type = set(link, value)
 
   /**
-   * Sets if we should fit the intercept.
-   * Default is true.
+   * Sets if we should fit the intercept. Default is true.
    *
    * @group setParam
    */
@@ -301,8 +318,7 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setFitIntercept(value: Boolean): this.type = set(fitIntercept, value)
 
   /**
-   * Sets the maximum number of iterations (applicable for solver "irls").
-   * Default is 25.
+   * Sets the maximum number of iterations (applicable for solver "irls"). Default is 25.
    *
    * @group setParam
    */
@@ -310,9 +326,8 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setMaxIter(value: Int): this.type = set(maxIter, value)
 
   /**
-   * Sets the convergence tolerance of iterations.
-   * Smaller value will lead to higher accuracy with the cost of more iterations.
-   * Default is 1E-6.
+   * Sets the convergence tolerance of iterations. Smaller value will lead to higher accuracy with
+   * the cost of more iterations. Default is 1E-6.
    *
    * @group setParam
    */
@@ -320,14 +335,8 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setTol(value: Double): this.type = set(tol, value)
 
   /**
-   * Sets the regularization parameter for L2 regularization.
-   * The regularization term is
-   * <blockquote>
-   *    $$
-   *    0.5 * regParam * L2norm(coefficients)^2
-   *    $$
-   * </blockquote>
-   * Default is 0.0.
+   * Sets the regularization parameter for L2 regularization. The regularization term is
+   * <blockquote> $$ 0.5 * regParam * L2norm(coefficients)^2 $$ </blockquote> Default is 0.0.
    *
    * @group setParam
    */
@@ -335,11 +344,10 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setRegParam(value: Double): this.type = set(regParam, value)
 
   /**
-   * Sets the value of param [[weightCol]].
-   * If this is not set or empty, we treat all instance weights as 1.0.
-   * Default is not set, so all instances have weight one.
-   * In the Binomial family, weights correspond to number of trials and should be integer.
-   * Non-integer weights are rounded to integer in AIC calculation.
+   * Sets the value of param [[weightCol]]. If this is not set or empty, we treat all instance
+   * weights as 1.0. Default is not set, so all instances have weight one. In the Binomial family,
+   * weights correspond to number of trials and should be integer. Non-integer weights are rounded
+   * to integer in AIC calculation.
    *
    * @group setParam
    */
@@ -347,9 +355,8 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setWeightCol(value: String): this.type = set(weightCol, value)
 
   /**
-   * Sets the value of param [[offsetCol]].
-   * If this is not set or empty, we treat all instance offsets as 0.0.
-   * Default is not set, so all instances have offset 0.0.
+   * Sets the value of param [[offsetCol]]. If this is not set or empty, we treat all instance
+   * offsets as 0.0. Default is not set, so all instances have offset 0.0.
    *
    * @group setParam
    */
@@ -357,8 +364,8 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   def setOffsetCol(value: String): this.type = set(offsetCol, value)
 
   /**
-   * Sets the solver algorithm used for optimization.
-   * Currently only supports "irls" which is also the default solver.
+   * Sets the solver algorithm used for optimization. Currently only supports "irls" which is also
+   * the default solver.
    *
    * @group setParam
    */
@@ -377,70 +384,98 @@ class GeneralizedLinearRegression @Since("2.0.0") (@Since("2.0.0") override val 
   @Since("3.0.0")
   def setAggregationDepth(value: Int): this.type = set(aggregationDepth, value)
 
-  override protected def train(
-      dataset: Dataset[_]): GeneralizedLinearRegressionModel = instrumented { instr =>
-    val familyAndLink = FamilyAndLink(this)
+  override protected def train(dataset: Dataset[_]): GeneralizedLinearRegressionModel =
+    instrumented { instr =>
+      val familyAndLink = FamilyAndLink(this)
 
-    instr.logPipelineStage(this)
-    instr.logDataset(dataset)
-    instr.logParams(this, labelCol, featuresCol, weightCol, offsetCol, predictionCol,
-      linkPredictionCol, family, solver, fitIntercept, link, maxIter, regParam, tol,
-      aggregationDepth)
-    val numFeatures = getNumFeatures(dataset, $(featuresCol))
-    instr.logNumFeatures(numFeatures)
+      instr.logPipelineStage(this)
+      instr.logDataset(dataset)
+      instr.logParams(
+        this,
+        labelCol,
+        featuresCol,
+        weightCol,
+        offsetCol,
+        predictionCol,
+        linkPredictionCol,
+        family,
+        solver,
+        fitIntercept,
+        link,
+        maxIter,
+        regParam,
+        tol,
+        aggregationDepth)
+      val numFeatures = getNumFeatures(dataset, $(featuresCol))
+      instr.logNumFeatures(numFeatures)
 
-    if (numFeatures > WeightedLeastSquares.MAX_NUM_FEATURES) {
-      val msg = "Currently, GeneralizedLinearRegression only supports number of features" +
-        s" <= ${WeightedLeastSquares.MAX_NUM_FEATURES}. Found $numFeatures in the input dataset."
-      throw new SparkException(msg)
-    }
-
-    require(numFeatures > 0 || $(fitIntercept),
-      "GeneralizedLinearRegression was given data with 0 features, and with Param fitIntercept " +
-        "set to false. To fit a model with 0 features, fitIntercept must be set to true." )
-
-    val validated = dataset.select(
-      checkRegressionLabels($(labelCol)),
-      checkNonNegativeWeights(get(weightCol)),
-      if (!hasOffsetCol) lit(0.0) else checkNonNanValues($(offsetCol), "Offsets"),
-      checkNonNanVectors($(featuresCol))
-    )
-
-    val model = if (familyAndLink.family == Gaussian && familyAndLink.link == Identity) {
-      // TODO: Make standardizeFeatures and standardizeLabel configurable.
-      val instances = validated.rdd.map {
-        case Row(label: Double, weight: Double, offset: Double, features: Vector) =>
-          Instance(label - offset, weight, features)
+      if (numFeatures > WeightedLeastSquares.MAX_NUM_FEATURES) {
+        val msg = "Currently, GeneralizedLinearRegression only supports number of features" +
+          s" <= ${WeightedLeastSquares.MAX_NUM_FEATURES}. Found $numFeatures in the input dataset."
+        throw new SparkException(msg)
       }
-      val optimizer = new WeightedLeastSquares($(fitIntercept), $(regParam), elasticNetParam = 0.0,
-        standardizeFeatures = true, standardizeLabel = true)
-      val wlsModel = optimizer.fit(instances, instr = OptionalInstrumentation.create(instr),
-        depth = $(aggregationDepth))
-      val model = copyValues(
-        new GeneralizedLinearRegressionModel(uid, wlsModel.coefficients, wlsModel.intercept)
-          .setParent(this))
-      model.createSummary(dataset, wlsModel.diagInvAtWA.toArray, 1)
-      model
-    } else {
-      val instances = validated.rdd.map {
-        case Row(label: Double, weight: Double, offset: Double, features: Vector) =>
-          OffsetInstance(label, weight, offset, features)
+
+      require(
+        numFeatures > 0 || $(fitIntercept),
+        "GeneralizedLinearRegression was given data with 0 features, and with Param fitIntercept " +
+          "set to false. To fit a model with 0 features, fitIntercept must be set to true.")
+
+      val validated = dataset.select(
+        checkRegressionLabels($(labelCol)),
+        checkNonNegativeWeights(get(weightCol)),
+        if (!hasOffsetCol) lit(0.0) else checkNonNanValues($(offsetCol), "Offsets"),
+        checkNonNanVectors($(featuresCol)))
+
+      val model = if (familyAndLink.family == Gaussian && familyAndLink.link == Identity) {
+        // TODO: Make standardizeFeatures and standardizeLabel configurable.
+        val instances = validated.rdd.map {
+          case Row(label: Double, weight: Double, offset: Double, features: Vector) =>
+            Instance(label - offset, weight, features)
+        }
+        val optimizer = new WeightedLeastSquares(
+          $(fitIntercept),
+          $(regParam),
+          elasticNetParam = 0.0,
+          standardizeFeatures = true,
+          standardizeLabel = true)
+        val wlsModel = optimizer.fit(
+          instances,
+          instr = OptionalInstrumentation.create(instr),
+          depth = $(aggregationDepth))
+        val model = copyValues(
+          new GeneralizedLinearRegressionModel(uid, wlsModel.coefficients, wlsModel.intercept)
+            .setParent(this))
+        model.createSummary(dataset, wlsModel.diagInvAtWA.toArray, 1)
+        model
+      } else {
+        val instances = validated.rdd.map {
+          case Row(label: Double, weight: Double, offset: Double, features: Vector) =>
+            OffsetInstance(label, weight, offset, features)
+        }
+        // Fit Generalized Linear Model by iteratively reweighted least squares (IRLS).
+        val initialModel = familyAndLink.initialize(
+          instances,
+          $(fitIntercept),
+          $(regParam),
+          instr = OptionalInstrumentation.create(instr),
+          $(aggregationDepth))
+        val optimizer = new IterativelyReweightedLeastSquares(
+          initialModel,
+          familyAndLink.reweightFunc,
+          $(fitIntercept),
+          $(regParam),
+          $(maxIter),
+          $(tol))
+        val irlsModel = optimizer.fit(instances, instr = OptionalInstrumentation.create(instr))
+        val model = copyValues(
+          new GeneralizedLinearRegressionModel(uid, irlsModel.coefficients, irlsModel.intercept)
+            .setParent(this))
+        model.createSummary(dataset, irlsModel.diagInvAtWA.toArray, irlsModel.numIterations)
+        model
       }
-      // Fit Generalized Linear Model by iteratively reweighted least squares (IRLS).
-      val initialModel = familyAndLink.initialize(instances, $(fitIntercept), $(regParam),
-        instr = OptionalInstrumentation.create(instr), $(aggregationDepth))
-      val optimizer = new IterativelyReweightedLeastSquares(initialModel,
-        familyAndLink.reweightFunc, $(fitIntercept), $(regParam), $(maxIter), $(tol))
-      val irlsModel = optimizer.fit(instances, instr = OptionalInstrumentation.create(instr))
-      val model = copyValues(
-        new GeneralizedLinearRegressionModel(uid, irlsModel.coefficients, irlsModel.intercept)
-          .setParent(this))
-      model.createSummary(dataset, irlsModel.diagInvAtWA.toArray, irlsModel.numIterations)
+
       model
     }
-
-    model
-  }
 
   @Since("2.0.0")
   override def copy(extra: ParamMap): GeneralizedLinearRegression = defaultCopy(extra)
@@ -465,11 +500,18 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
    * The link function of the Tweedie family is specified through param linkPower.
    */
   private[regression] lazy val supportedFamilyAndLinkPairs = Set(
-    Gaussian -> Identity, Gaussian -> Log, Gaussian -> Inverse,
-    Binomial -> Logit, Binomial -> Probit, Binomial -> CLogLog,
-    Poisson -> Log, Poisson -> Identity, Poisson -> Sqrt,
-    Gamma -> Inverse, Gamma -> Identity, Gamma -> Log
-  )
+    Gaussian -> Identity,
+    Gaussian -> Log,
+    Gaussian -> Inverse,
+    Binomial -> Logit,
+    Binomial -> Probit,
+    Binomial -> CLogLog,
+    Poisson -> Log,
+    Poisson -> Identity,
+    Poisson -> Sqrt,
+    Gamma -> Inverse,
+    Gamma -> Identity,
+    Gamma -> Log)
 
   /** String name for "irls" (iteratively reweighted least squares) solver. */
   private[regression] val IRLS = "irls"
@@ -485,7 +527,7 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   private[regression] lazy val supportedLinkNames =
     supportedFamilyAndLinkPairs.map(_._2.name).toArray
 
-  private[regression] val epsilon: Double = 1E-16
+  private[regression] val epsilon: Double = 1e-16
 
   private[regression] def ylogy(y: Double, mu: Double): Double = {
     if (y == 0) 0.0 else y * math.log(y / mu)
@@ -494,7 +536,8 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   /**
    * Wrapper of family and link combination used in the model.
    */
-  private[regression] class FamilyAndLink(val family: Family, val link: Link) extends Serializable {
+  private[regression] class FamilyAndLink(val family: Family, val link: Link)
+      extends Serializable {
 
     /** Linear predictor based on given mu. */
     def predict(mu: Double): Double = link.link(family.project(mu))
@@ -509,28 +552,32 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
         instances: RDD[OffsetInstance],
         fitIntercept: Boolean,
         regParam: Double,
-        instr: OptionalInstrumentation = OptionalInstrumentation.create(
-          classOf[GeneralizedLinearRegression]),
-        depth: Int = 2
-      ): WeightedLeastSquaresModel = {
+        instr: OptionalInstrumentation =
+          OptionalInstrumentation.create(classOf[GeneralizedLinearRegression]),
+        depth: Int = 2): WeightedLeastSquaresModel = {
       val newInstances = instances.map { instance =>
         val mu = family.initialize(instance.label, instance.weight)
         val eta = predict(mu) - instance.offset
         Instance(eta, instance.weight, instance.features)
       }
       // TODO: Make standardizeFeatures and standardizeLabel configurable.
-      val initialModel = new WeightedLeastSquares(fitIntercept, regParam, elasticNetParam = 0.0,
-        standardizeFeatures = true, standardizeLabel = true)
+      val initialModel = new WeightedLeastSquares(
+        fitIntercept,
+        regParam,
+        elasticNetParam = 0.0,
+        standardizeFeatures = true,
+        standardizeLabel = true)
         .fit(newInstances, instr, depth)
       initialModel
     }
 
     /**
-     * The reweight function used to update working labels and weights
-     * at each iteration of [[IterativelyReweightedLeastSquares]].
+     * The reweight function used to update working labels and weights at each iteration of
+     * [[IterativelyReweightedLeastSquares]].
      */
     def reweightFunc(
-        instance: OffsetInstance, model: WeightedLeastSquaresModel): (Double, Double) = {
+        instance: OffsetInstance,
+        model: WeightedLeastSquaresModel): (Double, Double) = {
       val eta = model.predict(instance.features) + instance.offset
       val mu = fitted(eta)
       val newLabel = eta - instance.offset + (instance.label - mu) * link.deriv(mu)
@@ -548,9 +595,9 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
       val familyObj = Family.fromParams(params)
       val linkObj =
         if ((params.getFamily.toLowerCase(Locale.ROOT) != "tweedie" &&
-              params.isSet(params.link)) ||
-            (params.getFamily.toLowerCase(Locale.ROOT) == "tweedie" &&
-              params.isSet(params.linkPower))) {
+            params.isSet(params.link)) ||
+          (params.getFamily.toLowerCase(Locale.ROOT) == "tweedie" &&
+            params.isSet(params.linkPower))) {
           Link.fromParams(params)
         } else {
           familyObj.defaultLink
@@ -562,7 +609,8 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   /**
    * A description of the error distribution to be used in the model.
    *
-   * @param name the name of the family.
+   * @param name
+   *   the name of the family.
    */
   private[regression] abstract class Family(val name: String) extends Serializable {
 
@@ -581,10 +629,14 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
     /**
      * Akaike Information Criterion (AIC) value of the family for a given dataset.
      *
-     * @param predictions an RDD of (y, mu, weight) of instances in evaluation dataset
-     * @param deviance the deviance for the fitted model in evaluation dataset
-     * @param numInstances number of instances in evaluation dataset
-     * @param weightSum weights sum of instances in evaluation dataset
+     * @param predictions
+     *   an RDD of (y, mu, weight) of instances in evaluation dataset
+     * @param deviance
+     *   the deviance for the fitted model in evaluation dataset
+     * @param numInstances
+     *   number of instances in evaluation dataset
+     * @param weightSum
+     *   weights sum of instances in evaluation dataset
      */
     def aic(
         predictions: RDD[(Double, Double, Double)],
@@ -599,12 +651,12 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   private[regression] object Family {
 
     /**
-     * Gets the [[Family]] object based on param family and variancePower.
-     * If param family is set with "gaussian", "binomial", "poisson" or "gamma",
-     * return the corresponding object directly; otherwise, construct a Tweedie object
-     * according to variancePower.
+     * Gets the [[Family]] object based on param family and variancePower. If param family is set
+     * with "gaussian", "binomial", "poisson" or "gamma", return the corresponding object
+     * directly; otherwise, construct a Tweedie object according to variancePower.
      *
-     * @param params the parameter map containing family name and variance power
+     * @param params
+     *   the parameter map containing family name and variance power
      */
     def fromParams(params: GeneralizedLinearRegressionBase): Family = {
       params.getFamily.toLowerCase(Locale.ROOT) match {
@@ -624,21 +676,24 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   }
 
   /**
-   * Tweedie exponential family distribution.
-   * This includes the special cases of Gaussian, Poisson and Gamma.
+   * Tweedie exponential family distribution. This includes the special cases of Gaussian, Poisson
+   * and Gamma.
    */
-  private[regression] class Tweedie(val variancePower: Double)
-    extends Family("tweedie") {
+  private[regression] class Tweedie(val variancePower: Double) extends Family("tweedie") {
 
     override val defaultLink: Link = new Power(1.0 - variancePower)
 
     override def initialize(y: Double, weight: Double): Double = {
       if (variancePower >= 1.0 && variancePower < 2.0) {
-        require(y >= 0.0, s"The response variable of $name($variancePower) family " +
-          s"should be non-negative, but got $y")
+        require(
+          y >= 0.0,
+          s"The response variable of $name($variancePower) family " +
+            s"should be non-negative, but got $y")
       } else if (variancePower >= 2.0) {
-        require(y > 0.0, s"The response variable of $name($variancePower) family " +
-          s"should be positive, but got $y")
+        require(
+          y > 0.0,
+          s"The response variable of $name($variancePower) family " +
+            s"should be positive, but got $y")
       }
       if (y == 0) Tweedie.delta else y
     }
@@ -672,7 +727,7 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
       /*
        This depends on the density of the Tweedie distribution.
        Only implemented for Gaussian, Poisson and Gamma at this point.
-      */
+       */
       throw new UnsupportedOperationException("No AIC available for the tweedie family")
     }
 
@@ -694,8 +749,8 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   }
 
   /**
-   * Gaussian exponential family distribution.
-   * The default link for the Gaussian family is the identity link.
+   * Gaussian exponential family distribution. The default link for the Gaussian family is the
+   * identity link.
    */
   private[regression] object Gaussian extends Tweedie(0.0) {
 
@@ -732,8 +787,8 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   }
 
   /**
-   * Binomial exponential family distribution.
-   * The default link for the Binomial family is the logit link.
+   * Binomial exponential family distribution. The default link for the Binomial family is the
+   * logit link.
    */
   private[regression] object Binomial extends Family("binomial") {
 
@@ -741,8 +796,10 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
 
     override def initialize(y: Double, weight: Double): Double = {
       val mu = (weight * y + 0.5) / (weight + 1.0)
-      require(mu > 0.0 && mu < 1.0, "The response variable of Binomial family" +
-        s"should be in range (0, 1), but got $mu")
+      require(
+        mu > 0.0 && mu < 1.0,
+        "The response variable of Binomial family" +
+          s"should be in range (0, 1), but got $mu")
       mu
     }
 
@@ -757,15 +814,17 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
         deviance: Double,
         numInstances: Double,
         weightSum: Double): Double = {
-      -2.0 * predictions.map { case (y: Double, mu: Double, weight: Double) =>
-        // weights for Binomial distribution correspond to number of trials
-        val wt = math.round(weight).toInt
-        if (wt == 0) {
-          0.0
-        } else {
-          dist.Binomial(wt, mu).logProbabilityOf(math.round(y * weight).toInt)
+      -2.0 * predictions
+        .map { case (y: Double, mu: Double, weight: Double) =>
+          // weights for Binomial distribution correspond to number of trials
+          val wt = math.round(weight).toInt
+          if (wt == 0) {
+            0.0
+          } else {
+            dist.Binomial(wt, mu).logProbabilityOf(math.round(y * weight).toInt)
+          }
         }
-      }.sum()
+        .sum()
     }
 
     override def project(mu: Double): Double = {
@@ -780,8 +839,8 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   }
 
   /**
-   * Poisson exponential family distribution.
-   * The default link for the Poisson family is the log link.
+   * Poisson exponential family distribution. The default link for the Poisson family is the log
+   * link.
    */
   private[regression] object Poisson extends Tweedie(1.0) {
 
@@ -790,8 +849,10 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
     override val defaultLink: Link = Log
 
     override def initialize(y: Double, weight: Double): Double = {
-      require(y >= 0.0, "The response variable of Poisson family " +
-        s"should be non-negative, but got $y")
+      require(
+        y >= 0.0,
+        "The response variable of Poisson family " +
+          s"should be non-negative, but got $y")
       /*
         Force Poisson mean > 0 to avoid numerical instability in IRLS.
         R uses y + delta for initialization. See poisson()$initialize.
@@ -810,15 +871,17 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
         deviance: Double,
         numInstances: Double,
         weightSum: Double): Double = {
-      -2.0 * predictions.map { case (y: Double, mu: Double, weight: Double) =>
-        weight * dist.Poisson(mu).logProbabilityOf(y.toInt)
-      }.sum()
+      -2.0 * predictions
+        .map { case (y: Double, mu: Double, weight: Double) =>
+          weight * dist.Poisson(mu).logProbabilityOf(y.toInt)
+        }
+        .sum()
     }
   }
 
   /**
-   * Gamma exponential family distribution.
-   * The default link for the Gamma family is the inverse link.
+   * Gamma exponential family distribution. The default link for the Gamma family is the inverse
+   * link.
    */
   private[regression] object Gamma extends Tweedie(2.0) {
 
@@ -827,15 +890,17 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
     override val defaultLink: Link = Inverse
 
     override def initialize(y: Double, weight: Double): Double = {
-      require(y > 0.0, "The response variable of Gamma family " +
-        s"should be positive, but got $y")
+      require(
+        y > 0.0,
+        "The response variable of Gamma family " +
+          s"should be positive, but got $y")
       y
     }
 
     override def variance(mu: Double): Double = mu * mu
 
     override def deviance(y: Double, mu: Double, weight: Double): Double = {
-      -2.0 * weight * (math.log(y / mu) - (y - mu)/mu)
+      -2.0 * weight * (math.log(y / mu) - (y - mu) / mu)
     }
 
     override def aic(
@@ -844,18 +909,20 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
         numInstances: Double,
         weightSum: Double): Double = {
       val disp = deviance / weightSum
-      -2.0 * predictions.map { case (y: Double, mu: Double, weight: Double) =>
-        weight * dist.Gamma(1.0 / disp, mu * disp).logPdf(y)
-      }.sum() + 2.0
+      -2.0 * predictions
+        .map { case (y: Double, mu: Double, weight: Double) =>
+          weight * dist.Gamma(1.0 / disp, mu * disp).logPdf(y)
+        }
+        .sum() + 2.0
     }
   }
 
   /**
-   * A description of the link function to be used in the model.
-   * The link function provides the relationship between the linear predictor
-   * and the mean of the distribution function.
+   * A description of the link function to be used in the model. The link function provides the
+   * relationship between the linear predictor and the mean of the distribution function.
    *
-   * @param name the name of link function.
+   * @param name
+   *   the name of link function.
    */
   private[regression] abstract class Link(val name: String) extends Serializable {
 
@@ -872,11 +939,12 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   private[regression] object Link {
 
     /**
-     * Gets the [[Link]] object based on param family, link and linkPower.
-     * If param family is set with "tweedie", return or construct link function object
-     * according to linkPower; otherwise, return link function object according to link.
+     * Gets the [[Link]] object based on param family, link and linkPower. If param family is set
+     * with "tweedie", return or construct link function object according to linkPower; otherwise,
+     * return link function object according to link.
      *
-     * @param params the parameter map containing family, link and linkPower
+     * @param params
+     *   the parameter map containing family, link and linkPower
      */
     def fromParams(params: GeneralizedLinearRegressionBase): Link = {
       if (params.getFamily.toLowerCase(Locale.ROOT) == "tweedie") {
@@ -902,8 +970,7 @@ object GeneralizedLinearRegression extends DefaultParamsReadable[GeneralizedLine
   }
 
   /** Power link function class */
-  private[regression] class Power(val linkPower: Double)
-    extends Link("power") {
+  private[regression] class Power(val linkPower: Double) extends Link("power") {
 
     override def link(mu: Double): Double = {
       if (linkPower == 0.0) {
@@ -1012,9 +1079,10 @@ class GeneralizedLinearRegressionModel private[ml] (
     @Since("2.0.0") override val uid: String,
     @Since("2.0.0") val coefficients: Vector,
     @Since("2.0.0") val intercept: Double)
-  extends RegressionModel[Vector, GeneralizedLinearRegressionModel]
-  with GeneralizedLinearRegressionBase with MLWritable
-  with HasTrainingSummary[GeneralizedLinearRegressionTrainingSummary] {
+    extends RegressionModel[Vector, GeneralizedLinearRegressionModel]
+    with GeneralizedLinearRegressionBase
+    with MLWritable
+    with HasTrainingSummary[GeneralizedLinearRegressionTrainingSummary] {
 
   // For ml connect only
   private[ml] def this() = this("", Vectors.empty, Double.NaN)
@@ -1065,7 +1133,9 @@ class GeneralizedLinearRegressionModel private[ml] (
     if (hasLinkPredictionCol) {
       val predLinkUDF = udf((features: Vector, offset: Double) => predictLink(features, offset))
       outputData = outputData
-        .withColumn($(linkPredictionCol), predLinkUDF(col($(featuresCol)), offset),
+        .withColumn(
+          $(linkPredictionCol),
+          predLinkUDF(col($(featuresCol)), offset),
           outputSchema($(linkPredictionCol)).metadata)
       numColsOutput += 1
     }
@@ -1073,26 +1143,31 @@ class GeneralizedLinearRegressionModel private[ml] (
     if ($(predictionCol).nonEmpty) {
       if (hasLinkPredictionCol) {
         val predUDF = udf((eta: Double) => familyAndLink.fitted(eta))
-        outputData = outputData.withColumn($(predictionCol), predUDF(col($(linkPredictionCol))),
+        outputData = outputData.withColumn(
+          $(predictionCol),
+          predUDF(col($(linkPredictionCol))),
           outputSchema($(predictionCol)).metadata)
       } else {
         val predUDF = udf((features: Vector, offset: Double) => predict(features, offset))
-        outputData = outputData.withColumn($(predictionCol), predUDF(col($(featuresCol)), offset),
+        outputData = outputData.withColumn(
+          $(predictionCol),
+          predUDF(col($(featuresCol)), offset),
           outputSchema($(predictionCol)).metadata)
       }
       numColsOutput += 1
     }
 
     if (numColsOutput == 0) {
-      this.logWarning(log"${MDC(LogKeys.UUID, uid)}: GeneralizedLinearRegressionModel.transform()" +
-        log" does nothing because no output columns were set.")
+      this.logWarning(
+        log"${MDC(LogKeys.UUID, uid)}: GeneralizedLinearRegressionModel.transform()" +
+          log" does nothing because no output columns were set.")
     }
     outputData.toDF()
   }
 
   /**
-   * Gets R-like summary of model on training set. An exception is
-   * thrown if there is no summary available.
+   * Gets R-like summary of model on training set. An exception is thrown if there is no summary
+   * available.
    */
   @Since("2.0.0")
   override def summary: GeneralizedLinearRegressionTrainingSummary = super.summary
@@ -1107,8 +1182,8 @@ class GeneralizedLinearRegressionModel private[ml] (
 
   @Since("2.0.0")
   override def copy(extra: ParamMap): GeneralizedLinearRegressionModel = {
-    val copied = copyValues(new GeneralizedLinearRegressionModel(uid, coefficients, intercept),
-      extra)
+    val copied =
+      copyValues(new GeneralizedLinearRegressionModel(uid, coefficients, intercept), extra)
     copied.setSummary(trainingSummary).setParent(parent)
   }
 
@@ -1123,9 +1198,8 @@ class GeneralizedLinearRegressionModel private[ml] (
   /**
    * Returns a [[org.apache.spark.ml.util.MLWriter]] instance for this ML instance.
    *
-   * For [[GeneralizedLinearRegressionModel]], this does NOT currently save the
-   * training [[summary]]. An option to save [[summary]] may be added in the future.
-   *
+   * For [[GeneralizedLinearRegressionModel]], this does NOT currently save the training
+   * [[summary]]. An option to save [[summary]] may be added in the future.
    */
   @Since("2.0.0")
   override def write: MLWriter =
@@ -1140,35 +1214,38 @@ class GeneralizedLinearRegressionModel private[ml] (
   }
 
   private[spark] def createSummary(
-    dataset: Dataset[_], diagInvAtWA: Array[Double], numIter: Int
-  ): Unit = {
+      dataset: Dataset[_],
+      diagInvAtWA: Array[Double],
+      numIter: Int): Unit = {
     val summary = new GeneralizedLinearRegressionTrainingSummary(
-      dataset, this, diagInvAtWA, numIter, $(solver)
-    )
+      dataset,
+      this,
+      diagInvAtWA,
+      numIter,
+      $(solver))
 
     setSummary(Some(summary))
   }
 
   override private[spark] def saveSummary(path: String): Unit = {
     ReadWriteUtils.saveObjectToLocal[(Array[Double], Int)](
-      path, (summary.diagInvAtWA, summary.numIterations),
+      path,
+      (summary.diagInvAtWA, summary.numIterations),
       (data, dos) => {
         ReadWriteUtils.serializeDoubleArray(data._1, dos)
         dos.writeInt(data._2)
-      }
-    )
+      })
   }
 
   override private[spark] def loadSummary(path: String, dataset: DataFrame): Unit = {
     val (diagInvAtWA: Array[Double], numIterations: Int) =
       ReadWriteUtils.loadObjectFromLocal[(Array[Double], Int)](
-      path,
-      dis => {
-        val diagInvAtWA = ReadWriteUtils.deserializeDoubleArray(dis)
-        val numIterations = dis.readInt()
-        (diagInvAtWA, numIterations)
-      }
-    )
+        path,
+        dis => {
+          val diagInvAtWA = ReadWriteUtils.deserializeDoubleArray(dis)
+          val numIterations = dis.readInt()
+          (diagInvAtWA, numIterations)
+        })
     createSummary(dataset, diagInvAtWA, numIterations)
   }
 }
@@ -1198,9 +1275,10 @@ object GeneralizedLinearRegressionModel extends MLReadable[GeneralizedLinearRegr
   override def load(path: String): GeneralizedLinearRegressionModel = super.load(path)
 
   /** [[MLWriter]] instance for [[GeneralizedLinearRegressionModel]] */
-  private[GeneralizedLinearRegressionModel]
-  class GeneralizedLinearRegressionModelWriter(instance: GeneralizedLinearRegressionModel)
-    extends MLWriter with Logging {
+  private[GeneralizedLinearRegressionModel] class GeneralizedLinearRegressionModelWriter(
+      instance: GeneralizedLinearRegressionModel)
+      extends MLWriter
+      with Logging {
 
     override protected def saveImpl(path: String): Unit = {
       // Save metadata and Params
@@ -1213,7 +1291,7 @@ object GeneralizedLinearRegressionModel extends MLReadable[GeneralizedLinearRegr
   }
 
   private class GeneralizedLinearRegressionModelReader
-    extends MLReader[GeneralizedLinearRegressionModel] {
+      extends MLReader[GeneralizedLinearRegressionModel] {
 
     /** Checked against metadata when loading model */
     private val className = classOf[GeneralizedLinearRegressionModel].getName
@@ -1224,9 +1302,8 @@ object GeneralizedLinearRegressionModel extends MLReadable[GeneralizedLinearRegr
       val dataPath = new Path(path, "data").toString
       val data = ReadWriteUtils.loadObject[Data](dataPath, sparkSession, deserializeData)
 
-      val model = new GeneralizedLinearRegressionModel(
-        metadata.uid, data.coefficients, data.intercept
-      )
+      val model =
+        new GeneralizedLinearRegressionModel(metadata.uid, data.coefficients, data.intercept)
 
       metadata.getAndSetParams(model)
       model
@@ -1237,20 +1314,24 @@ object GeneralizedLinearRegressionModel extends MLReadable[GeneralizedLinearRegr
 /**
  * Summary of [[GeneralizedLinearRegression]] model and predictions.
  *
- * @param dataset Dataset to be summarized.
- * @param origModel Model to be summarized.  This is copied to create an internal
- *                  model which cannot be modified from outside.
+ * @param dataset
+ *   Dataset to be summarized.
+ * @param origModel
+ *   Model to be summarized. This is copied to create an internal model which cannot be modified
+ *   from outside.
  */
 @Since("2.0.0")
 class GeneralizedLinearRegressionSummary private[regression] (
     dataset: Dataset[_],
-    origModel: GeneralizedLinearRegressionModel) extends Summary with Serializable {
+    origModel: GeneralizedLinearRegressionModel)
+    extends Summary
+    with Serializable {
 
   import GeneralizedLinearRegression._
 
   /**
-   * Field in "predictions" which gives the predicted value of each instance.
-   * This is set to a new column name if the original model's `predictionCol` is not set.
+   * Field in "predictions" which gives the predicted value of each instance. This is set to a new
+   * column name if the original model's `predictionCol` is not set.
    */
   @Since("2.0.0")
   val predictionCol: String = {
@@ -1262,11 +1343,12 @@ class GeneralizedLinearRegressionSummary private[regression] (
   }
 
   /**
-   * Private copy of model to ensure Params are not modified outside this class.
-   * Coefficients is not a deep copy, but that is acceptable.
+   * Private copy of model to ensure Params are not modified outside this class. Coefficients is
+   * not a deep copy, but that is acceptable.
    *
-   * @note [[predictionCol]] must be set correctly before the value of [[model]] is set,
-   * and [[model]] must be set before [[predictions]] is set!
+   * @note
+   *   [[predictionCol]] must be set correctly before the value of [[model]] is set, and [[model]]
+   *   must be set before [[predictions]] is set!
    */
   protected val model: GeneralizedLinearRegressionModel =
     origModel.copy(ParamMap.empty).setPredictionCol(predictionCol)
@@ -1283,8 +1365,8 @@ class GeneralizedLinearRegressionSummary private[regression] (
   private[regression] lazy val link: Link = familyLink.link
 
   /**
-   * summary row containing:
-   *  numInstances, weightSum, deviance, rss, weighted average of label - offset.
+   * summary row containing: numInstances, weightSum, deviance, rss, weighted average of label -
+   * offset.
    */
   private lazy val glrSummary = {
     val devUDF = udf { (label: Double, pred: Double, weight: Double) =>
@@ -1292,22 +1374,24 @@ class GeneralizedLinearRegressionSummary private[regression] (
     }
     val devCol = sum(devUDF(label, prediction, weight))
 
-    val rssCol = if (model.getFamily.toLowerCase(Locale.ROOT) != Binomial.name &&
-      model.getFamily.toLowerCase(Locale.ROOT) != Poisson.name) {
-      val rssUDF = udf { (label: Double, pred: Double, weight: Double) =>
-        (label - pred) * (label - pred) * weight / family.variance(pred)
+    val rssCol =
+      if (model.getFamily.toLowerCase(Locale.ROOT) != Binomial.name &&
+        model.getFamily.toLowerCase(Locale.ROOT) != Poisson.name) {
+        val rssUDF = udf { (label: Double, pred: Double, weight: Double) =>
+          (label - pred) * (label - pred) * weight / family.variance(pred)
+        }
+        sum(rssUDF(label, prediction, weight))
+      } else {
+        lit(Double.NaN)
       }
-      sum(rssUDF(label, prediction, weight))
-    } else {
-      lit(Double.NaN)
-    }
 
-    val avgCol = if (model.getFitIntercept &&
-      (!model.hasOffsetCol || (model.hasOffsetCol && family == Gaussian && link == Identity))) {
-      sum((label - offset) * weight) / sum(weight)
-    } else {
-      lit(Double.NaN)
-    }
+    val avgCol =
+      if (model.getFitIntercept &&
+        (!model.hasOffsetCol || (model.hasOffsetCol && family == Gaussian && link == Identity))) {
+        sum((label - offset) * weight) / sum(weight)
+      } else {
+        lit(Double.NaN)
+      }
 
     predictions
       .select(count(label), sum(weight), devCol, rssCol, avgCol)
@@ -1319,12 +1403,12 @@ class GeneralizedLinearRegressionSummary private[regression] (
   lazy val numInstances: Long = glrSummary.getLong(0)
 
   /**
-   * Name of features. If the name cannot be retrieved from attributes,
-   * set default names to feature column name with numbered suffix "_0", "_1", and so on.
+   * Name of features. If the name cannot be retrieved from attributes, set default names to
+   * feature column name with numbered suffix "_0", "_1", and so on.
    */
   private[ml] lazy val featureNames: Array[String] = {
-    val featureAttrs = AttributeGroup.fromStructField(
-      dataset.schema(model.getFeaturesCol)).attributes
+    val featureAttrs =
+      AttributeGroup.fromStructField(dataset.schema(model.getFeaturesCol)).attributes
     if (featureAttrs.isDefined) {
       featureAttrs.get.map(_.name.get)
     } else {
@@ -1371,14 +1455,17 @@ class GeneralizedLinearRegressionSummary private[regression] (
       val r = math.sqrt(math.max(family.deviance(y, mu, weight), 0.0))
       if (y > mu) r else -1.0 * r
     }
-    predictions.select(
-      drUDF(label, prediction, weight).as("devianceResiduals"))
+    predictions.select(drUDF(label, prediction, weight).as("devianceResiduals"))
   }
 
   private[regression] lazy val pearsonResiduals: DataFrame = {
     val prUDF = udf { mu: Double => family.variance(mu) }
-    predictions.select(label.minus(prediction)
-      .multiply(sqrt(weight)).divide(sqrt(prUDF(prediction))).as("pearsonResiduals"))
+    predictions.select(
+      label
+        .minus(prediction)
+        .multiply(sqrt(weight))
+        .divide(sqrt(prUDF(prediction)))
+        .as("pearsonResiduals"))
   }
 
   private[regression] lazy val workingResiduals: DataFrame = {
@@ -1399,8 +1486,9 @@ class GeneralizedLinearRegressionSummary private[regression] (
   /**
    * Get the residuals of the fitted model by type.
    *
-   * @param residualsType The type of residuals which should be returned.
-   *                      Supported options: deviance, pearson, working and response.
+   * @param residualsType
+   *   The type of residuals which should be returned. Supported options: deviance, pearson,
+   *   working and response.
    */
   @Since("2.0.0")
   def residuals(residualsType: String): DataFrame = {
@@ -1409,8 +1497,9 @@ class GeneralizedLinearRegressionSummary private[regression] (
       case "pearson" => pearsonResiduals
       case "working" => workingResiduals
       case "response" => responseResiduals
-      case other => throw new UnsupportedOperationException(
-        s"The residuals type $other is not supported by Generalized Linear Regression.")
+      case other =>
+        throw new UnsupportedOperationException(
+          s"The residuals type $other is not supported by Generalized Linear Regression.")
     }
   }
 
@@ -1437,16 +1526,17 @@ class GeneralizedLinearRegressionSummary private[regression] (
         if (family.name != "tweedie") {
           paramMap.remove(model.variancePower)
         }
-        val emptyVectorUDF = udf{ () => Vectors.zeros(0) }
-        model.parent.fit(
-          dataset.withColumn(featureNull, emptyVectorUDF()), paramMap
-        ).intercept
+        val emptyVectorUDF = udf { () => Vectors.zeros(0) }
+        model.parent.fit(dataset.withColumn(featureNull, emptyVectorUDF()), paramMap).intercept
       }
     }
-    predictions.select(label, offset, weight).rdd.map {
-      case Row(y: Double, offset: Double, weight: Double) =>
+    predictions
+      .select(label, offset, weight)
+      .rdd
+      .map { case Row(y: Double, offset: Double, weight: Double) =>
         family.deviance(y, link.unlink(intercept + offset), weight)
-    }.sum()
+      }
+      .sum()
   }
 
   /**
@@ -1456,29 +1546,28 @@ class GeneralizedLinearRegressionSummary private[regression] (
   lazy val deviance: Double = glrSummary.getDouble(2)
 
   /**
-   * The dispersion of the fitted model.
-   * It is taken as 1.0 for the "binomial" and "poisson" families, and otherwise
-   * estimated by the residual Pearson's Chi-Squared statistic (which is defined as
-   * sum of the squares of the Pearson residuals) divided by the residual degrees of freedom.
+   * The dispersion of the fitted model. It is taken as 1.0 for the "binomial" and "poisson"
+   * families, and otherwise estimated by the residual Pearson's Chi-Squared statistic (which is
+   * defined as sum of the squares of the Pearson residuals) divided by the residual degrees of
+   * freedom.
    */
   @Since("2.0.0")
-  lazy val dispersion: Double = if (
-    model.getFamily.toLowerCase(Locale.ROOT) == Binomial.name ||
+  lazy val dispersion: Double =
+    if (model.getFamily.toLowerCase(Locale.ROOT) == Binomial.name ||
       model.getFamily.toLowerCase(Locale.ROOT) == Poisson.name) {
-    1.0
-  } else {
-    val rss = glrSummary.getDouble(3)
-    rss / degreesOfFreedom
-  }
+      1.0
+    } else {
+      val rss = glrSummary.getDouble(3)
+      rss / degreesOfFreedom
+    }
 
   /** Akaike Information Criterion (AIC) for the fitted model. */
   @Since("2.0.0")
   lazy val aic: Double = {
     val weightSum = glrSummary.getDouble(1)
-    val t = predictions.select(
-      label, prediction, weight).rdd.map {
-        case Row(label: Double, pred: Double, weight: Double) =>
-          (label, pred, weight)
+    val t = predictions.select(label, prediction, weight).rdd.map {
+      case Row(label: Double, pred: Double, weight: Double) =>
+        (label, pred, weight)
     }
     family.aic(t, deviance, numInstances.toDouble, weightSum) + 2 * rank
   }
@@ -1487,12 +1576,17 @@ class GeneralizedLinearRegressionSummary private[regression] (
 /**
  * Summary of [[GeneralizedLinearRegression]] fitting and model.
  *
- * @param dataset Dataset to be summarized.
- * @param origModel Model to be summarized.  This is copied to create an internal
- *                  model which cannot be modified from outside.
- * @param diagInvAtWA diagonal of matrix (A^T * W * A)^-1 in the last iteration
- * @param numIterations number of iterations
- * @param solver the solver algorithm used for model training
+ * @param dataset
+ *   Dataset to be summarized.
+ * @param origModel
+ *   Model to be summarized. This is copied to create an internal model which cannot be modified
+ *   from outside.
+ * @param diagInvAtWA
+ *   diagonal of matrix (A^T * W * A)^-1 in the last iteration
+ * @param numIterations
+ *   number of iterations
+ * @param solver
+ *   the solver algorithm used for model training
  */
 @Since("2.0.0")
 class GeneralizedLinearRegressionTrainingSummary private[regression] (
@@ -1501,7 +1595,8 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
     private[spark] val diagInvAtWA: Array[Double],
     @Since("2.0.0") val numIterations: Int,
     @Since("2.0.0") val solver: String)
-  extends GeneralizedLinearRegressionSummary(dataset, origModel) with Serializable {
+    extends GeneralizedLinearRegressionSummary(dataset, origModel)
+    with Serializable {
 
   import GeneralizedLinearRegression._
 
@@ -1513,12 +1608,11 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
   }
 
   /**
-   * Standard error of estimated coefficients and intercept.
-   * This value is only available when the underlying `WeightedLeastSquares`
-   * using the "normal" solver.
+   * Standard error of estimated coefficients and intercept. This value is only available when the
+   * underlying `WeightedLeastSquares` using the "normal" solver.
    *
-   * If `GeneralizedLinearRegression.fitIntercept` is set to true,
-   * then the last element returned corresponds to the intercept.
+   * If `GeneralizedLinearRegression.fitIntercept` is set to true, then the last element returned
+   * corresponds to the intercept.
    */
   @Since("2.0.0")
   lazy val coefficientStandardErrors: Array[Double] = {
@@ -1531,12 +1625,11 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
   }
 
   /**
-   * T-statistic of estimated coefficients and intercept.
-   * This value is only available when the underlying `WeightedLeastSquares`
-   * using the "normal" solver.
+   * T-statistic of estimated coefficients and intercept. This value is only available when the
+   * underlying `WeightedLeastSquares` using the "normal" solver.
    *
-   * If `GeneralizedLinearRegression.fitIntercept` is set to true,
-   * then the last element returned corresponds to the intercept.
+   * If `GeneralizedLinearRegression.fitIntercept` is set to true, then the last element returned
+   * corresponds to the intercept.
    */
   @Since("2.0.0")
   lazy val tValues: Array[Double] = {
@@ -1554,12 +1647,11 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
   }
 
   /**
-   * Two-sided p-value of estimated coefficients and intercept.
-   * This value is only available when the underlying `WeightedLeastSquares`
-   * using the "normal" solver.
+   * Two-sided p-value of estimated coefficients and intercept. This value is only available when
+   * the underlying `WeightedLeastSquares` using the "normal" solver.
    *
-   * If `GeneralizedLinearRegression.fitIntercept` is set to true,
-   * then the last element returned corresponds to the intercept.
+   * If `GeneralizedLinearRegression.fitIntercept` is set to true, then the last element returned
+   * corresponds to the intercept.
    */
   @Since("2.0.0")
   lazy val pValues: Array[Double] = {
@@ -1581,8 +1673,8 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
   /**
    * Coefficients with statistics: feature name, coefficients, standard error, tValue and pValue.
    */
-  private[ml] lazy val coefficientsWithStatistics: Array[
-    (String, Double, Double, Double, Double)] = {
+  private[ml] lazy val coefficientsWithStatistics
+      : Array[(String, Double, Double, Double, Double)] = {
     var featureNamesLocal = featureNames
     var coefficientsArray = model.coefficients.toArray
     var index = Array.range(0, coefficientsArray.length)
@@ -1593,8 +1685,12 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
       index = (coefficientsArray.length - 1) +: index
     }
     index.map { i =>
-      (featureNamesLocal(i), coefficientsArray(i), coefficientStandardErrors(i),
-        tValues(i), pValues(i))
+      (
+        featureNamesLocal(i),
+        coefficientsArray(i),
+        coefficientStandardErrors(i),
+        tValues(i),
+        pValues(i))
     }
   }
 
@@ -1635,19 +1731,24 @@ class GeneralizedLinearRegressionTrainingSummary private[regression] (
 
       // Output coefficients with statistics
       sb.append("Coefficients:\n")
-      colNames.zipWithIndex.map { case (colName: String, i: Int) =>
-        Utils.leftPad(colName, colWidths(i))
-      }.addString(sb, "", " ", "\n")
+      colNames.zipWithIndex
+        .map { case (colName: String, i: Int) =>
+          Utils.leftPad(colName, colWidths(i))
+        }
+        .addString(sb, "", " ", "\n")
 
       data.foreach { case strRow: Array[String] =>
-        strRow.zipWithIndex.map { case (cell: String, i: Int) =>
-          Utils.leftPad(cell, colWidths(i))
-        }.addString(sb, "", " ", "\n")
+        strRow.zipWithIndex
+          .map { case (cell: String, i: Int) =>
+            Utils.leftPad(cell, colWidths(i))
+          }
+          .addString(sb, "", " ", "\n")
       }
 
       sb.append("\n")
-      sb.append(s"(Dispersion parameter for ${family.name} family taken to be " +
-        s"${round(dispersion)})")
+      sb.append(
+        s"(Dispersion parameter for ${family.name} family taken to be " +
+          s"${round(dispersion)})")
 
       sb.append("\n")
       val nd = s"Null deviance: ${round(nullDeviance)} on $degreesOfFreedom degrees of freedom"

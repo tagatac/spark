@@ -55,7 +55,8 @@ class WholeTextFileRecordReaderSuite extends SparkFunSuite {
 
     // Set the block size of local file system to test whether files are split right or not.
     sc.hadoopConfiguration.setLong("fs.local.block.size", 32)
-    sc.hadoopConfiguration.set("io.compression.codecs",
+    sc.hadoopConfiguration.set(
+      "io.compression.codecs",
       "org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.DefaultCodec")
     factory = new CompressionCodecFactory(sc.hadoopConfiguration)
   }
@@ -70,37 +71,39 @@ class WholeTextFileRecordReaderSuite extends SparkFunSuite {
 
   import WholeTextFileRecordReaderSuite.CompressionType
 
-  def createNativeFile(inputDir: File, fileName: String, contents: Array[Byte],
-    compressionType: CompressionType.CompressionType = CompressionType.NONE): Unit = {
-    val out = if (compressionType == CompressionType.GZIP ||
-      compressionType == CompressionType.GZ) {
-      val codec = new GzipCodec
-      codec.setConf(new Configuration())
-      val extension = if (compressionType == CompressionType.GZIP) {
-        ".gzip" // Try with non-standard extension
+  def createNativeFile(
+      inputDir: File,
+      fileName: String,
+      contents: Array[Byte],
+      compressionType: CompressionType.CompressionType = CompressionType.NONE): Unit = {
+    val out =
+      if (compressionType == CompressionType.GZIP ||
+        compressionType == CompressionType.GZ) {
+        val codec = new GzipCodec
+        codec.setConf(new Configuration())
+        val extension = if (compressionType == CompressionType.GZIP) {
+          ".gzip" // Try with non-standard extension
+        } else {
+          codec.getDefaultExtension
+        }
+        val path = s"${inputDir.toString}/$fileName${extension}"
+        codec.createOutputStream(new DataOutputStream(new FileOutputStream(path)))
+      } else if (compressionType == CompressionType.ZSTD || compressionType == CompressionType.ZST) {
+        val extension = if (compressionType == CompressionType.ZSTD) ".zstd" else ".zst"
+        val path = s"${inputDir.toString}/${fileName}${extension}"
+        new ZStdCompressionCodec(sc.conf).compressedOutputStream(new FileOutputStream(path))
       } else {
-        codec.getDefaultExtension
+        val path = s"${inputDir.toString}/$fileName"
+        new DataOutputStream(new FileOutputStream(path))
       }
-      val path = s"${inputDir.toString}/$fileName${extension}"
-      codec.createOutputStream(new DataOutputStream(new FileOutputStream(path)))
-    } else if (compressionType == CompressionType.ZSTD || compressionType == CompressionType.ZST) {
-      val extension = if (compressionType == CompressionType.ZSTD) ".zstd" else ".zst"
-      val path = s"${inputDir.toString}/${fileName}${extension}"
-      new ZStdCompressionCodec(sc.conf).compressedOutputStream(new FileOutputStream(path))
-    } else {
-      val path = s"${inputDir.toString}/$fileName"
-      new DataOutputStream(new FileOutputStream(path))
-    }
     out.write(contents, 0, contents.length)
     out.close()
   }
 
   /**
    * This code will test the behaviors of WholeTextFileRecordReader based on local disk. There are
-   * three aspects to check:
-   *   1) Whether all files are read;
-   *   2) Whether paths are read correctly;
-   *   3) Does the contents be the same.
+   * three aspects to check: 1) Whether all files are read; 2) Whether paths are read correctly;
+   * 3) Does the contents be the same.
    */
   test("Correctness of WholeTextFileRecordReader.") {
     CompressionType.values.foreach { compressionType =>
@@ -113,7 +116,8 @@ class WholeTextFileRecordReaderSuite extends SparkFunSuite {
 
         val res = sc.wholeTextFiles(dir.toString, 3).collect()
 
-        assert(res.length === WholeTextFileRecordReaderSuite.fileNames.length,
+        assert(
+          res.length === WholeTextFileRecordReaderSuite.fileNames.length,
           "Number of files read out does not fit with the actual value.")
 
         for ((filename, contents) <- res) {
@@ -121,9 +125,11 @@ class WholeTextFileRecordReaderSuite extends SparkFunSuite {
             case CompressionType.NONE => filename.split('/').last
             case _ => filename.split('/').last.split('.').head
           }
-          assert(WholeTextFileRecordReaderSuite.fileNames.contains(shortName),
+          assert(
+            WholeTextFileRecordReaderSuite.fileNames.contains(shortName),
             s"Missing file name $filename.")
-          assert(contents === new Text(WholeTextFileRecordReaderSuite.files(shortName)).toString,
+          assert(
+            contents === new Text(WholeTextFileRecordReaderSuite.files(shortName)).toString,
             s"file $filename contents can not match.")
         }
       }
@@ -140,9 +146,16 @@ object WholeTextFileRecordReaderSuite {
   private val fileNames = Array("part-00000", "part-00001", "part-00002")
   private val fileLengths = Array(10, 100, 1000)
 
-  private val files = fileLengths.zip(fileNames).map { case (upperBound, filename) =>
-    filename -> LazyList.continually(testWords.toList.to(LazyList)).flatten.take(upperBound).toArray
-  }.toMap
+  private val files = fileLengths
+    .zip(fileNames)
+    .map { case (upperBound, filename) =>
+      filename -> LazyList
+        .continually(testWords.toList.to(LazyList))
+        .flatten
+        .take(upperBound)
+        .toArray
+    }
+    .toMap
 
   object CompressionType extends Enumeration {
     type CompressionType = Value

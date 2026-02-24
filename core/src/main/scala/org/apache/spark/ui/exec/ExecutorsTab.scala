@@ -49,7 +49,7 @@ private[ui] class ExecutorsPage(
     parent: SparkUITab,
     threadDumpEnabled: Boolean,
     heapHistogramEnabled: Boolean)
-  extends WebUIPage("") {
+    extends WebUIPage("") {
 
   def render(request: HttpServletRequest): Seq[Node] = {
     val imported = UIUtils.formatImportJavaScript(
@@ -64,14 +64,15 @@ private[ui] class ExecutorsPage(
          |setThreadDumpEnabled($threadDumpEnabled);
          |setHeapHistogramEnabled($heapHistogramEnabled)
          |""".stripMargin
-    val content =
-      {
-        <div id="active-executors"></div> ++
-        <script type="module" src={UIUtils.prependBaseUri(request, "/static/utils.js")}></script> ++
+    val content = {
+      <div id="active-executors"></div> ++
+        <script type="module" src={
+          UIUtils.prependBaseUri(request, "/static/utils.js")
+        }></script> ++
         <script type="module"
                 src={UIUtils.prependBaseUri(request, "/static/executorspage.js")}></script> ++
         <script type="module" nonce={CspNonce.get}>{Unparsed(js)}</script>
-      }
+    }
 
     UIUtils.headerSparkPage(request, "Executors", content, parent, useDataTables = true)
   }

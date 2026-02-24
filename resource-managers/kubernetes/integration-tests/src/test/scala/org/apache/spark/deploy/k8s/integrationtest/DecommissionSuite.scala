@@ -39,7 +39,8 @@ private[spark] trait DecommissionSuite { k8sSuite: KubernetesSuite =>
     val logConfFilePath = s"${sparkHomeDir.toFile}/conf/log4j2.properties"
 
     try {
-      Files.writeString(new File(logConfFilePath).toPath,
+      Files.writeString(
+        new File(logConfFilePath).toPath,
         """rootLogger.level = info
           |rootLogger.appenderRef.stdout.ref = console
           |appender.console.type = Console
@@ -106,9 +107,8 @@ private[spark] trait DecommissionSuite { k8sSuite: KubernetesSuite =>
       runSparkApplicationAndVerifyCompletion(
         appResource = PYSPARK_DECOMISSIONING_CLEANUP,
         mainClass = "",
-        expectedDriverLogOnCompletion = Seq(
-          "Finished waiting, stopping Spark",
-          "Decommission executors"),
+        expectedDriverLogOnCompletion =
+          Seq("Finished waiting, stopping Spark", "Decommission executors"),
         appArgs = Array.empty[String],
         driverPodChecker = doBasicDriverPyPodCheck,
         executorPodChecker = doBasicExecutorPyPodCheck,
@@ -119,8 +119,10 @@ private[spark] trait DecommissionSuite { k8sSuite: KubernetesSuite =>
     })
   }
 
-  test("Test decommissioning with dynamic allocation & shuffle cleanups",
-      k8sTestTag, decomTestTag) {
+  test(
+    "Test decommissioning with dynamic allocation & shuffle cleanups",
+    k8sTestTag,
+    decomTestTag) {
     runDecommissionTest(() => {
       sparkAppConf
         .set(config.DECOMMISSION_ENABLED.key, "true")
@@ -153,7 +155,8 @@ private[spark] trait DecommissionSuite { k8sSuite: KubernetesSuite =>
             PatienceConfiguration.Timeout(Span(120, Seconds)),
             PatienceConfiguration.Interval(Span(1, Seconds))) {
 
-            val currentPod = client.pods()
+            val currentPod = client
+              .pods()
               .inNamespace(kubernetesTestComponents.namespace)
               .withName(pod.getMetadata.getName)
               .get

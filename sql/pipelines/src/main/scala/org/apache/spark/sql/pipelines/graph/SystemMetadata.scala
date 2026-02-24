@@ -30,43 +30,39 @@ sealed trait SystemMetadata {}
 /**
  * Represents the system metadata associated with a [[Flow]].
  */
-case class FlowSystemMetadata(
-    context: PipelineUpdateContext,
-    flow: Flow,
-    graph: DataflowGraph
-) extends SystemMetadata with Logging {
+case class FlowSystemMetadata(context: PipelineUpdateContext, flow: Flow, graph: DataflowGraph)
+    extends SystemMetadata
+    with Logging {
 
   /**
-   * Returns the checkpoint root directory for a given flow
-   * which is storage/_checkpoints/flow_destination_table/flow_name.
-   * @return the checkpoint root directory for `flow`
+   * Returns the checkpoint root directory for a given flow which is
+   * storage/_checkpoints/flow_destination_table/flow_name.
+   * @return
+   *   the checkpoint root directory for `flow`
    */
   def flowCheckpointsDirOpt(): Option[Path] = {
-    Option(if (graph.table.contains(flow.destinationIdentifier) ||
-      graph.sink.contains(flow.destinationIdentifier)) {
-      val checkpointRoot = new Path(context.storageRoot, "_checkpoints")
-      // Different tables in the pipeline can have flows with the same name, so we include
-      // the table's fully qualified identifier in the path to avoid collisions.
-      val flowTableId = tableIdentifierToPathString(flow.destinationIdentifier)
-      val flowName = flow.identifier.table
-      val checkpointDir = new Path(
-        new Path(checkpointRoot, flowTableId),
-        flowName
-      )
-      logInfo(
-        log"Flow ${MDC(LogKeys.FLOW_NAME, flowName)} using checkpoint " +
-          log"directory: ${MDC(LogKeys.CHECKPOINT_PATH, checkpointDir)}"
-      )
-      checkpointDir
-    } else {
-      throw new IllegalArgumentException(
-        s"Flow ${flow.identifier} does not have a valid destination for checkpoints."
-      )
-    })
+    Option(
+      if (graph.table.contains(flow.destinationIdentifier) ||
+        graph.sink.contains(flow.destinationIdentifier)) {
+        val checkpointRoot = new Path(context.storageRoot, "_checkpoints")
+        // Different tables in the pipeline can have flows with the same name, so we include
+        // the table's fully qualified identifier in the path to avoid collisions.
+        val flowTableId = tableIdentifierToPathString(flow.destinationIdentifier)
+        val flowName = flow.identifier.table
+        val checkpointDir = new Path(new Path(checkpointRoot, flowTableId), flowName)
+        logInfo(
+          log"Flow ${MDC(LogKeys.FLOW_NAME, flowName)} using checkpoint " +
+            log"directory: ${MDC(LogKeys.CHECKPOINT_PATH, checkpointDir)}")
+        checkpointDir
+      } else {
+        throw new IllegalArgumentException(
+          s"Flow ${flow.identifier} does not have a valid destination for checkpoints.")
+      })
   }
 
   /**
-   * Converts a TableIdentifier to a path string by joining its name parts with the path separator.
+   * Converts a TableIdentifier to a path string by joining its name parts with the path
+   * separator.
    */
   private def tableIdentifierToPathString(tableIdentifier: TableIdentifier): String = {
     tableIdentifier.nameParts.mkString(Path.SEPARATOR)
@@ -79,8 +75,8 @@ case class FlowSystemMetadata(
   }
 
   /**
-   * Same as [[latestCheckpointLocation]] but returns None if the flow checkpoints directory
-   * does not exist.
+   * Same as [[latestCheckpointLocation]] but returns None if the flow checkpoints directory does
+   * not exist.
    */
   def latestCheckpointLocationOpt(): Option[String] = {
     flowCheckpointsDirOpt().map { flowCheckpointsDir =>
@@ -95,16 +91,14 @@ object SystemMetadata {
   /**
    * Finds the largest checkpoint version subdirectory path within a checkpoint directory, or
    * creates and returns a version 0 subdirectory path if no versions exist.
-   * @param rootDir The root/parent directory where all the numbered checkpoint subdirectories are
-   *                stored
-   * @param createNewCheckpointDir If true, a new latest numbered checkpoint directory should be
-   *                               created and returned
-   * @return The string URI path to the latest checkpoint directory
+   * @param rootDir
+   *   The root/parent directory where all the numbered checkpoint subdirectories are stored
+   * @param createNewCheckpointDir
+   *   If true, a new latest numbered checkpoint directory should be created and returned
+   * @return
+   *   The string URI path to the latest checkpoint directory
    */
-  def getLatestCheckpointDir(
-      rootDir: Path,
-      createNewCheckpointDir: Boolean = false
-  ): String = {
+  def getLatestCheckpointDir(rootDir: Path, createNewCheckpointDir: Boolean = false): String = {
     val fs = rootDir.getFileSystem(spark.sessionState.newHadoopConf())
     val defaultDir = new Path(rootDir, "0")
     val checkpoint = if (fs.exists(rootDir)) {
@@ -114,17 +108,15 @@ object SystemMetadata {
           .sortBy(fs => Try(fs.getPath.getName.toInt).getOrElse(-1))
       availableCheckpoints.lastOption
         .filter(fs => Try(fs.getPath.getName.toInt).isSuccess)
-        .map(
-          latestCheckpoint =>
-            if (createNewCheckpointDir) {
-              val incrementedLatestCheckpointDir =
-                new Path(rootDir, Math.max(latestCheckpoint.getPath.getName.toInt + 1, 0).toString)
-              fs.mkdirs(incrementedLatestCheckpointDir)
-              incrementedLatestCheckpointDir
-            } else {
-              latestCheckpoint.getPath
-            }
-        )
+        .map(latestCheckpoint =>
+          if (createNewCheckpointDir) {
+            val incrementedLatestCheckpointDir =
+              new Path(rootDir, Math.max(latestCheckpoint.getPath.getName.toInt + 1, 0).toString)
+            fs.mkdirs(incrementedLatestCheckpointDir)
+            incrementedLatestCheckpointDir
+          } else {
+            latestCheckpoint.getPath
+          })
         .getOrElse {
           fs.mkdirs(defaultDir)
           defaultDir

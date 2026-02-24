@@ -46,25 +46,25 @@ private[spark] object DependencyUtils extends Logging {
       JAR_PACKAGES.key,
       JAR_REPOSITORIES.key,
       JAR_IVY_REPO_PATH.key,
-      JAR_IVY_SETTING_PATH.key
-    ).map(sys.props.get(_).orNull)
+      JAR_IVY_SETTING_PATH.key).map(sys.props.get(_).orNull)
     IvyProperties(packagesExclusions, packages, repositories, ivyRepoPath, ivySettingsPath)
   }
 
   /**
    * Download Ivy URI's dependency jars.
    *
-   * @param uri Ivy URI need to be downloaded. The URI format should be:
-   *              `ivy://group:module:version[?query]`
-   *            Ivy URI query part format should be:
-   *              `parameter=value&parameter=value...`
-   *            Note that currently Ivy URI query part support two parameters:
-   *             1. transitive: whether to download dependent jars related to your Ivy URI.
-   *                transitive=false or `transitive=true`, if not set, the default value is true.
-   *             2. exclude: exclusion list when download Ivy URI jar and dependency jars.
-   *                The `exclude` parameter content is a ',' separated `group:module` pair string :
-   *                `exclude=group:module,group:module...`
-   * @return List of jars downloaded.
+   * @param uri
+   *   Ivy URI need to be downloaded. The URI format should be:
+   *   `ivy://group:module:version[?query]` Ivy URI query part format should be:
+   *   `parameter=value&parameter=value...` Note that currently Ivy URI query part support two
+   *   parameters:
+   *   1. transitive: whether to download dependent jars related to your Ivy URI. transitive=false
+   *      or `transitive=true`, if not set, the default value is true.
+   *   2. exclude: exclusion list when download Ivy URI jar and dependency jars. The `exclude`
+   *      parameter content is a ',' separated `group:module` pair string :
+   *      `exclude=group:module,group:module...`
+   * @return
+   *   List of jars downloaded.
    */
   def resolveMavenDependencies(uri: URI): Seq[String] = {
     val ivyProperties = DependencyUtils.getIvyProperties()
@@ -90,8 +90,7 @@ private[spark] object DependencyUtils extends Logging {
       authority,
       fullReposList,
       ivyProperties.ivyRepoPath,
-      Option(ivyProperties.ivySettingsPath)
-    )
+      Option(ivyProperties.ivySettingsPath))
   }
 
   def resolveMavenDependencies(
@@ -114,13 +113,14 @@ private[spark] object DependencyUtils extends Logging {
         MavenUtils.loadIvySettings(path, Option(repositories), Option(ivyRepoPath))
 
       case None =>
-        MavenUtils.buildIvySettings(
-          Option(repositories),
-          Option(ivyRepoPath))
+        MavenUtils.buildIvySettings(Option(repositories), Option(ivyRepoPath))
     }
 
-    MavenUtils.resolveMavenCoordinates(packages, ivySettings,
-      transitive = packagesTransitive, exclusions = exclusions)
+    MavenUtils.resolveMavenCoordinates(
+      packages,
+      ivySettings,
+      transitive = packagesTransitive,
+      exclusions = exclusions)
   }
 
   def resolveAndDownloadJars(
@@ -154,11 +154,16 @@ private[spark] object DependencyUtils extends Logging {
    * Download a list of remote files to temp local files. If the file is local, the original file
    * will be returned.
    *
-   * @param fileList A comma separated file list.
-   * @param targetDir A temporary directory for which downloaded files.
-   * @param sparkConf Spark configuration.
-   * @param hadoopConf Hadoop configuration.
-   * @return A comma separated local files list.
+   * @param fileList
+   *   A comma separated file list.
+   * @param targetDir
+   *   A temporary directory for which downloaded files.
+   * @param sparkConf
+   *   Spark configuration.
+   * @param hadoopConf
+   *   Hadoop configuration.
+   * @return
+   *   A comma separated local files list.
    */
   def downloadFileList(
       fileList: String,
@@ -166,20 +171,26 @@ private[spark] object DependencyUtils extends Logging {
       sparkConf: SparkConf,
       hadoopConf: Configuration): String = {
     require(fileList != null, "fileList cannot be null.")
-    Utils.stringToSeq(fileList)
+    Utils
+      .stringToSeq(fileList)
       .map(downloadFile(_, targetDir, sparkConf, hadoopConf))
       .mkString(",")
   }
 
   /**
-   * Download a file from the remote to a local temporary directory. If the input path points to
-   * a local path, returns it with no operation.
+   * Download a file from the remote to a local temporary directory. If the input path points to a
+   * local path, returns it with no operation.
    *
-   * @param path A file path from where the files will be downloaded.
-   * @param targetDir A temporary directory for which downloaded files.
-   * @param sparkConf Spark configuration.
-   * @param hadoopConf Hadoop configuration.
-   * @return Path to the local file.
+   * @param path
+   *   A file path from where the files will be downloaded.
+   * @param targetDir
+   *   A temporary directory for which downloaded files.
+   * @param sparkConf
+   *   Spark configuration.
+   * @param hadoopConf
+   *   Hadoop configuration.
+   * @return
+   *   Path to the local file.
    */
   def downloadFile(
       path: String,
@@ -205,15 +216,19 @@ private[spark] object DependencyUtils extends Logging {
 
   def resolveGlobPaths(paths: String, hadoopConf: Configuration): String = {
     require(paths != null, "paths cannot be null.")
-    Utils.stringToSeq(paths).flatMap { path =>
-      val (base, fragment) = splitOnFragment(path)
-      (resolveGlobPath(base, hadoopConf), fragment) match {
-        case (resolved, Some(_)) if resolved.length > 1 => throw new SparkException(
-            s"${base.toString} resolves ambiguously to multiple files: ${resolved.mkString(",")}")
-        case (resolved, Some(namedAs)) => resolved.map(_ + "#" + namedAs)
-        case (resolved, _) => resolved
+    Utils
+      .stringToSeq(paths)
+      .flatMap { path =>
+        val (base, fragment) = splitOnFragment(path)
+        (resolveGlobPath(base, hadoopConf), fragment) match {
+          case (resolved, Some(_)) if resolved.length > 1 =>
+            throw new SparkException(
+              s"${base.toString} resolves ambiguously to multiple files: ${resolved.mkString(",")}")
+          case (resolved, Some(namedAs)) => resolved.map(_ + "#" + namedAs)
+          case (resolved, _) => resolved
+        }
       }
-    }.mkString(",")
+      .mkString(",")
   }
 
   def addJarToClasspath(localJar: String, loader: MutableURLClassLoader): Unit = {
@@ -232,11 +247,12 @@ private[spark] object DependencyUtils extends Logging {
   }
 
   /**
-   * Merge a sequence of comma-separated file lists, some of which may be null to indicate
-   * no files, into a single comma-separated string.
+   * Merge a sequence of comma-separated file lists, some of which may be null to indicate no
+   * files, into a single comma-separated string.
    */
   def mergeFileLists(lists: String*): String = {
-    val merged = lists.filterNot(SparkStringUtils.isBlank)
+    val merged = lists
+      .filterNot(SparkStringUtils.isBlank)
       .flatMap(Utils.stringToSeq)
     if (merged.nonEmpty) merged.mkString(",") else null
   }
@@ -252,9 +268,11 @@ private[spark] object DependencyUtils extends Logging {
       case "local" | "http" | "https" | "ftp" => Array(uri.toString)
       case _ =>
         val fs = FileSystem.get(uri, hadoopConf)
-        Option(fs.globStatus(new Path(uri))).map { status =>
-          status.filter(_.isFile).map(_.getPath.toUri.toString)
-        }.getOrElse(Array(uri.toString))
+        Option(fs.globStatus(new Path(uri)))
+          .map { status =>
+            status.filter(_.isFile).map(_.getPath.toUri.toString)
+          }
+          .getOrElse(Array(uri.toString))
     }
   }
 

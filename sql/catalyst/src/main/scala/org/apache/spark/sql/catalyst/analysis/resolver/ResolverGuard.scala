@@ -19,32 +19,10 @@ package org.apache.spark.sql.catalyst.analysis.resolver
 
 import java.util.Locale
 
-import org.apache.spark.sql.catalyst.{
-  FunctionIdentifier,
-  SQLConfHelper,
-  SqlScriptingContextManager
-}
-import org.apache.spark.sql.catalyst.analysis.{
-  FunctionRegistry,
-  GetViewColumnByNameAndOrdinal,
-  ResolvedInlineTable,
-  UnresolvedAlias,
-  UnresolvedAttribute,
-  UnresolvedFunction,
-  UnresolvedHaving,
-  UnresolvedInlineTable,
-  UnresolvedOrdinal,
-  UnresolvedRelation,
-  UnresolvedStar,
-  UnresolvedSubqueryColumnAliases
-}
+import org.apache.spark.sql.catalyst.{FunctionIdentifier, SQLConfHelper, SqlScriptingContextManager}
+import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, GetViewColumnByNameAndOrdinal, ResolvedInlineTable, UnresolvedAlias, UnresolvedAttribute, UnresolvedFunction, UnresolvedHaving, UnresolvedInlineTable, UnresolvedOrdinal, UnresolvedRelation, UnresolvedStar, UnresolvedSubqueryColumnAliases}
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.aggregate.{
-  AggregateExpression,
-  AnyValue,
-  First,
-  Last
-}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AnyValue, First, Last}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.connector.catalog.CatalogManager
 import org.apache.spark.sql.errors.QueryCompilationErrors
@@ -52,9 +30,8 @@ import org.apache.spark.sql.internal.{LegacyBehaviorPolicy, SQLConf}
 import org.apache.spark.sql.internal.SQLConf.HiveCaseSensitiveInferenceMode
 
 /**
- * [[ResolverGuard]] is a class that checks if the operator that is yet to be analyzed
- * only consists of operators and expressions that are currently supported by the
- * single-pass analyzer.
+ * [[ResolverGuard]] is a class that checks if the operator that is yet to be analyzed only
+ * consists of operators and expressions that are currently supported by the single-pass analyzer.
  *
  * This is a one-shot object and should not be reused after [[apply]] call.
  */
@@ -86,8 +63,8 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
   }
 
   /**
-   * Check if all the operators are supported. For implemented ones, recursively check
-   * their children. For unimplemented ones, return false.
+   * Check if all the operators are supported. For implemented ones, recursively check their
+   * children. For unimplemented ones, return false.
    */
   private def checkOperator(operator: LogicalPlan): Boolean = {
     val isSupported = operator match {
@@ -161,8 +138,8 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
   }
 
   /**
-   * Method used to check if expressions are supported by the new analyzer.
-   * For LeafNode types, we return true or false. For other ones, check their children.
+   * Method used to check if expressions are supported by the new analyzer. For LeafNode types, we
+   * return true or false. For other ones, check their children.
    */
   private def checkExpression(expression: Expression): Boolean = {
     val isSupported = expression match {
@@ -328,16 +305,17 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
 
   private def checkUnresolvedAttribute(unresolvedAttribute: UnresolvedAttribute) =
     !ResolverGuard.UNSUPPORTED_ATTRIBUTE_NAMES.contains(unresolvedAttribute.nameParts.head) &&
-    !unresolvedAttribute.containsTag(LogicalPlan.PLAN_ID_TAG)
+      !unresolvedAttribute.containsTag(LogicalPlan.PLAN_ID_TAG)
 
-  private def checkUnresolvedPredicate(unresolvedPredicate: Predicate) = unresolvedPredicate match {
-    case inSubquery: InSubquery =>
-      checkInSubquery(inSubquery)
-    case exists: Exists =>
-      checkExists(exists)
-    case _ =>
-      unresolvedPredicate.children.forall(checkExpression)
-  }
+  private def checkUnresolvedPredicate(unresolvedPredicate: Predicate) =
+    unresolvedPredicate match {
+      case inSubquery: InSubquery =>
+        checkInSubquery(inSubquery)
+      case exists: Exists =>
+        checkExists(exists)
+      case _ =>
+        unresolvedPredicate.children.forall(checkExpression)
+    }
 
   private def checkAttributeReference(attributeReference: AttributeReference) = true
 
@@ -347,12 +325,11 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
 
   private def checkUnresolvedFunction(unresolvedFunction: UnresolvedFunction) =
     unresolvedFunction.nameParts.size == 1 &&
-    !ResolverGuard.UNSUPPORTED_FUNCTION_NAMES.contains(unresolvedFunction.nameParts.head) &&
-    // UDFs are not supported
-    FunctionRegistry.functionSet.contains(
-      FunctionIdentifier(unresolvedFunction.nameParts.head.toLowerCase(Locale.ROOT))
-    ) &&
-    unresolvedFunction.children.forall(checkExpression)
+      !ResolverGuard.UNSUPPORTED_FUNCTION_NAMES.contains(unresolvedFunction.nameParts.head) &&
+      // UDFs are not supported
+      FunctionRegistry.functionSet.contains(
+        FunctionIdentifier(unresolvedFunction.nameParts.head.toLowerCase(Locale.ROOT))) &&
+      unresolvedFunction.children.forall(checkExpression)
 
   private def checkLiteral(literal: Literal) = true
 
@@ -411,9 +388,9 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
           _: StringLocate | _: StringLPad | _: BinaryPad | _: StringRPad | _: FormatString |
           _: InitCap | _: StringRepeat | _: StringSpace | _: Substring | _: Right | _: Left |
           _: Length | _: BitLength | _: OctetLength | _: Levenshtein | _: SoundEx | _: Ascii |
-          _: Chr | _: Base64 | _: UnBase64 | _: Decode | _: StringDecode | _: Encode | _: ToBinary |
-          _: FormatNumber | _: Sentences | _: StringSplitSQL | _: SplitPart | _: Empty2Null |
-          _: Luhncheck =>
+          _: Chr | _: Base64 | _: UnBase64 | _: Decode | _: StringDecode | _: Encode |
+          _: ToBinary | _: FormatNumber | _: Sentences | _: StringSplitSQL | _: SplitPart |
+          _: Empty2Null | _: Luhncheck =>
         true
       // Datetime
       case _: CurrentTime | _: CurrentTimestampLike | _: TimeZoneAwareExpression =>
@@ -425,8 +402,8 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
       // Interval
       case _: ExtractIntervalPart[_] | _: IntervalNumOperation | _: MultiplyInterval |
           _: DivideInterval | _: TryMakeInterval | _: MakeInterval | _: MakeDTInterval |
-          _: MakeYMInterval | _: MultiplyYMInterval | _: MultiplyDTInterval | _: DivideYMInterval |
-          _: DivideDTInterval =>
+          _: MakeYMInterval | _: MultiplyYMInterval | _: MultiplyDTInterval |
+          _: DivideYMInterval | _: DivideDTInterval =>
         true
       // Number format
       case _: ToNumber | _: TryToNumber | _: ToCharacter =>
@@ -435,8 +412,8 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
       case _: Rand | _: Randn | _: Uniform | _: RandStr =>
         true
       // Regexp
-      case _: Like | _: ILike | _: LikeAll | _: NotLikeAll | _: LikeAny | _: NotLikeAny | _: RLike |
-          _: StringSplit | _: RegExpReplace | _: RegExpExtract | _: RegExpExtractAll |
+      case _: Like | _: ILike | _: LikeAll | _: NotLikeAll | _: LikeAny | _: NotLikeAny |
+          _: RLike | _: StringSplit | _: RegExpReplace | _: RegExpExtract | _: RegExpExtractAll |
           _: RegExpCount | _: RegExpSubStr | _: RegExpInStr =>
         true
       // JSON
@@ -471,7 +448,7 @@ class ResolverGuard(catalogManager: CatalogManager) extends SQLConfHelper {
     } else if (conf.getConf(SQLConf.LEGACY_INLINE_CTE_IN_COMMANDS)) {
       Some("legacyInlineCTEInCommands")
     } else if (conf.getConf(SQLConf.LEGACY_CTE_PRECEDENCE_POLICY) !=
-      LegacyBehaviorPolicy.CORRECTED) {
+        LegacyBehaviorPolicy.CORRECTED) {
       Some("legacyCTEPrecedencePolicy")
     } else if (conf.getConfString("pipelines.id", null) != null) {
       Some("dlt")
