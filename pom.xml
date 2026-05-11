@@ -125,26 +125,26 @@
     <sbt.project.name>spark</sbt.project.name>
     <asm.version>9.9.1</asm.version>
     <slf4j.version>2.0.17</slf4j.version>
-    <log4j.version>2.25.3</log4j.version>
+    <log4j.version>2.25.4</log4j.version>
     <!-- make sure to update IsolatedClientLoader whenever this version is changed -->
     <hadoop.version>3.4.2</hadoop.version>
     <!-- SPARK-41247: When updating `protobuf.version`, also need to update `protoVersion` in `SparkBuild.scala` -->
     <protobuf.version>4.33.5</protobuf.version>
     <protoc-jar-maven-plugin.version>3.11.4</protoc-jar-maven-plugin.version>
-    <zookeeper.version>3.9.4</zookeeper.version>
+    <zookeeper.version>3.9.5</zookeeper.version>
     <curator.version>5.9.0</curator.version>
     <hive.group>org.apache.hive</hive.group>
     <hive.classifier>core</hive.classifier>
     <!-- Version used in Maven Hive dependency -->
-    <hive.version>2.3.10</hive.version>
+    <hive.version>4.0.1</hive.version>
     <!-- note that this should be compatible with Kafka brokers version 0.10 and up -->
     <kafka.version>3.9.1</kafka.version>
     <!-- After 10.17.1.0, the minimum required version is JDK19 -->
-    <derby.version>10.16.1.1</derby.version>
+    <derby.version>10.17.1.0</derby.version>
     <parquet.version>1.17.0</parquet.version>
     <orc.version>2.2.2</orc.version>
     <orc.classifier>shaded-protobuf</orc.classifier>
-    <jetty.version>12.1.5</jetty.version>
+    <jetty.version>12.1.7</jetty.version>
     <jakartaservlet.version>6.0.0</jakartaservlet.version>
     <!-- SPARK-46938: Required by Hive / LibThrift libs -->
     <javaxservlet.version>4.0.1</javaxservlet.version>
@@ -205,7 +205,7 @@
     <joda.version>2.14.0</joda.version>
     <jsr305.version>3.0.0</jsr305.version>
     <jaxb.version>2.2.11</jaxb.version>
-    <libthrift.version>0.16.0</libthrift.version>
+    <libthrift.version>0.23.0</libthrift.version>
     <antlr4.version>4.13.1</antlr4.version>
     <jpam.version>1.1</jpam.version>
     <selenium.version>4.32.0</selenium.version>
@@ -213,10 +213,10 @@
     <maven-antrun.version>3.1.0</maven-antrun.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <commons-cli.version>1.10.0</commons-cli.version>
-    <bouncycastle.version>1.83</bouncycastle.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
     <tink.version>1.19.0</tink.version>
     <datasketches.version>6.2.0</datasketches.version>
-    <netty.version>4.2.10.Final</netty.version>
+    <netty.version>4.2.13.Final</netty.version>
     <netty-tcnative.version>2.0.74.Final</netty-tcnative.version>
     <icu4j.version>78.2</icu4j.version>
     <junit.version>6.0.1</junit.version>
@@ -339,12 +339,12 @@
     </extraJavaTestArgs>
     <mariadb.java.client.version>3.5.7</mariadb.java.client.version>
     <mysql.connector.version>9.6.0</mysql.connector.version>
-    <postgresql.version>42.7.10</postgresql.version>
+    <postgresql.version>42.7.11</postgresql.version>
     <db2.jcc.version>11.5.9.0</db2.jcc.version>
     <mssql.jdbc.version>13.2.1.jre11</mssql.jdbc.version>
     <ojdbc17.version>23.6.0.24.10</ojdbc17.version>
     <databricks.jdbc.version>2.7.1</databricks.jdbc.version>
-    <snowflake.jdbc.version>3.26.1</snowflake.jdbc.version>
+    <snowflake.jdbc.version>4.0.2</snowflake.jdbc.version>
     <terajdbc.version>20.00.00.39</terajdbc.version>
     <!-- Used for SBT build to retrieve the Spark version -->
     <spark.version>${project.version}</spark.version>
@@ -2365,7 +2365,7 @@
       <dependency>
         <groupId>io.airlift</groupId>
         <artifactId>aircompressor</artifactId>
-        <version>2.0.2</version>
+        <version>2.0.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.orc</groupId>
